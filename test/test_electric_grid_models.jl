@@ -411,7 +411,9 @@ Test.@testset "Electric grid model tests" begin
                 )
             )
         end
-
+        
+        # TODO: Validate total_loss_active_error against MATLAB implementation.
+        # TODO: Validate total_loss_reactive_error against MATLAB implementation.
         display(DataFrames.DataFrame(
             [
                 power_multipliers,

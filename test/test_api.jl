@@ -45,6 +45,20 @@ Test.@testset "API tests" begin
         Test.@test actual == expected
     end
 
+    Test.@testset "Get fixed load data test" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.DatabaseInterface.FixedLoadData
+
+        # Get actual result.
+        @time_log "Get fixed load data test" actual = (
+            typeof(FLEDGE.API.get_fixed_load_data(test_scenario_name))
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
     Test.@testset "Run operation problem test" begin
         # Define expected result.
         expected = true

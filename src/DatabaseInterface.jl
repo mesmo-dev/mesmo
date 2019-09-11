@@ -234,4 +234,54 @@ function ElectricGridData(scenario_name::String)
     )
 end
 
+"Fixed load data object."
+struct FixedLoadData
+    fixed_loads::DataFrames.DataFrame
+    fixed_load_timeseries::DataFrames.DataFrame
+end
+
+"Load fixed load data from database for give scenario name."
+function FixedLoadData(scenario_name::String)
+    database_connection = DatabaseInterface.connect_database()
+
+    fixed_loads = DataFrames.DataFrame(SQLite.Query(
+        database_connection,
+        """
+        SELECT * FROM fixed_loads
+        WHERE model_name IN (
+            SELECT DISTINCT model_name FROM electric_grid_loads
+            WHERE model_type = 'fixed_load'
+            AND electric_grid_name = (
+				SELECT electric_grid_name FROM scenarios
+				WHERE scenario_name = ?
+			)
+        )
+        """;
+        values=[scenario_name]
+    ))
+    fixed_load_timeseries = DataFrames.DataFrame(SQLite.Query(
+        database_connection,
+        """
+        SELECT * FROM fixed_load_timeseries
+        WHERE timeseries_name IN (
+            SELECT DISTINCT timeseries_name FROM fixed_loads
+            WHERE model_name IN (
+                SELECT DISTINCT model_name FROM electric_grid_loads
+                WHERE model_type = 'fixed_load'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+            )
+        )
+        """;
+        values=[scenario_name]
+    ))
+
+    FixedLoadData(
+        fixed_loads,
+        fixed_load_timeseries
+    )
+end
+
 end

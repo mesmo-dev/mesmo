@@ -69,6 +69,15 @@ function get_linear_electric_grid_model(scenario_name::String)
     return linear_electric_grid_model
 end
 
+"Get fixed load data."
+function get_fixed_load_data(scenario_name::String)
+    fixed_load_data = (
+        FLEDGE.DatabaseInterface.FixedLoadData(scenario_name)
+    )
+
+    return fixed_load_data
+end
+
 """
 Run operation problem.
 

@@ -11,7 +11,7 @@ Test.@testset "Fixed load model tests" begin
         expected = FLEDGE.FixedLoadModels.FixedLoadModel
 
         # Get actual result.
-        @time_log "Test which passes" actual = typeof(
+        @time_log "Construct fixed load model test" actual = typeof(
             FLEDGE.FixedLoadModels.FixedLoadModel(
                 electric_grid_data,
                 "test_load"

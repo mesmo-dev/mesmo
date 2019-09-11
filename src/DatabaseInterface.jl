@@ -90,12 +90,7 @@ function create_database(
     end
 end
 
-"""
-Electric grid data object.
-
-- Gets electric grid data from database
-- Data is stored in pandas dataframes.
-"""
+"Electric grid data object."
 struct ElectricGridData
     electric_grids::DataFrames.DataFrame
     electric_grid_nodes::DataFrames.DataFrame
@@ -107,6 +102,8 @@ struct ElectricGridData
     electric_grid_transformer_reactances::DataFrames.DataFrame
     electric_grid_transformer_taps::DataFrames.DataFrame
 end
+
+"Load electric grid data from database for given scenario name."
 function ElectricGridData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 

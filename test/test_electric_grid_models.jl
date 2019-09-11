@@ -25,7 +25,7 @@ Test.@testset "Electric grid model tests" begin
         expected = FLEDGE.ElectricGridModels.LinearElectricGridModel
 
         # Get actual result.
-        @time_log "Test which passes" linear_electric_grid_model = (
+        @time_log "Linear electric grid model test" linear_electric_grid_model = (
             FLEDGE.ElectricGridModels.LinearElectricGridModel(
                 electric_grid_model,
                 nodal_voltage_vector,

@@ -5,9 +5,9 @@ CREATE TABLE IF NOT EXISTS "scenarios" (
 	"electric_grid_name"	TEXT,
 	"case_name"	TEXT,
 	"optimal_scheduling_problem_name"	TEXT,
-	"time_start"	TEXT,
-	"time_end"	TEXT,
-	"time_step"	TEXT,
+	"timestep_start"	TEXT,
+	"timestep_end"	TEXT,
+	"timestep_interval_seconds"	TEXT,
 	PRIMARY KEY("scenario_name")
 );
 CREATE TABLE IF NOT EXISTS "operation_switch_timeseries" (

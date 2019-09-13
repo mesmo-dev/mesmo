@@ -5,6 +5,7 @@ include("config.jl")
 
 import CSV
 import DataFrames
+import Dates
 import SQLite
 
 """
@@ -90,6 +91,57 @@ function create_database(
     end
 end
 
+"Timestep data object."
+struct TimestepData
+    timestep_start::Dates.DateTime
+    timestep_end::Dates.DateTime
+    timestep_interval_seconds::Dates.Second
+    timestep_count::Int
+    timestep_vector::Array{Dates.DateTime,1}
+end
+
+"Load timestep data and generate timestep vector for given `scenario_name`."
+function TimestepData(scenario_name::String)
+    database_connection = DatabaseInterface.connect_database()
+
+    scenarios = DataFrames.DataFrame(SQLite.Query(
+        database_connection,
+        """
+        SELECT * FROM scenarios
+        WHERE scenario_name = ?
+        """;
+        values=[scenario_name],
+        stricttypes=false # Workaround for type error with Datetime columns.
+    ))
+
+    # Strings in the format "yyyy-mm-ddTHH:MM:SS", e.g., "2017-12-31T01:30:45",
+    # are parsed into `Date.DateTime` objects automatically and therefore no
+    # conversion is needed. If there is an error here, this behaviour might
+    # have changed.
+    timestep_start = scenarios[:timestep_start][1]
+    timestep_end = scenarios[:timestep_end][1]
+
+    # Timestep interval is converted to `Date.Second`.
+    timestep_interval_seconds = (
+        Dates.Second(scenarios[:timestep_interval_seconds][1])
+    )
+
+    # Construct vector of timesteps for the scenario.
+    timestep_vector = (
+        Array(timestep_start:timestep_interval_seconds:timestep_end)
+    )
+
+    timestep_count = length(timestep_vector)
+
+    TimestepData(
+        timestep_start,
+        timestep_end,
+        timestep_interval_seconds,
+        timestep_count,
+        timestep_vector
+    )
+end
+
 "Electric grid data object."
 struct ElectricGridData
     electric_grids::DataFrames.DataFrame
@@ -103,7 +155,7 @@ struct ElectricGridData
     electric_grid_transformer_taps::DataFrames.DataFrame
 end
 
-"Load electric grid data from database for given scenario name."
+"Load electric grid data from database for given `scenario_name`."
 function ElectricGridData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
@@ -237,7 +289,7 @@ struct FixedLoadData
     fixed_load_timeseries::DataFrames.DataFrame
 end
 
-"Load fixed load data from database for give scenario name."
+"Load fixed load data from database for given `scenario_name`."
 function FixedLoadData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 

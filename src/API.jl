@@ -4,11 +4,18 @@ module API
 include("config.jl")
 import ..FLEDGE
 
+"Get timestep data for given `scenario_name`"
+function get_timestep_data(scenario_name::String)
+    scenario_data = (
+        FLEDGE.DatabaseInterface.TimestepData(scenario_name)
+    )
+end
+
 """
 Get electric grid data.
 
 - Instantiates and returns electric grid data object for
-  the given `scenario_name`.
+  given `scenario_name`.
 """
 function get_electric_grid_data(scenario_name::String)
     electric_grid_data = (
@@ -17,11 +24,20 @@ function get_electric_grid_data(scenario_name::String)
     return electric_grid_data
 end
 
+"Get fixed load data for given `scenario_name`."
+function get_fixed_load_data(scenario_name::String)
+    fixed_load_data = (
+        FLEDGE.DatabaseInterface.FixedLoadData(scenario_name)
+    )
+
+    return fixed_load_data
+end
+
 """
 Get electric grid model.
 
 - Instantiates and returns electric grid model object for
-  the given `scenario_name`.
+  given `scenario_name`.
 """
 function get_electric_grid_model(scenario_name::String)
     electric_grid_data = get_electric_grid_data(scenario_name)
@@ -36,7 +52,7 @@ end
 Get linear electric grid model.
 
 - Instantiates and returns linear electric grid model object for
-  the given `scenario_name`.
+  given `scenario_name`.
 """
 function get_linear_electric_grid_model(scenario_name::String)
     # Obtain electric grid model.
@@ -69,13 +85,20 @@ function get_linear_electric_grid_model(scenario_name::String)
     return linear_electric_grid_model
 end
 
-"Get fixed load data."
-function get_fixed_load_data(scenario_name::String)
-    fixed_load_data = (
-        FLEDGE.DatabaseInterface.FixedLoadData(scenario_name)
+"""
+Initialize OpenDSS model.
+
+- Instantiates OpenDSS model.
+- No object is returned because the OpenDSS model lives in memory and
+  can be accessed with the API of the `OpenDSS.jl` package.
+"""
+function initialize_open_dss_model(scenario_name::String)
+    electric_grid_data = get_electric_grid_data(scenario_name)
+    success = (
+        FLEDGE.ElectricGridModels.initialize_open_dss_model(electric_grid_data)
     )
 
-    return fixed_load_data
+    return success
 end
 
 """
@@ -90,22 +113,6 @@ function run_operation_problem(scenario_name::String)
     )
 
     success = true
-    return success
-end
-
-"""
-Initialize OpenDSS model.
-
-- Instantiates OpenDSS model.
-- No object is returned because the OpenDSS model lives in memory and
-  can be accessed with the API of the `OpenDSS.jl` package.
-"""
-function initialize_open_dss_model(scenario_name::String)
-    electric_grid_data = get_electric_grid_data(scenario_name)
-    success = (
-        FLEDGE.ElectricGridModels.initialize_open_dss_model(electric_grid_data)
-    )
-
     return success
 end
 

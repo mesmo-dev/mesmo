@@ -83,9 +83,12 @@ function create_database(
         if endswith(file_name, ".csv")
             Memento.info(_logger, "Loading $file_name into database.")
             SQLite.load!(
-                CSV.read(joinpath(csv_path, file_name)),
+                CSV.read(
+                    joinpath(csv_path, file_name);
+                    dateformat="" # Keep date / time columns as strings.
+                ),
                 database_connection,
-                file_name[1:end-4]
+                file_name[1:end-4] # Table name.
             )
         end
     end
@@ -110,18 +113,16 @@ function TimestepData(scenario_name::String)
         SELECT * FROM scenarios
         WHERE scenario_name = ?
         """;
-        values=[scenario_name],
-        stricttypes=false # Workaround for type error with Datetime columns.
+        values=[scenario_name]
     ))
 
-    # Strings in the format "yyyy-mm-ddTHH:MM:SS", e.g., "2017-12-31T01:30:45",
-    # are parsed into `Date.DateTime` objects automatically and therefore no
-    # conversion is needed. If there is an error here, this behaviour might
-    # have changed.
-    timestep_start = scenarios[:timestep_start][1]
-    timestep_end = scenarios[:timestep_end][1]
+    # Parse strings into `Dates.DateTime`.
+    # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
+    #   e.g., "2017-12-31T01:30:45", for this parsing to work.
+    timestep_start = Dates.DateTime(scenarios[:timestep_start][1])
+    timestep_end = Dates.DateTime(scenarios[:timestep_end][1])
 
-    # Timestep interval is converted to `Date.Second`.
+    # Timestep interval is converted to `Dates.Second`.
     timestep_interval_seconds = (
         Dates.Second(scenarios[:timestep_interval_seconds][1])
     )

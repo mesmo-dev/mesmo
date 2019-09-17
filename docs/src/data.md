@@ -2,7 +2,7 @@
 
 ## General
 
-- Date / time are stored as Strings in the format "yyyy-mm-ddTHH:MM:SS", e.g., "2017-12-31T01:30:45".
+- Date / time are stored as strings in the format "yyyy-mm-ddTHH:MM:SS", e.g., "2017-12-31T01:30:45".
 
 ## Transformers
 

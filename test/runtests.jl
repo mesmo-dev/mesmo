@@ -25,10 +25,6 @@ Plots.plotly()
 Plots.default(size=(750, 500))
 test_plots = false # If true, tests may produce plots.
 
-# Change the working directory to test directory when running locally in REPL
-# to avoid include errors.
-# cd(@__DIR__)
-
 # Utility functions for tests.
 include("utils.jl")
 

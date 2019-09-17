@@ -4,19 +4,37 @@ module FixedLoadModels
 include("../config.jl")
 import ..FLEDGE
 
+import TimeSeries
+
 "Fixed load model object."
 struct FixedLoadModel
-    load_active_power_timeseries::Array{Float64,1}
-    load_reactive_power_timeseries::Array{Float64,1}
+    load_active_power_timeseries::TimeSeries.TimeArray
+    load_reactive_power_timeseries::TimeSeries.TimeArray
 end
 
-"Construct fixed load model object by electric grid data and load name."
+"Construct fixed load model object by fixed load data and load name."
 function FixedLoadModel(
-    electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData,
+    fixed_load_data::FLEDGE.DatabaseInterface.FixedLoadData,
     load_name::String
 )
-    load_active_power_timeseries = zeros(Float64, 10)
-    load_reactive_power_timeseries = zeros(Float64, 10)
+    # Get fixed load index by `load_name`.
+    load_index = (
+        load_name .== fixed_load_data.fixed_loads[:load_name]
+    )
+
+    # Construct active and reactive power timeseries.
+    load_active_power_timeseries = (
+        fixed_load_data.fixed_load_timeseries_dict[
+            Symbol(fixed_load_data.fixed_loads[:timeseries_name][load_index][1])
+        ][:apparent_power_per_unit]
+        .* fixed_load_data.fixed_loads[:active_power][load_index][1]
+    )
+    load_reactive_power_timeseries = (
+        fixed_load_data.fixed_load_timeseries_dict[
+            Symbol(fixed_load_data.fixed_loads[:timeseries_name][load_index][1])
+        ][:apparent_power_per_unit]
+        .* fixed_load_data.fixed_loads[:reactive_power][load_index][1]
+    )
 
     FixedLoadModel(
         load_active_power_timeseries,

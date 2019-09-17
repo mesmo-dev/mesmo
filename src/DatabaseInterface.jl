@@ -7,6 +7,7 @@ import CSV
 import DataFrames
 import Dates
 import SQLite
+import TimeSeries
 
 """
 Get database connection handle.
@@ -287,7 +288,7 @@ end
 "Fixed load data object."
 struct FixedLoadData
     fixed_loads::DataFrames.DataFrame
-    fixed_load_timeseries::DataFrames.DataFrame
+    fixed_load_timeseries_dict::Dict{Symbol,TimeSeries.TimeArray}
 end
 
 "Load fixed load data from database for given `scenario_name`."
@@ -298,39 +299,75 @@ function FixedLoadData(scenario_name::String)
         database_connection,
         """
         SELECT * FROM fixed_loads
-        WHERE model_name IN (
-            SELECT DISTINCT model_name FROM electric_grid_loads
-            WHERE model_type = 'fixed_load'
-            AND electric_grid_name = (
-				SELECT electric_grid_name FROM scenarios
-				WHERE scenario_name = ?
-			)
+        JOIN electric_grid_loads USING (model_name)
+        WHERE model_type = 'fixed_load'
+        AND electric_grid_name = (
+            SELECT electric_grid_name FROM scenarios
+            WHERE scenario_name = ?
+        )
+        AND case_name = (
+            SELECT case_name FROM scenarios
+            WHERE scenario_name = ?
         )
         """;
-        values=[scenario_name]
+        values=[
+            scenario_name,
+            scenario_name
+        ]
     ))
-    fixed_load_timeseries = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM fixed_load_timeseries
-        WHERE timeseries_name IN (
-            SELECT DISTINCT timeseries_name FROM fixed_loads
-            WHERE model_name IN (
-                SELECT DISTINCT model_name FROM electric_grid_loads
-                WHERE model_type = 'fixed_load'
-                AND electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
+
+    # Instantiate dictionary for unique `timeseries_name`.
+    fixed_load_timeseries_dict = Dict(
+        symbol => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+        for symbol in Symbol.(
+            unique(fixed_loads[:timeseries_name])
+        )
+    )
+
+    # Load timeseries for each `timeseries_name`.
+    # TODO: Resample / interpolate timeseries depending on timestep interval.
+    for timeseries_name in keys(fixed_load_timeseries_dict)
+        fixed_load_timeseries = (
+            DataFrames.DataFrame(
+                SQLite.Query(
+                    database_connection,
+                    """
+                    SELECT * FROM fixed_load_timeseries
+                    WHERE timeseries_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """;
+                    values=[
+                        String(timeseries_name),
+                        scenario_name,
+                        scenario_name
+                    ]
                 )
             )
         )
-        """;
-        values=[scenario_name]
-    ))
+
+        # Parse strings into `Dates.DateTime`.
+        # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
+        #   e.g., "2017-12-31T01:30:45", for this parsing to work.
+        fixed_load_timeseries[:time] = (
+            Dates.DateTime.(fixed_load_timeseries[:time])
+        )
+
+        # Convert to `TimeSeries.TimeArray` and store into dictionary.
+        fixed_load_timeseries_dict[timeseries_name] = (
+            TimeSeries.TimeArray(fixed_load_timeseries; timestamp=:time)
+        )
+    end
 
     FixedLoadData(
         fixed_loads,
-        fixed_load_timeseries
+        fixed_load_timeseries_dict
     )
 end
 

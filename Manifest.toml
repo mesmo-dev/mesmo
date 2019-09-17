@@ -520,6 +520,12 @@ version = "0.2.11"
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[[TimeSeries]]
+deps = ["Dates", "DelimitedFiles", "RecipesBase", "Reexport", "Statistics", "Tables"]
+git-tree-sha1 = "abd4bd489ed0ed88532498d1aa1d2e41d7b05485"
+uuid = "9e3dc215-6440-5c97-bce1-76c03772f85e"
+version = "0.16.0"
+
 [[TimeZones]]
 deps = ["Dates", "EzXML", "Mocking", "Printf", "Serialization", "Unicode"]
 git-tree-sha1 = "2769a7ceffe237e651ed960a331a19258c8cf208"

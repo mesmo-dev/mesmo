@@ -108,14 +108,18 @@ end
 function TimestepData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
-    scenarios = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM scenarios
-        WHERE scenario_name = ?
-        """;
-        values=[scenario_name]
-    ))
+    scenarios = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM scenarios
+                WHERE scenario_name = ?
+                """;
+                values=[scenario_name]
+            )
+        )
+    )
 
     # Parse strings into `Dates.DateTime`.
     # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
@@ -161,116 +165,152 @@ end
 function ElectricGridData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
-    electric_grids = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grids
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_nodes = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_nodes
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_loads = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_loads
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_lines = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_lines
-        JOIN electric_grid_line_types USING (line_type)
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_line_types = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_line_types
-        WHERE line_type IN (
-            SELECT line_type FROM electric_grid_lines
-            WHERE electric_grid_name = (
-                SELECT electric_grid_name FROM scenarios
-                WHERE scenario_name = ?
+    electric_grids = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grids
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[scenario_name]
             )
         )
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_line_types_matrices = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_line_types_matrices
-        WHERE line_type IN (
-            SELECT line_type FROM electric_grid_lines
-            WHERE electric_grid_name = (
-                SELECT electric_grid_name FROM scenarios
-                WHERE scenario_name = ?
+    )
+    electric_grid_nodes = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_nodes
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[scenario_name]
             )
         )
-        ORDER BY line_type ASC, row ASC, col ASC
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_transformers = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_transformers
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    )
+    electric_grid_loads = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_loads
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[scenario_name]
+            )
         )
-        ORDER BY transformer_name ASC, winding ASC
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_transformer_reactances = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_transformer_reactances
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    )
+    electric_grid_lines = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_lines
+                JOIN electric_grid_line_types USING (line_type)
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[scenario_name]
+            )
         )
-        ORDER BY transformer_name ASC, row ASC, col ASC
-        """;
-        values=[scenario_name]
-    ))
-    electric_grid_transformer_taps = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM electric_grid_transformer_taps
-        WHERE electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    )
+    electric_grid_line_types = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_line_types
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """;
+                values=[scenario_name]
+            )
         )
-        ORDER BY transformer_name ASC, winding ASC
-        """;
-        values=[scenario_name]
-    ))
+    )
+    electric_grid_line_types_matrices = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_line_types_matrices
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                ORDER BY line_type ASC, row ASC, col ASC
+                """;
+                values=[scenario_name]
+            )
+        )
+    )
+    electric_grid_transformers = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_transformers
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, winding ASC
+                """;
+                values=[scenario_name]
+            )
+        )
+    )
+    electric_grid_transformer_reactances = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_transformer_reactances
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, row ASC, col ASC
+                """;
+                values=[scenario_name]
+            )
+        )
+    )
+    electric_grid_transformer_taps = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM electric_grid_transformer_taps
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, winding ASC
+                """;
+                values=[scenario_name]
+            )
+        )
+    )
 
     ElectricGridData(
         electric_grids,
@@ -295,32 +335,36 @@ end
 function FixedLoadData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
-    fixed_loads = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM fixed_loads
-        JOIN electric_grid_loads USING (model_name)
-        WHERE model_type = 'fixed_load'
-        AND electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    fixed_loads = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM fixed_loads
+                JOIN electric_grid_loads USING (model_name)
+                WHERE model_type = 'fixed_load'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                AND case_name = (
+                    SELECT case_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[
+                    scenario_name,
+                    scenario_name
+                ]
+            )
         )
-        AND case_name = (
-            SELECT case_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[
-            scenario_name,
-            scenario_name
-        ]
-    ))
+    )
 
     # Instantiate dictionary for unique `timeseries_name`.
-    fixed_load_timeseries_dict = Dict(
-        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-        for key in (
-            unique(fixed_loads[:timeseries_name])
+    fixed_load_timeseries_dict = (
+        Dict(
+            key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+            for key in unique(fixed_loads[:timeseries_name])
         )
     )
 
@@ -381,32 +425,36 @@ end
 function EVChargerData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
-    ev_chargers = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM ev_chargers
-        JOIN electric_grid_loads USING (model_name)
-        WHERE model_type = 'ev_charger'
-        AND electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    ev_chargers = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM ev_chargers
+                JOIN electric_grid_loads USING (model_name)
+                WHERE model_type = 'ev_charger'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                AND case_name = (
+                    SELECT case_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[
+                    scenario_name,
+                    scenario_name
+                ]
+            )
         )
-        AND case_name = (
-            SELECT case_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[
-            scenario_name,
-            scenario_name
-        ]
-    ))
+    )
 
     # Instantiate dictionary for unique `timeseries_name`.
-    ev_charger_timeseries_dict = Dict(
-        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-        for key in (
-            unique(ev_chargers[:timeseries_name])
+    ev_charger_timeseries_dict = (
+        Dict(
+            key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+            for key in unique(ev_chargers[:timeseries_name])
         )
     )
 
@@ -467,32 +515,36 @@ end
 function FlexibleLoadData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 
-    flexible_loads = DataFrames.DataFrame(SQLite.Query(
-        database_connection,
-        """
-        SELECT * FROM flexible_loads
-        JOIN electric_grid_loads USING (model_name)
-        WHERE model_type = 'flexible_load'
-        AND electric_grid_name = (
-            SELECT electric_grid_name FROM scenarios
-            WHERE scenario_name = ?
+    flexible_loads = (
+        DataFrames.DataFrame(
+            SQLite.Query(
+                database_connection,
+                """
+                SELECT * FROM flexible_loads
+                JOIN electric_grid_loads USING (model_name)
+                WHERE model_type = 'flexible_load'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                AND case_name = (
+                    SELECT case_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """;
+                values=[
+                    scenario_name,
+                    scenario_name
+                ]
+            )
         )
-        AND case_name = (
-            SELECT case_name FROM scenarios
-            WHERE scenario_name = ?
-        )
-        """;
-        values=[
-            scenario_name,
-            scenario_name
-        ]
-    ))
+    )
 
     # Instantiate dictionary for unique `timeseries_name`.
-    flexible_load_timeseries_dict = Dict(
-        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-        for key in (
-            unique(flexible_loads[:timeseries_name])
+    flexible_load_timeseries_dict = (
+        Dict(
+            key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+            for key in unique(flexible_loads[:timeseries_name])
         )
     )
 

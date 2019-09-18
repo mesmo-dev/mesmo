@@ -27,12 +27,14 @@ function FixedLoadModel(
         fixed_load_data.fixed_load_timeseries_dict[
             fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
+        .* fixed_load_data.fixed_loads[:scaling_factor][load_index][1]
         .* fixed_load_data.fixed_loads[:active_power][load_index][1]
     )
     load_reactive_power_timeseries = (
         fixed_load_data.fixed_load_timeseries_dict[
             fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
+        .* fixed_load_data.fixed_loads[:scaling_factor][load_index][1]
         .* fixed_load_data.fixed_loads[:reactive_power][load_index][1]
     )
 

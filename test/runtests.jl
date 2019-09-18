@@ -32,6 +32,7 @@ Test.@testset "FLEDGE tests" begin
     include("test_template.jl")
     include("test_database_interface.jl")
     include("test_electric_grid_models.jl")
+    include("test_ev_charger_models.jl")
     include("test_fixed_load_models.jl")
     include("test_power_flow_solvers.jl")
     include("test_api.jl")

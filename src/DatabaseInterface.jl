@@ -371,4 +371,90 @@ function FixedLoadData(scenario_name::String)
     )
 end
 
+"EV charger data object."
+struct EVChargerData
+    ev_chargers::DataFrames.DataFrame
+    ev_charger_timeseries_dict::Dict{String,TimeSeries.TimeArray}
+end
+
+"Load EV charger data from database for given `scenario_name`."
+function EVChargerData(scenario_name::String)
+    database_connection = DatabaseInterface.connect_database()
+
+    ev_chargers = DataFrames.DataFrame(SQLite.Query(
+        database_connection,
+        """
+        SELECT * FROM ev_chargers
+        JOIN electric_grid_loads USING (model_name)
+        WHERE model_type = 'ev_charger'
+        AND electric_grid_name = (
+            SELECT electric_grid_name FROM scenarios
+            WHERE scenario_name = ?
+        )
+        AND case_name = (
+            SELECT case_name FROM scenarios
+            WHERE scenario_name = ?
+        )
+        """;
+        values=[
+            scenario_name,
+            scenario_name
+        ]
+    ))
+
+    # Instantiate dictionary for unique `timeseries_name`.
+    ev_charger_timeseries_dict = Dict(
+        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+        for key in (
+            unique(ev_chargers[:timeseries_name])
+        )
+    )
+
+    # Load timeseries for each `timeseries_name`.
+    # TODO: Resample / interpolate timeseries depending on timestep interval.
+    for timeseries_name in keys(ev_charger_timeseries_dict)
+        ev_charger_timeseries = (
+            DataFrames.DataFrame(
+                SQLite.Query(
+                    database_connection,
+                    """
+                    SELECT * FROM ev_charger_timeseries
+                    WHERE timeseries_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """;
+                    values=[
+                        timeseries_name,
+                        scenario_name,
+                        scenario_name
+                    ]
+                )
+            )
+        )
+
+        # Parse strings into `Dates.DateTime`.
+        # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
+        #   e.g., "2017-12-31T01:30:45", for this parsing to work.
+        ev_charger_timeseries[:time] = (
+            Dates.DateTime.(ev_charger_timeseries[:time])
+        )
+
+        # Convert to `TimeSeries.TimeArray` and store into dictionary.
+        ev_charger_timeseries_dict[timeseries_name] = (
+            TimeSeries.TimeArray(ev_charger_timeseries; timestamp=:time)
+        )
+    end
+
+    EVChargerData(
+        ev_chargers,
+        ev_charger_timeseries_dict
+    )
+end
+
 end

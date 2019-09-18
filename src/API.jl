@@ -33,6 +33,15 @@ function get_fixed_load_data(scenario_name::String)
     return fixed_load_data
 end
 
+"Get EV charger data for given `scenario_name`."
+function get_ev_charger_data(scenario_name::String)
+    ev_charger_data = (
+        FLEDGE.DatabaseInterface.EVChargerData(scenario_name)
+    )
+
+    return ev_charger_data
+end
+
 """
 Get electric grid model.
 

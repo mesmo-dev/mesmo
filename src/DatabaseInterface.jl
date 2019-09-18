@@ -460,7 +460,7 @@ end
 "Flexible load data object."
 struct FlexibleLoadData
     flexible_loads::DataFrames.DataFrame
-    flexible_loads_dict::Dict{String,TimeSeries.TimeArray}
+    flexible_load_timeseries_dict::Dict{String,TimeSeries.TimeArray}
 end
 
 "Flexible load data from database for given `scenario_name`."

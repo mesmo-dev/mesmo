@@ -17,7 +17,7 @@ function FixedLoadModel(
     fixed_load_data::FLEDGE.DatabaseInterface.FixedLoadData,
     load_name::String
 )
-    # Get fixed load index by `load_name`.
+    # Get load index by `load_name`.
     load_index = (
         load_name .== fixed_load_data.fixed_loads[:load_name]
     )
@@ -43,4 +43,5 @@ function FixedLoadModel(
         load_reactive_power_timeseries
     )
 end
+
 end

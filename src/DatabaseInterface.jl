@@ -457,4 +457,90 @@ function EVChargerData(scenario_name::String)
     )
 end
 
+"Flexible load data object."
+struct FlexibleLoadData
+    flexible_loads::DataFrames.DataFrame
+    flexible_loads_dict::Dict{String,TimeSeries.TimeArray}
+end
+
+"Flexible load data from database for given `scenario_name`."
+function FlexibleLoadData(scenario_name::String)
+    database_connection = DatabaseInterface.connect_database()
+
+    flexible_loads = DataFrames.DataFrame(SQLite.Query(
+        database_connection,
+        """
+        SELECT * FROM flexible_loads
+        JOIN electric_grid_loads USING (model_name)
+        WHERE model_type = 'flexible_load'
+        AND electric_grid_name = (
+            SELECT electric_grid_name FROM scenarios
+            WHERE scenario_name = ?
+        )
+        AND case_name = (
+            SELECT case_name FROM scenarios
+            WHERE scenario_name = ?
+        )
+        """;
+        values=[
+            scenario_name,
+            scenario_name
+        ]
+    ))
+
+    # Instantiate dictionary for unique `timeseries_name`.
+    flexible_load_timeseries_dict = Dict(
+        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+        for key in (
+            unique(flexible_loads[:timeseries_name])
+        )
+    )
+
+    # Load timeseries for each `timeseries_name`.
+    # TODO: Resample / interpolate timeseries depending on timestep interval.
+    for timeseries_name in keys(flexible_load_timeseries_dict)
+        flexible_load_timeseries = (
+            DataFrames.DataFrame(
+                SQLite.Query(
+                    database_connection,
+                    """
+                    SELECT * FROM flexible_load_timeseries
+                    WHERE timeseries_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """;
+                    values=[
+                        timeseries_name,
+                        scenario_name,
+                        scenario_name
+                    ]
+                )
+            )
+        )
+
+        # Parse strings into `Dates.DateTime`.
+        # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
+        #   e.g., "2017-12-31T01:30:45", for this parsing to work.
+        flexible_load_timeseries[:time] = (
+            Dates.DateTime.(flexible_load_timeseries[:time])
+        )
+
+        # Convert to `TimeSeries.TimeArray` and store into dictionary.
+        flexible_load_timeseries_dict[timeseries_name] = (
+            TimeSeries.TimeArray(flexible_load_timeseries; timestamp=:time)
+        )
+    end
+
+    FlexibleLoadData(
+        flexible_loads,
+        flexible_load_timeseries_dict
+    )
+end
+
 end

@@ -42,6 +42,15 @@ function get_ev_charger_data(scenario_name::String)
     return ev_charger_data
 end
 
+"Get flexible load data for given `scenario_name`."
+function get_flexible_load_data(scenario_name::String)
+    flexible_load_data = (
+        FLEDGE.DatabaseInterface.FlexibleLoadData(scenario_name)
+    )
+
+    return flexible_load_data
+end
+
 """
 Get electric grid model.
 

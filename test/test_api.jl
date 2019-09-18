@@ -71,6 +71,20 @@ Test.@testset "API tests" begin
         Test.@test actual == expected
     end
 
+    Test.@testset "Get flexible load data test" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.DatabaseInterface.FlexibleLoadData
+
+        # Get actual result.
+        @time_log "Get flexible load data test" actual = (
+            typeof(FLEDGE.API.get_flexible_load_data(test_scenario_name))
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
     Test.@testset "Get electric grid model test" begin
         # Define expected result.
         # - TODO: Replace type test with proper result check.

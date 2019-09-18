@@ -288,7 +288,7 @@ end
 "Fixed load data object."
 struct FixedLoadData
     fixed_loads::DataFrames.DataFrame
-    fixed_load_timeseries_dict::Dict{Symbol,TimeSeries.TimeArray}
+    fixed_load_timeseries_dict::Dict{String,TimeSeries.TimeArray}
 end
 
 "Load fixed load data from database for given `scenario_name`."
@@ -318,8 +318,8 @@ function FixedLoadData(scenario_name::String)
 
     # Instantiate dictionary for unique `timeseries_name`.
     fixed_load_timeseries_dict = Dict(
-        symbol => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-        for symbol in Symbol.(
+        key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+        for key in (
             unique(fixed_loads[:timeseries_name])
         )
     )
@@ -344,7 +344,7 @@ function FixedLoadData(scenario_name::String)
                     )
                     """;
                     values=[
-                        String(timeseries_name),
+                        timeseries_name,
                         scenario_name,
                         scenario_name
                     ]

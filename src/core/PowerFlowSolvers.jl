@@ -383,33 +383,33 @@ function get_voltage_fixed_point(
     # Obtain no-source variables for fixed point equation.
     nodal_admittance_matrix_no_source = (
         electric_grid_model.nodal_admittance_matrix[
-            electric_grid_model.index.node_by_node_type[:no_source],
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"],
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
     nodal_transformation_matrix_no_source = (
         electric_grid_model.nodal_transformation_matrix[
-            electric_grid_model.index.node_by_node_type[:no_source],
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"],
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
     nodal_power_vector_wye_no_source = (
         (
             nodal_power_vector_wye
         )[
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
     nodal_power_vector_delta_no_source = (
         (
             nodal_power_vector_delta
         )[
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
     nodal_voltage_vector_no_load_no_source = (
         electric_grid_model.nodal_voltage_vector_no_load[
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
 
@@ -440,7 +440,7 @@ function get_voltage_fixed_point(
     # Get full voltage vector by concatenating source and calculated voltage.
     nodal_voltage_vector_solution = [
         electric_grid_model.nodal_voltage_vector_no_load[
-            electric_grid_model.index.node_by_node_type[:source]
+            electric_grid_model.index.node_by_node_type["source"]
         ];
         nodal_voltage_vector_solution
     ]

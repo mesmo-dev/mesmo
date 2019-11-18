@@ -50,11 +50,11 @@ Test.@testset "DER model tests" begin
         )
 
         # Define expected result.
-        expected = FLEDGE.DERModels.FlexibleLoadModel
+        expected = FLEDGE.DERModels.GenericFlexibleLoadModel
 
         # Get actual result.
         @time_log "Flexible load model test" actual = typeof(
-            FLEDGE.DERModels.FlexibleLoadModel(
+            FLEDGE.DERModels.GenericFlexibleLoadModel(
                 flexible_load_data,
                 flexible_load_data.flexible_loads[:load_name][1]
             )

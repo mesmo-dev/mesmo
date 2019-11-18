@@ -6,10 +6,13 @@ import ..FLEDGE
 
 import TimeSeries
 
+"DER model type."
+abstract type DERModel end
+
 "Fixed load model object."
-struct FixedLoadModel
-    load_active_power_nominal_timeseries::TimeSeries.TimeArray
-    load_reactive_power_nominal_timeseries::TimeSeries.TimeArray
+struct FixedLoadModel <: DERModel
+    active_power_nominal_timeseries::TimeSeries.TimeArray
+    reactive_power_nominal_timeseries::TimeSeries.TimeArray
 end
 
 "Construct fixed load model object by fixed load data and load name."
@@ -23,14 +26,14 @@ function FixedLoadModel(
     )
 
     # Construct active and reactive power timeseries.
-    load_active_power_nominal_timeseries = (
+    active_power_nominal_timeseries = (
         fixed_load_data.fixed_load_timeseries_dict[
             fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
         .* fixed_load_data.fixed_loads[:scaling_factor][load_index][1]
         .* fixed_load_data.fixed_loads[:active_power][load_index][1]
     )
-    load_reactive_power_nominal_timeseries = (
+    reactive_power_nominal_timeseries = (
         fixed_load_data.fixed_load_timeseries_dict[
             fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
@@ -39,15 +42,15 @@ function FixedLoadModel(
     )
 
     FixedLoadModel(
-        load_active_power_nominal_timeseries,
-        load_reactive_power_nominal_timeseries
+        active_power_nominal_timeseries,
+        reactive_power_nominal_timeseries
     )
 end
 
 "EV charger model object."
-struct EVChargerModel
-    load_active_power_nominal_timeseries::TimeSeries.TimeArray
-    load_reactive_power_nominal_timeseries::TimeSeries.TimeArray
+struct EVChargerModel <: DERModel
+    active_power_nominal_timeseries::TimeSeries.TimeArray
+    reactive_power_nominal_timeseries::TimeSeries.TimeArray
 end
 
 "Construct EV charger model object by EV charger load data and load name."
@@ -61,14 +64,14 @@ function EVChargerModel(
     )
 
     # Construct active and reactive power timeseries.
-    load_active_power_nominal_timeseries = (
+    active_power_nominal_timeseries = (
         ev_charger_data.ev_charger_timeseries_dict[
             ev_charger_data.ev_chargers[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
         .* ev_charger_data.ev_chargers[:scaling_factor][load_index][1]
         .* ev_charger_data.ev_chargers[:active_power][load_index][1]
     )
-    load_reactive_power_nominal_timeseries = (
+    reactive_power_nominal_timeseries = (
         ev_charger_data.ev_charger_timeseries_dict[
             ev_charger_data.ev_chargers[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
@@ -77,15 +80,15 @@ function EVChargerModel(
     )
 
     EVChargerModel(
-        load_active_power_nominal_timeseries,
-        load_reactive_power_nominal_timeseries
+        active_power_nominal_timeseries,
+        reactive_power_nominal_timeseries
     )
 end
 
 "Flexible load model object."
-struct FlexibleLoadModel
-    load_active_power_nominal_timeseries::TimeSeries.TimeArray
-    load_reactive_power_nominal_timeseries::TimeSeries.TimeArray
+struct FlexibleLoadModel <: DERModel
+    active_power_nominal_timeseries::TimeSeries.TimeArray
+    reactive_power_nominal_timeseries::TimeSeries.TimeArray
 end
 
 "Construct flexible load model object by flexible load data and load name."
@@ -99,14 +102,14 @@ function FlexibleLoadModel(
     )
 
     # Construct active and reactive power timeseries.
-    load_active_power_nominal_timeseries = (
+    active_power_nominal_timeseries = (
         flexible_load_data.flexible_load_timeseries_dict[
             flexible_load_data.flexible_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
         .* flexible_load_data.flexible_loads[:scaling_factor][load_index][1]
         .* flexible_load_data.flexible_loads[:active_power][load_index][1]
     )
-    load_reactive_power_nominal_timeseries = (
+    reactive_power_nominal_timeseries = (
         flexible_load_data.flexible_load_timeseries_dict[
             flexible_load_data.flexible_loads[:timeseries_name][load_index][1]
         ][:apparent_power_per_unit]
@@ -115,8 +118,8 @@ function FlexibleLoadModel(
     )
 
     FlexibleLoadModel(
-        load_active_power_nominal_timeseries,
-        load_reactive_power_nominal_timeseries
+        active_power_nominal_timeseries,
+        reactive_power_nominal_timeseries
     )
 end
 

@@ -13,9 +13,7 @@
 ```@autodocs
     Modules = [
         FLEDGE.DatabaseInterface,
-        FLEDGE.FixedLoadModels,
-        FLEDGE.FlexibleLoadModels,
-        FLEDGE.EVChargerModels,
+        FLEDGE.DERModels,
         FLEDGE.ElectricGridModels,
         FLEDGE.PowerFlowSolvers,
         FLEDGE.OptimizationSolvers,

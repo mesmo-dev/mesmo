@@ -605,27 +605,27 @@ function ElectricGridModel(
 
     # Define transformer factor matrices according to:
     # https://doi.org/10.1109/TPWRS.2017.2728618
-        transformer_factors_1 = [
-            1 0 0;
-            0 1 0;
-            0 0 1
+    transformer_factors_1 = [
+        1 0 0;
+        0 1 0;
+        0 0 1
+    ]
+    transformer_factors_2 = (
+        1 / 3
+        * [
+            2 -1 -1;
+            -1 2 -1;
+            -1 -1 2
         ]
-        transformer_factors_2 = (
-            1 / 3
-            * [
-                2 -1 -1;
-                -1 2 -1;
-                -1 -1 2
-            ]
-        )
-        transformer_factors_3 = (
-            1 / sqrt(3)
-            * [
-                -1 1 0;
-                0 -1 1;
-                1 0 -1
-            ]
-        )
+    )
+    transformer_factors_3 = (
+        1 / sqrt(3)
+        * [
+            -1 1 0;
+            0 -1 1;
+            1 0 -1
+        ]
+    )
 
     # Add transformers to admittance matrix.
     for transformer in eachrow(

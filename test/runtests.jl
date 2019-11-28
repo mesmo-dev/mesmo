@@ -18,6 +18,7 @@ test_scenario_name = "singapore_6node"
 
 # Create test logger and set logging level.
 test_logger = Memento.getlogger("FLEDGE tests")
+Memento.config!("debug")
 Memento.setlevel!(test_logger, "debug")
 
 # Define plotting backend and default settings.

@@ -10,13 +10,18 @@ const _config = Dict([
     "logger_level" => "debug" # Levels: debug, info, notice, warn, error.
 ])
 
-# Create module level logger.
+# Create module logger.
 const _logger = Memento.getlogger(@__MODULE__)
+# Set root logger level to enable receiving all messages from module logger.
+Memento.config!(_config["logger_level"])
+# Set module logger level.
 Memento.setlevel!(_logger, _config["logger_level"])
-Memento.info(
+Memento.debug(
     _logger,
-    "Created logger with logging level: $(_config["logger_level"])"
+    "Created logger with level \"$(_config["logger_level"])\"."
 )
+# TODO: Revise logger configuration to follow recommendations from:
+# <https://github.com/invenia/Memento.jl/issues/69>
 
 # Set logger to be available for configuration at runtime,
 # which is important for modifying the logging level during runtime.

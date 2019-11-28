@@ -205,14 +205,20 @@ function GenericFlexibleLoadModel(
 
     # Construct output constraint timeseries.
     output_maximum_timeseries = (
-        flexible_load_data.flexible_loads[:power_decrease_percentage_maximum][1]
+        (
+            1.0
+            - flexible_load_data.flexible_loads[:power_decrease_percentage_maximum][1]
+        )
         .* TimeSeries.merge(
             active_power_nominal_timeseries,
             reactive_power_nominal_timeseries
         )
     )
     output_minimum_timeseries = (
-        flexible_load_data.flexible_loads[:power_increase_percentage_maximum][1]
+        (
+            1.0
+            + flexible_load_data.flexible_loads[:power_increase_percentage_maximum][1]
+        )
         .* TimeSeries.merge(
             active_power_nominal_timeseries,
             reactive_power_nominal_timeseries

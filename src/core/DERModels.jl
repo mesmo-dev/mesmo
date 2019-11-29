@@ -201,7 +201,17 @@ function GenericFlexibleLoadModel(
     )
 
     # Instantiate disturbance timeseries.
-    disturbance_timeseries = 0.0 .* active_power_nominal_timeseries
+    disturbance_timeseries = (
+        TimeSeries.TimeArray(
+            TimeSeries.timestamp(active_power_nominal_timeseries),
+            Matrix{Float64}(
+                undef,
+                length(TimeSeries.timestamp(active_power_nominal_timeseries)),
+                length(index_disturbances)
+            ),
+            Symbol.(index_disturbances)
+        )
+    )
 
     # Construct output constraint timeseries.
     output_maximum_timeseries = (

@@ -1,6 +1,7 @@
 # Utility functions for tests.
 
 import Base
+import Logging
 import Printf
 
 function time_string_print(elapsedtime, bytes=0, gctime=0, allocs=0)
@@ -43,8 +44,7 @@ macro time_log(note_string, ex)
             time_string_print(elapsedtime, bytes, gctime,
             Base.gc_alloc_count(allocs))
         )
-        Memento.notice(
-            test_logger,
+        Logging.@info(
             $(esc(note_string)) * " | " * lstrip(time_string)
         )
         val

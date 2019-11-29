@@ -148,8 +148,7 @@ function check_solution_conditions(
     # and power vectors are not valid. This suggests an error in the
     # problem setup and hence triggers a warning.
     if !condition_initial
-        Memento.warn(
-            _logger,
+        Logging.@warn(
             "Fixed point solution condition is not satisfied for the"
             * " provided initial point."
         )
@@ -264,8 +263,7 @@ function get_voltage_fixed_point(
         # Reaching the iteration limit is considered undesired and therefore
         # triggers a warning.
         if power_candidate_iteration == power_candidate_iteration_limit
-            Memento.warn(
-                _logger,
+            Logging.@warn(
                 "Power vector candidate selection algorithm reached maximum"
                 * " limit of $power_candidate_iteration_limit iterations."
             )
@@ -343,8 +341,7 @@ function get_voltage_fixed_point(
         # Reaching the iteration limit is considered undesired and therefore
         # triggers a warning.
         if voltage_iteration == voltage_iteration_limit
-            Memento.warn(
-                _logger,
+            Logging.@warn(
                 "Fixed point voltage solution algorithm reached maximum"
                 * " limit of $voltage_iteration_limit iterations."
             )
@@ -354,8 +351,7 @@ function get_voltage_fixed_point(
     # Reaching the iteration limit is considered undesired and therefore
     # triggers a warning.
     if outer_iteration == outer_iteration_limit
-        Memento.warn(
-            _logger,
+        Logging.@warn(
             "'Get voltage vector' solution algorithm reached maximum"
             * " limit of $outer_iteration_limit iterations."
         )

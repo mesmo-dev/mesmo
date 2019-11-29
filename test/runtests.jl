@@ -1,10 +1,12 @@
 # FLEDGE tests.
 
+# Enable debug message logging for FLEDGE.
+ENV["JULIA_DEBUG"] = "FLEDGE"
+
 import FLEDGE
 
 import CSV
 import DataFrames
-import Memento
 import OpenDSSDirect
 import Plots
 import Plotly
@@ -12,21 +14,14 @@ import SQLite
 import SparseArrays
 import Test
 
-# Test data directory path and default test scenario.
+# Settings.
 test_data_path = joinpath(@__DIR__, "data")
 test_scenario_name = "singapore_6node"
-
-# Create test logger and set logging level.
-test_logger = Memento.getlogger("FLEDGE tests")
-Memento.config!("debug")
-Memento.setlevel!(test_logger, "debug")
-
-# Define plotting backend and default settings.
-Plots.plotly()
+Plots.plotly()  # Select plotting backend.
 Plots.default(size=(750, 500))
 test_plots = false # If true, tests may produce plots.
 
-# Utility functions for tests.
+# Load utility functions for tests.
 include("utils.jl")
 
 Test.@testset "FLEDGE tests" begin

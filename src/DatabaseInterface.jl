@@ -24,8 +24,7 @@ function connect_database(;
         || !isfile(database_path)
     )
         # Debugging output.
-        Memento.info(
-            _logger,
+        Logging.@info(
             "Creating / overwriting SQLITE file at `$database_path`."
         )
 
@@ -82,7 +81,7 @@ function create_database(
     # Import CSV files into database.
     for file_name in readdir(csv_path)
         if endswith(file_name, ".csv")
-            Memento.info(_logger, "Loading $file_name into database.")
+            Logging.@debug("Loading $file_name into database.")
             SQLite.load!(
                 CSV.read(
                     joinpath(csv_path, file_name);

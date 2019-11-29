@@ -414,26 +414,29 @@ Test.@testset "Electric grid model tests" begin
         
         # TODO: Validate total_loss_active_error against MATLAB implementation.
         # TODO: Validate total_loss_reactive_error against MATLAB implementation.
-        display(DataFrames.DataFrame(
-            [
-                power_multipliers,
-                nodal_voltage_vector_error,
-                nodal_voltage_vector_magnitude_error,
-                branch_power_vector_1_squared_error,
-                branch_power_vector_2_squared_error,
-                total_loss_active_error,
-                total_loss_reactive_error
-            ],
-            [
-                :power_multipliers,
-                :nodal_voltage_vector_error,
-                :nodal_voltage_vector_magnitude_error,
-                :branch_power_vector_1_squared_error,
-                :branch_power_vector_2_squared_error,
-                :total_loss_active_error,
-                :total_loss_reactive_error
-            ]
-        ))
+        @Logging.info(
+            "Linear electric grid model error:",
+            linear_electric_grid_model_error = DataFrames.DataFrame(
+                [
+                    power_multipliers,
+                    nodal_voltage_vector_error,
+                    nodal_voltage_vector_magnitude_error,
+                    branch_power_vector_1_squared_error,
+                    branch_power_vector_2_squared_error,
+                    total_loss_active_error,
+                    total_loss_reactive_error
+                ],
+                [
+                    :power_multipliers,
+                    :nodal_voltage_vector_error,
+                    :nodal_voltage_vector_magnitude_error,
+                    :branch_power_vector_1_squared_error,
+                    :branch_power_vector_2_squared_error,
+                    :total_loss_active_error,
+                    :total_loss_reactive_error
+                ]
+            )
+        )
 
         # Evaluate test.
         Test.@test actual == expected

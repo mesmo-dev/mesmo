@@ -43,7 +43,7 @@ Every time the `master` branch changes, a new version number is defined accordin
     - In Python, docstrings follow [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html).
 - Exceptions / errors / warnings / debug info:
     - Use proper logging tools instead of `print("Error: ...")`.
-    - In Julia, use [Memento](https://github.com/invenia/Memento.jl) like `Memento.error(_logger, "...")` or `Memento.warn(_logger, "...")` or `Memento.info(_logger, "...")`.
+    - In Julia, use [Logging](https://docs.julialang.org/en/v1/stdlib/Logging/) like `Logging.@error("...")` or `Logging.@warn("...")` or `Logging.@info("...")` or `Logging.@debug("...")`.
     - In Python, use [logging](https://docs.python.org/3.6/library/logging.html) like `logger.error("...")` or `logger.warning("...")` or `logger.debug("...")`.
 - Line length:
     - In Julia, line lengths should not exceed 80 characters.

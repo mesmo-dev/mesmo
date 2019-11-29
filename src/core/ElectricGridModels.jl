@@ -798,8 +798,7 @@ function ElectricGridModel(
                 * transformer_factors_2
             )
         else
-            Memento.error(
-                _logger,
+            Logging.@error(
                 "Unknown transformer type: " * "$type"
             )
         end
@@ -966,8 +965,7 @@ function ElectricGridModel(
             elseif phases == [1, 3]
                 node_index = [node_index[2]]
             else
-                Memento.error(
-                    _logger,
+                Logging.@error(
                     "Unknown delta load phase arrangement: " * "$phases"
                 )
             end
@@ -982,8 +980,7 @@ function ElectricGridModel(
                 load_index
             )
         else
-            Memento.error(
-                _logger,
+            Logging.@error(
                 "Unknown load connection type: " * "$connection"
             )
         end
@@ -1915,8 +1912,7 @@ function initialize_open_dss_model(
                     )
                     # Remove leading ".0"
                     node_phases_string = node_phases_string[3:end]
-                    Memento.warn(
-                        _logger,
+                    Logging.@warn(
                         "No ground connection possible for delta-connected"
                         * " transformer $(transformer[:transformer_name])."
                     )

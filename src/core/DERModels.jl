@@ -174,39 +174,39 @@ function GenericFlexibleLoadModel(
 
     # Instantiate state space matrices.
     state_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(state_names),
             length(state_names)
         )
     )
     state_matrix[1, 1] = 1.0
     control_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(state_names),
             length(control_names)
         )
     )
     control_matrix[1, 1] = 1.0
     disturbance_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(state_names),
             length(disturbance_names)
         )
     )
     state_output_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(output_names),
             length(state_names)
         )
     )
     state_output_matrix[1, 1] = 1.0
     control_output_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(output_names),
             length(control_names)
         )
@@ -214,8 +214,8 @@ function GenericFlexibleLoadModel(
     control_output_matrix[2, 1] = 1.0
     control_output_matrix[3, 2] = 1.0
     disturbance_output_matrix = (
-        Matrix{Float64}(
-            undef,
+        zeros(
+            Float64,
             length(output_names),
             length(disturbance_names)
         )
@@ -225,8 +225,8 @@ function GenericFlexibleLoadModel(
     disturbance_timeseries = (
         TimeSeries.TimeArray(
             TimeSeries.timestamp(active_power_nominal_timeseries),
-            Matrix{Float64}(
-                undef,
+            zeros(
+                Float64,
                 length(TimeSeries.timestamp(active_power_nominal_timeseries)),
                 length(disturbance_names)
             ),

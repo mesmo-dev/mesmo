@@ -22,26 +22,28 @@ function FixedLoadModel(
     fixed_load_data::FLEDGE.DatabaseInterface.FixedLoadData,
     load_name::String
 )
-    # Get load index by `load_name`.
-    load_index = (
-        load_name .== fixed_load_data.fixed_loads[:load_name]
+    # Get fixed load data by `load_name`.
+    fixed_load = (
+        fixed_load_data.fixed_loads[
+            load_name .== fixed_load_data.fixed_loads[:load_name]
+        , :]
     )
 
     # Construct active and reactive power timeseries.
     active_power_nominal_timeseries = (
         fixed_load_data.fixed_load_timeseries_dict[
-            fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
+            fixed_load[1, :timeseries_name]
         ][:apparent_power_per_unit]
-        .* fixed_load_data.fixed_loads[:scaling_factor][load_index][1]
-        .* fixed_load_data.fixed_loads[:active_power][load_index][1]
+        .* fixed_load[1, :scaling_factor]
+        .* fixed_load[1, :active_power]
         .* -1.0 # Load / demand is negative.
     )
     reactive_power_nominal_timeseries = (
         fixed_load_data.fixed_load_timeseries_dict[
-            fixed_load_data.fixed_loads[:timeseries_name][load_index][1]
+            fixed_load[1, :timeseries_name]
         ][:apparent_power_per_unit]
-        .* fixed_load_data.fixed_loads[:scaling_factor][load_index][1]
-        .* fixed_load_data.fixed_loads[:reactive_power][load_index][1]
+        .* fixed_load[1, :scaling_factor]
+        .* fixed_load[1, :reactive_power]
         .* -1.0 # Load / demand is negative.
     )
 
@@ -62,26 +64,28 @@ function EVChargerModel(
     ev_charger_data::FLEDGE.DatabaseInterface.EVChargerData,
     load_name::String
 )
-    # Get load index by `load_name`.
-    load_index = (
-        load_name .== ev_charger_data.ev_chargers[:load_name]
+    # Get EV charger data by `load_name`.
+    ev_charger = (
+        ev_charger_data.ev_chargers[
+            load_name .== ev_charger_data.ev_chargers[:load_name]
+        , :]
     )
 
     # Construct active and reactive power timeseries.
     active_power_nominal_timeseries = (
         ev_charger_data.ev_charger_timeseries_dict[
-            ev_charger_data.ev_chargers[:timeseries_name][load_index][1]
+            ev_charger[1, :timeseries_name]
         ][:apparent_power_per_unit]
-        .* ev_charger_data.ev_chargers[:scaling_factor][load_index][1]
-        .* ev_charger_data.ev_chargers[:active_power][load_index][1]
+        .* ev_charger[1, :scaling_factor]
+        .* ev_charger[1, :active_power]
         .* -1.0 # Load / demand is negative.
     )
     reactive_power_nominal_timeseries = (
         ev_charger_data.ev_charger_timeseries_dict[
-            ev_charger_data.ev_chargers[:timeseries_name][load_index][1]
+            ev_charger[1, :timeseries_name]
         ][:apparent_power_per_unit]
-        .* ev_charger_data.ev_chargers[:scaling_factor][load_index][1]
-        .* ev_charger_data.ev_chargers[:reactive_power][load_index][1]
+        .* ev_charger[1, :scaling_factor]
+        .* ev_charger[1, :reactive_power]
         .* -1.0 # Load / demand is negative.
     )
 
@@ -98,10 +102,10 @@ abstract type FlexibleLoadModel <: DERModel end
 struct GenericFlexibleLoadModel <: FlexibleLoadModel
     active_power_nominal_timeseries::TimeSeries.TimeArray
     reactive_power_nominal_timeseries::TimeSeries.TimeArray
-    index_states::Vector{String}
-    index_controls::Vector{String}
-    index_disturbances::Vector{String}
-    index_outputs::Vector{String}
+    state_names::Vector{String}
+    control_names::Vector{String}
+    disturbance_names::Vector{String}
+    output_names::Vector{String}
     state_matrix::Matrix{Float64}
     control_matrix::Matrix{Float64}
     disturbance_matrix::Matrix{Float64}
@@ -118,26 +122,28 @@ function GenericFlexibleLoadModel(
     flexible_load_data::FLEDGE.DatabaseInterface.FlexibleLoadData,
     load_name::String
 )
-    # Get load index by `load_name`.
-    load_index = (
-        load_name .== flexible_load_data.flexible_loads[:load_name]
+    # Get flexible load data by `load_name`.
+    flexible_load = (
+        flexible_load_data.flexible_loads[
+            load_name .== flexible_load_data.flexible_loads[:load_name]
+        , :]
     )
 
     # Construct nominal active and reactive power timeseries.
     active_power_nominal_timeseries = (
         flexible_load_data.flexible_load_timeseries_dict[
-            flexible_load_data.flexible_loads[:timeseries_name][load_index][1]
-        ][:apparent_power_per_unit]
-        .* flexible_load_data.flexible_loads[:scaling_factor][load_index][1]
-        .* flexible_load_data.flexible_loads[:active_power][load_index][1]
+            flexible_load[1, :timeseries_name]
+        ][:, :apparent_power_per_unit]
+        .* flexible_load[1, :scaling_factor]
+        .* flexible_load[1, :active_power]
         .* -1.0 # Load / demand is negative.
     )
     reactive_power_nominal_timeseries = (
         flexible_load_data.flexible_load_timeseries_dict[
-            flexible_load_data.flexible_loads[:timeseries_name][load_index][1]
-        ][:apparent_power_per_unit]
-        .* flexible_load_data.flexible_loads[:scaling_factor][load_index][1]
-        .* flexible_load_data.flexible_loads[:reactive_power][load_index][1]
+            flexible_load[1, :timeseries_name]
+        ][:, :apparent_power_per_unit]
+        .* flexible_load[1, :scaling_factor]
+        .* flexible_load[1, :reactive_power]
         .* -1.0 # Load / demand is negative.
     )
     # Update column names for use when merging multiple timeseries.
@@ -151,52 +157,52 @@ function GenericFlexibleLoadModel(
     )
 
     # Instantiate index vectors.
-    index_states = Vector{String}()
-    index_controls = ["active_power", "reactive_power"]
-    index_disturbances = Vector{String}()
-    index_outputs = ["active_power", "reactive_power"]
+    state_names = Vector{String}()
+    control_names = ["active_power", "reactive_power"]
+    disturbance_names = Vector{String}()
+    output_names = ["active_power", "reactive_power"]
 
     # Instantiate state space matrices.
     state_matrix = (
         Matrix{Float64}(
             undef,
-            length(index_states),
-            length(index_states)
+            length(state_names),
+            length(state_names)
         )
     )
     control_matrix = (
         Matrix{Float64}(
             undef,
-            length(index_states),
-            length(index_controls)
+            length(state_names),
+            length(control_names)
         )
     )
     disturbance_matrix = (
         Matrix{Float64}(
             undef,
-            length(index_states),
-            length(index_disturbances)
+            length(state_names),
+            length(disturbance_names)
         )
     )
     state_output_matrix = (
         Matrix{Float64}(
             undef,
-            length(index_outputs),
-            length(index_states)
+            length(output_names),
+            length(state_names)
         )
     )
     control_output_matrix = (
         Matrix{Float64}(
             LinearAlgebra.I,
-            length(index_outputs),
-            length(index_controls)
+            length(output_names),
+            length(control_names)
         )
     )
     disturbance_output_matrix = (
         Matrix{Float64}(
             undef,
-            length(index_outputs),
-            length(index_disturbances)
+            length(output_names),
+            length(disturbance_names)
         )
     )
 
@@ -207,9 +213,9 @@ function GenericFlexibleLoadModel(
             Matrix{Float64}(
                 undef,
                 length(TimeSeries.timestamp(active_power_nominal_timeseries)),
-                length(index_disturbances)
+                length(disturbance_names)
             ),
-            Symbol.(index_disturbances)
+            Symbol.(disturbance_names)
         )
     )
 
@@ -217,7 +223,7 @@ function GenericFlexibleLoadModel(
     output_maximum_timeseries = (
         (
             1.0
-            - flexible_load_data.flexible_loads[:power_decrease_percentage_maximum][1]
+            - flexible_load[1, :power_decrease_percentage_maximum][1]
         )
         .* TimeSeries.merge(
             active_power_nominal_timeseries,
@@ -227,7 +233,7 @@ function GenericFlexibleLoadModel(
     output_minimum_timeseries = (
         (
             1.0
-            + flexible_load_data.flexible_loads[:power_increase_percentage_maximum][1]
+            + flexible_load[1, :power_increase_percentage_maximum][1]
         )
         .* TimeSeries.merge(
             active_power_nominal_timeseries,
@@ -238,10 +244,10 @@ function GenericFlexibleLoadModel(
     GenericFlexibleLoadModel(
         active_power_nominal_timeseries,
         reactive_power_nominal_timeseries,
-        index_states,
-        index_controls,
-        index_disturbances,
-        index_outputs,
+        state_names,
+        control_names,
+        disturbance_names,
+        output_names,
         state_matrix,
         control_matrix,
         disturbance_matrix,

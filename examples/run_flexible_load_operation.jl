@@ -33,21 +33,21 @@ optimization_problem = (
 JuMP.@variable(
     optimization_problem,
     state_vector[
-        flexible_load_model.index_states,
+        flexible_load_model.state_names,
         timestep_data.timestep_vector
     ]
 )
 JuMP.@variable(
     optimization_problem,
     control_vector[
-        flexible_load_model.index_controls,
+        flexible_load_model.control_names,
         timestep_data.timestep_vector
     ]
 )
 JuMP.@variable(
     optimization_problem,
     output_vector[
-        flexible_load_model.index_outputs,
+        flexible_load_model.output_names,
         timestep_data.timestep_vector
     ]
 )

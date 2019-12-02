@@ -34,28 +34,28 @@ JuMP.@variable(
     optimization_problem,
     state_vector[
         flexible_load_model.state_names,
-        timestep_data.timestep_vector
+        timestep_data.timesteps
     ]
 )
 JuMP.@variable(
     optimization_problem,
     control_vector[
         flexible_load_model.control_names,
-        timestep_data.timestep_vector
+        timestep_data.timesteps
     ]
 )
 JuMP.@variable(
     optimization_problem,
     output_vector[
         flexible_load_model.output_names,
-        timestep_data.timestep_vector
+        timestep_data.timesteps
     ]
 )
 
 # Define constraints.
 JuMP.@constraint(
     optimization_problem,
-    state_equation[timestep = timestep_data.timestep_vector[1:end-1]],
+    state_equation[timestep = timestep_data.timesteps[1:end-1]],
     state_vector[:, timestep + timestep_data.timestep_interval_seconds].data .== (
         flexible_load_model.state_matrix
         * state_vector[:, timestep].data
@@ -67,7 +67,7 @@ JuMP.@constraint(
 )
 JuMP.@constraint(
     optimization_problem,
-    output_equation[timestep = timestep_data.timestep_vector],
+    output_equation[timestep = timestep_data.timesteps],
     output_vector[:, timestep].data .== (
         flexible_load_model.state_output_matrix
         * state_vector[:, timestep].data
@@ -79,14 +79,14 @@ JuMP.@constraint(
 )
 JuMP.@constraint(
     optimization_problem,
-    output_minimum[timestep = timestep_data.timestep_vector],
+    output_minimum[timestep = timestep_data.timesteps],
     output_vector[:, timestep].data .>= (
         transpose(values(flexible_load_model.output_minimum_timeseries[timestep]))
     )
 )
 JuMP.@constraint(
     optimization_problem,
-    output_maximum[timestep = timestep_data.timestep_vector],
+    output_maximum[timestep = timestep_data.timesteps],
     output_vector[:, timestep].data .<= (
         transpose(values(flexible_load_model.output_maximum_timeseries[timestep]))
     )

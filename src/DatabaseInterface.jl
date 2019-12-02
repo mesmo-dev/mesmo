@@ -35,12 +35,7 @@ function connect_database(;
     return database_connection
 end
 
-"""
-Create or overwrite SQLITE database from SQL schema file and CSV files.
-
-- TODO: Investigate database locking behavior.
-- TODO: Check behaviour with redundant values in CSV.
-"""
+"Create or overwrite SQLITE database from SQL schema file and CSV files."
 function create_database(
     database_path;
     database_schema_path=(
@@ -79,6 +74,7 @@ function create_database(
     end
 
     # Import CSV files into database.
+    # TODO: Check behaviour with redundant values in CSV.
     for file_name in readdir(csv_path)
         if endswith(file_name, ".csv")
             Logging.@debug("Loading $file_name into database.")
@@ -100,7 +96,7 @@ struct TimestepData
     timestep_end::Dates.DateTime
     timestep_interval_seconds::Dates.Second
     timestep_count::Int
-    timestep_vector::Array{Dates.DateTime,1}
+    timesteps::Vector{Dates.DateTime}
 end
 
 "Load timestep data and generate timestep vector for given `scenario_name`."
@@ -132,18 +128,18 @@ function TimestepData(scenario_name::String)
     )
 
     # Construct vector of timesteps for the scenario.
-    timestep_vector = (
+    timesteps = (
         Array(timestep_start:timestep_interval_seconds:timestep_end)
     )
 
-    timestep_count = length(timestep_vector)
+    timestep_count = length(timesteps)
 
     TimestepData(
         timestep_start,
         timestep_end,
         timestep_interval_seconds,
         timestep_count,
-        timestep_vector
+        timesteps
     )
 end
 
@@ -327,7 +323,7 @@ end
 "Fixed load data object."
 struct FixedLoadData
     fixed_loads::DataFrames.DataFrame
-    fixed_load_timeseries_dict::Dict{String,TimeSeries.TimeArray}
+    fixed_load_timeseries_dict::Dict{String, TimeSeries.TimeArray}
 end
 
 "Load fixed load data from database for given `scenario_name`."
@@ -417,7 +413,7 @@ end
 "EV charger data object."
 struct EVChargerData
     ev_chargers::DataFrames.DataFrame
-    ev_charger_timeseries_dict::Dict{String,TimeSeries.TimeArray}
+    ev_charger_timeseries_dict::Dict{String, TimeSeries.TimeArray}
 end
 
 "Load EV charger data from database for given `scenario_name`."
@@ -507,10 +503,10 @@ end
 "Flexible load data object."
 struct FlexibleLoadData
     flexible_loads::DataFrames.DataFrame
-    flexible_load_timeseries_dict::Dict{String,TimeSeries.TimeArray}
+    flexible_load_timeseries_dict::Dict{String, TimeSeries.TimeArray}
 end
 
-"Flexible load data from database for given `scenario_name`."
+"Load flexible load data from database for given `scenario_name`."
 function FlexibleLoadData(scenario_name::String)
     database_connection = DatabaseInterface.connect_database()
 

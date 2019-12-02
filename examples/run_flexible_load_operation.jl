@@ -5,9 +5,14 @@ import FLEDGE
 import GLPK
 import JuMP
 import Logging
+import PlotlyJS
+import Plots
+import TimeSeries
 
 # Settings.
 scenario_name = "singapore_6node"
+Plots.plotlyjs()  # Select plotting backend.
+Plots.default(size=(750, 500))
 
 # Get data.
 timestep_data = FLEDGE.get_timestep_data(scenario_name)
@@ -113,3 +118,17 @@ JuMP.optimize!(optimization_problem)
 # Get results.
 optimization_termination_status = JuMP.termination_status(optimization_problem)
 Logging.@info("", optimization_termination_status)
+
+# Plot results.
+display(Plots.plot(
+    price_data.price_timeseries_dict[price_name][:price_value],
+    line = :steppost
+))
+display(Plots.plot(
+    TimeSeries.TimeArray(
+        timestep_data.timesteps,
+        transpose(JuMP.value.(output_vector.data)),
+        Symbol.(flexible_load_model.output_names)
+    ),
+    line = :steppost
+))

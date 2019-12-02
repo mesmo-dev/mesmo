@@ -57,6 +57,12 @@ JuMP.@variable(
 )
 
 # Define constraints.
+# TODO: Define initial state in model.
+JuMP.@constraint(
+    optimization_problem,
+    state_initial,
+    state_vector[:, timestep_data.timesteps[1]].data .== 0.0
+)
 JuMP.@constraint(
     optimization_problem,
     state_equation[timestep = timestep_data.timesteps[1:end-1]],
@@ -105,9 +111,10 @@ JuMP.@objective(
         (
             -1.0
             * values(price_data.price_timeseries_dict[price_name][:price_value][timestep])
-            .* output_vector[:, timestep].data
+            .* output_vector[output_name, timestep]
         )
         for timestep = timestep_data.timesteps
+        for output_name = ["active_power", "reactive_power"]
     ]))
 )
 
@@ -118,17 +125,55 @@ JuMP.optimize!(optimization_problem)
 # Get results.
 optimization_termination_status = JuMP.termination_status(optimization_problem)
 Logging.@info("", optimization_termination_status)
-
-# Plot results.
-display(Plots.plot(
-    price_data.price_timeseries_dict[price_name][:price_value],
-    line = :steppost
-))
-display(Plots.plot(
+output_vector_timeseries = (
     TimeSeries.TimeArray(
         timestep_data.timesteps,
         transpose(JuMP.value.(output_vector.data)),
         Symbol.(flexible_load_model.output_names)
+    )
+)
+
+# Plot results.
+Plots.plot(
+    TimeSeries.rename(
+        flexible_load_model.output_maximum_timeseries[[:accumulated_energy]],
+        :accumulated_energy_maximum
     ),
+    line = :steppost,
+)
+Plots.plot!(
+    TimeSeries.rename(
+        flexible_load_model.output_minimum_timeseries[[:accumulated_energy]],
+        :accumulated_energy_minimum
+    ),
+    line = :steppost,
+)
+Plots.plot!(
+    output_vector_timeseries[[:accumulated_energy]],
     line = :steppost
-))
+)
+Plots.gui()
+Plots.plot(
+    TimeSeries.rename(
+        flexible_load_model.output_maximum_timeseries[[:active_power]],
+        :active_power_maximum
+    ),
+    line = :steppost,
+)
+Plots.plot!(
+    TimeSeries.rename(
+        flexible_load_model.output_minimum_timeseries[[:active_power]],
+        :active_power_minimum
+    ),
+    line = :steppost,
+)
+Plots.plot!(
+    output_vector_timeseries[[:active_power]],
+    line = :steppost
+)
+Plots.gui()
+Plots.plot(
+    price_data.price_timeseries_dict[price_name][:price_value],
+    line = :steppost
+)
+Plots.gui()

@@ -1,6 +1,8 @@
 "Distributed energy resource (DER) models."
 module DERModels
 
+# TODO: Fix apparent power to active/reactive power ratio.
+
 include("../config.jl")
 import ..FLEDGE
 
@@ -156,11 +158,19 @@ function GenericFlexibleLoadModel(
         :reactive_power
     )
 
+    # Calculate nominal accumulated energy timeseries.
+    accumulated_energy_nominal_timeseries = (
+        TimeSeries.rename(
+            TimeSeries.cumsum(active_power_nominal_timeseries, dims=1),
+            :accumulated_energy
+        )
+    )
+
     # Instantiate index vectors.
-    state_names = Vector{String}()
+    state_names = ["accumulated_energy"]
     control_names = ["active_power", "reactive_power"]
     disturbance_names = Vector{String}()
-    output_names = ["active_power", "reactive_power"]
+    output_names = ["accumulated_energy", "active_power", "reactive_power"]
 
     # Instantiate state space matrices.
     state_matrix = (
@@ -170,6 +180,7 @@ function GenericFlexibleLoadModel(
             length(state_names)
         )
     )
+    state_matrix[1, 1] = 1.0
     control_matrix = (
         Matrix{Float64}(
             undef,
@@ -177,6 +188,7 @@ function GenericFlexibleLoadModel(
             length(control_names)
         )
     )
+    control_matrix[1, 1] = 1.0
     disturbance_matrix = (
         Matrix{Float64}(
             undef,
@@ -191,13 +203,16 @@ function GenericFlexibleLoadModel(
             length(state_names)
         )
     )
+    state_output_matrix[1, 1] = 1.0
     control_output_matrix = (
         Matrix{Float64}(
-            LinearAlgebra.I,
+            undef,
             length(output_names),
             length(control_names)
         )
     )
+    control_output_matrix[2, 1] = 1.0
+    control_output_matrix[3, 2] = 1.0
     disturbance_output_matrix = (
         Matrix{Float64}(
             undef,
@@ -219,25 +234,37 @@ function GenericFlexibleLoadModel(
         )
     )
 
-    # Construct output constraint timeseries.
+    # Construct output constraint timeseries
+    # TODO: Fix issue with accumulated energy constraint.
     output_maximum_timeseries = (
-        (
-            1.0
-            - flexible_load[1, :power_decrease_percentage_maximum][1]
-        )
-        .* TimeSeries.merge(
-            active_power_nominal_timeseries,
-            reactive_power_nominal_timeseries
+        TimeSeries.merge(
+            (
+                accumulated_energy_nominal_timeseries .* 0.0
+            ),
+            (
+                (1.0 - flexible_load[1, :power_decrease_percentage_maximum])
+                .* active_power_nominal_timeseries
+            ),
+            (
+                (1.0 - flexible_load[1, :power_decrease_percentage_maximum])
+                .* reactive_power_nominal_timeseries
+            )
         )
     )
     output_minimum_timeseries = (
-        (
-            1.0
-            + flexible_load[1, :power_increase_percentage_maximum][1]
-        )
-        .* TimeSeries.merge(
-            active_power_nominal_timeseries,
-            reactive_power_nominal_timeseries
+        TimeSeries.merge(
+            (
+                (accumulated_energy_nominal_timeseries .* 0.0)
+                .+ values(accumulated_energy_nominal_timeseries[:accumulated_energy][end])
+            ),
+            (
+                (1.0 + flexible_load[1, :power_increase_percentage_maximum])
+                .* active_power_nominal_timeseries
+            ),
+            (
+                (1.0 + flexible_load[1, :power_increase_percentage_maximum])
+                .* reactive_power_nominal_timeseries
+            )
         )
     )
 

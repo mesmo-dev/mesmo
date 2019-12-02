@@ -11,18 +11,17 @@ scenario_name = "singapore_6node"
 
 # Get data.
 timestep_data = FLEDGE.get_timestep_data(scenario_name)
-Logging.@info("", timestep_data)
 flexible_load_data = FLEDGE.get_flexible_load_data(scenario_name)
+price_data = FLEDGE.get_price_data(scenario_name)
 
 # Get model.
-load_name = flexible_load_data.flexible_loads[:load_name][1] # Take first load.
+load_name = flexible_load_data.flexible_loads[1, :load_name] # Take first load.
 flexible_load_model = (
     FLEDGE.DERModels.GenericFlexibleLoadModel(
         flexible_load_data,
         load_name
     )
 )
-Logging.@info("", flexible_load_model)
 
 # Instantiate optimization problem.
 optimization_problem = (
@@ -93,10 +92,18 @@ JuMP.@constraint(
 )
 
 # Define objective.
+price_name = "energy"
 JuMP.@objective(
     optimization_problem,
     Min,
-    sum(sum(-1.0 .* output_vector))
+    sum(sum([
+        (
+            -1.0
+            * values(price_data.price_timeseries_dict[price_name][:price_value][timestep])
+            .* output_vector[:, timestep].data
+        )
+        for timestep = timestep_data.timesteps
+    ]))
 )
 
 # Solve problem.

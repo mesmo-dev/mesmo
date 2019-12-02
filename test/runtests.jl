@@ -8,8 +8,8 @@ import FLEDGE
 import CSV
 import DataFrames
 import OpenDSSDirect
+import PlotlyJS
 import Plots
-import Plotly
 import SQLite
 import SparseArrays
 import Test

@@ -17,7 +17,7 @@ import Test
 # Settings.
 test_data_path = joinpath(@__DIR__, "data")
 test_scenario_name = "singapore_6node"
-Plots.plotly()  # Select plotting backend.
+Plots.plotlyjs()  # Select plotting backend.
 Plots.default(size=(750, 500))
 test_plots = false # If true, tests may produce plots.
 

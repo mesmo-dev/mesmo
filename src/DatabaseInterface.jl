@@ -590,4 +590,76 @@ function FlexibleLoadData(scenario_name::String)
     )
 end
 
+"Price data object."
+struct PriceData
+    price_timeseries_dict::Dict{String, TimeSeries.TimeArray}
+end
+
+"Load price data object from database for a given `scenario_name`."
+function PriceData(scenario_name::String)
+    database_connection = DatabaseInterface.connect_database()
+
+    # Instantiate dictionary for price timeseries.
+    price_timeseries_dict = (
+        Dict(
+            key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
+            for key in (
+                DataFrames.DataFrame(
+                    SQLite.Query(
+                        database_connection,
+                        """
+                        SELECT DISTINCT price_name FROM price_timeseries
+                        """
+                    )
+                )[:price_name]
+            )
+        )
+    )
+
+    # Load timeseries for each `price_name`.
+    # TODO: Resample / interpolate timeseries depending on timestep interval.
+    for price_name in keys(price_timeseries_dict)
+        price_timeseries = (
+            DataFrames.DataFrame(
+                SQLite.Query(
+                    database_connection,
+                    """
+                    SELECT * FROM price_timeseries
+                    WHERE price_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """;
+                    values=[
+                        price_name,
+                        scenario_name,
+                        scenario_name
+                    ]
+                )
+            )
+        )
+
+        # Parse strings into `Dates.DateTime`.
+        # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
+        #   e.g., "2017-12-31T01:30:45", for this parsing to work.
+        price_timeseries[:time] = (
+            Dates.DateTime.(price_timeseries[:time])
+        )
+
+        # Convert to `TimeSeries.TimeArray` and store into dictionary.
+        price_timeseries_dict[price_name] = (
+            TimeSeries.TimeArray(price_timeseries; timestamp=:time)
+        )
+    end
+
+    PriceData(
+        price_timeseries_dict
+    )
+end
+
 end

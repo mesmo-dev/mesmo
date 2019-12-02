@@ -85,6 +85,20 @@ Test.@testset "API tests" begin
         Test.@test actual == expected
     end
 
+    Test.@testset "Get price data test" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.DatabaseInterface.PriceData
+
+        # Get actual result.
+        @time_log "Get price data test" actual = (
+            typeof(FLEDGE.API.get_price_data(test_scenario_name))
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
     Test.@testset "Get electric grid model test" begin
         # Define expected result.
         # - TODO: Replace type test with proper result check.

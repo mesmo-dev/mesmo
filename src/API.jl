@@ -51,6 +51,15 @@ function get_flexible_load_data(scenario_name::String)
     return flexible_load_data
 end
 
+"Get price data for given `scenario_name`."
+function get_price_data(scenario_name::String)
+    price_data = (
+        FLEDGE.DatabaseInterface.PriceData(scenario_name)
+    )
+
+    return price_data
+end
+
 """
 Get electric grid model.
 

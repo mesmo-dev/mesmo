@@ -159,8 +159,9 @@ function GenericFlexibleLoadModel(
     )
 
     # Calculate nominal accumulated energy timeseries.
+    # TODO: Implement interpolation in DatabaseInterface and remove `0.5 .*` here.
     accumulated_energy_nominal_timeseries = (
-        TimeSeries.rename(
+        0.5 .* TimeSeries.rename(
             TimeSeries.cumsum(active_power_nominal_timeseries, dims=1),
             :accumulated_energy
         )
@@ -235,11 +236,16 @@ function GenericFlexibleLoadModel(
     )
 
     # Construct output constraint timeseries
-    # TODO: Fix issue with accumulated energy constraint.
+    # TODO: Fix offset of accumulated energy constraints.
     output_maximum_timeseries = (
         TimeSeries.merge(
             (
-                accumulated_energy_nominal_timeseries .* 0.0
+                accumulated_energy_nominal_timeseries
+                .- values(
+                    accumulated_energy_nominal_timeseries[
+                        Int(flexible_load[1, :time_period_power_shift_maximum])
+                    ]
+                )
             ),
             (
                 (1.0 - flexible_load[1, :power_decrease_percentage_maximum])
@@ -254,8 +260,12 @@ function GenericFlexibleLoadModel(
     output_minimum_timeseries = (
         TimeSeries.merge(
             (
-                (accumulated_energy_nominal_timeseries .* 0.0)
-                .+ values(accumulated_energy_nominal_timeseries[:accumulated_energy][end])
+                accumulated_energy_nominal_timeseries
+                .+ values(
+                    accumulated_energy_nominal_timeseries[
+                        Int(flexible_load[1, :time_period_power_shift_maximum])
+                    ]
+                )
             ),
             (
                 (1.0 + flexible_load[1, :power_increase_percentage_maximum])

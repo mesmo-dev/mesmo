@@ -3,13 +3,13 @@
 ## Installation
 
 1. Check requirements:
-    - [Julia 1.1](https://julialang.org/)
+    - [Julia 1.2](https://julialang.org/downloads/oldreleases.html)
 2. Clone or download repository.
-3. In Julia, run `]activate path_to_fledge_repository; instantiate`.
+3. In Julia, run `]activate path_to_fledge_repository; instantiate; precompile`.
 
 ## Known issues
 
-- FLEDGE will fail under Julia 1.0 due to usage of `eachrow()` and `eachcol()`.
+- FLEDGE may fail under Julia 1.0 due to usage of `eachrow()` and `eachcol()`.
 
 ## Usage
 

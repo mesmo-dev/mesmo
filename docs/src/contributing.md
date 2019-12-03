@@ -5,7 +5,7 @@ Please create an [issue](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/issues) if 
 If you are keen to contribute to this project, please follow these guidelines:
 
 - Before making any change, please first discuss via issue or email with the owners of this repository.
-- Development is based on Julia 1.1 and Python 3.6.
+- Development is based on Julia 1.2 and Python 3.6.
 - Git branches follow the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/).
 - Release versioning follows the [Semantic Versioning principle](https://semver.org/).
 
@@ -26,7 +26,7 @@ Every time the `master` branch changes, a new version number is defined accordin
 
 ## Style Guide
 
-- For Julia code, follow the [Julia style guide](https://docs.julialang.org/en/v1.1/manual/style-guide/).
+- For Julia code, follow the [Julia style guide](https://docs.julialang.org/en/v1.2/manual/style-guide/).
 - For Python code, follow the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and check [this PEP8 Explainer](https://realpython.com/python-pep8/).
 - Variable / function / object / class / module names:
     - Names are verbose and avoid abbreviations.
@@ -39,7 +39,7 @@ Every time the `master` branch changes, a new version number is defined accordin
 - Docstrings / comments:
     - Docstrings should at minimum contain a short description of the function / class / module.
     - Docstrings and comments should only contain full sentences which conclude with a full stop (dot).
-    - In Julia, docstrings follow [Julia documentation style](https://docs.julialang.org/en/v1.1/manual/documentation/).
+    - In Julia, docstrings follow [Julia documentation style](https://docs.julialang.org/en/v1.2/manual/documentation/).
     - In Python, docstrings follow [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html).
 - Exceptions / errors / warnings / debug info:
     - Use proper logging tools instead of `print("Error: ...")`.

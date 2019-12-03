@@ -33,9 +33,9 @@ The preliminary documentation is located at [tumcreate-estl.github.io/FLEDGE.jl]
 ## Installation
 
 1. Check requirements:
-    - [Julia 1.1](https://julialang.org/)
+    - [Julia 1.2](https://julialang.org/downloads/oldreleases.html)
 2. Clone or download repository.
-3. In Julia, run `]activate path_to_fledge_repository; instantiate`.
+3. In Julia, run `]activate path_to_fledge_repository; instantiate; precompile`.
 
 Please also see [docs/src/intro.md](./docs/src/intro.md).
 

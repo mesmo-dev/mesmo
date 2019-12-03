@@ -7,8 +7,8 @@ import FLEDGE
 
 import CSV
 import DataFrames
+import GR
 import OpenDSSDirect
-import PlotlyJS
 import Plots
 import SQLite
 import SparseArrays
@@ -17,8 +17,7 @@ import Test
 # Settings.
 test_data_path = joinpath(@__DIR__, "data")
 test_scenario_name = "singapore_6node"
-Plots.plotlyjs()  # Select plotting backend.
-Plots.default(size=(750, 500))
+Plots.gr()  # Select plotting backend.
 test_plots = false # If true, tests may produce plots.
 
 # Load utility functions for tests.

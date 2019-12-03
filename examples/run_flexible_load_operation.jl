@@ -3,16 +3,15 @@
 import FLEDGE
 
 import GLPK
+import GR
 import JuMP
 import Logging
-import PlotlyJS
 import Plots
 import TimeSeries
 
 # Settings.
 scenario_name = "singapore_6node"
-Plots.plotlyjs()  # Select plotting backend.
-Plots.default(size=(750, 500))
+Plots.gr()  # Select plotting backend.
 
 # Get data.
 timestep_data = FLEDGE.get_timestep_data(scenario_name)
@@ -152,7 +151,7 @@ Plots.plot!(
     output_vector_timeseries[[:accumulated_energy]],
     line = :steppost
 )
-Plots.gui()
+display(Plots.plot!(legend = :outertop))
 Plots.plot(
     TimeSeries.rename(
         flexible_load_model.output_maximum_timeseries[[:active_power]],
@@ -171,9 +170,9 @@ Plots.plot!(
     output_vector_timeseries[[:active_power]],
     line = :steppost
 )
-Plots.gui()
+display(Plots.plot!(legend = :outertop))
 Plots.plot(
     price_data.price_timeseries_dict[price_name][:price_value],
     line = :steppost
 )
-Plots.gui()
+display(Plots.plot!(legend = :outertop))

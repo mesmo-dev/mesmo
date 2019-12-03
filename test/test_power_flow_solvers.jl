@@ -118,7 +118,7 @@ Test.@testset "Power flow solver tests" begin
             )
         )
         if test_plots
-            display(Plots.bar(
+            Plots.bar(
                 sort(
                     OpenDSSDirect.Circuit.AllNodeNames(),
                     lt=FLEDGE.Utils.natural_less_than
@@ -128,7 +128,8 @@ Test.@testset "Power flow solver tests" begin
                     - abs.(open_dss)
                 );
                 label="Error"
-            ))
+            )
+            display(Plots.plot!(legend = :outertop))
             Plots.scatter(
                 sort(
                     OpenDSSDirect.Circuit.AllNodeNames(),
@@ -143,7 +144,7 @@ Test.@testset "Power flow solver tests" begin
                 label="OpenDSS",
                 marker=7
             )
-            display(Plots.scatter!(
+            Plots.scatter!(
                 sort(
                     OpenDSSDirect.Circuit.AllNodeNames(),
                     lt=FLEDGE.Utils.natural_less_than
@@ -156,7 +157,8 @@ Test.@testset "Power flow solver tests" begin
                 );
                 label="Fixed point",
                 marker=4
-            ))
+            )
+            display(Plots.plot!(legend = :outertop))
         end
         actual = typeof(actual)
 

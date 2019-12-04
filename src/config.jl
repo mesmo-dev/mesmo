@@ -10,11 +10,13 @@ const _config = Dict([
 ])
 
 # Automatically add signatures before all docstrings via `DocStringExtensions`.
-DocStringExtensions.@template DEFAULT =
+DocStringExtensions.@template DEFAULT = (
+    # TODO: Use TYPEDSIGNATURES, once updating DocStringExtensions is possible.
     """
-    $(DocStringExtensions.TYPEDSIGNATURES)
+    $(DocStringExtensions.SIGNATURES)
     $(DocStringExtensions.DOCSTRING)
     """
+)
 
 # Output configuration parameters.
 if string(@__MODULE__) in ("FLEDGE", "Main.FLEDGE")

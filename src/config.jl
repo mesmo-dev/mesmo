@@ -11,9 +11,8 @@ const _config = Dict([
 
 # Automatically add signatures before all docstrings via `DocStringExtensions`.
 DocStringExtensions.@template DEFAULT = (
-    # TODO: Use TYPEDSIGNATURES, once updating DocStringExtensions is possible.
     """
-    $(DocStringExtensions.SIGNATURES)
+    $(DocStringExtensions.TYPEDSIGNATURES)
     $(DocStringExtensions.DOCSTRING)
     """
 )

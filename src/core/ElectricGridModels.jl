@@ -43,16 +43,21 @@ function ElectricGridIndex(
     # of the nodal admittance matrix.
     # - The admittance matrix has one entry for each phase of each node in
     #   both dimensions.
-    # - There cannot be "empty" dimensions for missing phases of nodes, 
+    # - There cannot be "empty" dimensions for missing phases of nodes,
     #   because the matrix would become singular.
     # - Therefore the admittance matrix must have the exact number of existing
     #   phases of all nodes.
     nodal_dimension = (
-        sum(Matrix(electric_grid_data.electric_grid_nodes[[
-            :is_phase_1_connected,
-            :is_phase_2_connected,
-            :is_phase_3_connected
-        ]]))
+        sum(Matrix(
+            electric_grid_data.electric_grid_nodes[
+            :,
+                [
+                    :is_phase_1_connected,
+                    :is_phase_2_connected,
+                    :is_phase_3_connected
+                ]
+            ]
+        ))
     )
 
     # Count number of phases of all branches, which will be the first dimension
@@ -63,16 +68,26 @@ function ElectricGridIndex(
     #   phases of all nodes.
     # - TODO: Add switches.
     branch_dimension = Int(
-        sum(Matrix(electric_grid_data.electric_grid_lines[[
-            :is_phase_1_connected,
-            :is_phase_2_connected,
-            :is_phase_3_connected
-        ]]))
-        + sum(Matrix(electric_grid_data.electric_grid_transformers[[
-            :is_phase_1_connected,
-            :is_phase_2_connected,
-            :is_phase_3_connected
-        ]]))
+        sum(Matrix(
+            electric_grid_data.electric_grid_lines[
+                :,
+                [
+                    :is_phase_1_connected,
+                    :is_phase_2_connected,
+                    :is_phase_3_connected
+                ]
+            ]
+        ))
+        + sum(Matrix(
+            electric_grid_data.electric_grid_transformers[
+                :,
+                [
+                    :is_phase_1_connected,
+                    :is_phase_2_connected,
+                    :is_phase_3_connected
+                ]
+            ]
+        ))
         / 2
     )
 
@@ -92,7 +107,7 @@ function ElectricGridIndex(
         if (
             node[:node_name]
             ==
-            electric_grid_data.electric_grids[:source_node_name][1]
+            electric_grid_data.electric_grids[1, :source_node_name]
         )
             node_type = "source"
         else
@@ -100,19 +115,19 @@ function ElectricGridIndex(
         end
         if node[:is_phase_1_connected] == 1
             push!(
-                nodes_phases, 
+                nodes_phases,
                 [node[:node_name], "1", node_type]
             )
         end
         if node[:is_phase_2_connected] == 1
             push!(
-                nodes_phases, 
+                nodes_phases,
                 [node[:node_name], "2", node_type]
             )
         end
         if node[:is_phase_3_connected] == 1
             push!(
-                nodes_phases, 
+                nodes_phases,
                 [node[:node_name], "3", node_type]
             )
         end
@@ -123,7 +138,7 @@ function ElectricGridIndex(
     nodes_phases = (
         nodes_phases[
             sortperm(
-                nodes_phases[:node_name] .* nodes_phases[:phase],
+                nodes_phases[!, :node_name] .* nodes_phases[!, :phase],
                 lt=FLEDGE.Utils.natural_less_than
             ),
             1:end
@@ -179,7 +194,7 @@ function ElectricGridIndex(
     # Arrange all loads into a data frame for generating indexing
     # functions for the load incidence matrix.
     loads = (
-        electric_grid_data.electric_grid_loads[:load_name]
+        electric_grid_data.electric_grid_loads[!, :load_name]
     )
 
 
@@ -195,13 +210,13 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_nodes[:node_name]
+                electric_grid_data.electric_grid_nodes[!, :node_name]
             )
         )
     )
     for node_name in keys(node_by_node_name)
         node_by_node_name[node_name] = findall(
-            nodes_phases[:node_name] .== node_name
+            nodes_phases[!, :node_name] .== node_name
         )
     end
     # Index by phase.
@@ -215,7 +230,7 @@ function ElectricGridIndex(
     )
     for phase in keys(node_by_phase)
         node_by_phase[phase] = findall(
-            nodes_phases[:phase] .== phase
+            nodes_phases[!, :phase] .== phase
         )
     end
     # Index by node type.
@@ -229,7 +244,7 @@ function ElectricGridIndex(
     )
     for node_type in keys(node_by_node_type)
         node_by_node_type[node_type] = findall(
-            nodes_phases[:node_type] .== node_type
+            nodes_phases[!, :node_type] .== node_type
         )
     end
     # Index by load name.
@@ -237,7 +252,7 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_loads[:load_name]
+                electric_grid_data.electric_grid_loads[!, :load_name]
             )
         )
     )
@@ -245,20 +260,20 @@ function ElectricGridIndex(
         load_index = repeat([false], nodal_dimension)
         if load[:is_phase_1_connected] == 1
             load_index .|= (
-                (nodes_phases[:node_name] .== load[:node_name])
-                .& (nodes_phases[:phase] .== "1")
+                (nodes_phases[!, :node_name] .== load[:node_name])
+                .& (nodes_phases[!, :phase] .== "1")
             )
         end
         if load[:is_phase_2_connected] == 1
             load_index .|= (
-                (nodes_phases[:node_name] .== load[:node_name])
-                .& (nodes_phases[:phase] .== "2")
+                (nodes_phases[!, :node_name] .== load[:node_name])
+                .& (nodes_phases[!, :phase] .== "2")
             )
         end
         if load[:is_phase_3_connected] == 1
             load_index .|= (
-                (nodes_phases[:node_name] .== load[:node_name])
-                .& (nodes_phases[:phase] .== "3")
+                (nodes_phases[!, :node_name] .== load[:node_name])
+                .& (nodes_phases[!, :phase] .== "3")
             )
         end
         node_by_load_name[load[:load_name]] = findall(
@@ -278,14 +293,14 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_lines[:line_name]
+                electric_grid_data.electric_grid_lines[!, :line_name]
             )
         )
     )
     for line_name in keys(branch_by_line_name)
         branch_by_line_name[line_name] = findall(
-            (branches_phases[:branch_name] .== line_name)
-            .& (branches_phases[:branch_type] .== "line")
+            (branches_phases[!, :branch_name] .== line_name)
+            .& (branches_phases[!, :branch_type] .== "line")
         )
     end
     # Index by transformer name.
@@ -293,14 +308,14 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_transformers[:transformer_name]
+                electric_grid_data.electric_grid_transformers[!, :transformer_name]
             )
         )
     )
     for transformer_name in keys(branch_by_transformer_name)
         branch_by_transformer_name[transformer_name] = findall(
-            (branches_phases[:branch_name] .== transformer_name)
-            .& (branches_phases[:branch_type] .== "transformer")
+            (branches_phases[!, :branch_name] .== transformer_name)
+            .& (branches_phases[!, :branch_type] .== "transformer")
         )
     end
     # Index by phase.
@@ -314,7 +329,7 @@ function ElectricGridIndex(
     )
     for phase in keys(branch_by_phase)
         branch_by_phase[phase] = findall(
-            branches_phases[:phase] .== phase
+            branches_phases[!, :phase] .== phase
         )
     end
 
@@ -325,7 +340,7 @@ function ElectricGridIndex(
         Dict(
             key => Int[value]
             for (key, value) in zip(
-                electric_grid_data.electric_grid_loads[:load_name],
+                electric_grid_data.electric_grid_loads[!, :load_name],
                 1:load_dimension
             )
         )
@@ -449,7 +464,7 @@ function ElectricGridModel(
     for line in eachrow(electric_grid_data.electric_grid_lines)
         # Obtain line resistance and reactance matrix entries for the line.
         rxc_matrix_entries_index = (
-            electric_grid_data.electric_grid_line_types_matrices[:line_type]
+            electric_grid_data.electric_grid_line_types_matrices[!, :line_type]
             .== line[:line_type]
         )
         r_matrix_entries = (
@@ -630,7 +645,7 @@ function ElectricGridModel(
     # Add transformers to admittance matrix.
     for transformer in eachrow(
         electric_grid_data.electric_grid_transformers[
-            electric_grid_data.electric_grid_transformers[:winding] .== 1,
+            electric_grid_data.electric_grid_transformers[!, :winding] .== 1,
             1:end
         ]
     )
@@ -639,7 +654,7 @@ function ElectricGridModel(
             electric_grid_data.electric_grid_transformers[
                 (
                     electric_grid_data.
-                    electric_grid_transformers[:transformer_name]
+                    electric_grid_transformers[!, :transformer_name]
                     .== transformer[:transformer_name]
                 ),
                 1:end
@@ -650,8 +665,8 @@ function ElectricGridModel(
         voltage_1 = (
             electric_grid_data.electric_grid_nodes[
                 (
-                    electric_grid_data.electric_grid_nodes[:node_name]
-                    .== windings[:node_name][1]
+                    electric_grid_data.electric_grid_nodes[!, :node_name]
+                    .== windings[1, :node_name]
                 ),
                 :voltage
             ]
@@ -659,8 +674,8 @@ function ElectricGridModel(
         voltage_2 = (
             electric_grid_data.electric_grid_nodes[
                 (
-                    electric_grid_data.electric_grid_nodes[:node_name]
-                    .== windings[:node_name][2]
+                    electric_grid_data.electric_grid_nodes[!, :node_name]
+                    .== windings[2, :node_name]
                 ),
                 :voltage
             ]
@@ -668,9 +683,9 @@ function ElectricGridModel(
 
         # Obtain transformer type.
         type = (
-            windings[:connection][1]
+            windings[1, :connection]
             * "-"
-            * windings[:connection][2]
+            * windings[2, :connection]
         )
 
         # Obtain transformer resistance and reactance.
@@ -681,7 +696,7 @@ function ElectricGridModel(
             electric_grid_data.electric_grid_transformer_reactances[
                 (
                     electric_grid_data.
-                    electric_grid_transformer_reactances[:transformer_name]
+                    electric_grid_transformer_reactances[!, :transformer_name]
                     .== transformer[:transformer_name]
                 ),
                 :reactance_percentage
@@ -697,7 +712,7 @@ function ElectricGridModel(
                 )
                 * (
                     voltage_2 ^ 2
-                    / windings[:power][1]
+                    / windings[1, :power]
                 )
             )
         )
@@ -705,7 +720,7 @@ function ElectricGridModel(
         # Calculate turn ratio.
         turn_ratio = (
             (
-                1.0 # TODO: Replace `1.0` with actual tap position. 
+                1.0 # TODO: Replace `1.0` with actual tap position.
                 *voltage_1
             )
             / (
@@ -806,10 +821,10 @@ function ElectricGridModel(
         # Obtain indexes for positioning the transformer element
         # matrices in the full matrices.
         node_index_1 = (
-            index.node_by_node_name[windings[:node_name][1]]
+            index.node_by_node_name[windings[1, :node_name]]
         )
         node_index_2 = (
-            index.node_by_node_name[windings[:node_name][2]]
+            index.node_by_node_name[windings[2, :node_name]]
         )
         branch_index = (
             index.branch_by_transformer_name[transformer[:transformer_name]]
@@ -908,7 +923,7 @@ function ElectricGridModel(
         )
 
         # Obtain index for positioning node transformation matrix in full
-        # transformation matrix. 
+        # transformation matrix.
         node_index = (
             index.node_by_node_name[node[:node_name]]
         )
@@ -1093,8 +1108,8 @@ function ElectricGridModel(
         node = first(
             electric_grid_data.electric_grid_nodes[
                 (
-                    electric_grid_data.electric_grid_nodes[:node_name]
-                    .== electric_grid_data.electric_grids[:source_node_name]
+                    electric_grid_data.electric_grid_nodes[!, :node_name]
+                    .== electric_grid_data.electric_grids[1, :source_node_name]
                 ),
                 1:end
             ]
@@ -1140,10 +1155,10 @@ function ElectricGridModel(
 
     # Construct nominal load power vector.
     load_power_vector_nominal = (
-        electric_grid_data.electric_grids[:load_multiplier][1]
+        electric_grid_data.electric_grids[1, :load_multiplier]
         .* Vector(
-            electric_grid_data.electric_grid_loads[:active_power]
-            + 1im .* electric_grid_data.electric_grid_loads[:reactive_power]
+            electric_grid_data.electric_grid_loads[!, :active_power]
+            + 1im .* electric_grid_data.electric_grid_loads[!, :reactive_power]
         )
     )
 
@@ -1259,7 +1274,7 @@ function LinearElectricGridModel(
         - 1im * nodal_admittance_matrix_no_source
         \ LinearAlgebra.Diagonal(conj.(inv.(nodal_voltage_no_source)))
     )
-    
+
     sensitivity_voltage_by_power_delta_active = (
         SparseArrays.spzeros(
             ComplexF64,
@@ -1285,7 +1300,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     sensitivity_voltage_by_power_delta_reactive = (
         SparseArrays.spzeros(
             ComplexF64,
@@ -1308,7 +1323,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     sensitivity_voltage_magnitude_by_power_wye_active = (
         LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
         * real.(
@@ -1316,7 +1331,7 @@ function LinearElectricGridModel(
             * sensitivity_voltage_by_power_wye_active
         )
     )
-    
+
     sensitivity_voltage_magnitude_by_power_wye_reactive = (
         LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
         * real.(
@@ -1324,7 +1339,7 @@ function LinearElectricGridModel(
             * sensitivity_voltage_by_power_wye_reactive
         )
     )
-    
+
     sensitivity_voltage_magnitude_by_power_delta_active = (
         LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
         * real.(
@@ -1332,7 +1347,7 @@ function LinearElectricGridModel(
             * sensitivity_voltage_by_power_delta_active
         )
     )
-    
+
     sensitivity_voltage_magnitude_by_power_delta_reactive = (
         LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
         * real.(
@@ -1340,7 +1355,7 @@ function LinearElectricGridModel(
             * sensitivity_voltage_by_power_delta_reactive
         )
     )
-    
+
     # Power flows
     sensitivity_power_branch_from_by_voltage = (
         LinearAlgebra.Diagonal(conj.(
@@ -1366,7 +1381,7 @@ function LinearElectricGridModel(
         )
         * conj.(electric_grid_model.branch_admittance_2_matrix)
     )
-    
+
     sensitivity_power_branch_from_by_power_wye_active = (
         2 .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1399,7 +1414,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     sensitivity_power_branch_from_by_power_delta_active = (
         2 * hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1432,7 +1447,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     sensitivity_power_branch_to_by_power_wye_active = (
         2 * hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1465,7 +1480,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     sensitivity_power_branch_to_by_power_delta_active = (
         2 * hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1498,7 +1513,7 @@ function LinearElectricGridModel(
             )
         )
     )
-    
+
     # Losses
     # Second rows are the imaginary part, sum of which can be proven to be zero!
     sensitivity_loss_active_by_voltage = (
@@ -1525,7 +1540,7 @@ function LinearElectricGridModel(
             ))
         )
     )[1, :]
-    
+
     sensitivity_loss_active_by_power_wye_active = (
         transpose(sensitivity_loss_active_by_voltage)
         * vcat(
@@ -1540,7 +1555,7 @@ function LinearElectricGridModel(
             imag.(sensitivity_voltage_by_power_wye_reactive)
         )
     )
-    
+
     sensitivity_loss_active_by_power_delta_active = (
         transpose(sensitivity_loss_active_by_voltage)
         * vcat(
@@ -1555,7 +1570,7 @@ function LinearElectricGridModel(
             imag.(sensitivity_voltage_by_power_delta_reactive)
         )
     )
-    
+
     sensitivity_loss_reactive_by_power_wye_active = (
         transpose(sensitivity_loss_reactive_by_voltage)
         * vcat(
@@ -1570,7 +1585,7 @@ function LinearElectricGridModel(
             imag.(sensitivity_voltage_by_power_wye_reactive)
         )
     )
-    
+
     sensitivity_loss_reactive_by_power_delta_active = (
         transpose(sensitivity_loss_reactive_by_voltage)
         * vcat(
@@ -1585,7 +1600,7 @@ function LinearElectricGridModel(
             imag.(sensitivity_voltage_by_power_delta_reactive)
         )
     )
-    
+
     # No-load losses
     sensitivity_loss_active_by_noload_voltage = (
         real_valued_conjugate(
@@ -1611,14 +1626,14 @@ function LinearElectricGridModel(
             ))
         )
     )
-    
+
     constant_loss_active_no_load = (
         sensitivity_loss_active_by_noload_voltage
         * vcat(
             real.(electric_grid_model.nodal_voltage_vector_no_load),
             imag.(electric_grid_model.nodal_voltage_vector_no_load)
         )
-    ) 
+    )
     constant_loss_reactive_no_load = (
         sensitivity_loss_reactive_by_noload_voltage
         * vcat(
@@ -1689,7 +1704,7 @@ function initialize_open_dss_model(
     if debug_print_opendss_commands
         println(opendss_command_string)
     end
-    
+
     # Obtain extra definitions string.
     if ismissing(electric_grid_data.electric_grids[:extra_definitions_string][1])
         extra_definitions_string = ""
@@ -1864,7 +1879,7 @@ function initialize_open_dss_model(
         )
 
         # Add transformer name, number of phases / windings and reactances
-        # to OpenDSS command string.  
+        # to OpenDSS command string.
         opendss_command_string = (
             "new transformer.$(transformer[:transformer_name])"
             * " phases=$n_phases"
@@ -1918,7 +1933,7 @@ function initialize_open_dss_model(
                     )
                 end
             end
-            
+
             # Add node connection, nominal voltage / power and resistance
             # to OpenDSS command string for each winding.
             opendss_command_string *= (

@@ -14,11 +14,17 @@ scenario_name = "singapore_6node"
 Plots.gr()  # Select plotting backend.
 
 # Get model.
+electric_grid_data = (
+    FLEDGE.get_electric_grid_data(scenario_name)
+)
+electric_grid_index = (
+    FLEDGE.ElectricGridModels.ElectricGridIndex(electric_grid_data)
+)
 electric_grid_model = (
-    FLEDGE.API.get_electric_grid_model(scenario_name)
+    FLEDGE.get_electric_grid_model(scenario_name)
 )
 linear_electric_grid_model = (
-    FLEDGE.API.get_linear_electric_grid_model(scenario_name)
+    FLEDGE.get_linear_electric_grid_model(scenario_name)
 )
 Logging.@info("", linear_electric_grid_model)
 
@@ -30,17 +36,17 @@ optimization_problem = (
 # Define variables.
 JuMP.@variable(
     optimization_problem,
-    load_active_power_vector
+    load_active_power_vector[electric_grid_index.load_names]
 )
 JuMP.@variable(
     optimization_problem,
-    load_reactive_power_vector
+    load_reactive_power_vector[electric_grid_index.load_names]
 )
 JuMP.@variable(
     optimization_problem,
-    voltage_magnitude_vector
+    voltage_magnitude_vector[electric_grid_index.nodes_phases]
 )
 JuMP.@variable(
     optimization_problem,
-    voltage_magnitude_per_unit_deviation_vector
+    voltage_magnitude_per_unit_deviation_vector[electric_grid_index.nodes_phases]
 )

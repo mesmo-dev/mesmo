@@ -18,13 +18,13 @@ electric_grid_data = (
     FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
 )
 electric_grid_index = (
-    FLEDGE.ElectricGridModels.ElectricGridIndex(electric_grid_data)
+    FLEDGE.ElectricGridModels.ElectricGridIndex(scenario_name)
 )
 electric_grid_model = (
-    FLEDGE.get_electric_grid_model(scenario_name)
+    FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
 )
 linear_electric_grid_model = (
-    FLEDGE.get_linear_electric_grid_model(scenario_name)
+    FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
 )
 Logging.@info("", linear_electric_grid_model)
 

@@ -46,6 +46,8 @@ struct ElectricGridIndex
     load_by_load_name::Dict{String,Array{Int,1}}
     # TODO: Check if `load_by_load_name` is needed at all.
 end
+
+"Instantiate electric grid index object for given `electric_grid_data`"
 function ElectricGridIndex(
     electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData
 )
@@ -418,6 +420,16 @@ function ElectricGridIndex(
     )
 end
 
+"Instantiate electric grid index object for given `scenario_name`."
+function ElectricGridIndex(scenario_name::String)
+    # Obtain electric grid data.
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
+
+    ElectricGridIndex(electric_grid_data)
+end
+
 "Electric grid model object."
 struct ElectricGridModel
     electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData
@@ -435,7 +447,7 @@ struct ElectricGridModel
 end
 
 """
-Construct electric grid model by `electric_grid_data` object.
+Instantiate electric grid model object for given `electric_grid_data`.
 
 - The nodal no-load voltage vector can be constructed by
   1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
@@ -1235,7 +1247,20 @@ function ElectricGridModel(
     )
 end
 
-"Linear electric grid model object composed of sensitivity matrices."
+"Instantiate electric grid model object for given `scenario_name`."
+function ElectricGridModel(
+    scenario_name::String;
+    kwargs...
+)
+    # Obtain electric grid data.
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
+
+    ElectricGridModel(electric_grid_data; kwargs...)
+end
+
+"Linear electric grid model object."
 struct LinearElectricGridModel
     sensitivity_voltage_by_power_wye_active
     sensitivity_voltage_by_power_wye_reactive
@@ -1731,6 +1756,33 @@ function LinearElectricGridModel(
     )
 end
 
+"Instantiate linear electric grid model object for given `scenario_name`."
+function LinearElectricGridModel(scenario_name::String)
+    # Obtain electric grid model.
+    electric_grid_model = ElectricGridModel(scenario_name)
+
+    # Obtain power flow solution for nominal loading conditions.
+    nodal_voltage_vector = (
+        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
+    )
+    (
+        branch_power_vector_1,
+        branch_power_vector_2
+    ) = (
+        FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
+            electric_grid_model,
+            nodal_voltage_vector
+        )
+    )
+
+    LinearElectricGridModel(
+        electric_grid_model,
+        nodal_voltage_vector,
+        branch_power_vector_1,
+        branch_power_vector_2
+    )
+end
+
 "Utility function for creating the node phases string for OpenDSS."
 function get_node_phases_string(element)
     node_phases_string = ""
@@ -1750,17 +1802,20 @@ function get_node_phases_string(element)
     return node_phases_string
 end
 
-"Initialize OpenDSS circuit model based on electric grid data."
+"""
+Initialize OpenDSS circuit model for given `electric_grid_data`.
+
+- Instantiates OpenDSS model.
+- No object is returned because the OpenDSS model lives in memory and
+  can be accessed with the API of the `OpenDSS.jl` package.
+"""
 function initialize_open_dss_model(
-    electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData;
-    debug_print_opendss_commands=false
+    electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData
 )
     # Clear OpenDSS.
     opendss_command_string = "clear"
+    Logging.@debug("", opendss_command_string)
     OpenDSSDirect.dss(opendss_command_string)
-    if debug_print_opendss_commands
-        println(opendss_command_string)
-    end
 
     # Obtain extra definitions string.
     if ismissing(electric_grid_data.electric_grids[:extra_definitions_string][1])
@@ -1781,10 +1836,8 @@ function initialize_open_dss_model(
     )
 
     # Create circuit in OpenDSS.
+    Logging.@debug("", opendss_command_string)
     OpenDSSDirect.dss(opendss_command_string)
-    if debug_print_opendss_commands
-        println(opendss_command_string)
-    end
 
     # Define line codes.
     for line_type in eachrow(electric_grid_data.electric_grid_line_types)
@@ -1845,10 +1898,8 @@ function initialize_open_dss_model(
         end
 
         # Create line code in OpenDSS.
+        Logging.@debug("", opendss_command_string)
         OpenDSSDirect.dss(opendss_command_string)
-        if debug_print_opendss_commands
-            println(opendss_command_string)
-        end
     end
 
     # Define lines.
@@ -1874,10 +1925,8 @@ function initialize_open_dss_model(
         )
 
         # Create line in OpenDSS.
+        Logging.@debug("", opendss_command_string)
         OpenDSSDirect.dss(opendss_command_string)
-        if debug_print_opendss_commands
-            println(opendss_command_string)
-        end
     end
 
     # Define transformers.
@@ -2015,10 +2064,8 @@ function initialize_open_dss_model(
         end
 
         # Create transformer in OpenDSS.
+        Logging.@debug("", opendss_command_string)
         OpenDSSDirect.dss(opendss_command_string)
-        if debug_print_opendss_commands
-            println(opendss_command_string)
-        end
     end
 
     # Define loads.
@@ -2071,10 +2118,8 @@ function initialize_open_dss_model(
         )
 
         # Create load in OpenDSS.
+        Logging.@debug("", opendss_command_string)
         OpenDSSDirect.dss(opendss_command_string)
-        if debug_print_opendss_commands
-            println(opendss_command_string)
-        end
     end
 
     # TODO: Add switches.
@@ -2089,18 +2134,24 @@ function initialize_open_dss_model(
         * "$(electric_grid_data.electric_grids[:load_multiplier][1])"
         * "\ncalcvoltagebases"
     )
+    Logging.@debug("", opendss_command_string)
     OpenDSSDirect.dss(opendss_command_string)
-    if debug_print_opendss_commands
-        println(opendss_command_string)
-    end
 
     # Set solution mode to "single snapshot power flow" according to:
     # OpenDSSComDoc, November 2016, page 1
     opendss_command_string = "set mode=0"
+    Logging.@debug("", opendss_command_string)
     OpenDSSDirect.dss(opendss_command_string)
-    if debug_print_opendss_commands
-        println(opendss_command_string)
-    end
+end
+
+"Initialize OpenDSS model for given `scenario_name`."
+function initialize_open_dss_model(scenario_name::String)
+    # Obtain electric grid data.
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
+
+    initialize_open_dss_model(electric_grid_data)
 end
 
 end

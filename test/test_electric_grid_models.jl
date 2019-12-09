@@ -1,10 +1,39 @@
 # Electric grid model tests.
 
 Test.@testset "Electric grid model tests" begin
-    Test.@testset "Linear electric grid model test" begin
+    Test.@testset "Electric grid model test" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.ElectricGridModels.ElectricGridModel
+
+        # Get actual result.
+        @time_log "Electric grid model test" actual = (
+            typeof(FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name))
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Simple linear electric grid model test" begin
+        # Define expected result.
+        expected = FLEDGE.ElectricGridModels.LinearElectricGridModel
+
+        # Get actual result.
+        @time_log "Simple linear electric grid model test" actual = (
+            typeof(
+                FLEDGE.ElectricGridModels.LinearElectricGridModel(test_scenario_name)
+            )
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Detailed linear electric grid model test" begin
         # Obtain electric grid model.
         electric_grid_model = (
-            FLEDGE.API.get_electric_grid_model(test_scenario_name)
+            FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name)
         )
 
         # Obtain power flow solution for nominal loading conditions.
@@ -25,7 +54,7 @@ Test.@testset "Electric grid model tests" begin
         expected = FLEDGE.ElectricGridModels.LinearElectricGridModel
 
         # Get actual result.
-        @time_log "Linear electric grid model test" linear_electric_grid_model = (
+        @time_log "Detailed linear electric grid model test" linear_electric_grid_model = (
             FLEDGE.ElectricGridModels.LinearElectricGridModel(
                 electric_grid_model,
                 nodal_voltage_vector,
@@ -437,6 +466,23 @@ Test.@testset "Electric grid model tests" begin
                 ]
             )
         )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Initialize OpenDSS model test" begin
+        # Define expected result.
+        electric_grid_data = (
+            FLEDGE.DatabaseInterface.ElectricGridData(test_scenario_name)
+        )
+        expected = electric_grid_data.electric_grids[:electric_grid_name][1]
+
+        # Get actual result.
+        @time_log "Initialize OpenDSS model test" (
+            FLEDGE.ElectricGridModels.initialize_open_dss_model(test_scenario_name)
+        )
+        actual = OpenDSSDirect.Circuit.Name()
 
         # Evaluate test.
         Test.@test actual == expected

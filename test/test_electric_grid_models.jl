@@ -77,28 +77,28 @@ Test.@testset "Electric grid model tests" begin
         nodal_voltage_vector_magnitude_fixed_point = (
             zeros(
                 Float64,
-                electric_grid_model.index.nodal_dimension,
+                electric_grid_model.index.node_dimension,
                 length(power_multipliers)
             )
         )
         nodal_voltage_vector_magnitude_linear_model = (
             zeros(
                 Float64,
-                electric_grid_model.index.nodal_dimension,
+                electric_grid_model.index.node_dimension,
                 length(power_multipliers)
             )
         )
         nodal_voltage_vector_fixed_point = (
             zeros(
                 ComplexF64,
-                electric_grid_model.index.nodal_dimension,
+                electric_grid_model.index.node_dimension,
                 length(power_multipliers)
             )
         )
         nodal_voltage_vector_linear_model = (
             zeros(
                 ComplexF64,
-                electric_grid_model.index.nodal_dimension,
+                electric_grid_model.index.node_dimension,
                 length(power_multipliers)
             )
         )
@@ -411,7 +411,7 @@ Test.@testset "Electric grid model tests" begin
                 )
             )
         end
-        
+
         # TODO: Validate total_loss_active_error against MATLAB implementation.
         # TODO: Validate total_loss_reactive_error against MATLAB implementation.
         @Logging.info(

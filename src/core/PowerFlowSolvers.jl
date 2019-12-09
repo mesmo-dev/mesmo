@@ -110,7 +110,7 @@ function check_solution_conditions(
         ))
     )
 
-    # Calculate norm of the initial nodal voltage vector. 
+    # Calculate norm of the initial nodal voltage vector.
     gamma = (
         minimum([
             minimum(
@@ -269,8 +269,8 @@ function get_voltage_fixed_point(
             )
         end
 
-        # Store current candidate power vectors as initial power vectors 
-        # for next round of computation of solution conditions. 
+        # Store current candidate power vectors as initial power vectors
+        # for next round of computation of solution conditions.
         nodal_power_vector_wye_initial_no_source = copy(
             nodal_power_vector_wye_candidate_no_source
         )
@@ -326,7 +326,7 @@ function get_voltage_fixed_point(
                 ))
             )
 
-            # Set voltage solution as initial voltage for next iteration. 
+            # Set voltage solution as initial voltage for next iteration.
             nodal_voltage_vector_initial_no_source = copy(
                 nodal_voltage_vector_solution_no_source
             )
@@ -615,7 +615,7 @@ function get_voltage_open_dss()
 
     # Extract nodal voltage vector.
     # - Voltages are sorted by node names in the fashion as nodes are sorted in
-    #   nodes_phases in FLEDGE.ElectricGridModels.ElectricGridModelIndex().
+    #   nodes in FLEDGE.ElectricGridModels.ElectricGridModelIndex().
     nodal_voltage_vector_solution = (
         OpenDSSDirect.Circuit.AllBusVolts()[
             sortperm(

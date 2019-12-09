@@ -23,9 +23,19 @@ end
 
 "Electric grid index object."
 struct ElectricGridIndex
-    nodal_dimension::Int
+    node_dimension::Int
     branch_dimension::Int
     load_dimension::Int
+    phases::Vector{String}
+    node_names::Vector{String}
+    node_types::Vector{String}
+    nodes_phases::Vector{Tuple{String,String}}
+    line_names::Vector{String}
+    transformer_names::Vector{String}
+    branch_names::Vector{String}
+    branch_types::Vector{String}
+    branches_phases::Vector{Tuple{String,String}}
+    load_names::Vector{String}
     node_by_node_name::Dict{String,Array{Int,1}}
     node_by_phase::Dict{String,Array{Int,1}}
     node_by_node_type::Dict{String,Array{Int,1}}
@@ -39,15 +49,15 @@ end
 function ElectricGridIndex(
     electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData
 )
-    # Count number of phases of all nodes, which will be the dimensions
-    # of the nodal admittance matrix.
+    # Define node dimension, i.e., number of phases of all nodes, which
+    # will be the dimension of the nodal admittance matrix.
     # - The admittance matrix has one entry for each phase of each node in
     #   both dimensions.
     # - There cannot be "empty" dimensions for missing phases of nodes,
     #   because the matrix would become singular.
     # - Therefore the admittance matrix must have the exact number of existing
     #   phases of all nodes.
-    nodal_dimension = (
+    node_dimension = (
         sum(Matrix(
             electric_grid_data.electric_grid_nodes[
             :,
@@ -60,8 +70,8 @@ function ElectricGridIndex(
         ))
     )
 
-    # Count number of phases of all branches, which will be the first dimension
-    # of the branch admittance matrices.
+    # Define branch dimension, i.e., number of phases of all branches, which
+    # will be the first dimension of the branch admittance matrices.
     # - Branches consider all power delivery elements, i.e., lines as well as
     #   transformers.
     # - The second dimension of the branch admittance matrices is the number of
@@ -91,15 +101,15 @@ function ElectricGridIndex(
         / 2
     )
 
-    # Count number of all loads, which will be the second dimension of the
-    # load incidence matrix.
+    # Define load dimension, i.e., number of all loads, which
+    # will be the second dimension of the load incidence matrix.
     load_dimension = (
         size(electric_grid_data.electric_grid_loads, 1)
     )
 
-    # Arrange all phases of all nodes into a data frame for generating indexing
-    # functions for the admittance matrix.
-    nodes_phases = DataFrames.DataFrame(
+    # Create `nodes` data frame, i.e., collection of all phases of all nodes
+    # for generating indexing functions for the admittance matrix.
+    nodes = DataFrames.DataFrame(
         [String, String, String],
         [:node_name, :phase, :node_type]
     )
@@ -115,54 +125,54 @@ function ElectricGridIndex(
         end
         if node[:is_phase_1_connected] == 1
             push!(
-                nodes_phases,
+                nodes,
                 [node[:node_name], "1", node_type]
             )
         end
         if node[:is_phase_2_connected] == 1
             push!(
-                nodes_phases,
+                nodes,
                 [node[:node_name], "2", node_type]
             )
         end
         if node[:is_phase_3_connected] == 1
             push!(
-                nodes_phases,
+                nodes,
                 [node[:node_name], "3", node_type]
             )
         end
     end
-    # Sorting for node_name and phase.
+    # Sort `nodes` for `node_name` and `phase`.
     # - This is to ensure compatibility when comparing voltage solution with
     #   OpenDSS solution from FLEDGE.PowerFlowSolvers.get_voltage_open_dss().
-    nodes_phases = (
-        nodes_phases[
+    nodes = (
+        nodes[
             sortperm(
-                nodes_phases[!, :node_name] .* nodes_phases[!, :phase],
+                nodes[!, :node_name] .* nodes[!, :phase],
                 lt=FLEDGE.Utils.natural_less_than
             ),
             1:end
         ]
     )
 
-    # Arrange all phases of all branches into a data frame for generating
-    # indexing functions for the branch admittance matrices.
+    # Create `branches` data frame, i.e., collection of phases of all branches
+    # for generating indexing functions for the branch admittance matrices.
     # - Transformers must have same number of phases per winding and exactly
     #   two windings.
-    branches_phases = DataFrames.DataFrame(
+    branches = DataFrames.DataFrame(
         [String, String, String],
         [:branch_name, :phase, :branch_type]
     )
-    for branches in [
+    for data_branches in [
         electric_grid_data.electric_grid_lines,
         electric_grid_data.electric_grid_transformers
     ]
-        if :transformer_name in names(branches)
+        if :transformer_name in names(data_branches)
             branch_type = "transformer"
         else
             branch_type = "line"
         end
-        for branch in eachrow(branches)
+        for branch in eachrow(data_branches)
             if branch_type == "transformer"
                 if branch[:winding] == 2
                     # Avoid duplicate branch definition for transformers by
@@ -172,34 +182,71 @@ function ElectricGridIndex(
             end
             if branch[:is_phase_1_connected] == 1
                 push!(
-                    branches_phases,
+                    branches,
                     [branch[Symbol(branch_type * "_name")], "1", branch_type]
                 )
             end
             if branch[:is_phase_2_connected] == 1
                 push!(
-                    branches_phases,
+                    branches,
                     [branch[Symbol(branch_type * "_name")], "2", branch_type]
                 )
             end
             if branch[:is_phase_3_connected] == 1
                 push!(
-                    branches_phases,
+                    branches,
                     [branch[Symbol(branch_type * "_name")], "3", branch_type]
                 )
             end
         end
     end
 
-    # Arrange all loads into a data frame for generating indexing
+    # Create `loads` data frame for generating indexing
     # functions for the load incidence matrix.
     loads = (
         electric_grid_data.electric_grid_loads[!, :load_name]
     )
 
+    # Define index vectors for various element types
+    # for easier index definitions, e.g., in the optimization problem.
+    phases = ["1", "2", "3"]
+    node_names = (
+        Vector(electric_grid_data.electric_grid_nodes[!, :node_name])
+    )
+    Logging.@info("", node_names)
+    node_types = ["source", "no_source"]
+    nodes_phases = (
+        [
+            (node[:node_name], node[:phase])
+            for node in eachrow(nodes)
+        ]
+    )
+    Logging.@info("", nodes_phases)
+    line_names = (
+        Vector(electric_grid_data.electric_grid_lines[!, :line_name])
+    )
+    transformer_names = (
+        Vector(electric_grid_data.electric_grid_transformers[!, :transformer_name])
+    )
+    branch_names = (
+        vcat(
+            line_names,
+            transformer_names
+        )
+    )
+    branch_types = ["line", "transformer"]
+    branches_phases = (
+        [
+            (branch[:branch_name], branch[:phase])
+            for branch in eachrow(branches)
+        ]
+    )
+    load_names = (
+        Vector(electric_grid_data.electric_grid_loads[!, :load_name])
+    )
 
     # Generate indexing dictionaries for the nodal admittance matrix,
-    # i.e., for the phases of all nodes.
+    # i.e., for all phases of all nodes.
     # - This is a workaround to avoid low-performance string search operations
     #   for each indexing access.
     # - Instead, the appropriate boolean index vectors are pre-generated here
@@ -210,13 +257,13 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_nodes[!, :node_name]
+                node_names
             )
         )
     )
-    for node_name in keys(node_by_node_name)
+    for node_name in node_names
         node_by_node_name[node_name] = findall(
-            nodes_phases[!, :node_name] .== node_name
+            nodes[!, :node_name] .== node_name
         )
     end
     # Index by phase.
@@ -224,13 +271,13 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                ["1", "2", "3"]
+                phases
             )
         )
     )
-    for phase in keys(node_by_phase)
+    for phase in phases
         node_by_phase[phase] = findall(
-            nodes_phases[!, :phase] .== phase
+            nodes[!, :phase] .== phase
         )
     end
     # Index by node type.
@@ -238,13 +285,13 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                ["source", "no_source"]
+                node_types
             )
         )
     )
-    for node_type in keys(node_by_node_type)
+    for node_type in node_types
         node_by_node_type[node_type] = findall(
-            nodes_phases[!, :node_type] .== node_type
+            nodes[!, :node_type] .== node_type
         )
     end
     # Index by load name.
@@ -252,28 +299,28 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_loads[!, :load_name]
+                load_names
             )
         )
     )
     for load in eachrow(electric_grid_data.electric_grid_loads)
-        load_index = repeat([false], nodal_dimension)
+        load_index = repeat([false], node_dimension)
         if load[:is_phase_1_connected] == 1
             load_index .|= (
-                (nodes_phases[!, :node_name] .== load[:node_name])
-                .& (nodes_phases[!, :phase] .== "1")
+                (nodes[!, :node_name] .== load[:node_name])
+                .& (nodes[!, :phase] .== "1")
             )
         end
         if load[:is_phase_2_connected] == 1
             load_index .|= (
-                (nodes_phases[!, :node_name] .== load[:node_name])
-                .& (nodes_phases[!, :phase] .== "2")
+                (nodes[!, :node_name] .== load[:node_name])
+                .& (nodes[!, :phase] .== "2")
             )
         end
         if load[:is_phase_3_connected] == 1
             load_index .|= (
-                (nodes_phases[!, :node_name] .== load[:node_name])
-                .& (nodes_phases[!, :phase] .== "3")
+                (nodes[!, :node_name] .== load[:node_name])
+                .& (nodes[!, :phase] .== "3")
             )
         end
         node_by_load_name[load[:load_name]] = findall(
@@ -282,7 +329,7 @@ function ElectricGridIndex(
     end
 
     # Generate indexing dictionaries for the branch admittance matrices,
-    # i.e., for the phases of all branches.
+    # i.e., for all phases of all branches.
     # - This is a workaround to avoid low-performance string search operations
     #   for each indexing access.
     # - Instead, the appropriate boolean index vectors are pre-generated here
@@ -293,14 +340,14 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_lines[!, :line_name]
+                line_names
             )
         )
     )
-    for line_name in keys(branch_by_line_name)
+    for line_name in line_names
         branch_by_line_name[line_name] = findall(
-            (branches_phases[!, :branch_name] .== line_name)
-            .& (branches_phases[!, :branch_type] .== "line")
+            (branches[!, :branch_name] .== line_name)
+            .& (branches[!, :branch_type] .== "line")
         )
     end
     # Index by transformer name.
@@ -308,14 +355,14 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                electric_grid_data.electric_grid_transformers[!, :transformer_name]
+                transformer_names
             )
         )
     )
-    for transformer_name in keys(branch_by_transformer_name)
+    for transformer_name in transformer_names
         branch_by_transformer_name[transformer_name] = findall(
-            (branches_phases[!, :branch_name] .== transformer_name)
-            .& (branches_phases[!, :branch_type] .== "transformer")
+            (branches[!, :branch_name] .== transformer_name)
+            .& (branches[!, :branch_type] .== "transformer")
         )
     end
     # Index by phase.
@@ -323,33 +370,43 @@ function ElectricGridIndex(
         Dict(
             key => Vector{Int}()
             for key in (
-                ["1", "2", "3"]
+                phases
             )
         )
     )
-    for phase in keys(branch_by_phase)
+    for phase in phases
         branch_by_phase[phase] = findall(
-            branches_phases[!, :phase] .== phase
+            branches[!, :phase] .== phase
         )
     end
 
-    # Generate indexing dictionaries for the load incidence matrix.
+    # Generate indexing dictionary for the load incidence matrix.
 
     # Index by load name.
     load_by_load_name = (
         Dict(
             key => Int[value]
             for (key, value) in zip(
-                electric_grid_data.electric_grid_loads[!, :load_name],
+                load_names,
                 1:load_dimension
             )
         )
     )
 
     ElectricGridIndex(
-        nodal_dimension,
+        node_dimension,
         branch_dimension,
         load_dimension,
+        phases,
+        node_names,
+        node_types,
+        nodes_phases,
+        line_names,
+        transformer_names,
+        branch_names,
+        branch_types,
+        branches_phases,
+        load_names,
         node_by_node_name,
         node_by_phase,
         node_by_node_type,
@@ -1008,56 +1065,56 @@ function ElectricGridModel(
         nodal_admittance_dictionary[:row_indexes],
         nodal_admittance_dictionary[:col_indexes],
         nodal_admittance_dictionary[:values],
-        index.nodal_dimension,
-        index.nodal_dimension
+        index.node_dimension,
+        index.node_dimension
     )
     nodal_transformation_matrix = SparseArrays.sparse(
         nodal_transformation_dictionary[:row_indexes],
         nodal_transformation_dictionary[:col_indexes],
         nodal_transformation_dictionary[:values],
-        index.nodal_dimension,
-        index.nodal_dimension
+        index.node_dimension,
+        index.node_dimension
     )
     branch_admittance_1_matrix = SparseArrays.sparse(
         branch_admittance_1_dictionary[:row_indexes],
         branch_admittance_1_dictionary[:col_indexes],
         branch_admittance_1_dictionary[:values],
         index.branch_dimension,
-        index.nodal_dimension
+        index.node_dimension
     )
     branch_admittance_2_matrix = SparseArrays.sparse(
         branch_admittance_2_dictionary[:row_indexes],
         branch_admittance_2_dictionary[:col_indexes],
         branch_admittance_2_dictionary[:values],
         index.branch_dimension,
-        index.nodal_dimension
+        index.node_dimension
     )
     branch_incidence_1_matrix = SparseArrays.sparse(
         branch_incidence_1_dictionary[:row_indexes],
         branch_incidence_1_dictionary[:col_indexes],
         branch_incidence_1_dictionary[:values],
         index.branch_dimension,
-        index.nodal_dimension
+        index.node_dimension
     )
     branch_incidence_2_matrix = SparseArrays.sparse(
         branch_incidence_2_dictionary[:row_indexes],
         branch_incidence_2_dictionary[:col_indexes],
         branch_incidence_2_dictionary[:values],
         index.branch_dimension,
-        index.nodal_dimension
+        index.node_dimension
     )
     load_incidence_wye_matrix = SparseArrays.sparse(
         load_incidence_wye_dictionary[:row_indexes],
         load_incidence_wye_dictionary[:col_indexes],
         load_incidence_wye_dictionary[:values],
-        index.nodal_dimension,
+        index.node_dimension,
         index.load_dimension
     )
     load_incidence_delta_matrix = SparseArrays.sparse(
         load_incidence_delta_dictionary[:row_indexes],
         load_incidence_delta_dictionary[:col_indexes],
         load_incidence_delta_dictionary[:values],
-        index.nodal_dimension,
+        index.node_dimension,
         index.load_dimension
     )
 
@@ -1069,7 +1126,7 @@ function ElectricGridModel(
     #   calculated from the source node voltage and the nodal admittance matrix.
     # - TODO: Check if no-load voltage divide by sqrt(3) correct.
     nodal_voltage_vector_no_load = (
-        zeros(ComplexF64, index.nodal_dimension)
+        zeros(ComplexF64, index.node_dimension)
     )
     # Define phase orientations.
     voltage_phase_factors = [
@@ -1248,8 +1305,8 @@ function LinearElectricGridModel(
     sensitivity_voltage_by_power_wye_active = (
         SparseArrays.spzeros(
             ComplexF64,
-            electric_grid_model.index.nodal_dimension,
-            electric_grid_model.index.nodal_dimension,
+            electric_grid_model.index.node_dimension,
+            electric_grid_model.index.node_dimension,
         )
     )
     sensitivity_voltage_by_power_wye_active[
@@ -1263,8 +1320,8 @@ function LinearElectricGridModel(
     sensitivity_voltage_by_power_wye_reactive = (
         SparseArrays.spzeros(
             ComplexF64,
-            electric_grid_model.index.nodal_dimension,
-            electric_grid_model.index.nodal_dimension,
+            electric_grid_model.index.node_dimension,
+            electric_grid_model.index.node_dimension,
         )
     )
     sensitivity_voltage_by_power_wye_reactive[
@@ -1278,8 +1335,8 @@ function LinearElectricGridModel(
     sensitivity_voltage_by_power_delta_active = (
         SparseArrays.spzeros(
             ComplexF64,
-            electric_grid_model.index.nodal_dimension,
-            electric_grid_model.index.nodal_dimension,
+            electric_grid_model.index.node_dimension,
+            electric_grid_model.index.node_dimension,
         )
     )
     # TODO: Currently requiring conversion to dense matrix for `ldiv!` to work.
@@ -1304,8 +1361,8 @@ function LinearElectricGridModel(
     sensitivity_voltage_by_power_delta_reactive = (
         SparseArrays.spzeros(
             ComplexF64,
-            electric_grid_model.index.nodal_dimension,
-            electric_grid_model.index.nodal_dimension,
+            electric_grid_model.index.node_dimension,
+            electric_grid_model.index.node_dimension,
         )
     )
     sensitivity_voltage_by_power_delta_reactive[

@@ -4,62 +4,6 @@ module API
 include("config.jl")
 import ..FLEDGE
 
-"Get timestep data for given `scenario_name`"
-function get_timestep_data(scenario_name::String)
-    scenario_data = (
-        FLEDGE.DatabaseInterface.TimestepData(scenario_name)
-    )
-end
-
-"""
-Get electric grid data.
-
-- Instantiates and returns electric grid data object for
-  given `scenario_name`.
-"""
-function get_electric_grid_data(scenario_name::String)
-    electric_grid_data = (
-        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
-    )
-    return electric_grid_data
-end
-
-"Get fixed load data for given `scenario_name`."
-function get_fixed_load_data(scenario_name::String)
-    fixed_load_data = (
-        FLEDGE.DatabaseInterface.FixedLoadData(scenario_name)
-    )
-
-    return fixed_load_data
-end
-
-"Get EV charger data for given `scenario_name`."
-function get_ev_charger_data(scenario_name::String)
-    ev_charger_data = (
-        FLEDGE.DatabaseInterface.EVChargerData(scenario_name)
-    )
-
-    return ev_charger_data
-end
-
-"Get flexible load data for given `scenario_name`."
-function get_flexible_load_data(scenario_name::String)
-    flexible_load_data = (
-        FLEDGE.DatabaseInterface.FlexibleLoadData(scenario_name)
-    )
-
-    return flexible_load_data
-end
-
-"Get price data for given `scenario_name`."
-function get_price_data(scenario_name::String)
-    price_data = (
-        FLEDGE.DatabaseInterface.PriceData(scenario_name)
-    )
-
-    return price_data
-end
-
 """
 Get electric grid model.
 
@@ -67,7 +11,9 @@ Get electric grid model.
   given `scenario_name`.
 """
 function get_electric_grid_model(scenario_name::String)
-    electric_grid_data = get_electric_grid_data(scenario_name)
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
     electric_grid_model = (
         FLEDGE.ElectricGridModels.ElectricGridModel(electric_grid_data)
     )
@@ -120,7 +66,9 @@ Initialize OpenDSS model.
   can be accessed with the API of the `OpenDSS.jl` package.
 """
 function initialize_open_dss_model(scenario_name::String)
-    electric_grid_data = get_electric_grid_data(scenario_name)
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
     success = (
         FLEDGE.ElectricGridModels.initialize_open_dss_model(electric_grid_data)
     )
@@ -134,7 +82,9 @@ Run operation problem.
 - Instantiates and solves operation problem for the given `scenario_name`.
 """
 function run_operation_problem(scenario_name::String)
-    electric_grid_data = get_electric_grid_data(scenario_name)
+    electric_grid_data = (
+        FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
+    )
     operation_problem = (
         FLEDGE.OperationProblems.OperationProblem(electric_grid_data)
     )

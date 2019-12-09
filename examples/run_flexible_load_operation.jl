@@ -14,9 +14,9 @@ scenario_name = "singapore_6node"
 Plots.gr()  # Select plotting backend.
 
 # Get data.
-timestep_data = FLEDGE.get_timestep_data(scenario_name)
-flexible_load_data = FLEDGE.get_flexible_load_data(scenario_name)
-price_data = FLEDGE.get_price_data(scenario_name)
+timestep_data = FLEDGE.DatabaseInterface.TimestepData(scenario_name)
+flexible_load_data = FLEDGE.DatabaseInterface.FlexibleLoadData(scenario_name)
+price_data = FLEDGE.DatabaseInterface.PriceData(scenario_name)
 
 # Get model.
 load_name = flexible_load_data.flexible_loads[1, :load_name] # Take first load.

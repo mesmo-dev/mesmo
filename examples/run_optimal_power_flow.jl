@@ -15,7 +15,7 @@ Plots.gr()  # Select plotting backend.
 
 # Get model.
 electric_grid_data = (
-    FLEDGE.get_electric_grid_data(scenario_name)
+    FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
 )
 electric_grid_index = (
     FLEDGE.ElectricGridModels.ElectricGridIndex(electric_grid_data)

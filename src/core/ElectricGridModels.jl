@@ -34,7 +34,7 @@ struct ElectricGridIndex
     transformer_names::Vector{String}
     branch_names::Vector{String}
     branch_types::Vector{String}
-    branches_phases::Vector{Tuple{String,String}}
+    branches_phases::Vector{Tuple{String,String,String}}
     load_names::Vector{String}
     node_by_node_name::Dict{String,Array{Int,1}}
     node_by_phase::Dict{String,Array{Int,1}}
@@ -237,7 +237,7 @@ function ElectricGridIndex(
     branch_types = ["line", "transformer"]
     branches_phases = (
         [
-            (branch[:branch_name], branch[:phase])
+            (branch[:branch_name], branch[:phase], branch[:branch_type])
             for branch in eachrow(branches)
         ]
     )

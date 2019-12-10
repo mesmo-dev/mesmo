@@ -42,6 +42,8 @@ optimization_problem = (
 )
 
 # Define variables.
+
+# Load.
 JuMP.@variable(
     optimization_problem,
     load_active_power_vector[electric_grid_index.load_names]
@@ -50,6 +52,26 @@ JuMP.@variable(
     optimization_problem,
     load_reactive_power_vector[electric_grid_index.load_names]
 )
+
+# Power.
+JuMP.@variable(
+    optimization_problem,
+    nodal_power_vector_wye_active_change[electric_grid_index.nodes_phases]
+)
+JuMP.@variable(
+    optimization_problem,
+    nodal_power_vector_wye_reactive_change[electric_grid_index.nodes_phases]
+)
+JuMP.@variable(
+    optimization_problem,
+    nodal_power_vector_delta_active_change[electric_grid_index.nodes_phases]
+)
+JuMP.@variable(
+    optimization_problem,
+    nodal_power_vector_delta_reactive_change[electric_grid_index.nodes_phases]
+)
+
+# Voltage.
 JuMP.@variable(
     optimization_problem,
     voltage_magnitude_vector[electric_grid_index.nodes_phases]
@@ -59,7 +81,19 @@ JuMP.@variable(
     voltage_magnitude_per_unit_deviation_vector[electric_grid_index.nodes_phases]
 )
 
+# Branch flows.
+JuMP.@variable(
+    optimization_problem,
+    branch_power_vector_1_squared[electric_grid_index.branches_phases]
+)
+JuMP.@variable(
+    optimization_problem,
+    branch_power_vector_2_squared[electric_grid_index.branches_phases]
+)
+
 # Define constraints.
+
+# Load.
 JuMP.@constraint(
     optimization_problem,
     load_active_minimum_maximum,
@@ -82,6 +116,79 @@ JuMP.@constraint(
         1.5 .* load_reactive_power_vector_nominal
     )
 )
+
+# Power.
+JuMP.@constraint(
+    optimization_problem,
+    nodal_power_vector_wye_active_equation,
+    (
+        nodal_power_vector_wye_active_change.data
+        .==
+        0.0
+        + electric_grid_model.load_incidence_wye_matrix
+        * (
+            -1.0
+            .* (
+                load_active_power_vector.data
+                - load_active_power_vector_nominal
+            )
+        )
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    nodal_power_vector_wye_reactive_equation,
+    (
+        nodal_power_vector_wye_reactive_change.data
+        .==
+        0.0
+        + electric_grid_model.load_incidence_wye_matrix
+        * (
+            -1.0
+            .* (
+                load_reactive_power_vector.data
+                - load_reactive_power_vector_nominal
+            )
+        )
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    nodal_power_vector_delta_active_equation,
+    (
+        nodal_power_vector_delta_active_change.data
+        .==
+        0.0
+        + electric_grid_model.load_incidence_delta_matrix
+        * (
+            -1.0
+            .* (
+                load_active_power_vector.data
+                - load_active_power_vector_nominal
+            )
+        )
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    nodal_power_vector_delta_reactive_equation,
+    (
+        nodal_power_vector_delta_reactive_change.data
+        .==
+        0.0
+        + electric_grid_model.load_incidence_delta_matrix
+        * (
+            -1.0
+            .* (
+                load_reactive_power_vector.data
+                - load_reactive_power_vector_nominal
+            )
+        )
+    )
+)
+
+
+# Voltage.
 JuMP.@constraint(
     optimization_problem,
     voltage_magnitude_equation,
@@ -91,17 +198,13 @@ JuMP.@constraint(
         (
             abs.(electric_grid_model.nodal_voltage_vector_no_load)
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
-            * electric_grid_model.load_incidence_wye_matrix
-            * (-1.0 .* (load_active_power_vector.data - load_active_power_vector_nominal))
+            * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
-            * electric_grid_model.load_incidence_wye_matrix
-            * (-1.0 .* (load_reactive_power_vector.data - load_reactive_power_vector_nominal))
+            * nodal_power_vector_wye_reactive_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_active
-            * electric_grid_model.load_incidence_delta_matrix
-            * (-1.0 .* (load_active_power_vector.data - load_active_power_vector_nominal))
+            * nodal_power_vector_delta_active_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_reactive
-            * electric_grid_model.load_incidence_delta_matrix
-            * (-1.0 .* (load_reactive_power_vector.data - load_reactive_power_vector_nominal))
+            * nodal_power_vector_delta_reactive_change.data
         )
     )
 )
@@ -138,6 +241,44 @@ JuMP.@constraint(
             voltage_magnitude_vector.data
             ./ abs.(electric_grid_model.nodal_voltage_vector_no_load)
             .- 1.0
+        )
+    )
+)
+
+# Branch flows.
+JuMP.@constraint(
+    optimization_problem,
+    branch_flow_1_equation,
+    (
+        branch_power_vector_1_squared.data
+        .==
+        (
+            linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_active
+            * nodal_power_vector_wye_active_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_reactive
+            * nodal_power_vector_wye_reactive_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_from_by_power_delta_active
+            * nodal_power_vector_delta_active_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_from_by_power_delta_reactive
+            * nodal_power_vector_delta_reactive_change.data
+        )
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    branch_flow_2_equation,
+    (
+        branch_power_vector_2_squared.data
+        .==
+        (
+            linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_active
+            * nodal_power_vector_wye_active_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_reactive
+            * nodal_power_vector_wye_reactive_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_to_by_power_delta_active
+            * nodal_power_vector_delta_active_change.data
+            + linear_electric_grid_model.sensitivity_power_branch_to_by_power_delta_reactive
+            * nodal_power_vector_delta_reactive_change.data
         )
     )
 )

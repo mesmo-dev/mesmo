@@ -29,17 +29,11 @@ linear_electric_grid_model = (
 )
 
 # Define derivative model parameters.
-load_active_power_vector_maximum = (
-    1.5 .* real.(electric_grid_model.load_power_vector_nominal)
+load_active_power_vector_nominal = (
+    real.(electric_grid_model.load_power_vector_nominal)
 )
-load_active_power_vector_minimum = (
-    0.5 .* real.(electric_grid_model.load_power_vector_nominal)
-)
-load_reactive_power_vector_maximum = (
-    1.5 .* imag.(electric_grid_model.load_power_vector_nominal)
-)
-load_reactive_power_vector_minimum = (
-    0.5 .* imag.(electric_grid_model.load_power_vector_nominal)
+load_reactive_power_vector_nominal = (
+    imag.(electric_grid_model.load_power_vector_nominal)
 )
 
 # Instantiate optimization problem.
@@ -70,22 +64,22 @@ JuMP.@constraint(
     optimization_problem,
     load_active_minimum_maximum,
     (
-        load_active_power_vector_minimum
+        0.5 .* load_active_power_vector_nominal
         .<=
         load_active_power_vector.data
         .<=
-        load_active_power_vector_maximum
+        1.5 .* load_active_power_vector_nominal
     )
 )
 JuMP.@constraint(
     optimization_problem,
     load_reactive_minimum_maximum,
     (
-        load_reactive_power_vector_minimum
+        0.5 .* load_reactive_power_vector_nominal
         .<=
         load_reactive_power_vector.data
         .<=
-        load_reactive_power_vector_maximum
+        1.5 .* load_reactive_power_vector_nominal
     )
 )
 JuMP.@constraint(
@@ -95,18 +89,19 @@ JuMP.@constraint(
         voltage_magnitude_vector.data
         .==
         (
-            linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
+            abs.(electric_grid_model.nodal_voltage_vector_no_load)
+            + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
             * electric_grid_model.load_incidence_wye_matrix
-            * load_active_power_vector.data
+            * (-1.0 .* (load_active_power_vector.data - load_active_power_vector_nominal))
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
             * electric_grid_model.load_incidence_wye_matrix
-            * load_reactive_power_vector.data
+            * (-1.0 .* (load_reactive_power_vector.data - load_reactive_power_vector_nominal))
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_active
             * electric_grid_model.load_incidence_delta_matrix
-            * load_active_power_vector.data
+            * (-1.0 .* (load_active_power_vector.data - load_active_power_vector_nominal))
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_reactive
             * electric_grid_model.load_incidence_delta_matrix
-            * load_reactive_power_vector.data
+            * (-1.0 .* (load_reactive_power_vector.data - load_reactive_power_vector_nominal))
         )
     )
 )
@@ -161,8 +156,14 @@ JuMP.optimize!(optimization_problem)
 # Get results.
 optimization_termination_status = JuMP.termination_status(optimization_problem)
 Logging.@info("", optimization_termination_status)
-load_active_power_vector_per_unit = (
+
+voltage_magnitude_vector_per_unit_result = (
+    JuMP.value.(voltage_magnitude_vector.data)
+    ./ abs.(electric_grid_model.nodal_voltage_vector_no_load)
+)
+Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_result))
+load_active_power_vector_per_unit_result = (
     JuMP.value.(load_active_power_vector.data)
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )
-Logging.@info("", Statistics.mean(load_active_power_vector_per_unit))
+Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_result))

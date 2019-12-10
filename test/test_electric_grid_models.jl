@@ -443,29 +443,28 @@ Test.@testset "Electric grid model tests" begin
 
         # TODO: Validate total_loss_active_error against MATLAB implementation.
         # TODO: Validate total_loss_reactive_error against MATLAB implementation.
-        @Logging.info(
-            "Linear electric grid model error:",
-            linear_electric_grid_model_error = DataFrames.DataFrame(
-                [
-                    power_multipliers,
-                    nodal_voltage_vector_error,
-                    nodal_voltage_vector_magnitude_error,
-                    branch_power_vector_1_squared_error,
-                    branch_power_vector_2_squared_error,
-                    total_loss_active_error,
-                    total_loss_reactive_error
-                ],
-                [
-                    :power_multipliers,
-                    :nodal_voltage_vector_error,
-                    :nodal_voltage_vector_magnitude_error,
-                    :branch_power_vector_1_squared_error,
-                    :branch_power_vector_2_squared_error,
-                    :total_loss_active_error,
-                    :total_loss_reactive_error
-                ]
-            )
+        linear_electric_grid_model_error = DataFrames.DataFrame(
+            [
+                power_multipliers,
+                nodal_voltage_vector_error,
+                nodal_voltage_vector_magnitude_error,
+                branch_power_vector_1_squared_error,
+                branch_power_vector_2_squared_error,
+                total_loss_active_error,
+                total_loss_reactive_error
+            ],
+            [
+                :power_multipliers,
+                :nodal_voltage_vector_error,
+                :nodal_voltage_vector_magnitude_error,
+                :branch_power_vector_1_squared_error,
+                :branch_power_vector_2_squared_error,
+                :total_loss_active_error,
+                :total_loss_reactive_error
+            ]
         )
+        @Logging.info("", linear_electric_grid_model_error)
+        display(linear_electric_grid_model_error)
 
         # Evaluate test.
         Test.@test actual == expected
@@ -476,7 +475,7 @@ Test.@testset "Electric grid model tests" begin
         electric_grid_data = (
             FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
         )
-        expected = electric_grid_data.electric_grids[:electric_grid_name][1]
+        expected = electric_grid_data.electric_grids[1, :electric_grid_name]
 
         # Get actual result.
         @time_log "Initialize OpenDSS model test" (

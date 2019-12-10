@@ -8,7 +8,7 @@ Test.@testset "Electric grid model tests" begin
 
         # Get actual result.
         @time_log "Electric grid model test" actual = (
-            typeof(FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name))
+            typeof(FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name))
         )
 
         # Evaluate test.
@@ -22,7 +22,7 @@ Test.@testset "Electric grid model tests" begin
         # Get actual result.
         @time_log "Simple linear electric grid model test" actual = (
             typeof(
-                FLEDGE.ElectricGridModels.LinearElectricGridModel(test_scenario_name)
+                FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
             )
         )
 
@@ -33,7 +33,7 @@ Test.@testset "Electric grid model tests" begin
     Test.@testset "Detailed linear electric grid model test" begin
         # Obtain electric grid model.
         electric_grid_model = (
-            FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name)
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
         )
 
         # Obtain power flow solution for nominal loading conditions.
@@ -474,13 +474,13 @@ Test.@testset "Electric grid model tests" begin
     Test.@testset "Initialize OpenDSS model test" begin
         # Define expected result.
         electric_grid_data = (
-            FLEDGE.DatabaseInterface.ElectricGridData(test_scenario_name)
+            FLEDGE.DatabaseInterface.ElectricGridData(scenario_name)
         )
         expected = electric_grid_data.electric_grids[:electric_grid_name][1]
 
         # Get actual result.
         @time_log "Initialize OpenDSS model test" (
-            FLEDGE.ElectricGridModels.initialize_open_dss_model(test_scenario_name)
+            FLEDGE.ElectricGridModels.initialize_open_dss_model(scenario_name)
         )
         actual = OpenDSSDirect.Circuit.Name()
 

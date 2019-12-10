@@ -16,7 +16,7 @@ import Test
 
 # Settings.
 test_data_path = joinpath(@__DIR__, "data")
-test_scenario_name = "singapore_6node"
+scenario_name = "singapore_6node"
 Plots.gr()  # Select plotting backend.
 test_plots = false # If true, tests may produce plots.
 

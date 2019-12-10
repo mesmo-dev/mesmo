@@ -4,7 +4,7 @@ Test.@testset "DER model tests" begin
     Test.@testset "Fixed load model test" begin
         # Obtain electric grid data.
         fixed_load_data = (
-            FLEDGE.DatabaseInterface.FixedLoadData(test_scenario_name)
+            FLEDGE.DatabaseInterface.FixedLoadData(scenario_name)
         )
 
         # Define expected result.
@@ -25,7 +25,7 @@ Test.@testset "DER model tests" begin
     Test.@testset "EV charger model test" begin
         # Obtain electric grid data.
         ev_charger_data = (
-            FLEDGE.DatabaseInterface.EVChargerData(test_scenario_name)
+            FLEDGE.DatabaseInterface.EVChargerData(scenario_name)
         )
 
         # Define expected result.
@@ -46,7 +46,7 @@ Test.@testset "DER model tests" begin
     Test.@testset "Flexible load model test" begin
         # Obtain electric grid data.
         flexible_load_data = (
-            FLEDGE.DatabaseInterface.FlexibleLoadData(test_scenario_name)
+            FLEDGE.DatabaseInterface.FlexibleLoadData(scenario_name)
         )
 
         # Define expected result.

@@ -102,12 +102,12 @@ Test.@testset "Power flow solver tests" begin
     Test.@testset "Get voltage vector fixed point with model test" begin
         # Set up electric grid model.
         electric_grid_model = (
-            FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name)
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
         )
 
         # Define expected result.
         # - TODO: Replace type test with proper result check.
-        FLEDGE.ElectricGridModels.initialize_open_dss_model(test_scenario_name)
+        FLEDGE.ElectricGridModels.initialize_open_dss_model(scenario_name)
         open_dss = FLEDGE.PowerFlowSolvers.get_voltage_open_dss()
         expected = Array{ComplexF64, 1}
 
@@ -169,7 +169,7 @@ Test.@testset "Power flow solver tests" begin
     Test.@testset "Get branch power vectors with model test" begin
         # Set up electric grid model.
         electric_grid_model = (
-            FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name)
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
         )
 
         # Get voltage vector.
@@ -202,7 +202,7 @@ Test.@testset "Power flow solver tests" begin
     Test.@testset "Get total loss with model test" begin
         # Set up electric grid model.
         electric_grid_model = (
-            FLEDGE.ElectricGridModels.ElectricGridModel(test_scenario_name)
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
         )
 
         # Get voltage vector.
@@ -231,7 +231,7 @@ Test.@testset "Power flow solver tests" begin
 
     Test.@testset "Get voltage vector by OpenDSS test" begin
         # Set up OpenDSS model.
-        FLEDGE.ElectricGridModels.initialize_open_dss_model(test_scenario_name)
+        FLEDGE.ElectricGridModels.initialize_open_dss_model(scenario_name)
 
         # Define expected result.
         # - TODO: Replace type test with proper result check.

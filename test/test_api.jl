@@ -7,7 +7,7 @@ Test.@testset "API tests" begin
 
         # Get actual result.
         @time_log "Run operation problem test" actual = (
-            FLEDGE.API.run_operation_problem(test_scenario_name)
+            FLEDGE.API.run_operation_problem(scenario_name)
         )
 
         # Evaluate test.

@@ -4,6 +4,7 @@ import Base
 import Logging
 import Printf
 
+"Time string print modified for printing timing of tests."
 function time_string_print(elapsedtime, bytes=0, gctime=0, allocs=0)
     time_string = Printf.@sprintf("%10.6f seconds", elapsedtime)
     if bytes != 0 || allocs != 0
@@ -37,6 +38,7 @@ function time_string_print(elapsedtime, bytes=0, gctime=0, allocs=0)
     return time_string
 end
 
+"Time test execution and print results into `Logging.@info`"
 macro time_log(note_string, ex)
     quote
         local val, elapsedtime, bytes, gctime, allocs = @timed($(esc(ex)))

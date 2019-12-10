@@ -36,7 +36,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "Timestep data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.TimestepData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.TimestepData(scenario_name))
         )
 
         # Evaluate test.
@@ -50,7 +50,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "Electric grid data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.ElectricGridData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.ElectricGridData(scenario_name))
         )
 
         # Evaluate test.
@@ -64,7 +64,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "Fixed load data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.FixedLoadData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.FixedLoadData(scenario_name))
         )
 
         # Evaluate test.
@@ -78,7 +78,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "EV charger data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.EVChargerData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.EVChargerData(scenario_name))
         )
 
         # Evaluate test.
@@ -92,7 +92,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "Flexible load data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.FlexibleLoadData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.FlexibleLoadData(scenario_name))
         )
 
         # Evaluate test.
@@ -106,7 +106,7 @@ Test.@testset "Database interface tests" begin
 
         # Get actual result.
         @time_log "Get price data test" actual = (
-            typeof(FLEDGE.DatabaseInterface.PriceData(test_scenario_name))
+            typeof(FLEDGE.DatabaseInterface.PriceData(scenario_name))
         )
 
         # Evaluate test.

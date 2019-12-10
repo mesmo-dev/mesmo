@@ -215,7 +215,6 @@ function ElectricGridIndex(
     node_names = (
         Vector(electric_grid_data.electric_grid_nodes[!, :node_name])
     )
-    Logging.@info("", node_names)
     node_types = ["source", "no_source"]
     nodes_phases = (
         [
@@ -223,7 +222,6 @@ function ElectricGridIndex(
             for node in eachrow(nodes)
         ]
     )
-    Logging.@info("", nodes_phases)
     line_names = (
         Vector(electric_grid_data.electric_grid_lines[!, :line_name])
     )
@@ -1058,7 +1056,7 @@ function ElectricGridModel(
             # - Delta loads are assumed to be single-phase.
             incidence_matrix = [- 1]
             insert_sub_matrix!(
-                load_incidence_wye_dictionary,
+                load_incidence_delta_dictionary,
                 incidence_matrix,
                 node_index,
                 load_index
@@ -1262,6 +1260,7 @@ end
 
 "Linear electric grid model object."
 struct LinearElectricGridModel
+    # TODO: Add type definitions for sensitivity matrices.
     sensitivity_voltage_by_power_wye_active
     sensitivity_voltage_by_power_wye_reactive
     sensitivity_voltage_by_power_delta_active

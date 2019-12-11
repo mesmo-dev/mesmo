@@ -27,6 +27,9 @@ electric_grid_model = (
 linear_electric_grid_model = (
     FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
 )
+nodal_voltage_vector_initial = (
+    FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
+)
 
 # Define derivative model parameters.
 load_active_power_vector_nominal = (
@@ -196,7 +199,7 @@ JuMP.@constraint(
         voltage_magnitude_vector.data
         .==
         (
-            abs.(electric_grid_model.nodal_voltage_vector_no_load)
+            abs.(nodal_voltage_vector_initial)
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
             * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive

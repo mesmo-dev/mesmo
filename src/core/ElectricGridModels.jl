@@ -1337,7 +1337,7 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"],
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
-        nodal_admittance_matrix_no_source
+        -1.0 .* nodal_admittance_matrix_no_source
         \ LinearAlgebra.Diagonal(conj.(inv.(nodal_voltage_no_source)))
     )
 
@@ -1352,7 +1352,7 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"],
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
-        - 1im .* nodal_admittance_matrix_no_source
+        1.0im .* nodal_admittance_matrix_no_source
         \ LinearAlgebra.Diagonal(conj.(inv.(nodal_voltage_no_source)))
     )
 
@@ -1371,7 +1371,7 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
         (
-            nodal_admittance_matrix_no_source
+            -1.0 .* nodal_admittance_matrix_no_source
             \ Matrix(transpose(nodal_transformation_matrix_no_source))
         )
         .* transpose(
@@ -1394,7 +1394,7 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
         (
-            - 1im .* nodal_admittance_matrix_no_source
+            1.0im .* nodal_admittance_matrix_no_source
             \ Matrix(transpose(nodal_transformation_matrix_no_source))
         )
         .* transpose(

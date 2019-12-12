@@ -1464,7 +1464,8 @@ function LinearElectricGridModel(
     )
 
     sensitivity_power_branch_from_by_power_wye_active = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_1))
         )
@@ -1480,7 +1481,8 @@ function LinearElectricGridModel(
         )
     )
     sensitivity_power_branch_from_by_power_wye_reactive = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_1))
         )
@@ -1497,7 +1499,8 @@ function LinearElectricGridModel(
     )
 
     sensitivity_power_branch_from_by_power_delta_active = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_1))
         )
@@ -1513,7 +1516,8 @@ function LinearElectricGridModel(
         )
     )
     sensitivity_power_branch_from_by_power_delta_reactive = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_1))
         )
@@ -1530,7 +1534,8 @@ function LinearElectricGridModel(
     )
 
     sensitivity_power_branch_to_by_power_wye_active = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_2))
         )
@@ -1546,7 +1551,8 @@ function LinearElectricGridModel(
         )
     )
     sensitivity_power_branch_to_by_power_wye_reactive = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_2))
         )
@@ -1563,7 +1569,8 @@ function LinearElectricGridModel(
     )
 
     sensitivity_power_branch_to_by_power_delta_active = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_2))
         )
@@ -1579,7 +1586,8 @@ function LinearElectricGridModel(
         )
     )
     sensitivity_power_branch_to_by_power_delta_reactive = (
-        2.0 .* hcat(
+        2.0
+        .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
             LinearAlgebra.Diagonal(imag.(branch_power_vector_2))
         )
@@ -1758,7 +1766,9 @@ end
 "Instantiate linear electric grid model object for given `scenario_name`."
 function LinearElectricGridModel(scenario_name::String)
     # Obtain electric grid model.
-    electric_grid_model = ElectricGridModel(scenario_name)
+    electric_grid_model = (
+        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+    )
 
     # Obtain power flow solution for nominal loading conditions.
     nodal_voltage_vector = (
@@ -1774,7 +1784,7 @@ function LinearElectricGridModel(scenario_name::String)
         )
     )
 
-    LinearElectricGridModel(
+    FLEDGE.ElectricGridModels.LinearElectricGridModel(
         electric_grid_model,
         nodal_voltage_vector,
         branch_power_vector_1,

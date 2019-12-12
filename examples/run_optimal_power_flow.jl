@@ -30,6 +30,15 @@ linear_electric_grid_model = (
 nodal_voltage_vector_initial = (
     FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
 )
+(
+    branch_power_vector_1_initial,
+    branch_power_vector_2_initial
+) = (
+    FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
+        electric_grid_model,
+        nodal_voltage_vector_initial
+    )
+)
 
 # Define derivative model parameters.
 load_active_power_vector_nominal = (
@@ -256,7 +265,8 @@ JuMP.@constraint(
         branch_power_vector_1_squared.data
         .==
         (
-            linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_active
+            (abs.(branch_power_vector_1_initial) .^ 2)
+            + linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_active
             * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_reactive
             * nodal_power_vector_wye_reactive_change.data
@@ -274,7 +284,8 @@ JuMP.@constraint(
         branch_power_vector_2_squared.data
         .==
         (
-            linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_active
+            (abs.(branch_power_vector_2_initial) .^ 2)
+            + linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_active
             * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_reactive
             * nodal_power_vector_wye_reactive_change.data
@@ -301,13 +312,18 @@ JuMP.optimize!(optimization_problem)
 optimization_termination_status = JuMP.termination_status(optimization_problem)
 Logging.@info("", optimization_termination_status)
 
-voltage_magnitude_vector_per_unit_result = (
+voltage_magnitude_vector_per_unit_value = (
     JuMP.value.(voltage_magnitude_vector.data)
     ./ abs.(electric_grid_model.nodal_voltage_vector_no_load)
 )
-Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_result))
-load_active_power_vector_per_unit_result = (
+Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))
+load_active_power_vector_per_unit_value = (
     JuMP.value.(load_active_power_vector.data)
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )
-Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_result))
+Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_value))
+branch_power_vector_1_squared_per_unit_value = (
+    JuMP.value.(branch_power_vector_1_squared.data)
+    ./ (abs.(branch_power_vector_1_initial) .^ 2)
+)
+Logging.@info("", Statistics.mean(branch_power_vector_1_squared_per_unit_value))

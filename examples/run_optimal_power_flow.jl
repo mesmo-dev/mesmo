@@ -2,7 +2,9 @@
 
 import FLEDGE
 
+import CPLEX # `]add CPLEX` to use CPLEX.
 import GLPK
+import Gurobi # `]add Gurobi` to use Gurobi.
 import GR
 import JuMP
 import Logging
@@ -50,7 +52,9 @@ load_reactive_power_vector_nominal = (
 
 # Instantiate optimization problem.
 optimization_problem = (
+    # JuMP.Model(JuMP.with_optimizer(CPLEX.Optimizer))
     JuMP.Model(JuMP.with_optimizer(GLPK.Optimizer, msg_lev=GLPK.MSG_ON))
+    # JuMP.Model(JuMP.with_optimizer(Gurobi.Optimizer))
 )
 
 # Define variables.

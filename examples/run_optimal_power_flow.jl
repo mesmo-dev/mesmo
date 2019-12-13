@@ -100,11 +100,11 @@ JuMP.@variable(
 # Branch flows.
 JuMP.@variable(
     optimization_problem,
-    branch_power_vector_1_squared[electric_grid_index.branches_phases]
+    branch_power_vector_1_squared_change[electric_grid_index.branches_phases]
 )
 JuMP.@variable(
     optimization_problem,
-    branch_power_vector_2_squared[electric_grid_index.branches_phases]
+    branch_power_vector_2_squared_change[electric_grid_index.branches_phases]
 )
 
 # Define constraints.
@@ -266,11 +266,10 @@ JuMP.@constraint(
     optimization_problem,
     branch_flow_1_equation,
     (
-        branch_power_vector_1_squared.data
+        branch_power_vector_1_squared_change.data
         .==
         (
-            (abs.(branch_power_vector_1_initial) .^ 2)
-            + linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_active
+            linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_active
             * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_power_branch_from_by_power_wye_reactive
             * nodal_power_vector_wye_reactive_change.data
@@ -285,11 +284,10 @@ JuMP.@constraint(
     optimization_problem,
     branch_flow_2_equation,
     (
-        branch_power_vector_2_squared.data
+        branch_power_vector_2_squared_change.data
         .==
         (
-            (abs.(branch_power_vector_2_initial) .^ 2)
-            + linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_active
+            linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_active
             * nodal_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_power_branch_to_by_power_wye_reactive
             * nodal_power_vector_wye_reactive_change.data
@@ -327,7 +325,10 @@ load_active_power_vector_per_unit_value = (
 )
 Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_value))
 branch_power_vector_1_squared_per_unit_value = (
-    JuMP.value.(branch_power_vector_1_squared.data)
+    (
+        JuMP.value.(branch_power_vector_1_squared_change.data)
+        + (abs.(branch_power_vector_1_initial) .^ 2)
+    )
     ./ (abs.(branch_power_vector_1_initial) .^ 2)
 )
 Logging.@info("", Statistics.mean(branch_power_vector_1_squared_per_unit_value))

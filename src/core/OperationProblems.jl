@@ -24,7 +24,7 @@ function OperationProblem(
     )
 
     # Obtain power flow solution for nominal loading conditions.
-    nodal_voltage_vector = (
+    node_voltage_vector = (
         FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
     )
     (
@@ -33,7 +33,7 @@ function OperationProblem(
     ) = (
         FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
             electric_grid_model,
-            nodal_voltage_vector
+            node_voltage_vector
         )
     )
 
@@ -41,7 +41,7 @@ function OperationProblem(
     linear_electric_grid_model = (
         FLEDGE.ElectricGridModels.LinearElectricGridModel(
             electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
-            nodal_voltage_vector::Array{ComplexF64,1},
+            node_voltage_vector::Array{ComplexF64,1},
             branch_power_vector_1::Array{ComplexF64,1},
             branch_power_vector_2::Array{ComplexF64,1}
         )

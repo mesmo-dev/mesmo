@@ -432,15 +432,15 @@ end
 struct ElectricGridModel
     electric_grid_data::FLEDGE.DatabaseInterface.ElectricGridData
     index::FLEDGE.ElectricGridModels.ElectricGridIndex
-    nodal_admittance_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int}
-    nodal_transformation_matrix::SparseArrays.SparseMatrixCSC{Int,Int}
+    node_admittance_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int}
+    node_transformation_matrix::SparseArrays.SparseMatrixCSC{Int,Int}
     branch_admittance_1_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int}
     branch_admittance_2_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int}
     branch_incidence_1_matrix::SparseArrays.SparseMatrixCSC{Int,Int}
     branch_incidence_2_matrix::SparseArrays.SparseMatrixCSC{Int,Int}
     load_incidence_wye_matrix::SparseArrays.SparseMatrixCSC{Float64,Int}
     load_incidence_delta_matrix::SparseArrays.SparseMatrixCSC{Int,Int}
-    nodal_voltage_vector_no_load::Array{ComplexF64,1}
+    node_voltage_vector_no_load::Array{ComplexF64,1}
     load_power_vector_nominal::Array{ComplexF64,1}
 end
 
@@ -468,12 +468,12 @@ function ElectricGridModel(
     # - For efficient construction, all matrix entries are first collected into
     #   dictionaries of row indexes, column indexes and values.
     # - The full matrices are constructed as sparse matrices later on.
-    nodal_admittance_dictionary = Dict(
+    node_admittance_dictionary = Dict(
         :col_indexes => Vector{Int}(),
         :row_indexes => Vector{Int}(),
         :values => Vector{ComplexF64}()
     )
-    nodal_transformation_dictionary = Dict(
+    node_transformation_dictionary = Dict(
         :col_indexes => Vector{Int}(),
         :row_indexes => Vector{Int}(),
         :values => Vector{Int}()
@@ -616,25 +616,25 @@ function ElectricGridModel(
 
         # Add line element matrices to the nodal admittance matrix.
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_11,
             node_index_1,
             node_index_1
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_12,
             node_index_1,
             node_index_2
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_21,
             node_index_2,
             node_index_1
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_22,
             node_index_2,
             node_index_2
@@ -899,25 +899,25 @@ function ElectricGridModel(
 
         # Add transformer element matrices to the nodal admittance matrix.
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_11,
             node_index_1,
             node_index_1
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_12,
             node_index_1,
             node_index_2
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_21,
             node_index_2,
             node_index_1
         )
         insert_sub_matrix!(
-            nodal_admittance_dictionary,
+            node_admittance_dictionary,
             admittance_matrix_22,
             node_index_2,
             node_index_2
@@ -997,7 +997,7 @@ function ElectricGridModel(
 
         # Add node transformation matrix to full transformation matrix.
         insert_sub_matrix!(
-            nodal_transformation_dictionary,
+            node_transformation_dictionary,
             transformation_matrix,
             node_index,
             node_index
@@ -1071,17 +1071,17 @@ function ElectricGridModel(
     # Construct sparse matrices for nodal admittance, nodal transformation,
     # branch admittance, branch incidence and load incidence matrices
     # from the respective dictionaries.
-    nodal_admittance_matrix = SparseArrays.sparse(
-        nodal_admittance_dictionary[:row_indexes],
-        nodal_admittance_dictionary[:col_indexes],
-        nodal_admittance_dictionary[:values],
+    node_admittance_matrix = SparseArrays.sparse(
+        node_admittance_dictionary[:row_indexes],
+        node_admittance_dictionary[:col_indexes],
+        node_admittance_dictionary[:values],
         index.node_dimension,
         index.node_dimension
     )
-    nodal_transformation_matrix = SparseArrays.sparse(
-        nodal_transformation_dictionary[:row_indexes],
-        nodal_transformation_dictionary[:col_indexes],
-        nodal_transformation_dictionary[:values],
+    node_transformation_matrix = SparseArrays.sparse(
+        node_transformation_dictionary[:row_indexes],
+        node_transformation_dictionary[:col_indexes],
+        node_transformation_dictionary[:values],
         index.node_dimension,
         index.node_dimension
     )
@@ -1135,7 +1135,7 @@ function ElectricGridModel(
     #   2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
     #   calculated from the source node voltage and the nodal admittance matrix.
     # - TODO: Check if no-load voltage divide by sqrt(3) correct.
-    nodal_voltage_vector_no_load = (
+    node_voltage_vector_no_load = (
         zeros(ComplexF64, index.node_dimension)
     )
     # Define phase orientations.
@@ -1162,7 +1162,7 @@ function ElectricGridModel(
             voltage = node[:voltage]
 
             # Insert voltage into voltage vector.
-            nodal_voltage_vector_no_load[
+            node_voltage_vector_no_load[
                 index.node_by_node_name[node[:node_name]]
             ] = (
                 voltage
@@ -1198,24 +1198,24 @@ function ElectricGridModel(
         voltage = node[:voltage]
 
         # Insert source node voltage into voltage vector.
-        nodal_voltage_vector_no_load[index.node_by_node_type["source"]] = (
+        node_voltage_vector_no_load[index.node_by_node_type["source"]] = (
             voltage
             .* voltage_phase_factors[phases]
             ./ sqrt(3)
         )
 
         # Calculate all remaining no-load node voltages.
-        nodal_voltage_vector_no_load[index.node_by_node_type["no_source"]] = (
-            - nodal_admittance_matrix[
+        node_voltage_vector_no_load[index.node_by_node_type["no_source"]] = (
+            - node_admittance_matrix[
                 index.node_by_node_type["no_source"],
                 index.node_by_node_type["no_source"]
             ]
             \ (
-                nodal_admittance_matrix[
+                node_admittance_matrix[
                     index.node_by_node_type["no_source"],
                     index.node_by_node_type["source"]
                 ]
-                * nodal_voltage_vector_no_load[index.node_by_node_type["source"]]
+                * node_voltage_vector_no_load[index.node_by_node_type["source"]]
             )
         )
     end
@@ -1232,15 +1232,15 @@ function ElectricGridModel(
     ElectricGridModel(
         electric_grid_data,
         index,
-        nodal_admittance_matrix,
-        nodal_transformation_matrix,
+        node_admittance_matrix,
+        node_transformation_matrix,
         branch_admittance_1_matrix,
         branch_admittance_2_matrix,
         branch_incidence_1_matrix,
         branch_incidence_2_matrix,
         load_incidence_wye_matrix,
         load_incidence_delta_matrix,
-        nodal_voltage_vector_no_load,
+        node_voltage_vector_no_load,
         load_power_vector_nominal
     )
 end
@@ -1269,14 +1269,14 @@ struct LinearElectricGridModel
     sensitivity_voltage_magnitude_by_power_wye_reactive
     sensitivity_voltage_magnitude_by_power_delta_active
     sensitivity_voltage_magnitude_by_power_delta_reactive
-    sensitivity_power_branch_from_by_power_wye_active
-    sensitivity_power_branch_from_by_power_wye_reactive
-    sensitivity_power_branch_from_by_power_delta_active
-    sensitivity_power_branch_from_by_power_delta_reactive
-    sensitivity_power_branch_to_by_power_wye_active
-    sensitivity_power_branch_to_by_power_wye_reactive
-    sensitivity_power_branch_to_by_power_delta_active
-    sensitivity_power_branch_to_by_power_delta_reactive
+    sensitivity_branch_power_1_by_power_wye_active
+    sensitivity_branch_power_1_by_power_wye_reactive
+    sensitivity_branch_power_1_by_power_delta_active
+    sensitivity_branch_power_1_by_power_delta_reactive
+    sensitivity_branch_power_2_by_power_wye_active
+    sensitivity_branch_power_2_by_power_wye_reactive
+    sensitivity_branch_power_2_by_power_delta_active
+    sensitivity_branch_power_2_by_power_delta_reactive
     sensitivity_loss_active_by_power_wye_active
     sensitivity_loss_active_by_power_wye_reactive
     sensitivity_loss_active_by_power_delta_active
@@ -1285,10 +1285,8 @@ struct LinearElectricGridModel
     sensitivity_loss_reactive_by_power_wye_reactive
     sensitivity_loss_reactive_by_power_delta_active
     sensitivity_loss_reactive_by_power_delta_reactive
-    sensitivity_loss_active_by_noload_voltage
-    sensitivity_loss_reactive_by_noload_voltage
-    constant_loss_active_no_load
-    constant_loss_reactive_no_load
+    loss_active_no_load
+    loss_reactive_no_load
 end
 
 """
@@ -1300,27 +1298,27 @@ nodal voltage vector and branch power vectors.
 """
 function LinearElectricGridModel(
     electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
-    nodal_voltage_vector::Array{ComplexF64,1},
+    node_voltage_vector::Array{ComplexF64,1},
     branch_power_vector_1::Array{ComplexF64,1},
     branch_power_vector_2::Array{ComplexF64,1}
 )
     # TODO: Rename sensitivity matrices to match global nomenclature.
 
     # Obtain no_source matrices and vectors.
-    nodal_admittance_matrix_no_source = (
-        electric_grid_model.nodal_admittance_matrix[
+    node_admittance_matrix_no_source = (
+        electric_grid_model.node_admittance_matrix[
             electric_grid_model.index.node_by_node_type["no_source"],
             electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_transformation_matrix_no_source = (
-        electric_grid_model.nodal_transformation_matrix[
+    node_transformation_matrix_no_source = (
+        electric_grid_model.node_transformation_matrix[
             electric_grid_model.index.node_by_node_type["no_source"],
             electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_voltage_no_source = (
-        nodal_voltage_vector[
+    node_voltage_no_source = (
+        node_voltage_vector[
             electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
@@ -1337,8 +1335,8 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"],
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
-        -1.0 .* nodal_admittance_matrix_no_source
-        \ LinearAlgebra.Diagonal(conj.(inv.(nodal_voltage_no_source)))
+        -1.0 .* node_admittance_matrix_no_source
+        \ LinearAlgebra.Diagonal(conj.(inv.(node_voltage_no_source)))
     )
 
     sensitivity_voltage_by_power_wye_reactive = (
@@ -1352,8 +1350,8 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"],
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
-        1.0im .* nodal_admittance_matrix_no_source
-        \ LinearAlgebra.Diagonal(conj.(inv.(nodal_voltage_no_source)))
+        1.0im .* node_admittance_matrix_no_source
+        \ LinearAlgebra.Diagonal(conj.(inv.(node_voltage_no_source)))
     )
 
     sensitivity_voltage_by_power_delta_active = (
@@ -1371,13 +1369,13 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
         (
-            -1.0 .* nodal_admittance_matrix_no_source
-            \ Matrix(transpose(nodal_transformation_matrix_no_source))
+            -1.0 .* node_admittance_matrix_no_source
+            \ Matrix(transpose(node_transformation_matrix_no_source))
         )
         .* transpose(
             inv.(
-                nodal_transformation_matrix_no_source
-                * conj.(nodal_voltage_no_source)
+                node_transformation_matrix_no_source
+                * conj.(node_voltage_no_source)
             )
         )
     )
@@ -1394,76 +1392,76 @@ function LinearElectricGridModel(
         electric_grid_model.index.node_by_node_type["no_source"]
     ] = (
         (
-            1.0im .* nodal_admittance_matrix_no_source
-            \ Matrix(transpose(nodal_transformation_matrix_no_source))
+            1.0im .* node_admittance_matrix_no_source
+            \ Matrix(transpose(node_transformation_matrix_no_source))
         )
         .* transpose(
             inv.(
-                nodal_transformation_matrix_no_source
-                * conj.(nodal_voltage_no_source)
+                node_transformation_matrix_no_source
+                * conj.(node_voltage_no_source)
             )
         )
     )
 
     sensitivity_voltage_magnitude_by_power_wye_active = (
-        LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
+        LinearAlgebra.Diagonal(abs.(inv.(node_voltage_vector)))
         * real.(
-            LinearAlgebra.Diagonal(conj.(nodal_voltage_vector))
+            LinearAlgebra.Diagonal(conj.(node_voltage_vector))
             * sensitivity_voltage_by_power_wye_active
         )
     )
 
     sensitivity_voltage_magnitude_by_power_wye_reactive = (
-        LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
+        LinearAlgebra.Diagonal(abs.(inv.(node_voltage_vector)))
         * real.(
-            LinearAlgebra.Diagonal(conj.(nodal_voltage_vector))
+            LinearAlgebra.Diagonal(conj.(node_voltage_vector))
             * sensitivity_voltage_by_power_wye_reactive
         )
     )
 
     sensitivity_voltage_magnitude_by_power_delta_active = (
-        LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
+        LinearAlgebra.Diagonal(abs.(inv.(node_voltage_vector)))
         * real.(
-            LinearAlgebra.Diagonal(conj.(nodal_voltage_vector))
+            LinearAlgebra.Diagonal(conj.(node_voltage_vector))
             * sensitivity_voltage_by_power_delta_active
         )
     )
 
     sensitivity_voltage_magnitude_by_power_delta_reactive = (
-        LinearAlgebra.Diagonal(abs.(inv.(nodal_voltage_vector)))
+        LinearAlgebra.Diagonal(abs.(inv.(node_voltage_vector)))
         * real.(
-            LinearAlgebra.Diagonal(conj.(nodal_voltage_vector))
+            LinearAlgebra.Diagonal(conj.(node_voltage_vector))
             * sensitivity_voltage_by_power_delta_reactive
         )
     )
 
     # Power flows
-    sensitivity_power_branch_from_by_voltage = (
+    sensitivity_branch_power_1_by_voltage = (
         LinearAlgebra.Diagonal(conj.(
             electric_grid_model.branch_admittance_1_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         ))
         * electric_grid_model.branch_incidence_1_matrix
         + LinearAlgebra.Diagonal(
             electric_grid_model.branch_incidence_1_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
         * conj.(electric_grid_model.branch_admittance_1_matrix)
     )
-    sensitivity_power_branch_to_by_voltage = (
+    sensitivity_branch_power_2_by_voltage = (
         LinearAlgebra.Diagonal(conj.(
             electric_grid_model.branch_admittance_2_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         ))
         * electric_grid_model.branch_incidence_2_matrix
         + LinearAlgebra.Diagonal(
             electric_grid_model.branch_incidence_2_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
         * conj.(electric_grid_model.branch_admittance_2_matrix)
     )
 
-    sensitivity_power_branch_from_by_power_wye_active = (
+    sensitivity_branch_power_1_by_power_wye_active = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1471,16 +1469,16 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_active)
             ),
             imag.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_active)
             )
         )
     )
-    sensitivity_power_branch_from_by_power_wye_reactive = (
+    sensitivity_branch_power_1_by_power_wye_reactive = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1488,17 +1486,17 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj(sensitivity_voltage_by_power_wye_reactive)
             ),
             imag.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj(sensitivity_voltage_by_power_wye_reactive)
             )
         )
     )
 
-    sensitivity_power_branch_from_by_power_delta_active = (
+    sensitivity_branch_power_1_by_power_delta_active = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1506,16 +1504,16 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_active)
             ),
             imag.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_active)
             )
         )
     )
-    sensitivity_power_branch_from_by_power_delta_reactive = (
+    sensitivity_branch_power_1_by_power_delta_reactive = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_1)),
@@ -1523,17 +1521,17 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_reactive)
             ),
             imag.(
-                sensitivity_power_branch_from_by_voltage
+                sensitivity_branch_power_1_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_reactive)
             )
         )
     )
 
-    sensitivity_power_branch_to_by_power_wye_active = (
+    sensitivity_branch_power_2_by_power_wye_active = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1541,16 +1539,16 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_active)
             ),
             imag.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_active)
             )
         )
     )
-    sensitivity_power_branch_to_by_power_wye_reactive = (
+    sensitivity_branch_power_2_by_power_wye_reactive = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1558,17 +1556,17 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_reactive)
             ),
             imag.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_wye_reactive)
             )
         )
     )
 
-    sensitivity_power_branch_to_by_power_delta_active = (
+    sensitivity_branch_power_2_by_power_delta_active = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1576,16 +1574,16 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_active)
             ),
             imag.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_active)
             )
         )
     )
-    sensitivity_power_branch_to_by_power_delta_reactive = (
+    sensitivity_branch_power_2_by_power_delta_reactive = (
         2.0
         .* hcat(
             LinearAlgebra.Diagonal(real.(branch_power_vector_2)),
@@ -1593,11 +1591,11 @@ function LinearElectricGridModel(
         )
         * vcat(
             real.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_reactive)
             ),
             imag.(
-                sensitivity_power_branch_to_by_voltage
+                sensitivity_branch_power_2_by_voltage
                 * conj.(sensitivity_voltage_by_power_delta_reactive)
             )
         )
@@ -1608,24 +1606,24 @@ function LinearElectricGridModel(
     sensitivity_loss_active_by_voltage = (
         real_valued_conjugate(
             conj.(
-                transpose(nodal_voltage_vector)
-                * real.(electric_grid_model.nodal_admittance_matrix)
+                transpose(node_voltage_vector)
+                * real.(electric_grid_model.node_admittance_matrix)
             )
             + transpose(conj.(
-                real.(electric_grid_model.nodal_admittance_matrix)
-                * nodal_voltage_vector
+                real.(electric_grid_model.node_admittance_matrix)
+                * node_voltage_vector
             ))
         )
     )[1, :]
     sensitivity_loss_reactive_by_voltage = (
         real_valued_conjugate(
             conj.(
-                transpose(nodal_voltage_vector)
-                * imag.(- electric_grid_model.nodal_admittance_matrix)
+                transpose(node_voltage_vector)
+                * imag.(- electric_grid_model.node_admittance_matrix)
             )
             + transpose(conj.(
-                imag.(- electric_grid_model.nodal_admittance_matrix)
-                * nodal_voltage_vector
+                imag.(- electric_grid_model.node_admittance_matrix)
+                * node_voltage_vector
             ))
         )
     )[1, :]
@@ -1694,40 +1692,40 @@ function LinearElectricGridModel(
     sensitivity_loss_active_by_noload_voltage = (
         real_valued_conjugate(
             conj.(
-                transpose(electric_grid_model.nodal_voltage_vector_no_load)
-                * real.(electric_grid_model.nodal_admittance_matrix)
+                transpose(electric_grid_model.node_voltage_vector_no_load)
+                * real.(electric_grid_model.node_admittance_matrix)
             )
             + transpose(conj.(
-                real.(electric_grid_model.nodal_admittance_matrix)
-                * electric_grid_model.nodal_voltage_vector_no_load
+                real.(electric_grid_model.node_admittance_matrix)
+                * electric_grid_model.node_voltage_vector_no_load
             ))
         )
     )
     sensitivity_loss_reactive_by_noload_voltage = (
         real_valued_conjugate(
             conj.(
-                transpose(electric_grid_model.nodal_voltage_vector_no_load)
-                * imag.(- electric_grid_model.nodal_admittance_matrix)
+                transpose(electric_grid_model.node_voltage_vector_no_load)
+                * imag.(- electric_grid_model.node_admittance_matrix)
             )
             + transpose(conj.(
-                imag.(- electric_grid_model.nodal_admittance_matrix)
-                * electric_grid_model.nodal_voltage_vector_no_load
+                imag.(- electric_grid_model.node_admittance_matrix)
+                * electric_grid_model.node_voltage_vector_no_load
             ))
         )
     )
 
-    constant_loss_active_no_load = (
+    loss_active_no_load = (
         sensitivity_loss_active_by_noload_voltage
         * vcat(
-            real.(electric_grid_model.nodal_voltage_vector_no_load),
-            imag.(electric_grid_model.nodal_voltage_vector_no_load)
+            real.(electric_grid_model.node_voltage_vector_no_load),
+            imag.(electric_grid_model.node_voltage_vector_no_load)
         )
     )
-    constant_loss_reactive_no_load = (
+    loss_reactive_no_load = (
         sensitivity_loss_reactive_by_noload_voltage
         * vcat(
-            real.(electric_grid_model.nodal_voltage_vector_no_load),
-            imag.(electric_grid_model.nodal_voltage_vector_no_load)
+            real.(electric_grid_model.node_voltage_vector_no_load),
+            imag.(electric_grid_model.node_voltage_vector_no_load)
         )
     )
 
@@ -1740,14 +1738,14 @@ function LinearElectricGridModel(
         sensitivity_voltage_magnitude_by_power_wye_reactive,
         sensitivity_voltage_magnitude_by_power_delta_active,
         sensitivity_voltage_magnitude_by_power_delta_reactive,
-        sensitivity_power_branch_from_by_power_wye_active,
-        sensitivity_power_branch_from_by_power_wye_reactive,
-        sensitivity_power_branch_from_by_power_delta_active,
-        sensitivity_power_branch_from_by_power_delta_reactive,
-        sensitivity_power_branch_to_by_power_wye_active,
-        sensitivity_power_branch_to_by_power_wye_reactive,
-        sensitivity_power_branch_to_by_power_delta_active,
-        sensitivity_power_branch_to_by_power_delta_reactive,
+        sensitivity_branch_power_1_by_power_wye_active,
+        sensitivity_branch_power_1_by_power_wye_reactive,
+        sensitivity_branch_power_1_by_power_delta_active,
+        sensitivity_branch_power_1_by_power_delta_reactive,
+        sensitivity_branch_power_2_by_power_wye_active,
+        sensitivity_branch_power_2_by_power_wye_reactive,
+        sensitivity_branch_power_2_by_power_delta_active,
+        sensitivity_branch_power_2_by_power_delta_reactive,
         sensitivity_loss_active_by_power_wye_active,
         sensitivity_loss_active_by_power_wye_reactive,
         sensitivity_loss_active_by_power_delta_active,
@@ -1756,10 +1754,8 @@ function LinearElectricGridModel(
         sensitivity_loss_reactive_by_power_wye_reactive,
         sensitivity_loss_reactive_by_power_delta_active,
         sensitivity_loss_reactive_by_power_delta_reactive,
-        sensitivity_loss_active_by_noload_voltage,
-        sensitivity_loss_reactive_by_noload_voltage,
-        constant_loss_active_no_load,
-        constant_loss_reactive_no_load
+        loss_active_no_load,
+        loss_reactive_no_load
     )
 end
 
@@ -1771,7 +1767,7 @@ function LinearElectricGridModel(scenario_name::String)
     )
 
     # Obtain power flow solution for nominal loading conditions.
-    nodal_voltage_vector = (
+    node_voltage_vector = (
         FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
     )
     (
@@ -1780,13 +1776,13 @@ function LinearElectricGridModel(scenario_name::String)
     ) = (
         FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
             electric_grid_model,
-            nodal_voltage_vector
+            node_voltage_vector
         )
     )
 
     FLEDGE.ElectricGridModels.LinearElectricGridModel(
         electric_grid_model,
-        nodal_voltage_vector,
+        node_voltage_vector,
         branch_power_vector_1,
         branch_power_vector_2
     )

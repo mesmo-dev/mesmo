@@ -138,7 +138,7 @@ Test.@testset "Power flow solver tests" begin
                 (
                     abs.(open_dss)
                     ./ abs.(
-                        electric_grid_model.nodal_voltage_vector_no_load
+                        electric_grid_model.node_voltage_vector_no_load
                     )
                 );
                 label="OpenDSS",
@@ -152,7 +152,7 @@ Test.@testset "Power flow solver tests" begin
                 (
                     abs.(actual)
                     ./ abs.(
-                        electric_grid_model.nodal_voltage_vector_no_load
+                        electric_grid_model.node_voltage_vector_no_load
                     )
                 );
                 label="Fixed point",
@@ -173,7 +173,7 @@ Test.@testset "Power flow solver tests" begin
         )
 
         # Get voltage vector.
-        nodal_voltage_vector = (
+        node_voltage_vector = (
             FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(
                 electric_grid_model
             )
@@ -190,7 +190,7 @@ Test.@testset "Power flow solver tests" begin
         ) = (
             FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
                 electric_grid_model,
-                nodal_voltage_vector
+                node_voltage_vector
             )
         )
         actual = typeof((branch_power_vector_1, branch_power_vector_2))
@@ -206,7 +206,7 @@ Test.@testset "Power flow solver tests" begin
         )
 
         # Get voltage vector.
-        nodal_voltage_vector = (
+        node_voltage_vector = (
             FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(
                 electric_grid_model
             )
@@ -220,7 +220,7 @@ Test.@testset "Power flow solver tests" begin
         @time_log "Get total loss with model test" total_loss = (
             FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
                 electric_grid_model,
-                nodal_voltage_vector
+                node_voltage_vector
             )
         )
         actual = typeof(total_loss)

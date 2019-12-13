@@ -66,7 +66,7 @@ Test.@testset "Electric grid model tests" begin
 
         # Define power vector multipliers for testing of linear model at
         # different loading conditions.
-        power_multipliers = 0:0.2:1.2
+        power_multipliers = 0:0.25:1.25
 
         # Obtain nodal power vectors assuming nominal loading conditions.
         node_power_vector_wye = (
@@ -98,6 +98,22 @@ Test.@testset "Electric grid model tests" begin
                 node_power_vector_delta
             )
         )
+        (
+            branch_power_vector_1_initial,
+            branch_power_vector_2_initial
+        ) = (
+            FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
+                electric_grid_model,
+                node_voltage_vector_initial
+            )
+        )
+        loss_initial = (
+            FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
+                electric_grid_model,
+                node_voltage_vector_initial
+            )
+        )
+
         node_voltage_vector_no_load = (
             electric_grid_model.node_voltage_vector_no_load
         )
@@ -159,16 +175,16 @@ Test.@testset "Electric grid model tests" begin
                 length(power_multipliers)
             )
         )
-        total_loss_active_fixed_point = (
+        loss_active_fixed_point = (
             zeros(Float64, length(power_multipliers))
         )
-        total_loss_active_linear_model = (
+        loss_active_linear_model = (
             zeros(Float64, length(power_multipliers))
         )
-        total_loss_reactive_fixed_point = (
+        loss_reactive_fixed_point = (
             zeros(Float64, length(power_multipliers))
         )
-        total_loss_reactive_linear_model = (
+        loss_reactive_linear_model = (
             zeros(Float64, length(power_multipliers))
         )
         node_voltage_vector_error = (
@@ -183,10 +199,10 @@ Test.@testset "Electric grid model tests" begin
         branch_power_vector_2_squared_error = (
             zeros(Float64, length(power_multipliers))
         )
-        total_loss_active_error = (
+        loss_active_error = (
             zeros(Float64, length(power_multipliers))
         )
-        total_loss_reactive_error = (
+        loss_reactive_error = (
             zeros(Float64, length(power_multipliers))
         )
 
@@ -253,33 +269,33 @@ Test.@testset "Electric grid model tests" begin
             )
 
             # Obtain total losses based on fixed-point solution.
-            total_loss_fixed_point = (
+            loss_fixed_point = (
                 FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
                     electric_grid_model,
                     node_voltage_vector_fixed_point[:, multiplier_index]
                 )
             )
-            total_loss_active_fixed_point[multiplier_index] = (
-                real(total_loss_fixed_point)
+            loss_active_fixed_point[multiplier_index] = (
+                real(loss_fixed_point)
             )
-            total_loss_reactive_fixed_point[multiplier_index] = (
-                imag(total_loss_fixed_point)
+            loss_reactive_fixed_point[multiplier_index] = (
+                imag(loss_fixed_point)
             )
 
             # Calculate nodal power difference / change.
-            node_power_vector_wye_active_difference = (
+            node_power_vector_wye_active_change = (
                 node_power_vector_wye_candidate_active
                 - node_power_vector_wye_active
             )
-            node_power_vector_wye_reactive_difference = (
+            node_power_vector_wye_reactive_change = (
                 node_power_vector_wye_candidate_reactive
                 - node_power_vector_wye_reactive
             )
-            node_power_vector_delta_active_difference = (
+            node_power_vector_delta_active_change = (
                 node_power_vector_delta_candidate_active
                 - node_power_vector_delta_active
             )
-            node_power_vector_delta_reactive_difference = (
+            node_power_vector_delta_reactive_change = (
                 node_power_vector_delta_candidate_reactive
                 - node_power_vector_delta_reactive
             )
@@ -287,119 +303,70 @@ Test.@testset "Electric grid model tests" begin
             # Calculate approximate voltage, power vectors and total losses.
             node_voltage_vector_linear_model[:, multiplier_index] = (
                 node_voltage_vector_initial
-                + linear_electric_grid_model.
-                sensitivity_voltage_by_power_wye_active
-                * node_power_vector_wye_active_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_by_power_wye_reactive
-                * node_power_vector_wye_reactive_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_by_power_delta_active
-                * node_power_vector_delta_active_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_by_power_delta_reactive
-                * node_power_vector_delta_reactive_difference
+                + linear_electric_grid_model.sensitivity_voltage_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_voltage_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_voltage_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_voltage_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
-            # node_voltage_vector_linear_model[:, multiplier_index] = (
-            #     node_voltage_vector_no_load
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_by_power_wye_active
-            #     * node_power_vector_wye_candidate_active
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_by_power_wye_reactive
-            #     * node_power_vector_wye_candidate_reactive
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_by_power_delta_active
-            #     * node_power_vector_delta_candidate_active
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_by_power_delta_reactive
-            #     * node_power_vector_delta_candidate_reactive
-            # )
             node_voltage_vector_magnitude_linear_model[:, multiplier_index] = (
                 abs.(node_voltage_vector_initial)
-                + linear_electric_grid_model.
-                sensitivity_voltage_magnitude_by_power_wye_active
-                * node_power_vector_wye_active_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_magnitude_by_power_wye_reactive
-                * node_power_vector_wye_reactive_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_magnitude_by_power_delta_active
-                * node_power_vector_delta_active_difference
-                + linear_electric_grid_model.
-                sensitivity_voltage_magnitude_by_power_delta_reactive
-                * node_power_vector_delta_reactive_difference
+                + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
-            # node_voltage_vector_magnitude_linear_model[:, multiplier_index] = (
-            #     abs.(node_voltage_vector_no_load)
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_magnitude_by_power_wye_active
-            #     * node_power_vector_wye_candidate_active
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_magnitude_by_power_wye_reactive
-            #     * node_power_vector_wye_candidate_reactive
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_magnitude_by_power_delta_active
-            #     * node_power_vector_delta_candidate_active
-            #     + linear_electric_grid_model.
-            #     sensitivity_voltage_magnitude_by_power_delta_reactive
-            #     * node_power_vector_delta_candidate_reactive
-            # )
             branch_power_vector_1_squared_linear_model[:, multiplier_index] = (
-                linear_electric_grid_model.
-                sensitivity_branch_power_1_by_power_wye_active
-                * node_power_vector_wye_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_branch_power_1_by_power_wye_reactive
-                * node_power_vector_wye_candidate_reactive
-                + linear_electric_grid_model.
-                sensitivity_branch_power_1_by_power_delta_active
-                * node_power_vector_delta_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_branch_power_1_by_power_delta_reactive
-                * node_power_vector_delta_candidate_reactive
+                (abs.(branch_power_vector_1_initial) .^ 2)
+                + linear_electric_grid_model.sensitivity_branch_power_1_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_branch_power_1_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_branch_power_1_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_branch_power_1_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
             branch_power_vector_2_squared_linear_model[:, multiplier_index] = (
-                linear_electric_grid_model.
-                sensitivity_branch_power_2_by_power_wye_active
-                * node_power_vector_wye_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_branch_power_2_by_power_wye_reactive
-                * node_power_vector_wye_candidate_reactive
-                + linear_electric_grid_model.
-                sensitivity_branch_power_2_by_power_delta_active
-                * node_power_vector_delta_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_branch_power_2_by_power_delta_reactive
-                * node_power_vector_delta_candidate_reactive
+                (abs.(branch_power_vector_2_initial) .^ 2)
+                + linear_electric_grid_model.sensitivity_branch_power_2_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_branch_power_2_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_branch_power_2_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_branch_power_2_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
-            total_loss_active_linear_model[multiplier_index] = (
-                linear_electric_grid_model.
-                sensitivity_loss_active_by_power_wye_active
-                * node_power_vector_wye_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_loss_active_by_power_wye_reactive
-                * node_power_vector_wye_candidate_reactive
-                + linear_electric_grid_model.
-                sensitivity_loss_active_by_power_delta_active
-                * node_power_vector_delta_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_loss_active_by_power_delta_reactive
-                * node_power_vector_delta_candidate_reactive
+            # TODO: Check usage of constant loss term from linear model.
+            loss_active_linear_model[multiplier_index] = (
+                real(loss_initial)
+                + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
-            total_loss_reactive_linear_model[multiplier_index] = (
-                linear_electric_grid_model.
-                sensitivity_loss_reactive_by_power_wye_active
-                * node_power_vector_wye_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_loss_reactive_by_power_wye_reactive
-                * node_power_vector_wye_candidate_reactive
-                + linear_electric_grid_model.
-                sensitivity_loss_reactive_by_power_delta_active
-                * node_power_vector_delta_candidate_active
-                + linear_electric_grid_model.
-                sensitivity_loss_reactive_by_power_delta_reactive
-                * node_power_vector_delta_candidate_reactive
+            loss_reactive_linear_model[multiplier_index] = (
+                imag(loss_initial)
+                + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_active
+                * node_power_vector_wye_active_change
+                + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_reactive
+                * node_power_vector_wye_reactive_change
+                + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_active
+                * node_power_vector_delta_active_change
+                + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_reactive
+                * node_power_vector_delta_reactive_change
             )
 
             # Calculate errors for voltage, power vectors and total losses.
@@ -427,22 +394,20 @@ Test.@testset "Electric grid model tests" begin
                     branch_power_vector_2_squared_linear_model[:, multiplier_index]
                 )
             )
-            total_loss_active_error[multiplier_index] = (
+            loss_active_error[multiplier_index] = (
                 get_error(
-                    total_loss_active_fixed_point[multiplier_index],
-                    total_loss_active_linear_model[multiplier_index]
+                    loss_active_fixed_point[multiplier_index],
+                    loss_active_linear_model[multiplier_index]
                 )
             )
-            total_loss_reactive_error[multiplier_index] = (
+            loss_reactive_error[multiplier_index] = (
                 get_error(
-                    total_loss_reactive_fixed_point[multiplier_index],
-                    total_loss_reactive_linear_model[multiplier_index]
+                    loss_reactive_fixed_point[multiplier_index],
+                    loss_reactive_linear_model[multiplier_index]
                 )
             )
         end
 
-        # TODO: Validate total_loss_active_error against MATLAB implementation.
-        # TODO: Validate total_loss_reactive_error against MATLAB implementation.
         linear_electric_grid_model_error = DataFrames.DataFrame(
             [
                 power_multipliers,
@@ -450,8 +415,8 @@ Test.@testset "Electric grid model tests" begin
                 node_voltage_vector_magnitude_error,
                 branch_power_vector_1_squared_error,
                 branch_power_vector_2_squared_error,
-                total_loss_active_error,
-                total_loss_reactive_error
+                loss_active_error,
+                loss_reactive_error
             ],
             [
                 :power_multipliers,
@@ -459,8 +424,8 @@ Test.@testset "Electric grid model tests" begin
                 :node_voltage_vector_magnitude_error,
                 :branch_power_vector_1_squared_error,
                 :branch_power_vector_2_squared_error,
-                :total_loss_active_error,
-                :total_loss_reactive_error
+                :loss_active_error,
+                :loss_reactive_error
             ]
         )
         @Logging.info("", linear_electric_grid_model_error)

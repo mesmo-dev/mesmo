@@ -26,20 +26,11 @@ electric_grid_index = (
 electric_grid_model = (
     FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
 )
+power_flow_solution = (
+    FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(scenario_name)
+)
 linear_electric_grid_model = (
     FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
-)
-node_voltage_vector_initial = (
-    FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
-)
-(
-    branch_power_vector_1_initial,
-    branch_power_vector_2_initial
-) = (
-    FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
-        electric_grid_model,
-        node_voltage_vector_initial
-    )
 )
 
 # Define derivative model parameters.
@@ -212,7 +203,7 @@ JuMP.@constraint(
         voltage_magnitude_vector.data
         .==
         (
-            abs.(node_voltage_vector_initial)
+            abs.(power_flow_solution.node_voltage_vector)
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
             * node_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
@@ -327,8 +318,8 @@ Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_value))
 branch_power_vector_1_squared_per_unit_value = (
     (
         JuMP.value.(branch_power_vector_1_squared_change.data)
-        + (abs.(branch_power_vector_1_initial) .^ 2)
+        + (abs.(power_flow_solution.branch_power_vector_1) .^ 2)
     )
-    ./ (abs.(branch_power_vector_1_initial) .^ 2)
+    ./ (abs.(power_flow_solution.branch_power_vector_1) .^ 2)
 )
 Logging.@info("", Statistics.mean(branch_power_vector_1_squared_per_unit_value))

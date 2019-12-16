@@ -217,13 +217,13 @@ Test.@testset "Power flow solver tests" begin
         expected = Complex{Float64}
 
         # Get actual result.
-        @time_log "Get total loss with model test" total_loss = (
+        @time_log "Get total loss with model test" loss = (
             FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
                 electric_grid_model,
                 node_voltage_vector
             )
         )
-        actual = typeof(total_loss)
+        actual = typeof(loss)
 
         # Evaluate test.
         Test.@test actual == expected
@@ -240,6 +240,24 @@ Test.@testset "Power flow solver tests" begin
         # Get actual result.
         @time_log "Get voltage vector by OpenDSS test" actual = (
             typeof(FLEDGE.PowerFlowSolvers.get_voltage_open_dss())
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Fixed point power flow solution test" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint
+
+        # Get actual result.
+        @time_log "Fixed point power flow solution test" actual = (
+            typeof(
+                FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
+                    scenario_name
+                )
+            )
         )
 
         # Evaluate test.

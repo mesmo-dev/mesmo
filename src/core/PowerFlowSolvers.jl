@@ -569,7 +569,7 @@ function get_loss_fixed_point(
 )
     # TODO: Validate loss solution.
     # Calculate total losses.
-    total_loss = (
+    loss = (
         conj(
             transpose(node_voltage_vector)
             * (
@@ -579,7 +579,7 @@ function get_loss_fixed_point(
         )
     )
 
-    return total_loss
+    return loss
 end
 
 
@@ -593,14 +593,14 @@ function get_loss_fixed_point(
     node_voltage_vector::Array{ComplexF64,1}
 )
     # Obtain total losses with admittance matrix from electric grid model.
-    total_loss = (
+    loss = (
         get_loss_fixed_point(
             electric_grid_model.node_admittance_matrix,
             node_voltage_vector
         )
     )
 
-    return total_loss
+    return loss
 end
 
 """
@@ -626,6 +626,67 @@ function get_voltage_open_dss()
     )
 
     return node_voltage_vector_solution
+end
+
+"""
+Power flow solution type.
+
+Expected fields:
+- `node_voltage_vector`
+- `branch_power_vector_1`
+- `branch_power_vector_2`
+- `loss`
+"""
+abstract type PowerFlowSolution end
+
+"Fixed point power flow solution object."
+struct PowerFlowSolutionFixedPoint <: PowerFlowSolution
+    node_voltage_vector::Vector{ComplexF64}
+    branch_power_vector_1::Vector{ComplexF64}
+    branch_power_vector_2::Vector{ComplexF64}
+    loss::ComplexF64
+end
+
+"""
+Instantiate fixed point power flow solution object for given `scenario_name`
+assuming nominal loading conditions.
+"""
+function PowerFlowSolutionFixedPoint(scenario_name::String)
+    # Obtain electric grid model.
+    electric_grid_model = (
+        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+    )
+
+    # Obtain voltage solution.
+    node_voltage_vector = (
+        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
+    )
+
+    # Obtain branch flow solution.
+    (
+        branch_power_vector_1,
+        branch_power_vector_2
+    ) = (
+        FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
+            electric_grid_model,
+            node_voltage_vector
+        )
+    )
+
+    # Obtain loss solution.
+    loss = (
+        FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
+            electric_grid_model,
+            node_voltage_vector
+        )
+    )
+
+    PowerFlowSolutionFixedPoint(
+        node_voltage_vector,
+        branch_power_vector_1,
+        branch_power_vector_2,
+        loss
+    )
 end
 
 end

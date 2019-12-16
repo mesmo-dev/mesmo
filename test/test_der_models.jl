@@ -14,7 +14,7 @@ Test.@testset "DER model tests" begin
         @time_log "Fixed load model test" actual = typeof(
             FLEDGE.DERModels.FixedLoadModel(
                 fixed_load_data,
-                fixed_load_data.fixed_loads[:load_name][1]
+                fixed_load_data.fixed_loads[1, :load_name]
             )
         )
 
@@ -35,7 +35,7 @@ Test.@testset "DER model tests" begin
         @time_log "EV charger model test" actual = typeof(
             FLEDGE.DERModels.EVChargerModel(
                 ev_charger_data,
-                ev_charger_data.ev_chargers[:load_name][1]
+                ev_charger_data.ev_chargers[1, :load_name]
             )
         )
 
@@ -56,7 +56,7 @@ Test.@testset "DER model tests" begin
         @time_log "Flexible load model test" actual = typeof(
             FLEDGE.DERModels.GenericFlexibleLoadModel(
                 flexible_load_data,
-                flexible_load_data.flexible_loads[:load_name][1]
+                flexible_load_data.flexible_loads[1, :load_name]
             )
         )
 

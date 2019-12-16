@@ -27,7 +27,7 @@ function FixedLoadModel(
     # Get fixed load data by `load_name`.
     fixed_load = (
         fixed_load_data.fixed_loads[
-            load_name .== fixed_load_data.fixed_loads[:load_name]
+            load_name .== fixed_load_data.fixed_loads[!, :load_name]
         , :]
     )
 
@@ -69,7 +69,7 @@ function EVChargerModel(
     # Get EV charger data by `load_name`.
     ev_charger = (
         ev_charger_data.ev_chargers[
-            load_name .== ev_charger_data.ev_chargers[:load_name]
+            load_name .== ev_charger_data.ev_chargers[!, :load_name]
         , :]
     )
 
@@ -127,7 +127,7 @@ function GenericFlexibleLoadModel(
     # Get flexible load data by `load_name`.
     flexible_load = (
         flexible_load_data.flexible_loads[
-            load_name .== flexible_load_data.flexible_loads[:load_name]
+            load_name .== flexible_load_data.flexible_loads[!, :load_name]
         , :]
     )
 

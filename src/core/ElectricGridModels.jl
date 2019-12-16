@@ -1823,20 +1823,20 @@ function initialize_open_dss_model(
     OpenDSSDirect.dss(opendss_command_string)
 
     # Obtain extra definitions string.
-    if ismissing(electric_grid_data.electric_grids[:extra_definitions_string][1])
+    if ismissing(electric_grid_data.electric_grids[1, :extra_definitions_string])
         extra_definitions_string = ""
     else
         extra_definitions_string = (
-            electric_grid_data.electric_grids[:extra_definitions_string][1]
+            electric_grid_data.electric_grids[1, :extra_definitions_string]
         )
     end
 
     # Add circuit info to OpenDSS command string.
     opendss_command_string = (
-        "new circuit.$(electric_grid_data.electric_grids[:electric_grid_name][1])"
-        * " phases=$(electric_grid_data.electric_grids[:n_phases][1])"
-        * " bus1=$(electric_grid_data.electric_grids[:source_node_name][1])"
-        * " basekv=$(electric_grid_data.electric_grids[:source_voltage][1] / 1e3)"
+        "new circuit.$(electric_grid_data.electric_grids[1, :electric_grid_name])"
+        * " phases=$(electric_grid_data.electric_grids[1, :n_phases])"
+        * " bus1=$(electric_grid_data.electric_grids[1, :source_node_name])"
+        * " basekv=$(electric_grid_data.electric_grids[1, :source_voltage] / 1e3)"
         * " $extra_definitions_string"
     )
 
@@ -1850,9 +1850,7 @@ function initialize_open_dss_model(
         matrices = (
             electric_grid_data.electric_grid_line_types_matrices[
                 (
-                    electric_grid_data.electric_grid_line_types_matrices[
-                        :line_type
-                    ]
+                    electric_grid_data.electric_grid_line_types_matrices[!, :line_type]
                     .== line_type[:line_type]
                 ),
                 [:r, :x, :c]
@@ -1870,34 +1868,34 @@ function initialize_open_dss_model(
         if line_type[:n_phases] == 1
             opendss_command_string *= (
                 " rmatrix = "
-                * (Printf.@sprintf("[%.8f]", matrices[:r]...))
+                * (Printf.@sprintf("[%.8f]", matrices[!, :r]...))
                 * " xmatrix = "
-                * (Printf.@sprintf("[%.8f]", matrices[:x]...))
+                * (Printf.@sprintf("[%.8f]", matrices[!, :x]...))
                 * " cmatrix = "
-                * (Printf.@sprintf("[%.8f]", matrices[:c]...))
+                * (Printf.@sprintf("[%.8f]", matrices[!, :c]...))
             )
         elseif line_type[:n_phases] == 2
             opendss_command_string *= (
                 " rmatrix = "
-                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[:r]...))
+                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[!, :r]...))
                 * " xmatrix = "
-                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[:x]...))
+                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[!, :x]...))
                 * " cmatrix = "
-                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[:c]...))
+                * (Printf.@sprintf("[%.8f | %.8f %.8f]", matrices[!, :c]...))
             )
         elseif line_type[:n_phases] == 3
             opendss_command_string *= (
                 " rmatrix = "
                 * (Printf.@sprintf(
-                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[:r]...
+                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[!, :r]...
                 ))
                 * " xmatrix = "
                 * (Printf.@sprintf(
-                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[:x]...
+                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[!, :x]...
                 ))
                 * " cmatrix = "
                 * (Printf.@sprintf(
-                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[:c]...
+                    "[%.8f | %.8f %.8f | %.8f %.8f %.8f]", matrices[!, :c]...
                 ))
             )
         end
@@ -1939,7 +1937,7 @@ function initialize_open_dss_model(
     #   identical number of phases at each winding / side.
     for transformer in eachrow(
         electric_grid_data.electric_grid_transformers[
-            electric_grid_data.electric_grid_transformers[:winding] .== 1,
+            electric_grid_data.electric_grid_transformers[!, :winding] .== 1,
             1:end
         ]
     )
@@ -1958,7 +1956,7 @@ function initialize_open_dss_model(
             electric_grid_data.electric_grid_transformers[
                 (
                     electric_grid_data.
-                    electric_grid_transformers[:transformer_name]
+                    electric_grid_transformers[!, :transformer_name]
                     .== transformer[:transformer_name]
                 ),
                 1:end
@@ -1970,7 +1968,7 @@ function initialize_open_dss_model(
             electric_grid_data.electric_grid_transformer_reactances[
                 (
                     electric_grid_data.
-                    electric_grid_transformer_reactances[:transformer_name]
+                    electric_grid_transformer_reactances[!, :transformer_name]
                     .== transformer[:transformer_name]
                 ),
                 1:end
@@ -1982,7 +1980,7 @@ function initialize_open_dss_model(
             electric_grid_data.electric_grid_transformer_taps[
                 (
                     electric_grid_data.
-                    electric_grid_transformer_taps[:transformer_name]
+                    electric_grid_transformer_taps[!, :transformer_name]
                     .== transformer[:transformer_name]
                 ),
                 1:end
@@ -1994,15 +1992,15 @@ function initialize_open_dss_model(
         opendss_command_string = (
             "new transformer.$(transformer[:transformer_name])"
             * " phases=$n_phases"
-            * " windings=$(length(windings[:winding]))"
-            * " xscarray=$([x for x in reactances[:reactance_percentage]])"
+            * " windings=$(length(windings[!, :winding]))"
+            * " xscarray=$([x for x in reactances[!, :reactance_percentage]])"
         )
         for winding = eachrow(windings)
             # Obtain nominal voltage level for each winding.
             voltage = (
                 electric_grid_data.electric_grid_nodes[
                     (
-                        electric_grid_data.electric_grid_nodes[:node_name]
+                        electric_grid_data.electric_grid_nodes[!, :node_name]
                         .== winding[:node_name]
                     ),
                     :voltage
@@ -2058,12 +2056,12 @@ function initialize_open_dss_model(
 
             # Add maximum / minimum level
             # to OpenDSS command string for each winding.
-            for winding_index in findall(taps[:winding] .== winding[:winding])
+            for winding_index in findall(taps[!, :winding] .== winding[:winding])
                 opendss_command_string *= (
                     " maxtap="
-                    * "$(taps[:tap_maximum_voltage_per_unit][winding_index])"
+                    * "$(taps[winding_index, :tap_maximum_voltage_per_unit])"
                     * " mintap="
-                    * "$(taps[:tap_minimum_voltage_per_unit][winding_index])"
+                    * "$(taps[winding_index, :tap_minimum_voltage_per_unit])"
                 )
             end
         end
@@ -2088,7 +2086,7 @@ function initialize_open_dss_model(
         voltage = (
             electric_grid_data.electric_grid_nodes[
                 (
-                    electric_grid_data.electric_grid_nodes[:node_name]
+                    electric_grid_data.electric_grid_nodes[!, :node_name]
                     .== load[:node_name]
                 ),
                 :voltage
@@ -2132,11 +2130,11 @@ function initialize_open_dss_model(
     # Set control mode and voltage bases.
     opendss_command_string = (
         "set voltagebases="
-        * "$(electric_grid_data.electric_grids[:voltage_bases_string][1])"
+        * "$(electric_grid_data.electric_grids[1, :voltage_bases_string])"
         * "\nset controlmode="
-        * "$(electric_grid_data.electric_grids[:control_mode_string][1])"
+        * "$(electric_grid_data.electric_grids[1, :control_mode_string])"
         * "\nset loadmult="
-        * "$(electric_grid_data.electric_grids[:load_multiplier][1])"
+        * "$(electric_grid_data.electric_grids[1, :load_multiplier])"
         * "\ncalcvoltagebases"
     )
     Logging.@debug("", opendss_command_string)

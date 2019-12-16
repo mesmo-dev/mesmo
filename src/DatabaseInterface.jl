@@ -119,12 +119,12 @@ function TimestepData(scenario_name::String)
     # Parse strings into `Dates.DateTime`.
     # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
     #   e.g., "2017-12-31T01:30:45", for this parsing to work.
-    timestep_start = Dates.DateTime(scenarios[:timestep_start][1])
-    timestep_end = Dates.DateTime(scenarios[:timestep_end][1])
+    timestep_start = Dates.DateTime(scenarios[1, :timestep_start])
+    timestep_end = Dates.DateTime(scenarios[1, :timestep_end])
 
     # Timestep interval is converted to `Dates.Second`.
     timestep_interval_seconds = (
-        Dates.Second(scenarios[:timestep_interval_seconds][1])
+        Dates.Second(scenarios[1, :timestep_interval_seconds])
     )
 
     # Construct vector of timesteps for the scenario.
@@ -359,7 +359,7 @@ function FixedLoadData(scenario_name::String)
     fixed_load_timeseries_dict = (
         Dict(
             key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-            for key in unique(fixed_loads[:timeseries_name])
+            for key in unique(fixed_loads[!, :timeseries_name])
         )
     )
 
@@ -394,8 +394,8 @@ function FixedLoadData(scenario_name::String)
         # Parse strings into `Dates.DateTime`.
         # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
         #   e.g., "2017-12-31T01:30:45", for this parsing to work.
-        fixed_load_timeseries[:time] = (
-            Dates.DateTime.(fixed_load_timeseries[:time])
+        fixed_load_timeseries[!, :time] = (
+            Dates.DateTime.(fixed_load_timeseries[!, :time])
         )
 
         # Convert to `TimeSeries.TimeArray` and store into dictionary.
@@ -449,7 +449,7 @@ function EVChargerData(scenario_name::String)
     ev_charger_timeseries_dict = (
         Dict(
             key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-            for key in unique(ev_chargers[:timeseries_name])
+            for key in unique(ev_chargers[!, :timeseries_name])
         )
     )
 
@@ -484,8 +484,8 @@ function EVChargerData(scenario_name::String)
         # Parse strings into `Dates.DateTime`.
         # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
         #   e.g., "2017-12-31T01:30:45", for this parsing to work.
-        ev_charger_timeseries[:time] = (
-            Dates.DateTime.(ev_charger_timeseries[:time])
+        ev_charger_timeseries[!, :time] = (
+            Dates.DateTime.(ev_charger_timeseries[!, :time])
         )
 
         # Convert to `TimeSeries.TimeArray` and store into dictionary.
@@ -539,7 +539,7 @@ function FlexibleLoadData(scenario_name::String)
     flexible_load_timeseries_dict = (
         Dict(
             key => TimeSeries.TimeArray(Vector{Dates.DateTime}(), Array{Any}(undef, 0, 0))
-            for key in unique(flexible_loads[:timeseries_name])
+            for key in unique(flexible_loads[!, :timeseries_name])
         )
     )
 
@@ -574,8 +574,8 @@ function FlexibleLoadData(scenario_name::String)
         # Parse strings into `Dates.DateTime`.
         # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
         #   e.g., "2017-12-31T01:30:45", for this parsing to work.
-        flexible_load_timeseries[:time] = (
-            Dates.DateTime.(flexible_load_timeseries[:time])
+        flexible_load_timeseries[!, :time] = (
+            Dates.DateTime.(flexible_load_timeseries[!, :time])
         )
 
         # Convert to `TimeSeries.TimeArray` and store into dictionary.
@@ -611,7 +611,7 @@ function PriceData(scenario_name::String)
                         SELECT DISTINCT price_name FROM price_timeseries
                         """
                     )
-                )[:price_name]
+                )[!, :price_name]
             )
         )
     )
@@ -647,8 +647,8 @@ function PriceData(scenario_name::String)
         # Parse strings into `Dates.DateTime`.
         # - Strings must be in the format "yyyy-mm-ddTHH:MM:SS",
         #   e.g., "2017-12-31T01:30:45", for this parsing to work.
-        price_timeseries[:time] = (
-            Dates.DateTime.(price_timeseries[:time])
+        price_timeseries[!, :time] = (
+            Dates.DateTime.(price_timeseries[!, :time])
         )
 
         # Convert to `TimeSeries.TimeArray` and store into dictionary.

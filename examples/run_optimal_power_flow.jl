@@ -98,6 +98,16 @@ JuMP.@variable(
     branch_power_vector_2_squared_change[electric_grid_index.branches_phases]
 )
 
+# Loss.
+JuMP.@variable(
+    optimization_problem,
+    loss_active_change
+)
+JuMP.@variable(
+    optimization_problem,
+    loss_reactive_change
+)
+
 # Define constraints.
 
 # Load.
@@ -290,6 +300,45 @@ JuMP.@constraint(
     )
 )
 
+# Loss.
+JuMP.@constraint(
+    optimization_problem,
+    loss_active_equation,
+    (
+        loss_active_change
+        .==
+        (
+            linear_electric_grid_model.sensitivity_loss_active_by_power_wye_active
+            * node_power_vector_wye_active_change.data
+            + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_reactive
+            * node_power_vector_wye_reactive_change.data
+            + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_active
+            * node_power_vector_delta_active_change.data
+            + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_reactive
+            * node_power_vector_delta_reactive_change.data
+        )
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    loss_reactive_equation,
+    (
+        loss_reactive_change
+        .==
+        (
+            linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_active
+            * node_power_vector_wye_active_change.data
+            + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_reactive
+            * node_power_vector_wye_reactive_change.data
+            + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_active
+            * node_power_vector_delta_active_change.data
+            + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_reactive
+            * node_power_vector_delta_reactive_change.data
+        )
+    )
+)
+
+
 # Define objective.
 JuMP.@objective(
     optimization_problem,
@@ -305,16 +354,21 @@ JuMP.optimize!(optimization_problem)
 optimization_termination_status = JuMP.termination_status(optimization_problem)
 Logging.@info("", optimization_termination_status)
 
+# Voltage.
 voltage_magnitude_vector_per_unit_value = (
     JuMP.value.(voltage_magnitude_vector.data)
     ./ abs.(electric_grid_model.node_voltage_vector_no_load)
 )
 Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))
+
+# Load.
 load_active_power_vector_per_unit_value = (
     JuMP.value.(load_active_power_vector.data)
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )
 Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_value))
+
+# Branch flows.
 branch_power_vector_1_squared_per_unit_value = (
     (
         JuMP.value.(branch_power_vector_1_squared_change.data)
@@ -323,3 +377,13 @@ branch_power_vector_1_squared_per_unit_value = (
     ./ (abs.(power_flow_solution.branch_power_vector_1) .^ 2)
 )
 Logging.@info("", Statistics.mean(branch_power_vector_1_squared_per_unit_value))
+
+# Loss.
+loss_active_per_unit_value = (
+    (
+        JuMP.value(loss_active_change)
+        + real(power_flow_solution.loss)
+    )
+    / real(power_flow_solution.loss)
+)
+Logging.@info("", loss_active_per_unit_value)

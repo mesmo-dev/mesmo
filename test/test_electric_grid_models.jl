@@ -346,8 +346,8 @@ Test.@testset "Electric grid model tests" begin
                 * node_power_vector_delta_reactive_change
             )
             # TODO: Check usage of constant loss term from linear model.
-            loss_active_linear_model[multiplier_index] = (
-                real(loss_initial)
+            loss_active_linear_model[multiplier_index, :] = (
+                [real(loss_initial)]
                 + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_active
                 * node_power_vector_wye_active_change
                 + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_reactive
@@ -357,8 +357,8 @@ Test.@testset "Electric grid model tests" begin
                 + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_reactive
                 * node_power_vector_delta_reactive_change
             )
-            loss_reactive_linear_model[multiplier_index] = (
-                imag(loss_initial)
+            loss_reactive_linear_model[multiplier_index, :] = (
+                [imag(loss_initial)]
                 + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_active
                 * node_power_vector_wye_active_change
                 + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_reactive
@@ -428,7 +428,7 @@ Test.@testset "Electric grid model tests" begin
                 :loss_reactive_error
             ]
         )
-        @Logging.info("", linear_electric_grid_model_error)
+        Logging.@info("", linear_electric_grid_model_error)
         display(linear_electric_grid_model_error)
 
         # Evaluate test.

@@ -66,7 +66,7 @@ Test.@testset "Electric grid model tests" begin
 
         # Define power vector multipliers for testing of linear model at
         # different loading conditions.
-        power_multipliers = 0:0.25:1.25
+        power_multipliers = 0.8:0.05:1.2
 
         # Obtain nodal power vectors assuming nominal loading conditions.
         node_power_vector_wye = (
@@ -430,6 +430,20 @@ Test.@testset "Electric grid model tests" begin
         )
         Logging.@info("", linear_electric_grid_model_error)
         display(linear_electric_grid_model_error)
+
+        if test_plots
+            for node_phase = 4:6
+                Plots.plot(power_multipliers, node_voltage_vector_magnitude_fixed_point[node_phase, :])
+                Plots.plot!(power_multipliers, node_voltage_vector_magnitude_linear_model[node_phase, :])
+                Plots.scatter!([1.0], [abs(node_voltage_vector_initial[node_phase])])
+                display(Plots.plot!())
+            end
+
+            Plots.plot(power_multipliers, loss_active_fixed_point)
+            Plots.plot!(power_multipliers, loss_active_linear_model)
+            Plots.scatter!([1.0], [real(loss_initial)])
+            display(Plots.plot!())
+        end
 
         # Evaluate test.
         Test.@test actual == expected

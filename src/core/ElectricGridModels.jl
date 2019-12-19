@@ -1277,11 +1277,8 @@ struct LinearElectricGridModel
 end
 
 """
-Construct linear electric grid model by electric grid model,
-nodal voltage vector and branch power vectors.
-
-- Expects valid nodal voltage vector solution with corresponding
-  branch power vectors as input.
+Instantiate linear electric grid model object for given `electric_grid_model`,
+`node_voltage_vector`, `branch_power_vector_1` and `branch_power_vector_2`.
 """
 function LinearElectricGridModel(
     electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
@@ -1682,32 +1679,55 @@ function LinearElectricGridModel(
     )
 end
 
-"Instantiate linear electric grid model object for given `scenario_name`."
-function LinearElectricGridModel(scenario_name::String)
-    # Obtain electric grid model.
-    electric_grid_model = (
-        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
-    )
-
-    # Obtain power flow solution for nominal loading conditions.
-    node_voltage_vector = (
-        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
-    )
-    (
-        branch_power_vector_1,
-        branch_power_vector_2
-    ) = (
-        FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
-            electric_grid_model,
-            node_voltage_vector
-        )
-    )
+"""
+Instantiate linear electric grid model object for given `electric_grid_model`
+and `power_flow_solution`.
+"""
+function LinearElectricGridModel(
+    electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
+    power_flow_solution # TODO: Define circular type references properly.
+)
+    # Obtain vectors.
+    node_voltage_vector = power_flow_solution.node_voltage_vector
+    branch_power_vector_1 = power_flow_solution.branch_power_vector_1
+    branch_power_vector_2 = power_flow_solution.branch_power_vector_2
 
     FLEDGE.ElectricGridModels.LinearElectricGridModel(
         electric_grid_model,
         node_voltage_vector,
         branch_power_vector_1,
         branch_power_vector_2
+    )
+end
+
+"""
+Instantiate linear electric grid model object for given `scenario_name`.
+
+- Power flow solution is obtained for nominal loading conditions
+  via fixed point solution.
+"""
+function LinearElectricGridModel(scenario_name::String)
+    # Obtain electric grid model.
+    electric_grid_model = (
+        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+    )
+
+    # Obtain load power vector.
+    load_power_vector = (
+        electric_grid_model.load_power_vector_nominal
+    )
+
+    # Obtain power flow solution.
+    power_flow_solution = (
+        FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
+            electric_grid_model,
+            load_power_vector
+        )
+    )
+
+    FLEDGE.ElectricGridModels.LinearElectricGridModel(
+        electric_grid_model,
+        power_flow_solution
     )
 end
 

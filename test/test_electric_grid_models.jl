@@ -15,12 +15,45 @@ Test.@testset "Electric grid model tests" begin
         Test.@test actual == expected
     end
 
-    Test.@testset "Simple linear electric grid model test" begin
+    Test.@testset "Simple linear electric grid model test 1" begin
+        # Set up electric grid model.
+        electric_grid_model = (
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+        )
+
+        # Get load power vector.
+        load_power_vector = (
+            electric_grid_model.load_power_vector_nominal
+        )
+
+        # Get power flow solution.
+        power_flow_solution = (
+            FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
+                electric_grid_model,
+                load_power_vector
+            )
+        )
+
         # Define expected result.
         expected = FLEDGE.ElectricGridModels.LinearElectricGridModel
 
         # Get actual result.
-        @time_log "Simple linear electric grid model test" actual = (
+        @time_log "Simple linear electric grid model test 1" actual = (
+            typeof(
+                FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
+            )
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Simple linear electric grid model test 2" begin
+        # Define expected result.
+        expected = FLEDGE.ElectricGridModels.LinearElectricGridModel
+
+        # Get actual result.
+        @time_log "Simple linear electric grid model test 2" actual = (
             typeof(
                 FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
             )

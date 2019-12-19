@@ -53,11 +53,11 @@ optimization_problem = (
 # Load.
 JuMP.@variable(
     optimization_problem,
-    load_active_power_vector[electric_grid_index.load_names]
+    load_active_power_vector_change[electric_grid_index.load_names]
 )
 JuMP.@variable(
     optimization_problem,
-    load_reactive_power_vector[electric_grid_index.load_names]
+    load_reactive_power_vector_change[electric_grid_index.load_names]
 )
 
 # Power.
@@ -111,22 +111,22 @@ JuMP.@constraint(
     optimization_problem,
     load_active_minimum_maximum,
     (
+        -0.5 .* load_active_power_vector_nominal
+        .<=
+        load_active_power_vector_change.data
+        .<=
         0.5 .* load_active_power_vector_nominal
-        .<=
-        load_active_power_vector.data
-        .<=
-        1.5 .* load_active_power_vector_nominal
     )
 )
 JuMP.@constraint(
     optimization_problem,
     load_reactive_minimum_maximum,
     (
+        -0.5 .* load_reactive_power_vector_nominal
+        .<=
+        load_reactive_power_vector_change.data
+        .<=
         0.5 .* load_reactive_power_vector_nominal
-        .<=
-        load_reactive_power_vector.data
-        .<=
-        1.5 .* load_reactive_power_vector_nominal
     )
 )
 
@@ -139,13 +139,7 @@ JuMP.@constraint(
         .==
         0.0
         + electric_grid_model.load_incidence_wye_matrix
-        * (
-            -1.0
-            .* (
-                load_active_power_vector.data
-                - load_active_power_vector_nominal
-            )
-        )
+        * (-1.0 .* load_active_power_vector_change.data)
     )
 )
 JuMP.@constraint(
@@ -156,13 +150,7 @@ JuMP.@constraint(
         .==
         0.0
         + electric_grid_model.load_incidence_wye_matrix
-        * (
-            -1.0
-            .* (
-                load_reactive_power_vector.data
-                - load_reactive_power_vector_nominal
-            )
-        )
+        * (-1.0 .* load_reactive_power_vector_change.data)
     )
 )
 JuMP.@constraint(
@@ -173,13 +161,7 @@ JuMP.@constraint(
         .==
         0.0
         + electric_grid_model.load_incidence_delta_matrix
-        * (
-            -1.0
-            .* (
-                load_active_power_vector.data
-                - load_active_power_vector_nominal
-            )
-        )
+        * (-1.0 .* load_active_power_vector_change.data)
     )
 )
 JuMP.@constraint(
@@ -190,13 +172,7 @@ JuMP.@constraint(
         .==
         0.0
         + electric_grid_model.load_incidence_delta_matrix
-        * (
-            -1.0
-            .* (
-                load_reactive_power_vector.data
-                - load_reactive_power_vector_nominal
-            )
-        )
+        * (-1.0 .* load_reactive_power_vector_change.data)
     )
 )
 
@@ -303,8 +279,10 @@ JuMP.@objective(
     optimization_problem,
     Min,
     (
-        sum(load_active_power_vector.data)
-        + sum(load_reactive_power_vector.data)
+        sum(load_active_power_vector_nominal)
+        + sum(load_active_power_vector_change.data)
+        + sum(load_reactive_power_vector_nominal)
+        + sum(load_reactive_power_vector_change.data)
     )
 )
 
@@ -328,7 +306,10 @@ Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))
 
 # Load.
 load_active_power_vector_per_unit_value = (
-    JuMP.value.(load_active_power_vector.data)
+    (
+        JuMP.value.(load_active_power_vector_change.data)
+        + load_active_power_vector_nominal
+    )
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )
 Logging.@info("", Statistics.mean(load_active_power_vector_per_unit_value))

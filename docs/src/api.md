@@ -1,17 +1,8 @@
 # API Reference
 
-## Official API
-
 ```@autodocs
     Modules = [
-        FLEDGE.API
-    ]
-```
-
-## Internals
-
-```@autodocs
-    Modules = [
+        FLEDGE.API,
         FLEDGE.DatabaseInterface,
         FLEDGE.DERModels,
         FLEDGE.ElectricGridModels,

@@ -26,17 +26,35 @@ electric_grid_index = (
 electric_grid_model = (
     FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
 )
+
+# Instantiate iteration variables.
+load_power_vector_reference = electric_grid_model.load_power_vector_nominal
+power_flow_solutions = []
+linear_electric_grid_models = []
+trust_region_iteration_count = 0
+
+# Get power flow solution and linear grid model.
 power_flow_solution = (
-    FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(scenario_name)
+    FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
+        electric_grid_model,
+        load_power_vector_reference
+    )
 )
+push!(power_flow_solutions, power_flow_solution)
 linear_electric_grid_model = (
-    FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
+    FLEDGE.ElectricGridModels.LinearElectricGridModel(
+        electric_grid_model,
+        power_flow_solution.node_voltage_vector,
+        power_flow_solution.branch_power_vector_1,
+        power_flow_solution.branch_power_vector_2
+    )
 )
+push!(linear_electric_grid_models, linear_electric_grid_model)
 
 # Instantiate optimization problem.
 optimization_problem = (
-    # JuMP.Model(JuMP.with_optimizer(CPLEX.Optimizer))
-    JuMP.Model(JuMP.with_optimizer(GLPK.Optimizer, msg_lev=GLPK.MSG_ON))
+    JuMP.Model(JuMP.with_optimizer(CPLEX.Optimizer))
+    # JuMP.Model(JuMP.with_optimizer(GLPK.Optimizer, msg_lev=GLPK.MSG_ON))
     # JuMP.Model(JuMP.with_optimizer(Gurobi.Optimizer))
 )
 
@@ -359,7 +377,7 @@ Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))
 load_active_power_vector_per_unit_value = (
     (
         JuMP.value.(load_active_power_vector_change.data)
-        + real.(electric_grid_model.load_power_vector_nominal)
+        + real.(load_power_vector_reference)
     )
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )

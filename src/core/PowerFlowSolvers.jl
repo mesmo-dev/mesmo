@@ -658,11 +658,11 @@ function PowerFlowSolutionFixedPoint(
     # Obtain node power vectors.
     node_power_vector_wye = (
         electric_grid_model.load_incidence_wye_matrix
-        * (-1.0 .* load_power_vector)
+        * load_power_vector
     )
     node_power_vector_delta = (
         electric_grid_model.load_incidence_delta_matrix
-        * (-1.0 .* load_power_vector)
+        * load_power_vector
     )
 
     # Obtain voltage solution.

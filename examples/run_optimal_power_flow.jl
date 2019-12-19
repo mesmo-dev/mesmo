@@ -81,7 +81,7 @@ JuMP.@variable(
 # Voltage.
 JuMP.@variable(
     optimization_problem,
-    voltage_magnitude_vector[electric_grid_index.nodes_phases]
+    voltage_magnitude_vector_change[electric_grid_index.nodes_phases]
 )
 
 # Branch flows.
@@ -206,11 +206,10 @@ JuMP.@constraint(
     optimization_problem,
     voltage_magnitude_equation,
     (
-        voltage_magnitude_vector.data
+        voltage_magnitude_vector_change.data
         .==
         (
-            abs.(power_flow_solution.node_voltage_vector)
-            + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
+            linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
             * node_power_vector_wye_active_change.data
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
             * node_power_vector_wye_reactive_change.data
@@ -319,7 +318,10 @@ Logging.@info("", optimization_termination_status)
 
 # Voltage.
 voltage_magnitude_vector_per_unit_value = (
-    JuMP.value.(voltage_magnitude_vector.data)
+    (
+        JuMP.value.(voltage_magnitude_vector_change.data)
+        + abs.(power_flow_solution.node_voltage_vector)
+    )
     ./ abs.(electric_grid_model.node_voltage_vector_no_load)
 )
 Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))

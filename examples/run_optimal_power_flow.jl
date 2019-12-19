@@ -33,14 +33,6 @@ linear_electric_grid_model = (
     FLEDGE.ElectricGridModels.LinearElectricGridModel(scenario_name)
 )
 
-# Define derivative model parameters.
-load_active_power_vector_nominal = (
-    real.(electric_grid_model.load_power_vector_nominal)
-)
-load_reactive_power_vector_nominal = (
-    imag.(electric_grid_model.load_power_vector_nominal)
-)
-
 # Instantiate optimization problem.
 optimization_problem = (
     # JuMP.Model(JuMP.with_optimizer(CPLEX.Optimizer))
@@ -117,22 +109,22 @@ JuMP.@constraint(
     optimization_problem,
     load_active_minimum_maximum,
     (
-        -0.5 .* load_active_power_vector_nominal
+        -0.5 .* real.(electric_grid_model.load_power_vector_nominal)
         .<=
         load_active_power_vector_change.data
         .<=
-        0.5 .* load_active_power_vector_nominal
+        0.5 .* real.(electric_grid_model.load_power_vector_nominal)
     )
 )
 JuMP.@constraint(
     optimization_problem,
     load_reactive_minimum_maximum,
     (
-        -0.5 .* load_reactive_power_vector_nominal
+        -0.5 .* imag.(electric_grid_model.load_power_vector_nominal)
         .<=
         load_reactive_power_vector_change.data
         .<=
-        0.5 .* load_reactive_power_vector_nominal
+        0.5 .* imag.(electric_grid_model.load_power_vector_nominal)
     )
 )
 
@@ -340,9 +332,7 @@ JuMP.@objective(
     optimization_problem,
     Min,
     (
-        sum(load_active_power_vector_nominal)
         + sum(load_active_power_vector_change.data)
-        + sum(load_reactive_power_vector_nominal)
         + sum(load_reactive_power_vector_change.data)
     )
 )
@@ -369,7 +359,7 @@ Logging.@info("", Statistics.mean(voltage_magnitude_vector_per_unit_value))
 load_active_power_vector_per_unit_value = (
     (
         JuMP.value.(load_active_power_vector_change.data)
-        + load_active_power_vector_nominal
+        + real.(electric_grid_model.load_power_vector_nominal)
     )
     ./ real.(electric_grid_model.load_power_vector_nominal)
 )

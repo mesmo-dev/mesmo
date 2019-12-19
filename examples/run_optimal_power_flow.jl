@@ -104,6 +104,12 @@ JuMP.@variable(
     loss_reactive_change
 )
 
+# Trust-region.
+JuMP.@variable(
+    optimization_problem,
+    change_limit
+)
+
 # Define constraints.
 
 # Load.
@@ -273,6 +279,61 @@ JuMP.@constraint(
     )
 )
 
+# Trust region.
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_voltage_magnitude_minimum,
+    (
+        -change_limit
+        .<=
+        voltage_magnitude_vector_change.data
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_voltage_magnitude_maximum,
+    (
+        voltage_magnitude_vector_change.data
+        .<=
+        change_limit
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_load_active_minimum,
+    (
+        -change_limit
+        .<=
+        load_active_power_vector_change.data
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_load_active_maximum,
+    (
+        load_active_power_vector_change.data
+        .<=
+        change_limit
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_load_reactive_minimum,
+    (
+        -change_limit
+        .<=
+        load_reactive_power_vector_change.data
+    )
+)
+JuMP.@constraint(
+    optimization_problem,
+    trust_region_load_reactive_maximum,
+    (
+        load_reactive_power_vector_change.data
+        .<=
+        change_limit
+    )
+)
 
 # Define objective.
 JuMP.@objective(

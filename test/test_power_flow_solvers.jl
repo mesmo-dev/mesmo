@@ -246,13 +246,42 @@ Test.@testset "Power flow solver tests" begin
         Test.@test actual == expected
     end
 
-    Test.@testset "Fixed point power flow solution test" begin
+    Test.@testset "Fixed point power flow solution test 1" begin
+        # Set up electric grid model.
+        electric_grid_model = (
+            FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+        )
+
+        # Get load power vector.
+        load_power_vector = (
+            electric_grid_model.load_power_vector_nominal
+        )
+
         # Define expected result.
         # - TODO: Replace type test with proper result check.
         expected = FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint
 
         # Get actual result.
-        @time_log "Fixed point power flow solution test" actual = (
+        @time_log "Fixed point power flow solution test 1" actual = (
+            typeof(
+                FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
+                    electric_grid_model,
+                    load_power_vector
+                )
+            )
+        )
+
+        # Evaluate test.
+        Test.@test actual == expected
+    end
+
+    Test.@testset "Fixed point power flow solution test 2" begin
+        # Define expected result.
+        # - TODO: Replace type test with proper result check.
+        expected = FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint
+
+        # Get actual result.
+        @time_log "Fixed point power flow solution test 2" actual = (
             typeof(
                 FLEDGE.PowerFlowSolvers.PowerFlowSolutionFixedPoint(
                     scenario_name

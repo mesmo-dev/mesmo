@@ -648,18 +648,30 @@ struct PowerFlowSolutionFixedPoint <: PowerFlowSolution
 end
 
 """
-Instantiate fixed point power flow solution object for given `scenario_name`
-assuming nominal loading conditions.
+Instantiate fixed point power flow solution object for given
+`electric_grid_model` and `load_power_vector`.
 """
-function PowerFlowSolutionFixedPoint(scenario_name::String)
-    # Obtain electric grid model.
-    electric_grid_model = (
-        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+function PowerFlowSolutionFixedPoint(
+    electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
+    load_power_vector::Vector{ComplexF64}
+)
+    # Obtain node power vectors.
+    node_power_vector_wye = (
+        electric_grid_model.load_incidence_wye_matrix
+        * (-1.0 .* load_power_vector)
+    )
+    node_power_vector_delta = (
+        electric_grid_model.load_incidence_delta_matrix
+        * (-1.0 .* load_power_vector)
     )
 
     # Obtain voltage solution.
     node_voltage_vector = (
-        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(electric_grid_model)
+        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(
+            electric_grid_model,
+            node_power_vector_wye,
+            node_power_vector_delta
+        )
     )
 
     # Obtain branch flow solution.
@@ -686,6 +698,27 @@ function PowerFlowSolutionFixedPoint(scenario_name::String)
         branch_power_vector_1,
         branch_power_vector_2,
         loss
+    )
+end
+
+"""
+Instantiate fixed point power flow solution object for given `scenario_name`
+assuming nominal loading conditions.
+"""
+function PowerFlowSolutionFixedPoint(scenario_name::String)
+    # Obtain electric grid model.
+    electric_grid_model = (
+        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+    )
+
+    # Obtain load power vector.
+    load_power_vector = (
+        electric_grid_model.load_power_vector_nominal
+    )
+
+    PowerFlowSolutionFixedPoint(
+        electric_grid_model,
+        load_power_vector
     )
 end
 

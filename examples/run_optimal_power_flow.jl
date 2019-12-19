@@ -83,10 +83,6 @@ JuMP.@variable(
     optimization_problem,
     voltage_magnitude_vector[electric_grid_index.nodes_phases]
 )
-JuMP.@variable(
-    optimization_problem,
-    voltage_magnitude_per_unit_deviation_vector[electric_grid_index.nodes_phases]
-)
 
 # Branch flows.
 JuMP.@variable(
@@ -225,42 +221,6 @@ JuMP.@constraint(
         )
     )
 )
-JuMP.@constraint(
-    optimization_problem,
-    voltage_magnitude_equation_0,
-    (
-        voltage_magnitude_per_unit_deviation_vector.data
-        .>=
-        0.0
-    )
-)
-JuMP.@constraint(
-    optimization_problem,
-    voltage_magnitude_equation_1,
-    (
-        voltage_magnitude_per_unit_deviation_vector.data
-        .>=
-        (
-            voltage_magnitude_vector.data
-            ./ abs.(electric_grid_model.node_voltage_vector_no_load)
-            .- 1.0
-        )
-    )
-)
-JuMP.@constraint(
-    optimization_problem,
-    voltage_magnitude_equation_2,
-    (
-        voltage_magnitude_per_unit_deviation_vector.data
-        .>=
-        -1.0
-        .* (
-            voltage_magnitude_vector.data
-            ./ abs.(electric_grid_model.node_voltage_vector_no_load)
-            .- 1.0
-        )
-    )
-)
 
 # Branch flows.
 JuMP.@constraint(
@@ -343,7 +303,10 @@ JuMP.@constraint(
 JuMP.@objective(
     optimization_problem,
     Min,
-    sum(voltage_magnitude_per_unit_deviation_vector.data)
+    (
+        sum(load_active_power_vector.data)
+        + sum(load_reactive_power_vector.data)
+    )
 )
 
 # Solve optimization problem.

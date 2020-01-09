@@ -16,6 +16,9 @@ timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 solver_name = 'gurobi'  # Must be valid input string for Pyomo's `SolverFactory`.
 solver_output = False  # If True, activate verbose solver output.
 
+# Test settings.
+test_scenario_name = 'singapore_6node'
+
 # Logger settings.
 logging_level = logging.DEBUG
 logging_handler = logging.StreamHandler()

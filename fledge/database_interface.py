@@ -65,10 +65,160 @@ def connect_database(
 
     # Create database, if `overwrite_database` or no database exists.
     if overwrite_database or not os.path.isfile(database_path):
-        fledge.database_interface.create_database(
+        create_database(
             database_path=database_path
         )
 
     # Obtain connection.
     database_connection = sqlite3.connect(database_path)
     return database_connection
+
+
+class ElectricGridData(object):
+    """Electric grid data object."""
+
+    electric_grids: pd.DataFrame
+    electric_grid_nodes: pd.DataFrame
+    electric_grid_loads: pd.DataFrame
+    electric_grid_lines: pd.DataFrame
+    electric_grid_line_types: pd.DataFrame
+    electric_grid_line_types_matrices: pd.DataFrame
+    electric_grid_transformers: pd.DataFrame
+    electric_grid_transformer_reactances: pd.DataFrame
+    electric_grid_transformer_taps: pd.DataFrame
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=connect_database()
+    ):
+        """Load electric grid data from database for given `scenario_name`."""
+
+        self.electric_grids = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grids
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_nodes = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_nodes
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_loads = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_loads
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_lines = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_lines
+                JOIN electric_grid_line_types USING (line_type)
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_line_types = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_line_types_matrices = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_matrices
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                ORDER BY line_type ASC, row ASC, col ASC
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_transformers = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_transformers
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, winding ASC
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_transformer_reactances = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_transformer_reactances
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, row ASC, col ASC
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_transformer_taps = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_transformer_taps
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                ORDER BY transformer_name ASC, winding ASC
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )

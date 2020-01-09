@@ -1,4 +1,4 @@
-"""Test template."""
+"""Test database interface."""
 
 import os
 import sqlite3
@@ -34,6 +34,15 @@ class TestDatabaseInterface(unittest.TestCase):
 
         # Compare expected and actual.
         self.assertEqual(actual, expected)
+
+    def test_electric_grid_data(self):
+        # Get result.
+        time_start = time.time()
+        fledge.database_interface.ElectricGridData(
+            scenario_name=fledge.config.test_scenario_name
+        )
+        time_end = time.time()
+        logger.info("Test ElectricGridData: Completed in {} seconds.".format(round(time_end - time_start, 6)))
 
 
 if __name__ == '__main__':

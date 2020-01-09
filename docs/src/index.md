@@ -23,8 +23,11 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for the 
     - Consideration of unbalanced / multiphase systems.
     - Generation of linear power flow approximations / sensitivity matrices.
 - Energy resource models
-    - Linear models for flexible loads and energy storage systems.
-    - Time series models for EV charging and photovoltaics.
+    - Time series models for fixed loads.
+    - Time series models for EV charging.
+    - Time series models for photovoltaics.
+    - Linear models for flexible loads.
+    - Linear models for energy storage systems.
 - Power flow solver
     - Iterative fixed-point power solver.
     - Integrated benchmarking against OpenDSS through [OpenDSSDirect](https://github.com/dss-extensions/OpenDSSDirect.jl).

@@ -20,26 +20,26 @@ and non-singularity for given power vector candidate and initial point.
   requirement for matrix inversions / solving of linear equations.
 """
 function check_solution_conditions(
-    nodal_admittance_matrix_no_source::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
-    nodal_transformation_matrix_no_source::SparseArrays.SparseMatrixCSC{Int,Int},
-    nodal_power_vector_wye_initial_no_source::Array{ComplexF64,1},
-    nodal_power_vector_delta_initial_no_source::Array{ComplexF64,1},
-    nodal_power_vector_wye_candidate_no_source::Array{ComplexF64,1},
-    nodal_power_vector_delta_candidate_no_source::Array{ComplexF64,1},
-    nodal_voltage_vector_no_load_no_source::Array{ComplexF64,1},
-    nodal_voltage_vector_initial_no_source::Array{ComplexF64,1},
+    node_admittance_matrix_no_source::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
+    node_transformation_matrix_no_source::SparseArrays.SparseMatrixCSC{Int,Int},
+    node_power_vector_wye_initial_no_source::Array{ComplexF64,1},
+    node_power_vector_delta_initial_no_source::Array{ComplexF64,1},
+    node_power_vector_wye_candidate_no_source::Array{ComplexF64,1},
+    node_power_vector_delta_candidate_no_source::Array{ComplexF64,1},
+    node_voltage_vector_no_load_no_source::Array{ComplexF64,1},
+    node_voltage_vector_initial_no_source::Array{ComplexF64,1},
 )
     # Calculate norm of the initial nodal power vector.
     xi_initial = (
         maximum(sum(
             abs.(
-                inv.(nodal_voltage_vector_no_load_no_source)
+                inv.(node_voltage_vector_no_load_no_source)
                 .* (
-                    nodal_admittance_matrix_no_source
+                    node_admittance_matrix_no_source
                     \ (
                         (
-                            inv.(nodal_voltage_vector_no_load_no_source)
-                            .* nodal_power_vector_wye_initial_no_source
+                            inv.(node_voltage_vector_no_load_no_source)
+                            .* node_power_vector_wye_initial_no_source
                         )
                     )
                 )
@@ -48,18 +48,18 @@ function check_solution_conditions(
         ))
         + maximum(sum(
             abs.(
-                inv.(nodal_voltage_vector_no_load_no_source)
+                inv.(node_voltage_vector_no_load_no_source)
                 .* (
-                    nodal_admittance_matrix_no_source
+                    node_admittance_matrix_no_source
                     \ Matrix(
                         (
-                            transpose(nodal_transformation_matrix_no_source)
+                            transpose(node_transformation_matrix_no_source)
                             .* transpose(inv.(
-                                abs.(nodal_transformation_matrix_no_source)
-                                * abs.(nodal_voltage_vector_no_load_no_source)
+                                abs.(node_transformation_matrix_no_source)
+                                * abs.(node_voltage_vector_no_load_no_source)
                             ))
                         )
-                        .* transpose(nodal_power_vector_delta_initial_no_source)
+                        .* transpose(node_power_vector_delta_initial_no_source)
                     )
                 )
             ),
@@ -71,15 +71,15 @@ function check_solution_conditions(
     xi_candidate = (
         maximum(sum(
             abs.(
-                inv.(nodal_voltage_vector_no_load_no_source)
+                inv.(node_voltage_vector_no_load_no_source)
                 .* (
-                    nodal_admittance_matrix_no_source
+                    node_admittance_matrix_no_source
                     \ (
                         LinearAlgebra.Diagonal(
-                            inv.(nodal_voltage_vector_no_load_no_source)
+                            inv.(node_voltage_vector_no_load_no_source)
                             .* (
-                                nodal_power_vector_wye_candidate_no_source
-                                - nodal_power_vector_wye_initial_no_source
+                                node_power_vector_wye_candidate_no_source
+                                - node_power_vector_wye_initial_no_source
                             )
                         )
                     )
@@ -89,19 +89,19 @@ function check_solution_conditions(
         ))
         + maximum(sum(
             abs.(
-                inv.(nodal_voltage_vector_no_load_no_source)
+                inv.(node_voltage_vector_no_load_no_source)
                 .* (
-                    nodal_admittance_matrix_no_source
+                    node_admittance_matrix_no_source
                     \ Matrix(
                         (
-                            transpose(nodal_transformation_matrix_no_source)
+                            transpose(node_transformation_matrix_no_source)
                             .* transpose(inv.(
-                                abs.(nodal_transformation_matrix_no_source)
-                                * abs.(nodal_voltage_vector_no_load_no_source)
+                                abs.(node_transformation_matrix_no_source)
+                                * abs.(node_voltage_vector_no_load_no_source)
                             ))
                         ) .* transpose(
-                            nodal_power_vector_delta_candidate_no_source
-                            - nodal_power_vector_delta_initial_no_source
+                            node_power_vector_delta_candidate_no_source
+                            - node_power_vector_delta_initial_no_source
                         )
                     )
                 )
@@ -110,21 +110,21 @@ function check_solution_conditions(
         ))
     )
 
-    # Calculate norm of the initial nodal voltage vector. 
+    # Calculate norm of the initial nodal voltage vector.
     gamma = (
         minimum([
             minimum(
-                abs.(nodal_voltage_vector_initial_no_source)
-                ./ abs.(nodal_voltage_vector_no_load_no_source)
+                abs.(node_voltage_vector_initial_no_source)
+                ./ abs.(node_voltage_vector_no_load_no_source)
             ),
             minimum(
                 abs.(
-                    nodal_transformation_matrix_no_source
-                    * nodal_voltage_vector_initial_no_source
+                    node_transformation_matrix_no_source
+                    * node_voltage_vector_initial_no_source
                 )
                 ./ (
-                    abs.(nodal_transformation_matrix_no_source)
-                    * abs.(nodal_voltage_vector_no_load_no_source)
+                    abs.(node_transformation_matrix_no_source)
+                    * abs.(node_voltage_vector_no_load_no_source)
                 )
             )
         ])
@@ -148,8 +148,7 @@ function check_solution_conditions(
     # and power vectors are not valid. This suggests an error in the
     # problem setup and hence triggers a warning.
     if !condition_initial
-        Memento.warn(
-            _logger,
+        Logging.@warn(
             "Fixed point solution condition is not satisfied for the"
             * " provided initial point."
         )
@@ -170,14 +169,14 @@ Get nodal voltage vector by solving with the fixed point algorithm.
 - Fixed point equation according to: <https://arxiv.org/pdf/1702.03310.pdf>
 """
 function get_voltage_fixed_point(
-    nodal_admittance_matrix_no_source::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
-    nodal_transformation_matrix_no_source::SparseArrays.SparseMatrixCSC{Int,Int},
-    nodal_power_vector_wye_no_source::Array{ComplexF64,1},
-    nodal_power_vector_delta_no_source::Array{ComplexF64,1},
-    nodal_power_vector_wye_initial_no_source::Array{ComplexF64,1},
-    nodal_power_vector_delta_initial_no_source::Array{ComplexF64,1},
-    nodal_voltage_vector_no_load_no_source::Array{ComplexF64,1},
-    nodal_voltage_vector_initial_no_source::Array{ComplexF64,1};
+    node_admittance_matrix_no_source::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
+    node_transformation_matrix_no_source::SparseArrays.SparseMatrixCSC{Int,Int},
+    node_power_vector_wye_no_source::Array{ComplexF64,1},
+    node_power_vector_delta_no_source::Array{ComplexF64,1},
+    node_power_vector_wye_initial_no_source::Array{ComplexF64,1},
+    node_power_vector_delta_initial_no_source::Array{ComplexF64,1},
+    node_voltage_vector_no_load_no_source::Array{ComplexF64,1},
+    node_voltage_vector_initial_no_source::Array{ComplexF64,1};
     outer_iteration_limit = 100,
     power_candidate_iteration_limit = 100,
     power_candidate_reduction_factor = 0.5,
@@ -185,11 +184,11 @@ function get_voltage_fixed_point(
     voltage_tolerance=1e-2
 )
     # Copy initial nodal voltage vector to avoid changing outer scope variables.
-    nodal_voltage_vector_initial_no_source = copy(
-        nodal_voltage_vector_initial_no_source
+    node_voltage_vector_initial_no_source = copy(
+        node_voltage_vector_initial_no_source
     )
-    nodal_voltage_vector_solution_no_source = copy(
-        nodal_voltage_vector_initial_no_source
+    node_voltage_vector_solution_no_source = copy(
+        node_voltage_vector_initial_no_source
     )
 
     # Instantiate outer iteration variables.
@@ -203,23 +202,23 @@ function get_voltage_fixed_point(
         && (outer_iteration < outer_iteration_limit)
     )
         # Define nodal power vector candidate to the desired nodal power vector.
-        nodal_power_vector_wye_candidate_no_source = (
-            nodal_power_vector_wye_no_source
+        node_power_vector_wye_candidate_no_source = (
+            node_power_vector_wye_no_source
         )
-        nodal_power_vector_delta_candidate_no_source = (
-            nodal_power_vector_delta_no_source
+        node_power_vector_delta_candidate_no_source = (
+            node_power_vector_delta_no_source
         )
 
         # Check solution conditions for nodal power vector candidate.
         is_final = check_solution_conditions(
-            nodal_admittance_matrix_no_source,
-            nodal_transformation_matrix_no_source,
-            nodal_power_vector_wye_initial_no_source,
-            nodal_power_vector_delta_initial_no_source,
-            nodal_power_vector_wye_candidate_no_source,
-            nodal_power_vector_delta_candidate_no_source,
-            nodal_voltage_vector_no_load_no_source,
-            nodal_voltage_vector_initial_no_source,
+            node_admittance_matrix_no_source,
+            node_transformation_matrix_no_source,
+            node_power_vector_wye_initial_no_source,
+            node_power_vector_delta_initial_no_source,
+            node_power_vector_wye_candidate_no_source,
+            node_power_vector_delta_candidate_no_source,
+            node_voltage_vector_no_load_no_source,
+            node_voltage_vector_initial_no_source,
         )
 
         # Instantiate power candidate iteration variable.
@@ -233,30 +232,30 @@ function get_voltage_fixed_point(
             !is_valid
             && (power_candidate_iteration < power_candidate_iteration_limit)
         )
-            nodal_power_vector_wye_candidate_no_source -= (
+            node_power_vector_wye_candidate_no_source -= (
                 power_candidate_reduction_factor
                 * (
-                    nodal_power_vector_wye_candidate_no_source
-                    - nodal_power_vector_wye_initial_no_source
+                    node_power_vector_wye_candidate_no_source
+                    - node_power_vector_wye_initial_no_source
                 )
             )
-            nodal_power_vector_delta_candidate_no_source -= (
+            node_power_vector_delta_candidate_no_source -= (
                 power_candidate_reduction_factor
                 * (
-                    nodal_power_vector_delta_candidate_no_source
-                    - nodal_power_vector_delta_initial_no_source
+                    node_power_vector_delta_candidate_no_source
+                    - node_power_vector_delta_initial_no_source
                 )
             )
 
             is_valid = check_solution_conditions(
-                nodal_admittance_matrix_no_source,
-                nodal_transformation_matrix_no_source,
-                nodal_power_vector_wye_initial_no_source,
-                nodal_power_vector_delta_initial_no_source,
-                nodal_power_vector_wye_candidate_no_source,
-                nodal_power_vector_delta_candidate_no_source,
-                nodal_voltage_vector_no_load_no_source,
-                nodal_voltage_vector_initial_no_source,
+                node_admittance_matrix_no_source,
+                node_transformation_matrix_no_source,
+                node_power_vector_wye_initial_no_source,
+                node_power_vector_delta_initial_no_source,
+                node_power_vector_wye_candidate_no_source,
+                node_power_vector_delta_candidate_no_source,
+                node_voltage_vector_no_load_no_source,
+                node_voltage_vector_initial_no_source,
             )
             power_candidate_iteration += 1
         end
@@ -264,20 +263,19 @@ function get_voltage_fixed_point(
         # Reaching the iteration limit is considered undesired and therefore
         # triggers a warning.
         if power_candidate_iteration == power_candidate_iteration_limit
-            Memento.warn(
-                _logger,
+            Logging.@warn(
                 "Power vector candidate selection algorithm reached maximum"
                 * " limit of $power_candidate_iteration_limit iterations."
             )
         end
 
-        # Store current candidate power vectors as initial power vectors 
-        # for next round of computation of solution conditions. 
-        nodal_power_vector_wye_initial_no_source = copy(
-            nodal_power_vector_wye_candidate_no_source
+        # Store current candidate power vectors as initial power vectors
+        # for next round of computation of solution conditions.
+        node_power_vector_wye_initial_no_source = copy(
+            node_power_vector_wye_candidate_no_source
         )
-        nodal_power_vector_delta_initial_no_source = copy(
-            nodal_power_vector_delta_candidate_no_source
+        node_power_vector_delta_initial_no_source = copy(
+            node_power_vector_delta_candidate_no_source
         )
 
         # Instantiate fixed point iteration variables.
@@ -290,29 +288,29 @@ function get_voltage_fixed_point(
             && (voltage_change > voltage_tolerance)
         )
             # Calculate fixed point equation.
-            nodal_voltage_vector_solution_no_source = copy(
-                nodal_voltage_vector_initial_no_source
+            node_voltage_vector_solution_no_source = copy(
+                node_voltage_vector_initial_no_source
             )
-            nodal_voltage_vector_solution_no_source = (
-                nodal_voltage_vector_no_load_no_source
+            node_voltage_vector_solution_no_source = (
+                node_voltage_vector_no_load_no_source
                 + (
-                    nodal_admittance_matrix_no_source
+                    node_admittance_matrix_no_source
                     \ (
                         (
-                            inv.(conj.(nodal_voltage_vector_solution_no_source))
-                            .* conj.(nodal_power_vector_wye_candidate_no_source)
+                            inv.(conj.(node_voltage_vector_solution_no_source))
+                            .* conj.(node_power_vector_wye_candidate_no_source)
                         )
                         + (
-                            transpose(nodal_transformation_matrix_no_source)
+                            transpose(node_transformation_matrix_no_source)
                             * (
                                 inv.(
-                                    nodal_transformation_matrix_no_source
+                                    node_transformation_matrix_no_source
                                     * conj.(
-                                        nodal_voltage_vector_solution_no_source
+                                        node_voltage_vector_solution_no_source
                                     )
                                 )
                                 .* conj.(
-                                    nodal_power_vector_delta_candidate_no_source
+                                    node_power_vector_delta_candidate_no_source
                                 )
                             )
                         )
@@ -323,14 +321,14 @@ function get_voltage_fixed_point(
             # Calculate voltage change from previous iteration.
             voltage_change = (
                 maximum(abs.(
-                    nodal_voltage_vector_solution_no_source
-                    - nodal_voltage_vector_initial_no_source
+                    node_voltage_vector_solution_no_source
+                    - node_voltage_vector_initial_no_source
                 ))
             )
 
-            # Set voltage solution as initial voltage for next iteration. 
-            nodal_voltage_vector_initial_no_source = copy(
-                nodal_voltage_vector_solution_no_source
+            # Set voltage solution as initial voltage for next iteration.
+            node_voltage_vector_initial_no_source = copy(
+                node_voltage_vector_solution_no_source
             )
 
             # Increment voltage iteration counter.
@@ -343,8 +341,7 @@ function get_voltage_fixed_point(
         # Reaching the iteration limit is considered undesired and therefore
         # triggers a warning.
         if voltage_iteration == voltage_iteration_limit
-            Memento.warn(
-                _logger,
+            Logging.@warn(
                 "Fixed point voltage solution algorithm reached maximum"
                 * " limit of $voltage_iteration_limit iterations."
             )
@@ -354,14 +351,13 @@ function get_voltage_fixed_point(
     # Reaching the iteration limit is considered undesired and therefore
     # triggers a warning.
     if outer_iteration == outer_iteration_limit
-        Memento.warn(
-            _logger,
+        Logging.@warn(
             "'Get voltage vector' solution algorithm reached maximum"
             * " limit of $outer_iteration_limit iterations."
         )
     end
 
-    return nodal_voltage_vector_solution_no_source
+    return node_voltage_vector_solution_no_source
 end
 
 """
@@ -376,75 +372,75 @@ Get nodal voltage vector by solving with the fixed point algorithm.
 """
 function get_voltage_fixed_point(
     electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
-    nodal_power_vector_wye::Array{ComplexF64,1},
-    nodal_power_vector_delta::Array{ComplexF64,1};
+    node_power_vector_wye::Array{ComplexF64,1},
+    node_power_vector_delta::Array{ComplexF64,1};
     options...
 )
     # Obtain no-source variables for fixed point equation.
-    nodal_admittance_matrix_no_source = (
-        electric_grid_model.nodal_admittance_matrix[
-            electric_grid_model.index.node_by_node_type[:no_source],
-            electric_grid_model.index.node_by_node_type[:no_source]
+    node_admittance_matrix_no_source = (
+        electric_grid_model.node_admittance_matrix[
+            electric_grid_model.index.node_by_node_type["no_source"],
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_transformation_matrix_no_source = (
-        electric_grid_model.nodal_transformation_matrix[
-            electric_grid_model.index.node_by_node_type[:no_source],
-            electric_grid_model.index.node_by_node_type[:no_source]
+    node_transformation_matrix_no_source = (
+        electric_grid_model.node_transformation_matrix[
+            electric_grid_model.index.node_by_node_type["no_source"],
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_power_vector_wye_no_source = (
+    node_power_vector_wye_no_source = (
         (
-            nodal_power_vector_wye
+            node_power_vector_wye
         )[
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_power_vector_delta_no_source = (
+    node_power_vector_delta_no_source = (
         (
-            nodal_power_vector_delta
+            node_power_vector_delta
         )[
-            electric_grid_model.index.node_by_node_type[:no_source]
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
-    nodal_voltage_vector_no_load_no_source = (
-        electric_grid_model.nodal_voltage_vector_no_load[
-            electric_grid_model.index.node_by_node_type[:no_source]
+    node_voltage_vector_no_load_no_source = (
+        electric_grid_model.node_voltage_vector_no_load[
+            electric_grid_model.index.node_by_node_type["no_source"]
         ]
     )
 
     # Define initial nodal power and voltage vectors as no-load conditions.
-    nodal_power_vector_wye_initial_no_source = (
-        zeros(ComplexF64, size(nodal_power_vector_wye_no_source))
+    node_power_vector_wye_initial_no_source = (
+        zeros(ComplexF64, size(node_power_vector_wye_no_source))
     )
-    nodal_power_vector_delta_initial_no_source = (
-        zeros(ComplexF64, size(nodal_power_vector_delta_no_source))
+    node_power_vector_delta_initial_no_source = (
+        zeros(ComplexF64, size(node_power_vector_delta_no_source))
     )
-    nodal_voltage_vector_initial_no_source = (
-        nodal_voltage_vector_no_load_no_source
+    node_voltage_vector_initial_no_source = (
+        node_voltage_vector_no_load_no_source
     )
 
     # Get fixed point solution.
-    nodal_voltage_vector_solution = get_voltage_fixed_point(
-        nodal_admittance_matrix_no_source,
-        nodal_transformation_matrix_no_source,
-        nodal_power_vector_wye_no_source,
-        nodal_power_vector_delta_no_source,
-        nodal_power_vector_wye_initial_no_source,
-        nodal_power_vector_delta_initial_no_source,
-        nodal_voltage_vector_no_load_no_source,
-        nodal_voltage_vector_initial_no_source;
+    node_voltage_vector_solution = get_voltage_fixed_point(
+        node_admittance_matrix_no_source,
+        node_transformation_matrix_no_source,
+        node_power_vector_wye_no_source,
+        node_power_vector_delta_no_source,
+        node_power_vector_wye_initial_no_source,
+        node_power_vector_delta_initial_no_source,
+        node_voltage_vector_no_load_no_source,
+        node_voltage_vector_initial_no_source;
         options...
     )
 
     # Get full voltage vector by concatenating source and calculated voltage.
-    nodal_voltage_vector_solution = [
-        electric_grid_model.nodal_voltage_vector_no_load[
-            electric_grid_model.index.node_by_node_type[:source]
+    node_voltage_vector_solution = [
+        electric_grid_model.node_voltage_vector_no_load[
+            electric_grid_model.index.node_by_node_type["source"]
         ];
-        nodal_voltage_vector_solution
+        node_voltage_vector_solution
     ]
-    return nodal_voltage_vector_solution
+    return node_voltage_vector_solution
 end
 
 """
@@ -458,23 +454,23 @@ function get_voltage_fixed_point(
     options...
 )
     # Obtain nodal power vectors assuming nominal loading conditions.
-    nodal_power_vector_wye = (
+    node_power_vector_wye = (
         electric_grid_model.load_incidence_wye_matrix
         * electric_grid_model.load_power_vector_nominal
     )
-    nodal_power_vector_delta = (
+    node_power_vector_delta = (
         electric_grid_model.load_incidence_delta_matrix
         * electric_grid_model.load_power_vector_nominal
     )
 
     # Get fixed point solution.
-    nodal_voltage_vector_solution = get_voltage_fixed_point(
+    node_voltage_vector_solution = get_voltage_fixed_point(
         electric_grid_model,
-        nodal_power_vector_wye,
-        nodal_power_vector_delta;
+        node_power_vector_wye,
+        node_power_vector_delta;
         options...
     )
-    return nodal_voltage_vector_solution
+    return node_voltage_vector_solution
 end
 
 """
@@ -492,27 +488,27 @@ function get_branch_power_fixed_point(
     branch_admittance_2_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
     branch_incidence_1_matrix::SparseArrays.SparseMatrixCSC{Int,Int},
     branch_incidence_2_matrix::SparseArrays.SparseMatrixCSC{Int,Int},
-    nodal_voltage_vector::Array{ComplexF64,1}
+    node_voltage_vector::Array{ComplexF64,1}
 )
     # Calculate branch power vectors.
     branch_power_vector_1 = (
         (
             branch_incidence_1_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
         .* conj.(
             branch_admittance_1_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
     )
     branch_power_vector_2 = (
         (
             branch_incidence_2_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
         .* conj.(
             branch_admittance_2_matrix
-            * nodal_voltage_vector
+            * node_voltage_vector
         )
     )
 
@@ -529,7 +525,7 @@ Get branch power vectors by calculating power flow with given nodal voltage.
 """
 function get_branch_power_fixed_point(
     electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
-    nodal_voltage_vector::Array{ComplexF64,1}
+    node_voltage_vector::Array{ComplexF64,1}
 )
     # Obtain branch admittance and incidence matrices.
     branch_admittance_1_matrix = (
@@ -554,7 +550,7 @@ function get_branch_power_fixed_point(
         branch_admittance_2_matrix,
         branch_incidence_1_matrix,
         branch_incidence_2_matrix,
-        nodal_voltage_vector
+        node_voltage_vector
     )
 end
 
@@ -568,22 +564,22 @@ Get total electric losses with given nodal voltage.
   input, which can be obtained from an `electric_grid_model` object.
 """
 function get_loss_fixed_point(
-    nodal_admittance_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
-    nodal_voltage_vector::Array{ComplexF64,1}
+    node_admittance_matrix::SparseArrays.SparseMatrixCSC{ComplexF64,Int},
+    node_voltage_vector::Array{ComplexF64,1}
 )
     # TODO: Validate loss solution.
     # Calculate total losses.
-    total_loss = (
+    loss = (
         conj(
-            transpose(nodal_voltage_vector)
+            transpose(node_voltage_vector)
             * (
-                nodal_admittance_matrix
-                * nodal_voltage_vector
+                node_admittance_matrix
+                * node_voltage_vector
             )
         )
     )
 
-    return total_loss
+    return loss
 end
 
 
@@ -594,17 +590,17 @@ Get branch power vectors by calculating power flow with given nodal voltage.
 """
 function get_loss_fixed_point(
     electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
-    nodal_voltage_vector::Array{ComplexF64,1}
+    node_voltage_vector::Array{ComplexF64,1}
 )
     # Obtain total losses with admittance matrix from electric grid model.
-    total_loss = (
+    loss = (
         get_loss_fixed_point(
-            electric_grid_model.nodal_admittance_matrix,
-            nodal_voltage_vector
+            electric_grid_model.node_admittance_matrix,
+            node_voltage_vector
         )
     )
 
-    return total_loss
+    return loss
 end
 
 """
@@ -619,8 +615,8 @@ function get_voltage_open_dss()
 
     # Extract nodal voltage vector.
     # - Voltages are sorted by node names in the fashion as nodes are sorted in
-    #   nodes_phases in FLEDGE.ElectricGridModels.ElectricGridModelIndex().
-    nodal_voltage_vector_solution = (
+    #   nodes in FLEDGE.ElectricGridModels.ElectricGridModelIndex().
+    node_voltage_vector_solution = (
         OpenDSSDirect.Circuit.AllBusVolts()[
             sortperm(
                 OpenDSSDirect.Circuit.AllNodeNames(),
@@ -629,7 +625,101 @@ function get_voltage_open_dss()
         ]
     )
 
-    return nodal_voltage_vector_solution
+    return node_voltage_vector_solution
+end
+
+"""
+Power flow solution type.
+
+Expected fields:
+- `node_voltage_vector`
+- `branch_power_vector_1`
+- `branch_power_vector_2`
+- `loss`
+"""
+abstract type PowerFlowSolution end
+
+"Fixed point power flow solution object."
+struct PowerFlowSolutionFixedPoint <: PowerFlowSolution
+    node_voltage_vector::Vector{ComplexF64}
+    branch_power_vector_1::Vector{ComplexF64}
+    branch_power_vector_2::Vector{ComplexF64}
+    loss::ComplexF64
+end
+
+"""
+Instantiate fixed point power flow solution object for given
+`electric_grid_model` and `load_power_vector`.
+"""
+function PowerFlowSolutionFixedPoint(
+    electric_grid_model::FLEDGE.ElectricGridModels.ElectricGridModel,
+    load_power_vector::Vector{ComplexF64}
+)
+    # Obtain node power vectors.
+    node_power_vector_wye = (
+        electric_grid_model.load_incidence_wye_matrix
+        * load_power_vector
+    )
+    node_power_vector_delta = (
+        electric_grid_model.load_incidence_delta_matrix
+        * load_power_vector
+    )
+
+    # Obtain voltage solution.
+    node_voltage_vector = (
+        FLEDGE.PowerFlowSolvers.get_voltage_fixed_point(
+            electric_grid_model,
+            node_power_vector_wye,
+            node_power_vector_delta
+        )
+    )
+
+    # Obtain branch flow solution.
+    (
+        branch_power_vector_1,
+        branch_power_vector_2
+    ) = (
+        FLEDGE.PowerFlowSolvers.get_branch_power_fixed_point(
+            electric_grid_model,
+            node_voltage_vector
+        )
+    )
+
+    # Obtain loss solution.
+    loss = (
+        FLEDGE.PowerFlowSolvers.get_loss_fixed_point(
+            electric_grid_model,
+            node_voltage_vector
+        )
+    )
+
+    PowerFlowSolutionFixedPoint(
+        node_voltage_vector,
+        branch_power_vector_1,
+        branch_power_vector_2,
+        loss
+    )
+end
+
+"""
+Instantiate fixed point power flow solution object for given `scenario_name`
+assuming nominal loading conditions.
+"""
+function PowerFlowSolutionFixedPoint(scenario_name::String)
+    # Obtain electric grid model.
+    electric_grid_model = (
+        FLEDGE.ElectricGridModels.ElectricGridModel(scenario_name)
+    )
+
+    # Obtain load power vector.
+    load_power_vector = (
+        electric_grid_model.load_power_vector_nominal
+    )
+
+    PowerFlowSolutionFixedPoint(
+        electric_grid_model,
+        load_power_vector
+    )
 end
 
 end

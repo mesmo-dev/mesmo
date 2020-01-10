@@ -804,3 +804,44 @@ class ElectricGridModel(object):
                 branch_index,
                 node_index_2
             )
+
+        # Define transformation matrix according to:
+        # https://doi.org/10.1109/TPWRS.2018.2823277
+        transformation_entries = (
+            np.array([
+                [1, -1, 0],
+                [0, 1, -1],
+                [-1, 0, 1]
+            ])
+        )
+        for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
+            # Obtain node transformation matrix index.
+            transformation_index = (
+                np.nonzero(
+                    [
+                        node['is_phase_1_connected'],
+                        node['is_phase_2_connected'],
+                        node['is_phase_3_connected']
+                    ]
+                    == 1
+                )[0].tolist()
+            )
+
+            # Construct node transformation matrix.
+            transformation_matrix = (
+                transformation_entries[transformation_index, transformation_index]
+            )
+
+            # Obtain index for positioning node transformation matrix in full
+            # transformation matrix.
+            node_index = (
+                self.index.node_by_node_name[node['node_name']]
+            )
+
+            # Add node transformation matrix to full transformation matrix.
+            insert_sub_matrix(
+                self.node_transformation_matrix,
+                transformation_matrix,
+                node_index,
+                node_index
+            )

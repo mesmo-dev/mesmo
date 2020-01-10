@@ -292,7 +292,7 @@ class ElectricGridIndex(object):
         # Index by transformer name.
         self.branch_by_transformer_name = dict.fromkeys(self.transformer_names)
         for transformer_name in self.transformer_names:
-            self.branch_by_line_name[transformer_name] = (
+            self.branch_by_transformer_name[transformer_name] = (
                 np.nonzero(
                     (branches['branch_name'] == transformer_name)
                     & (branches['branch_type'] == 'transformer')
@@ -515,6 +515,283 @@ class ElectricGridModel(object):
             )
 
             # Add line element matrices to the branch incidence matrices.
+            insert_sub_matrix(
+                self.branch_incidence_1_matrix,
+                np.identity(len(branch_index), dtype=np.int),
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_incidence_2_matrix,
+                np.identity(len(branch_index), dtype=np.int),
+                branch_index,
+                node_index_2
+            )
+
+        # Add transformers to admittance, transformation and incidence matrices.
+        # - Note: This setup only works for transformers with exactly two windings
+        #   and identical number of phases at each winding / side.
+    
+        # Define transformer factor matrices according to:
+        # https://doi.org/10.1109/TPWRS.2017.2728618
+        transformer_factors_1 = (
+            np.array([
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1]
+            ])
+        )
+        transformer_factors_2 = (
+            1 / 3
+            * np.array([
+                [2, -1, -1],
+                [-1, 2, -1],
+                [-1, -1, 2]
+            ])
+        )
+        transformer_factors_3 = (
+            1 / np.sqrt(3)
+            * np.array([
+                [-1, 1, 0],
+                [0, -1, 1],
+                [1, 0, -1]
+            ])
+        )
+
+        # Add transformers to admittance matrix.
+        for transformer_index, transformer in (
+            electric_grid_data.electric_grid_transformers.loc[
+                electric_grid_data.electric_grid_transformers['winding'] == 1,
+                :
+            ].iterrows()
+        ):
+            # Obtain transformer windings.
+            windings = (
+                electric_grid_data.electric_grid_transformers.loc[
+                    (
+                        electric_grid_data.electric_grid_transformers['transformer_name']
+                        == transformer['transformer_name']
+                    ),
+                    :
+                ].reset_index()
+            )
+
+            # Obtain primary and secondary voltage.
+            voltage_1 = (
+                electric_grid_data.electric_grid_nodes.loc[
+                    (
+                        electric_grid_data.electric_grid_nodes['node_name']
+                        == windings.at[0, 'node_name']
+                    ),
+                    'voltage'
+                ]
+            ).values[0]
+            voltage_2 = (
+                electric_grid_data.electric_grid_nodes.loc[
+                    (
+                        electric_grid_data.electric_grid_nodes['node_name']
+                        == windings.at[1, 'node_name']
+                    ),
+                    'voltage'
+                ]
+            ).values[0]
+    
+            # Obtain transformer type.
+            type = (
+                windings.at[0, 'connection']
+                + "-"
+                + windings.at[1, 'connection']
+            )
+    
+            # Obtain transformer resistance and reactance.
+            resistance_percentage = transformer['resistance_percentage']
+            reactance_percentage = (
+                electric_grid_data.electric_grid_transformer_reactances.loc[
+                    (
+                        electric_grid_data.electric_grid_transformer_reactances['transformer_name']
+                        == transformer['transformer_name']
+                    ),
+                    'reactance_percentage'
+                ]
+            ).values[0]
+    
+            # Calculate transformer admittance.
+            admittance = (
+                (
+                    (
+                        2 * resistance_percentage / 100
+                        + 1j * reactance_percentage / 100
+                    )
+                    * (
+                        voltage_2 ** 2
+                        / windings.at[0, 'power']
+                    )
+                ) ** -1
+            )
+    
+            # Calculate turn ratio.
+            turn_ratio = (
+                (
+                    1.0  # TODO: Replace `1.0` with actual tap position.
+                    * voltage_1
+                )
+                / (
+                    1.0  # TODO: Replace `1.0` with actual tap position.
+                    * voltage_2
+                )
+            )
+    
+            # Construct transformer element admittance matrices according to:
+            # https://doi.org/10.1109/TPWRS.2017.2728618
+            # - TODO: Add warning if wye-transformer is not grounded
+            if type == "wye-wye":
+                admittance_matrix_11 = (
+                    admittance
+                    * transformer_factors_1
+                    / turn_ratio ** 2
+                )
+                admittance_matrix_12 = (
+                    - 1 * admittance
+                    * transformer_factors_1
+                    / turn_ratio
+                )
+                admittance_matrix_21 = (
+                    - 1 * admittance
+                    * transformer_factors_1
+                    / turn_ratio
+                )
+                admittance_matrix_22 = (
+                    admittance
+                    * transformer_factors_1
+                )
+            elif type == "delta-wye":
+                admittance_matrix_11 = (
+                    admittance
+                    * transformer_factors_2
+                    / turn_ratio ** 2
+                )
+                admittance_matrix_12 = (
+                    - 1 * admittance
+                    * - 1 * np.transpose(transformer_factors_3)
+                    / turn_ratio
+                )
+                admittance_matrix_21 = (
+                    - 1 * admittance
+                    * - 1 * transformer_factors_3
+                    / turn_ratio
+                )
+                admittance_matrix_22 = (
+                    admittance
+                    * transformer_factors_1
+                )
+            elif type == "wye-delta":
+                admittance_matrix_11 = (
+                    admittance
+                    * transformer_factors_1
+                    / turn_ratio ** 2
+                )
+                admittance_matrix_12 = (
+                    - 1 * admittance
+                    * - 1 * transformer_factors_3
+                    / turn_ratio
+                )
+                admittance_matrix_21 = (
+                    - 1 * admittance
+                    * - 1 * np.transpose(transformer_factors_3)
+                    / turn_ratio
+                )
+                admittance_matrix_22 = (
+                    admittance
+                    * transformer_factors_2
+                )
+            elif type == "delta-delta":
+                admittance_matrix_11 = (
+                    admittance
+                    * transformer_factors_2
+                    / turn_ratio ** 2
+                )
+                admittance_matrix_12 = (
+                    - 1 * admittance
+                    * transformer_factors_2
+                    / turn_ratio
+                )
+                admittance_matrix_21 = (
+                    - 1 * admittance
+                    * transformer_factors_2
+                    / turn_ratio
+                )
+                admittance_matrix_22 = (
+                    admittance
+                    * transformer_factors_2
+                )
+            else:
+                logger.error(f"Unknown transformer type: {type}")
+    
+            # Obtain indexes for positioning the transformer element
+            # matrices in the full matrices.
+            node_index_1 = (
+                self.index.node_by_node_name[windings.at[0, 'node_name']]
+            )
+            node_index_2 = (
+                self.index.node_by_node_name[windings.at[1, 'node_name']]
+            )
+            branch_index = (
+                self.index.branch_by_transformer_name[transformer['transformer_name']]
+            )
+    
+            # Add transformer element matrices to the nodal admittance matrix.
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_11,
+                node_index_1,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_12,
+                node_index_1,
+                node_index_2
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_21,
+                node_index_2,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_22,
+                node_index_2,
+                node_index_2
+            )
+    
+            # Add transformer element matrices to the branch admittance matrices.
+            insert_sub_matrix(
+                self.branch_admittance_1_matrix,
+                admittance_matrix_11,
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_admittance_1_matrix,
+                admittance_matrix_12,
+                branch_index,
+                node_index_2
+            )
+            insert_sub_matrix(
+                self.branch_admittance_2_matrix,
+                admittance_matrix_21,
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_admittance_2_matrix,
+                admittance_matrix_22,
+                branch_index,
+                node_index_2
+            )
+    
+            # Add transformer element matrices to the branch incidence matrices.
             insert_sub_matrix(
                 self.branch_incidence_1_matrix,
                 np.identity(len(branch_index), dtype=np.int),

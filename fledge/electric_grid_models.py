@@ -37,10 +37,10 @@ class ElectricGridIndex(object):
 
     def __init__(
             self,
-            scenario_name: str = None,
-            electric_grid_data: fledge.database_interface.ElectricGridData = None
+            electric_grid_data: fledge.database_interface.ElectricGridData = None,
+            scenario_name: str = None
     ):
-        """Instantiate electric grid index object for given `electric_grid_data`"""
+        """Instantiate electric grid index object for given `electric_grid_data` or `scenario_name`."""
 
         # Load electric grid data, if none.
         if electric_grid_data is None:
@@ -272,7 +272,6 @@ class ElectricGridIndex(object):
                     & (nodes['phase'].isin(load_phases))
                 )[0].tolist()
             )
-        print(self.node_by_load_name)
 
         # Generate indexing dictionaries for the branch admittance matrices,
         # i.e., for all phases of all branches.
@@ -308,3 +307,223 @@ class ElectricGridIndex(object):
 
         # Index by load name.
         self.load_by_load_name = dict(zip(self.load_names, range(len(self.load_names))))
+
+
+class ElectricGridModel(object):
+    """Electric grid model object."""
+
+    electric_grid_data: fledge.database_interface.ElectricGridData
+    index: ElectricGridIndex
+    node_admittance_matrix: scipy.sparse.dok_matrix
+    node_transformation_matrix: scipy.sparse.dok_matrix
+    branch_admittance_1_matrix: scipy.sparse.dok_matrix
+    branch_admittance_2_matrix: scipy.sparse.dok_matrix
+    branch_incidence_1_matrix: scipy.sparse.dok_matrix
+    branch_incidence_2_matrix: scipy.sparse.dok_matrix
+    load_incidence_wye_matrix: scipy.sparse.dok_matrix
+    load_incidence_delta_matrix: scipy.sparse.dok_matrix
+    node_voltage_vector_no_load: np.ndarray
+    load_power_vector_nominal: np.ndarray
+
+    def __init__(
+            self,
+            electric_grid_data: fledge.database_interface.ElectricGridData = None,
+            scenario_name: str = None
+    ):
+        """Instantiate electric grid model object for given `electric_grid_data` or `scenario_name`.
+
+        - The nodal no-load voltage vector can be constructed by
+          1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
+          definition in the database is taken, or by
+          2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
+          calculated from the source node voltage and the nodal admittance matrix.
+        """
+
+        # Load electric grid data, if none.
+        if electric_grid_data is None:
+            electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+
+        # Obtain electric grid index.
+        self.index = ElectricGridIndex(electric_grid_data)
+
+        # Define sparse matrices for nodal admittance, nodal transformation,
+        # branch admittance, branch incidence and load matrix matrix entries.
+        self.node_admittance_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.node_dimension), dtype=np.complex)
+        )
+        self.node_transformation_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.node_dimension), dtype=np.int)
+        )
+        self.branch_admittance_1_matrix = (
+             scipy.sparse.dok_matrix((self.index.branch_dimension, self.index.node_dimension), dtype=np.complex)
+        )
+        self.branch_admittance_2_matrix = (
+             scipy.sparse.dok_matrix((self.index.branch_dimension, self.index.node_dimension), dtype=np.complex)
+        )
+        self.branch_incidence_1_matrix = (
+             scipy.sparse.dok_matrix((self.index.branch_dimension, self.index.node_dimension), dtype=np.int)
+        )
+        self.branch_incidence_2_matrix = (
+             scipy.sparse.dok_matrix((self.index.branch_dimension, self.index.node_dimension), dtype=np.int)
+        )
+        self.load_incidence_wye_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.load_dimension), dtype=np.float)
+        )
+        self.load_incidence_delta_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.load_dimension), dtype=np.float)
+        )
+
+        # Define utility function to insert sub matrix into a sparse matrix at given row/column indexes.
+        # - Ensures that values are added element-by-element to support sparse matrices.
+        def insert_sub_matrix(matrix, sub_matrix, row_indexes, col_indexes):
+            for row, sub_matrix_row in zip(row_indexes, sub_matrix.tolist()):
+                for col, value in zip(col_indexes, sub_matrix_row):
+                    matrix[row, col] += value  # In-place operator `+=` and empty return value for better performance.
+            return
+
+        # Add lines to admittance, transformation and incidence matrices.
+        for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
+            # Obtain line resistance and reactance matrix entries for the line.
+            rxc_matrix_entries_index = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[:, 'line_type'] == line['line_type']
+            )
+            r_matrix_entries = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'r'].values
+            )
+            x_matrix_entries = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'x'].values
+            )
+            c_matrix_entries = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'c'].values
+            )
+
+            # Obtain the full line resistance and reactance matrices.
+            # Data only contains upper half entries.
+            rxc_matrix_full_index = (
+                np.array([
+                    [1, 2, 4],
+                    [2, 3, 5],
+                    [4, 5, 6]
+                ]) - 1
+            )
+            # TODO: Remove usage of n_phases.
+            rxc_matrix_full_index = (
+                rxc_matrix_full_index[:line['n_phases'], :line['n_phases']]
+            )
+            r_matrix = r_matrix_entries[rxc_matrix_full_index]
+            x_matrix = x_matrix_entries[rxc_matrix_full_index]
+            c_matrix = c_matrix_entries[rxc_matrix_full_index]
+
+            # Construct line series admittance matrix.
+            series_admittance_matrix = (
+                np.linalg.inv(
+                    (r_matrix + 1j * x_matrix)
+                    * line['length']
+                )
+            )
+
+            # Construct line shunt admittance.
+            # Note: nF to Ω with X = 1 / (2π * f * C)
+            # TODO: Check line shunt admittance.
+            base_frequency = 60.0  # TODO: Define base frequency in the database
+            shunt_admittance_matrix = (
+                c_matrix
+                * 2 * np.pi * base_frequency * 1e-9
+                * 0.5j
+                * line['length']
+            )
+
+            # Construct line element admittance matrices according to:
+            # https://doi.org/10.1109/TPWRS.2017.2728618
+            admittance_matrix_11 = (
+                series_admittance_matrix
+                + shunt_admittance_matrix
+            )
+            admittance_matrix_12 = (
+                - series_admittance_matrix
+            )
+            admittance_matrix_21 = (
+                - series_admittance_matrix
+            )
+            admittance_matrix_22 = (
+                series_admittance_matrix
+                + shunt_admittance_matrix
+            )
+
+            # Obtain indexes for positioning the line element matrices
+            # in the full admittance matrices.
+            node_index_1 = (
+                self.index.node_by_node_name[line['node_1_name']]
+            )
+            node_index_2 = (
+                self.index.node_by_node_name[line['node_2_name']]
+            )
+            branch_index = (
+                self.index.branch_by_line_name[line['line_name']]
+            )
+
+            # Add line element matrices to the nodal admittance matrix.
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_11,
+                node_index_1,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_12,
+                node_index_1,
+                node_index_2
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_21,
+                node_index_2,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.node_admittance_matrix,
+                admittance_matrix_22,
+                node_index_2,
+                node_index_2
+            )
+
+            # Add line element matrices to the branch admittance matrices.
+            insert_sub_matrix(
+                self.branch_admittance_1_matrix,
+                admittance_matrix_11,
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_admittance_1_matrix,
+                admittance_matrix_12,
+                branch_index,
+                node_index_2
+            )
+            insert_sub_matrix(
+                self.branch_admittance_2_matrix,
+                admittance_matrix_21,
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_admittance_2_matrix,
+                admittance_matrix_22,
+                branch_index,
+                node_index_2
+            )
+
+            # Add line element matrices to the branch incidence matrices.
+            insert_sub_matrix(
+                self.branch_incidence_1_matrix,
+                np.identity(len(branch_index), dtype=np.int),
+                branch_index,
+                node_index_1
+            )
+            insert_sub_matrix(
+                self.branch_incidence_2_matrix,
+                np.identity(len(branch_index), dtype=np.int),
+                branch_index,
+                node_index_2
+            )

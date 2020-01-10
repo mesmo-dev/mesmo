@@ -20,6 +20,15 @@ class TestElectricGridModels(unittest.TestCase):
         time_end = time.time()
         logger.info("Test ElectricGridIndex: Completed in {} seconds.".format(round(time_end - time_start, 6)))
 
+    def test_electric_grid_model(self):
+        # Get result.
+        time_start = time.time()
+        fledge.electric_grid_models.ElectricGridModel(
+            scenario_name=fledge.config.test_scenario_name
+        )
+        time_end = time.time()
+        logger.info("Test ElectricGridModel: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+
 
 if __name__ == '__main__':
     unittest.main()

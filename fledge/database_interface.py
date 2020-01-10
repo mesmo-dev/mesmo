@@ -133,6 +133,7 @@ class ElectricGridData(object):
                 params=[scenario_name]
             )
         )
+        self.electric_grid_loads.index = self.electric_grid_loads['load_name']
         self.electric_grid_lines = (
             pd.read_sql(
                 """

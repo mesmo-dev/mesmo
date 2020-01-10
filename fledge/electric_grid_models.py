@@ -241,12 +241,38 @@ class ElectricGridIndex(object):
 
         # Index by node name.
         self.node_by_node_name = dict.fromkeys(self.node_names)
+        for node_name in self.node_names:
+            self.node_by_node_name[node_name] = np.nonzero(nodes['node_name'] == node_name)[0].tolist()
         # Index by phase.
         self.node_by_phase = dict.fromkeys(self.phases)
+        for phase in self.phases:
+            self.node_by_phase[phase] = np.nonzero(nodes['phase'] == phase)[0].tolist()
         # Index by node type.
         self.node_by_node_type = dict.fromkeys(self.node_types)
+        for node_type in self.node_types:
+            self.node_by_node_type[node_type] = np.nonzero(nodes['node_type'] == node_type)[0].tolist()
         # Index by load name.
         self.node_by_load_name = dict.fromkeys(self.load_names)
+        # TODO: Find a more efficient way to represent load / node / phase comparison.
+        for load_name in self.load_names:
+            load_phases = (
+                np.where(
+                    [
+                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_1_connected'] == 1,
+                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_2_connected'] == 1,
+                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_3_connected'] == 1
+                    ],
+                    ['1', '2', '3'],
+                    [None, None, None]
+                )
+            )
+            self.node_by_load_name[load_name] = (
+                np.nonzero(
+                    (nodes['node_name'] == electric_grid_data.electric_grid_loads.at[load_name, 'node_name'])
+                    & (nodes['phase'].isin(load_phases))
+                )[0].tolist()
+            )
+        print(self.node_by_load_name)
 
         # Generate indexing dictionaries for the branch admittance matrices,
         # i.e., for all phases of all branches.
@@ -257,12 +283,28 @@ class ElectricGridIndex(object):
 
         # Index by line name.
         self.branch_by_line_name = dict.fromkeys(self.line_names)
+        for line_name in self.line_names:
+            self.branch_by_line_name[line_name] = (
+                np.nonzero(
+                    (branches['branch_name'] == line_name)
+                    & (branches['branch_type'] == 'line')
+                )[0].tolist()
+            )
         # Index by transformer name.
         self.branch_by_transformer_name = dict.fromkeys(self.transformer_names)
+        for transformer_name in self.transformer_names:
+            self.branch_by_line_name[transformer_name] = (
+                np.nonzero(
+                    (branches['branch_name'] == transformer_name)
+                    & (branches['branch_type'] == 'transformer')
+                )[0].tolist()
+            )
         # Index by phase.
         self.branch_by_phase = dict.fromkeys(self.phases)
+        for phase in self.phases:
+            self.branch_by_phase[phase] = np.nonzero(branches['phase'] == phase)[0].tolist()
 
         # Generate indexing dictionary for the load incidence matrix.
 
         # Index by load name.
-        self.load_by_load_name = dict.fromkeys(self.load_names)
+        self.load_by_load_name = dict(zip(self.load_names, range(len(self.load_names))))

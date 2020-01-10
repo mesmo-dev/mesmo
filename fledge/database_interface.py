@@ -7,6 +7,8 @@ import sqlite3
 
 import fledge.config
 
+logger = fledge.config.get_logger(__name__)
+
 
 def create_database(
         database_path,
@@ -16,8 +18,8 @@ def create_database(
     """Create SQLITE database from SQL schema file and CSV files."""
 
     # Connect SQLITE database (creates file, if none).
-    conn = sqlite3.connect(database_path)
-    cursor = conn.cursor()
+    database_connection = sqlite3.connect(database_path)
+    cursor = database_connection.cursor()
 
     # Remove old data, if any.
     cursor.executescript(
@@ -32,29 +34,30 @@ def create_database(
     # Recreate SQLITE database (schema) from SQL file.
     with open(database_schema_path, 'r') as database_schema_file:
         cursor.executescript(database_schema_file.read())
-    conn.commit()
+    database_connection.commit()
 
     # Import CSV files into SQLITE database.
-    conn.text_factory = str  # Allows utf-8 data to be stored.
-    cursor = conn.cursor()
+    database_connection.text_factory = str  # Allows utf-8 data to be stored.
+    cursor = database_connection.cursor()
     for file in glob.glob(os.path.join(csv_path, '*.csv')):
         # Obtain table name.
         table_name = os.path.splitext(os.path.basename(file))[0]
 
         # Delete existing table content.
         cursor.execute("DELETE FROM {}".format(table_name))
-        conn.commit()
+        database_connection.commit()
 
         # Write new table content.
+        logger.debug(f"Loading {file} into database.")
         table = pd.read_csv(file)
         table.to_sql(
             table_name,
-            con=conn,
+            con=database_connection,
             if_exists='append',
             index=False
         )
     cursor.close()
-    conn.close()
+    database_connection.close()
 
 
 def connect_database(

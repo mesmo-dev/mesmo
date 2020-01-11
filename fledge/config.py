@@ -18,6 +18,7 @@ solver_output = False  # If True, activate verbose solver output.
 
 # Test settings.
 test_scenario_name = 'singapore_6node'
+test_data_path = os.path.join(fledge_path, 'tests', 'data')
 
 # Logger settings.
 logging_level = logging.DEBUG

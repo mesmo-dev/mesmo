@@ -306,7 +306,9 @@ class ElectricGridIndex(object):
         # Generate indexing dictionary for the load incidence matrix.
 
         # Index by load name.
-        self.load_by_load_name = dict(zip(self.load_names, range(len(self.load_names))))
+        self.load_by_load_name = (
+            dict(zip(self.load_names, np.arange(len(self.load_names))[np.newaxis].transpose().tolist()))
+        )
 
 
 class ElectricGridModel(object):
@@ -845,3 +847,57 @@ class ElectricGridModel(object):
                 node_index,
                 node_index
             )
+
+        # Add loads to load incidence matrix.
+        for load_index, load in electric_grid_data.electric_grid_loads.iterrows():
+            # Obtain load connection type.
+            connection = load['connection']
+
+            # Obtain indexes for positioning load in incidence matrix.
+            node_index = self.index.node_by_load_name[load['load_name']]
+            load_index = self.index.load_by_load_name[load['load_name']]
+
+            if connection == "wye":
+                # Define incidence matrix entries.
+                # - Wye loads are represented as balanced loads across all
+                #   their connected phases.
+                incidence_matrix = (
+                    - np.ones((len(node_index), 1), dtype=np.float)
+                    / len(node_index)
+                )
+                insert_sub_matrix(
+                    self.load_incidence_wye_matrix,
+                    incidence_matrix,
+                    node_index,
+                    load_index
+                )
+            elif connection == "delta":
+                # Obtain phases of the delta load.
+                phases = (
+                    np.nonzero([
+                        load['is_phase_1_connected'] == 1,
+                        load['is_phase_2_connected'] == 1,
+                        load['is_phase_3_connected'] == 1
+                    ])[0].tolist()
+                )
+
+                # Select connection node based on phase arrangement of delta load.
+                # - Delta loads must be single-phase.
+                if phases in ([1, 2], [2, 3]):
+                    node_index = [node_index[1]]
+                elif phases == [1, 3]:
+                    node_index = [node_index[2]]
+                else:
+                    logger.error(f"Unknown delta load phase arrangement: {phases}")
+
+                # Define incidence matrix entry.
+                # - Delta loads are assumed to be single-phase.
+                incidence_matrix = np.array([- 1])
+                insert_sub_matrix(
+                    self.load_incidence_delta_matrix,
+                    incidence_matrix,
+                    node_index,
+                    load_index
+                )
+            else:
+                logger.error(f"Unknown load connection type: {connection}")

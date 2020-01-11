@@ -97,6 +97,8 @@ class ElectricGridData(object):
     ):
         """Load electric grid data from database for given `scenario_name`."""
 
+        # TODO: Define indexes & convert to series where appropriate.
+
         self.electric_grids = (
             pd.read_sql(
                 """
@@ -123,6 +125,7 @@ class ElectricGridData(object):
                 params=[scenario_name]
             )
         )
+        self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
         self.electric_grid_loads = (
             pd.read_sql(
                 """

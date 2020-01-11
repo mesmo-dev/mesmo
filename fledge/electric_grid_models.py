@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import scipy.sparse
+import scipy.sparse.linalg
 
 import fledge.config
 import fledge.database_interface
@@ -330,7 +331,8 @@ class ElectricGridModel(object):
     def __init__(
             self,
             electric_grid_data: fledge.database_interface.ElectricGridData = None,
-            scenario_name: str = None
+            scenario_name: str = None,
+            voltage_no_load_method: str = 'by_definition'
     ):
         """Instantiate electric grid model object for given `electric_grid_data` or `scenario_name`.
 
@@ -901,3 +903,104 @@ class ElectricGridModel(object):
                 )
             else:
                 logger.error(f"Unknown load connection type: {connection}")
+
+        # Convert sparse matrices for nodal admittance, nodal transformation,
+        # branch admittance, branch incidence and load incidence matrices.
+        # - Converting from DOK to CSR format for more efficient calculations
+        #   according to <https://docs.scipy.org/doc/scipy/reference/sparse.html>.
+        self.node_admittance_matrix = self.node_admittance_matrix.tocsr(copy=False)
+        self.node_transformation_matrix = self.node_transformation_matrix.tocsr(copy=False)
+        self.branch_admittance_1_matrix = self.branch_admittance_1_matrix.tocsr(copy=False)
+        self.branch_admittance_2_matrix = self.branch_admittance_2_matrix.tocsr(copy=False)
+        self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr(copy=False)
+        self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr(copy=False)
+        self.load_incidence_wye_matrix = self.load_incidence_wye_matrix.tocsr(copy=False)
+        self.load_incidence_delta_matrix = self.load_incidence_delta_matrix.tocsr(copy=False)
+
+        # Construct no-load voltage vector for the grid.
+        # - The nodal no-load voltage vector can be constructed by
+        #   1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
+        #   definition in the database is taken, or by
+        #   2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
+        #   calculated from the source node voltage and the nodal admittance matrix.
+        # - TODO: Check if no-load voltage divide by sqrt(3) is correct.
+        self.node_voltage_vector_no_load = (
+            np.zeros(self.index.node_dimension, dtype=np.complex)
+        )
+        # Define phase orientations.
+        voltage_phase_factors = (
+            np.array([
+                np.exp(0 * 1j),  # Phase 1.
+                np.exp(- 2 * np.pi / 3 * 1j),  # Phase 2.
+                np.exp(2 * np.pi / 3 * 1j)  # Phase 3.
+            ])
+        )
+        if voltage_no_load_method == 'by_definition':
+            for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
+                # Obtain phases for node.
+                phases = (
+                    np.nonzero([
+                        node['is_phase_1_connected'] == 1,
+                        node['is_phase_2_connected'] == 1,
+                        node['is_phase_3_connected'] == 1
+                    ])[0].tolist()
+                )
+
+                # Obtain node voltage level.
+                voltage = node['voltage']
+
+                # Insert voltage into voltage vector.
+                self.node_voltage_vector_no_load[
+                    self.index.node_by_node_name[node['node_name']]
+                ] = (
+                    voltage
+                    * voltage_phase_factors[phases]
+                    / np.sqrt(3)
+                )
+        elif voltage_no_load_method == 'by_calculation':
+            # Obtain source node.
+            node = (
+                electric_grid_data.electric_grid_nodes.loc[
+                    electric_grid_data.electric_grids.at[0, 'source_node_name'],
+                    :
+                ]
+            )
+
+            # Obtain phases for source node.
+            phases = (
+                np.nonzero([
+                    node['is_phase_1_connected'] == 1,
+                    node['is_phase_2_connected'] == 1,
+                    node['is_phase_3_connected'] == 1
+                ])[0].tolist()
+            )
+
+            # Obtain source node voltage level.
+            voltage = node['voltage']
+
+            # Insert source node voltage into voltage vector.
+            self.node_voltage_vector_no_load[self.index.node_by_node_type['source']] = (
+                voltage
+                * voltage_phase_factors[phases]
+                / np.sqrt(3)
+            )
+
+            # Calculate all remaining no-load node voltages.
+            # TODO: Debug no-load voltage calculation.
+            self.node_voltage_vector_no_load[self.index.node_by_node_type['no_source']] = (
+                scipy.sparse.linalg.spsolve(
+                    - self.node_admittance_matrix[
+                        self.index.node_by_node_type['no_source'], :
+                    ][
+                        :, self.index.node_by_node_type['no_source']
+                    ],
+                    (
+                        self.node_admittance_matrix[
+                            self.index.node_by_node_type['no_source'], :
+                        ][
+                            :, self.index.node_by_node_type['source']
+                        ]
+                        * self.node_voltage_vector_no_load[self.index.node_by_node_type['source']]
+                    )
+                )
+            )

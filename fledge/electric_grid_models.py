@@ -317,14 +317,14 @@ class ElectricGridModel(object):
 
     electric_grid_data: fledge.database_interface.ElectricGridData
     index: ElectricGridIndex
-    node_admittance_matrix: scipy.sparse.dok_matrix
-    node_transformation_matrix: scipy.sparse.dok_matrix
-    branch_admittance_1_matrix: scipy.sparse.dok_matrix
-    branch_admittance_2_matrix: scipy.sparse.dok_matrix
-    branch_incidence_1_matrix: scipy.sparse.dok_matrix
-    branch_incidence_2_matrix: scipy.sparse.dok_matrix
-    load_incidence_wye_matrix: scipy.sparse.dok_matrix
-    load_incidence_delta_matrix: scipy.sparse.dok_matrix
+    node_admittance_matrix: scipy.sparse.spmatrix
+    node_transformation_matrix: scipy.sparse.spmatrix
+    branch_admittance_1_matrix: scipy.sparse.spmatrix
+    branch_admittance_2_matrix: scipy.sparse.spmatrix
+    branch_incidence_1_matrix: scipy.sparse.spmatrix
+    branch_incidence_2_matrix: scipy.sparse.spmatrix
+    load_incidence_wye_matrix: scipy.sparse.spmatrix
+    load_incidence_delta_matrix: scipy.sparse.spmatrix
     node_voltage_vector_no_load: np.ndarray
     load_power_vector_nominal: np.ndarray
 
@@ -1004,3 +1004,12 @@ class ElectricGridModel(object):
                     )
                 )
             )
+
+        # Construct nominal load power vector.
+        self.load_power_vector_nominal = (
+            electric_grid_data.electric_grids.at[0, 'load_multiplier']
+            * (
+                electric_grid_data.electric_grid_loads.loc[:, 'active_power']
+                + 1j * electric_grid_data.electric_grid_loads.loc[:, 'reactive_power']
+            ).values
+        )

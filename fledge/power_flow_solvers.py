@@ -61,7 +61,7 @@ def get_voltage_fixed_point(
 
     - Takes nodal wye-power, delta-power vectors as inputs.
     - Obtains the nodal admittance, transformation matrices and
-      inital nodal wye-power, delta-power and voltage vectors as well as
+      initial nodal wye-power, delta-power and voltage vectors as well as
       nodal no-load voltage vector without source nodes from an
       `electric_grid_model` object.
     - Assumes no-load conditions for initial nodal power and voltage vectors.
@@ -205,6 +205,87 @@ def get_voltage_fixed_point(
         )
 
     return node_voltage_vector_solution_no_source
+
+
+@multimethod
+def get_branch_power_fixed_point(
+    electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+    node_voltage_vector: np.ndarray
+):
+    """
+    Get branch power vectors by calculating power flow with given nodal voltage.
+
+    - Obtains the needed matrices from an `electric_grid_model` object.
+    """
+
+    # Obtain branch admittance and incidence matrices.
+    branch_admittance_1_matrix = (
+        electric_grid_model.branch_admittance_1_matrix
+    )
+    branch_admittance_2_matrix = (
+        electric_grid_model.branch_admittance_2_matrix
+    )
+    branch_incidence_1_matrix = (
+        electric_grid_model.branch_incidence_1_matrix
+    )
+    branch_incidence_2_matrix = (
+        electric_grid_model.branch_incidence_2_matrix
+    )
+
+    # Calculate branch power vectors.
+    return get_branch_power_fixed_point(
+        branch_admittance_1_matrix,
+        branch_admittance_2_matrix,
+        branch_incidence_1_matrix,
+        branch_incidence_2_matrix,
+        node_voltage_vector
+    )
+
+
+@multimethod
+def get_branch_power_fixed_point(
+    branch_admittance_1_matrix: scipy.sparse.spmatrix,
+    branch_admittance_2_matrix: scipy.sparse.spmatrix,
+    branch_incidence_1_matrix: scipy.sparse.spmatrix,
+    branch_incidence_2_matrix: scipy.sparse.spmatrix,
+    node_voltage_vector: np.ndarray
+):
+    """Get branch power vectors by calculating power flow with given nodal voltage.
+
+    - Returns two branch power vectors, where `branch_power_vector_1` represents the
+      "from"-direction and `branch_power_vector_2` represents the "to"-direction.
+    - Nodal voltage vector is assumed to be obtained from fixed-point solution,
+      therefore this function is associated with the fixed-point solver.
+    - This function directly takes branch admittance and incidence matrices as
+      inputs, which can be obtained from an `electric_grid_model` object.
+    """
+
+    # Calculate branch power vectors.
+    branch_power_vector_1 = (
+        (
+            branch_incidence_1_matrix
+            @ node_voltage_vector
+        )
+        * np.conj(
+            branch_admittance_1_matrix
+            @ node_voltage_vector
+        )
+    )
+    branch_power_vector_2 = (
+        (
+            branch_incidence_2_matrix
+            @ node_voltage_vector
+        )
+        * np.conj(
+            branch_admittance_2_matrix
+            @ node_voltage_vector
+        )
+    )
+
+    return (
+        branch_power_vector_1,
+        branch_power_vector_2
+    )
 
 
 class PowerFlowSolution(object):

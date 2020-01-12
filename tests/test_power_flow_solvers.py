@@ -51,14 +51,14 @@ class TestPowerFlowSolvers(unittest.TestCase):
         # Get actual result.
         time_start = time.time()
         actual = abs(fledge.power_flow_solvers.get_voltage_vector_fixed_point(
-            node_admittance_matrix_no_source=admittance_matrix[3:, 3:],
-            node_transformation_matrix_no_source=transformation_matrix[3:, 3:],
-            node_power_vector_wye_no_source=power_vector_wye[3:],
-            node_power_vector_delta_no_source=power_vector_delta[3:],
-            node_power_vector_wye_initial_no_source=np.zeros(power_vector_wye[3:].shape),
-            node_power_vector_delta_initial_no_source=np.zeros(power_vector_delta[3:].shape),
-            node_voltage_vector_no_load_no_source=voltage_vector_no_load[3:],
-            node_voltage_vector_initial_no_source=voltage_vector_no_load[3:]
+            admittance_matrix[3:, 3:],
+            transformation_matrix[3:, 3:],
+            power_vector_wye[3:],
+            power_vector_delta[3:],
+            np.zeros(power_vector_wye[3:].shape),
+            np.zeros(power_vector_delta[3:].shape),
+            voltage_vector_no_load[3:],
+            voltage_vector_no_load[3:]
         ))
         time_end = time.time()
         logger.info("Get voltage vector: Solved in {} seconds.".format(round(time_end - time_start, 6)))

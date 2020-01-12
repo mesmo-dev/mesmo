@@ -8,6 +8,7 @@ setuptools.setup(
     py_modules=setuptools.find_packages(),
     install_requires=[
         'hvplot',
+        'multimethod',
         'numpy',
         'pandas',
         'parameterized',  # For tests.

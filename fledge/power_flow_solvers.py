@@ -1,5 +1,6 @@
 """Power flow solvers."""
 
+from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -12,6 +13,7 @@ import fledge.electric_grid_models
 logger = fledge.config.get_logger(__name__)
 
 
+@multimethod
 def get_voltage_vector_fixed_point(
         node_admittance_matrix_no_source: scipy.sparse.spmatrix,
         node_transformation_matrix_no_source: scipy.sparse.spmatrix,

@@ -1,5 +1,6 @@
 """Electric grid models."""
 
+from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -36,22 +37,31 @@ class ElectricGridIndex(object):
     branch_by_phase: dict
     load_by_load_name: dict
 
+    @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.database_interface.ElectricGridData = None,
-            scenario_name: str = None
+            scenario_name: str
     ):
-        """Instantiate electric grid index object for given `electric_grid_data` or `scenario_name`."""
+        """Instantiate electric grid index object for given `scenario_name`."""
 
-        # Load electric grid data, if none.
-        if electric_grid_data is None:
-            electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+        # Obtain electric grid data.
+        electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+
+        # Instantiate electric grid index object.
+        self.__init__(electric_grid_data)
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_data: fledge.database_interface.ElectricGridData
+    ):
+        """Instantiate electric grid index object for given `electric_grid_data`."""
 
         # Obtain transformers for one / first winding.
         electric_grid_transformers_one_winding = (
             electric_grid_data.electric_grid_transformers.loc[
-            electric_grid_data.electric_grid_transformers['winding'] == 1,
-            :
+                electric_grid_data.electric_grid_transformers['winding'] == 1,
+                :
             ]
         )
 
@@ -328,13 +338,27 @@ class ElectricGridModel(object):
     node_voltage_vector_no_load: np.ndarray
     load_power_vector_nominal: np.ndarray
 
+    @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.database_interface.ElectricGridData = None,
-            scenario_name: str = None,
-            voltage_no_load_method: str = 'by_definition'
+            scenario_name: str,
+            **kwargs
     ):
-        """Instantiate electric grid model object for given `electric_grid_data` or `scenario_name`.
+        """Instantiate electric grid model object for given `scenario_name`."""
+
+        # Obtain electric grid data.
+        electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+
+        # Instantiate electric grid model object.
+        self.__init__(electric_grid_data, **kwargs)
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_data: fledge.database_interface.ElectricGridData,
+            voltage_no_load_method='by_definition'
+    ):
+        """Instantiate electric grid model object for given `electric_grid_data`.
 
         - The nodal no-load voltage vector can be constructed by
           1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
@@ -342,10 +366,6 @@ class ElectricGridModel(object):
           2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
           calculated from the source node voltage and the nodal admittance matrix.
         """
-
-        # Load electric grid data, if none.
-        if electric_grid_data is None:
-            electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
 
         # Obtain electric grid index.
         self.index = ElectricGridIndex(electric_grid_data)
@@ -535,7 +555,7 @@ class ElectricGridModel(object):
         # Add transformers to admittance, transformation and incidence matrices.
         # - Note: This setup only works for transformers with exactly two windings
         #   and identical number of phases at each winding / side.
-    
+
         # Define transformer factor matrices according to:
         # https://doi.org/10.1109/TPWRS.2017.2728618
         transformer_factors_1 = (
@@ -599,14 +619,14 @@ class ElectricGridModel(object):
                     'voltage'
                 ]
             ).values[0]
-    
+
             # Obtain transformer type.
             type = (
                 windings.at[0, 'connection']
                 + "-"
                 + windings.at[1, 'connection']
             )
-    
+
             # Obtain transformer resistance and reactance.
             resistance_percentage = transformer['resistance_percentage']
             reactance_percentage = (
@@ -618,7 +638,7 @@ class ElectricGridModel(object):
                     'reactance_percentage'
                 ]
             ).values[0]
-    
+
             # Calculate transformer admittance.
             admittance = (
                 (
@@ -632,7 +652,7 @@ class ElectricGridModel(object):
                     )
                 ) ** -1
             )
-    
+
             # Calculate turn ratio.
             turn_ratio = (
                 (
@@ -644,7 +664,7 @@ class ElectricGridModel(object):
                     * voltage_2
                 )
             )
-    
+
             # Construct transformer element admittance matrices according to:
             # https://doi.org/10.1109/TPWRS.2017.2728618
             # - TODO: Add warning if wye-transformer is not grounded
@@ -730,7 +750,7 @@ class ElectricGridModel(object):
                 )
             else:
                 logger.error(f"Unknown transformer type: {type}")
-    
+
             # Obtain indexes for positioning the transformer element
             # matrices in the full matrices.
             node_index_1 = (
@@ -742,7 +762,7 @@ class ElectricGridModel(object):
             branch_index = (
                 self.index.branch_by_transformer_name[transformer['transformer_name']]
             )
-    
+
             # Add transformer element matrices to the nodal admittance matrix.
             insert_sub_matrix(
                 self.node_admittance_matrix,
@@ -768,7 +788,7 @@ class ElectricGridModel(object):
                 node_index_2,
                 node_index_2
             )
-    
+
             # Add transformer element matrices to the branch admittance matrices.
             insert_sub_matrix(
                 self.branch_admittance_1_matrix,
@@ -794,7 +814,7 @@ class ElectricGridModel(object):
                 branch_index,
                 node_index_2
             )
-    
+
             # Add transformer element matrices to the branch incidence matrices.
             insert_sub_matrix(
                 self.branch_incidence_1_matrix,

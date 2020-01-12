@@ -20,7 +20,7 @@ class TestDatabaseInterface(unittest.TestCase):
             database_path=os.path.join(fledge.config.data_path, 'database.sqlite')
         )
         time_end = time.time()
-        logger.info("Test create_database: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+        logger.info(f"Test create_database: Completed in {round(time_end - time_start, 6)} seconds.")
 
     def test_connect_database(self):
         # Define expected result.
@@ -30,7 +30,7 @@ class TestDatabaseInterface(unittest.TestCase):
         time_start = time.time()
         actual = type(fledge.database_interface.connect_database())
         time_end = time.time()
-        logger.info("Test connect_database: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+        logger.info(f"Test connect_database: Completed in {round(time_end - time_start, 6)} seconds.")
 
         # Compare expected and actual.
         self.assertEqual(actual, expected)
@@ -42,7 +42,7 @@ class TestDatabaseInterface(unittest.TestCase):
             scenario_name=fledge.config.test_scenario_name
         )
         time_end = time.time()
-        logger.info("Test ElectricGridData: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+        logger.info(f"Test ElectricGridData: Completed in {round(time_end - time_start, 6)} seconds.")
 
 
 if __name__ == '__main__':

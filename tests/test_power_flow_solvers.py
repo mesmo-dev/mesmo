@@ -3,7 +3,7 @@
 import numpy as np
 import os
 import pandas as pd
-import parameterized
+from parameterized import parameterized
 import scipy.sparse
 import time
 import unittest
@@ -18,12 +18,12 @@ as_complex = np.vectorize(np.complex)  # Utility function to convert strings in 
 
 class TestPowerFlowSolvers(unittest.TestCase):
 
-    @parameterized.parameterized.expand([
+    @parameterized.expand([
         (0,),
         (1,),
         (2,),
     ])
-    def test_get_voltage_vector(self, test_number):
+    def test_get_voltage_fixed_point_1(self, test_number):
         # Obtain test data.
         path = os.path.join(fledge.config.test_data_path, 'test_get_voltage_vector_' + str(test_number))
         admittance_matrix = scipy.sparse.csr_matrix(as_complex(
@@ -50,7 +50,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
         # Get actual result.
         time_start = time.time()
-        actual = abs(fledge.power_flow_solvers.get_voltage_vector_fixed_point(
+        actual = abs(fledge.power_flow_solvers.get_voltage_fixed_point(
             admittance_matrix[3:, 3:],
             transformation_matrix[3:, 3:],
             power_vector_wye[3:],
@@ -61,7 +61,11 @@ class TestPowerFlowSolvers(unittest.TestCase):
             voltage_vector_no_load[3:]
         ))
         time_end = time.time()
-        logger.info("Get voltage vector: Solved in {} seconds.".format(round(time_end - time_start, 6)))
+        logger.info(f"Test get_voltage_fixed_point #1: Solved in {round(time_end - time_start, 6)} seconds.")
 
         # Compare expected and actual.
         np.testing.assert_array_almost_equal(actual, expected, decimal=0)
+
+
+if __name__ == '__main__':
+    unittest.main()

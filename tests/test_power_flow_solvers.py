@@ -9,6 +9,7 @@ import time
 import unittest
 
 import fledge.config
+import fledge.electric_grid_models
 import fledge.power_flow_solvers
 
 logger = fledge.config.get_logger(__name__)
@@ -61,10 +62,22 @@ class TestPowerFlowSolvers(unittest.TestCase):
             voltage_vector_no_load[3:]
         ))
         time_end = time.time()
-        logger.info(f"Test get_voltage_fixed_point #1: Solved in {round(time_end - time_start, 6)} seconds.")
+        logger.info(
+            f"Test get_voltage_fixed_point #1.{test_number}: Completed in {round(time_end - time_start, 6)} seconds."
+        )
 
         # Compare expected and actual.
         np.testing.assert_array_almost_equal(actual, expected, decimal=0)
+
+    def test_get_voltage_fixed_point_2(self):
+        # Obtain test data.
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(fledge.config.test_scenario_name)
+
+        # Get result.
+        time_start = time.time()
+        fledge.power_flow_solvers.get_voltage_fixed_point(electric_grid_model)
+        time_end = time.time()
+        logger.info(f"Test get_voltage_fixed_point #2: Completed in {round(time_end - time_start, 6)} seconds.")
 
 
 if __name__ == '__main__':

@@ -397,14 +397,6 @@ class ElectricGridModel(object):
              scipy.sparse.dok_matrix((self.index.node_dimension, self.index.load_dimension), dtype=np.float)
         )
 
-        # Define utility function to insert sub matrix into a sparse matrix at given row/column indexes.
-        # - Ensures that values are added element-by-element to support sparse matrices.
-        def insert_sub_matrix(matrix, sub_matrix, row_indexes, col_indexes):
-            for row, sub_matrix_row in zip(row_indexes, sub_matrix.tolist()):
-                for col, value in zip(col_indexes, sub_matrix_row):
-                    matrix[row, col] += value  # In-place operator `+=` and empty return value for better performance.
-            return
-
         # Add lines to admittance, transformation and incidence matrices.
         for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
             # Obtain line resistance and reactance matrix entries for the line.
@@ -487,69 +479,23 @@ class ElectricGridModel(object):
             )
 
             # Add line element matrices to the nodal admittance matrix.
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_11,
-                node_index_1,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_12,
-                node_index_1,
-                node_index_2
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_21,
-                node_index_2,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_22,
-                node_index_2,
-                node_index_2
-            )
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] = admittance_matrix_11
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] = admittance_matrix_12
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] = admittance_matrix_21
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] = admittance_matrix_22
 
             # Add line element matrices to the branch admittance matrices.
-            insert_sub_matrix(
-                self.branch_admittance_1_matrix,
-                admittance_matrix_11,
-                branch_index,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.branch_admittance_1_matrix,
-                admittance_matrix_12,
-                branch_index,
-                node_index_2
-            )
-            insert_sub_matrix(
-                self.branch_admittance_2_matrix,
-                admittance_matrix_21,
-                branch_index,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.branch_admittance_2_matrix,
-                admittance_matrix_22,
-                branch_index,
-                node_index_2
-            )
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_11
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_12
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_21
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_22
 
             # Add line element matrices to the branch incidence matrices.
-            insert_sub_matrix(
-                self.branch_incidence_1_matrix,
-                np.identity(len(branch_index), dtype=np.int),
-                branch_index,
-                node_index_1
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] = (
+                np.identity(len(branch_index), dtype=np.int)
             )
-            insert_sub_matrix(
-                self.branch_incidence_2_matrix,
-                np.identity(len(branch_index), dtype=np.int),
-                branch_index,
-                node_index_2
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] = (
+                 np.identity(len(branch_index), dtype=np.int)
             )
 
         # Add transformers to admittance, transformation and incidence matrices.
@@ -764,69 +710,23 @@ class ElectricGridModel(object):
             )
 
             # Add transformer element matrices to the nodal admittance matrix.
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_11,
-                node_index_1,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_12,
-                node_index_1,
-                node_index_2
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_21,
-                node_index_2,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.node_admittance_matrix,
-                admittance_matrix_22,
-                node_index_2,
-                node_index_2
-            )
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] = admittance_matrix_11
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] = admittance_matrix_12
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] = admittance_matrix_21
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] = admittance_matrix_22
 
             # Add transformer element matrices to the branch admittance matrices.
-            insert_sub_matrix(
-                self.branch_admittance_1_matrix,
-                admittance_matrix_11,
-                branch_index,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.branch_admittance_1_matrix,
-                admittance_matrix_12,
-                branch_index,
-                node_index_2
-            )
-            insert_sub_matrix(
-                self.branch_admittance_2_matrix,
-                admittance_matrix_21,
-                branch_index,
-                node_index_1
-            )
-            insert_sub_matrix(
-                self.branch_admittance_2_matrix,
-                admittance_matrix_22,
-                branch_index,
-                node_index_2
-            )
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_11
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_12
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_21
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_22
 
             # Add transformer element matrices to the branch incidence matrices.
-            insert_sub_matrix(
-                self.branch_incidence_1_matrix,
-                np.identity(len(branch_index), dtype=np.int),
-                branch_index,
-                node_index_1
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] = (
+                np.identity(len(branch_index), dtype=np.int)
             )
-            insert_sub_matrix(
-                self.branch_incidence_2_matrix,
-                np.identity(len(branch_index), dtype=np.int),
-                branch_index,
-                node_index_2
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] = (
+                np.identity(len(branch_index), dtype=np.int)
             )
 
         # Define transformation matrix according to:
@@ -860,12 +760,7 @@ class ElectricGridModel(object):
             )
 
             # Add node transformation matrix to full transformation matrix.
-            insert_sub_matrix(
-                self.node_transformation_matrix,
-                transformation_matrix,
-                node_index,
-                node_index
-            )
+            self.node_transformation_matrix[np.ix_(node_index, node_index)] = transformation_matrix
 
         # Add loads to load incidence matrix.
         for load_index, load in electric_grid_data.electric_grid_loads.iterrows():
@@ -884,12 +779,8 @@ class ElectricGridModel(object):
                     - np.ones((len(node_index), 1), dtype=np.float)
                     / len(node_index)
                 )
-                insert_sub_matrix(
-                    self.load_incidence_wye_matrix,
-                    incidence_matrix,
-                    node_index,
-                    load_index
-                )
+                self.load_incidence_wye_matrix[np.ix_(node_index, load_index)] = incidence_matrix
+
             elif connection == "delta":
                 # Obtain phases of the delta load.
                 phases = (
@@ -912,12 +803,8 @@ class ElectricGridModel(object):
                 # Define incidence matrix entry.
                 # - Delta loads are assumed to be single-phase.
                 incidence_matrix = np.array([- 1])
-                insert_sub_matrix(
-                    self.load_incidence_delta_matrix,
-                    incidence_matrix,
-                    node_index,
-                    load_index
-                )
+                self.load_incidence_wye_matrix[np.ix_(node_index, load_index)] = incidence_matrix
+
             else:
                 logger.error(f"Unknown load connection type: {connection}")
 

@@ -841,19 +841,16 @@ class ElectricGridModel(object):
         for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
             # Obtain node transformation matrix index.
             transformation_index = (
-                np.nonzero(
-                    [
-                        node['is_phase_1_connected'],
-                        node['is_phase_2_connected'],
-                        node['is_phase_3_connected']
-                    ]
-                    == 1
-                )[0].tolist()
+                np.nonzero([
+                    node['is_phase_1_connected'] == 1,
+                    node['is_phase_2_connected'] == 1,
+                    node['is_phase_3_connected'] == 1
+                ])[0].tolist()
             )
 
             # Construct node transformation matrix.
             transformation_matrix = (
-                transformation_entries[transformation_index, transformation_index]
+                transformation_entries[:, transformation_index][transformation_index, :]
             )
 
             # Obtain index for positioning node transformation matrix in full
@@ -945,7 +942,7 @@ class ElectricGridModel(object):
         #   calculated from the source node voltage and the nodal admittance matrix.
         # - TODO: Check if no-load voltage divide by sqrt(3) is correct.
         self.node_voltage_vector_no_load = (
-            np.zeros(self.index.node_dimension, dtype=np.complex)
+            np.zeros((self.index.node_dimension, 1), dtype=np.complex)
         )
         # Define phase orientations.
         voltage_phase_factors = (
@@ -970,12 +967,12 @@ class ElectricGridModel(object):
                 voltage = node['voltage']
 
                 # Insert voltage into voltage vector.
-                self.node_voltage_vector_no_load[
-                    self.index.node_by_node_name[node['node_name']]
-                ] = (
-                    voltage
-                    * voltage_phase_factors[phases]
-                    / np.sqrt(3)
+                self.node_voltage_vector_no_load[self.index.node_by_node_name[node['node_name']]] = (
+                    np.transpose([
+                        voltage
+                        * voltage_phase_factors[phases]
+                        / np.sqrt(3)
+                    ])
                 )
         elif voltage_no_load_method == 'by_calculation':
             # Obtain source node.
@@ -1000,29 +997,33 @@ class ElectricGridModel(object):
 
             # Insert source node voltage into voltage vector.
             self.node_voltage_vector_no_load[self.index.node_by_node_type['source']] = (
-                voltage
-                * voltage_phase_factors[phases]
-                / np.sqrt(3)
+                np.transpose([
+                    voltage
+                    * voltage_phase_factors[phases]
+                    / np.sqrt(3)
+                ])
             )
 
             # Calculate all remaining no-load node voltages.
             # TODO: Debug no-load voltage calculation.
             self.node_voltage_vector_no_load[self.index.node_by_node_type['no_source']] = (
-                scipy.sparse.linalg.spsolve(
-                    - self.node_admittance_matrix[
-                        self.index.node_by_node_type['no_source'], :
-                    ][
-                        :, self.index.node_by_node_type['no_source']
-                    ],
-                    (
-                        self.node_admittance_matrix[
+                np.transpose([
+                    scipy.sparse.linalg.spsolve(
+                        - self.node_admittance_matrix[
                             self.index.node_by_node_type['no_source'], :
                         ][
-                            :, self.index.node_by_node_type['source']
-                        ]
-                        * self.node_voltage_vector_no_load[self.index.node_by_node_type['source']]
+                            :, self.index.node_by_node_type['no_source']
+                        ],
+                        (
+                            self.node_admittance_matrix[
+                                self.index.node_by_node_type['no_source'], :
+                            ][
+                                :, self.index.node_by_node_type['source']
+                            ]
+                            @ self.node_voltage_vector_no_load[self.index.node_by_node_type['source']]
+                        )
                     )
-                )
+                ])
             )
 
         # Construct nominal load power vector.

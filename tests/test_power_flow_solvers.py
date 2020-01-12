@@ -20,13 +20,13 @@ as_complex = np.vectorize(np.complex)  # Utility function to convert strings in 
 class TestPowerFlowSolvers(unittest.TestCase):
 
     @parameterized.expand([
-        (0,),
-        (1,),
-        (2,),
+        ("1",),
+        ("2",),
+        ("3",),
     ])
-    def test_get_voltage_fixed_point_1(self, test_number):
+    def test_get_voltage_fixed_point_1(self, test_index):
         # Obtain test data.
-        path = os.path.join(fledge.config.test_data_path, 'test_get_voltage_vector_' + str(test_number))
+        path = os.path.join(fledge.config.test_data_path, 'test_get_voltage_vector_' + test_index)
         admittance_matrix = scipy.sparse.csr_matrix(as_complex(
             pd.read_csv(os.path.join(path, 'admittance_matrix.csv'), header=None, dtype=str).values
         ))
@@ -63,7 +63,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
         ))
         time_end = time.time()
         logger.info(
-            f"Test get_voltage_fixed_point #1.{test_number}: Completed in {round(time_end - time_start, 6)} seconds."
+            f"Test get_voltage_fixed_point #1.{test_index}: Completed in {round(time_end - time_start, 6)} seconds."
         )
 
         # Compare expected and actual.

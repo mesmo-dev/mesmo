@@ -288,6 +288,55 @@ def get_branch_power_fixed_point(
     )
 
 
+@multimethod
+def get_loss_fixed_point(
+    electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+    node_voltage_vector: np.ndarray
+):
+    """
+    Get total electric losses with given nodal voltage.
+
+    - Obtains the nodal admittance matrix from an `electric_grid_model` object.
+    """
+
+    # Obtain total losses with admittance matrix from electric grid model.
+    return (
+        get_loss_fixed_point(
+            electric_grid_model.node_admittance_matrix,
+            node_voltage_vector
+        )
+    )
+
+
+@multimethod
+def get_loss_fixed_point(
+    node_admittance_matrix: scipy.sparse.spmatrix,
+    node_voltage_vector: np.ndarray
+):
+    """
+    Get total electric losses with given nodal voltage.
+
+    - Nodal voltage vector is assumed to be obtained from fixed-point solution,
+      therefore this function is associated with the fixed-point solver.
+    - This function directly takes the nodal admittance matrix as
+      input, which can be obtained from an `electric_grid_model` object.
+    """
+
+    # Calculate total losses.
+    # TODO: Validate loss solution.
+    loss = (
+        np.conj(
+            np.transpose(node_voltage_vector)
+            @ np.transpose([(
+                node_admittance_matrix
+                @ node_voltage_vector
+            )])
+        )
+    )
+
+    return loss
+
+
 class PowerFlowSolution(object):
     """Power flow solution object."""
 

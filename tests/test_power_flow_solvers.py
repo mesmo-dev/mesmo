@@ -107,6 +107,13 @@ class TestPowerFlowSolvers(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test get_loss_fixed_point: Completed in {round(time_end - time_start, 6)} seconds.")
 
+    def test_power_flow_solution_fixed_point(self):
+        # Get result.
+        time_start = time.time()
+        fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name)
+        time_end = time.time()
+        logger.info(f"Test PowerFlowSolutionFixedPoint: Completed in {round(time_end - time_start, 6)} seconds.")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -346,23 +346,76 @@ class PowerFlowSolution(object):
     loss: np.complex
 
 
-class FixedPointPowerFlowSolution(PowerFlowSolution):
+class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     """Fixed point power flow solution object."""
 
+    @multimethod
     def __init__(
             self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel = None,
-            load_power_vector: np.ndarray = None,
-            scenario_name: str = None
+            scenario_name: str
     ):
-        """Instantiate fixed point power flow solution object for given `electric_grid_model` and `load_power_vector`
-        or for given `scenario_name` assuming nominal loading conditions.
+        """Instantiate fixed point power flow solution object for given `scenario_name`
+        assuming nominal loading conditions.
         """
 
-        # Obtain `electric_grid_model`, if none.
-        if electric_grid_model is None:
-            electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name=scenario_name)
+        # Obtain `electric_grid_model`.
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
 
-        # Obtain `load_power_vector`, if none, assuming nominal loading conditions.
-        if load_power_vector is None:
-            load_power_vector = electric_grid_model.load_power_vector_nominal
+        # Obtain `load_power_vector` assuming nominal loading conditions.
+        load_power_vector = electric_grid_model.load_power_vector_nominal
+
+        self.__init__(
+            electric_grid_model,
+            load_power_vector
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            load_power_vector: np.ndarray
+    ):
+        """Instantiate fixed point power flow solution object for given `electric_grid_model` and `load_power_vector`.
+        """
+
+        # Obtain node power vectors.
+        node_power_vector_wye = (
+            np.transpose([
+                electric_grid_model.load_incidence_wye_matrix
+                @ load_power_vector
+            ])
+        )
+        node_power_vector_delta = (
+            np.transpose([
+                electric_grid_model.load_incidence_delta_matrix
+                @ load_power_vector
+            ])
+        )
+
+        # Obtain voltage solution.
+        self.node_voltage_vector = (
+            fledge.power_flow_solvers.get_voltage_fixed_point(
+                electric_grid_model,
+                node_power_vector_wye,
+                node_power_vector_delta
+            )
+        )
+
+        # Obtain branch flow solution.
+        (
+            self.branch_power_vector_1,
+            self.branch_power_vector_2
+        ) = (
+            fledge.power_flow_solvers.get_branch_power_fixed_point(
+                electric_grid_model,
+                self.node_voltage_vector
+            )
+        )
+
+        # Obtain loss solution.
+        self.loss = (
+            fledge.power_flow_solvers.get_loss_fixed_point(
+                electric_grid_model,
+                self.node_voltage_vector
+            )
+        )

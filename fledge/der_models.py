@@ -26,8 +26,8 @@ class FixedLoadModel(DERModel):
 
     def __init__(
             self,
-            fixed_load_data,
-            load_name
+            fixed_load_data: fledge.database_interface.FixedLoadData,
+            load_name: str
     ):
         """Construct fixed load model object by fixed load data and load name."""
 
@@ -45,5 +45,33 @@ class FixedLoadModel(DERModel):
             fixed_load_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']]['apparent_power_per_unit']
             * fixed_load['scaling_factor']
             * fixed_load['reactive_power']
+            * -1.0  # Load / demand is negative.
+        )
+
+
+class EVChargerModel(DERModel):
+    """EV charger model object."""
+
+    def __init__(
+            self,
+            ev_charger_data: fledge.database_interface.EVChargerData,
+            load_name: str
+    ):
+        """Construct EV charger model object by fixed load data and load name."""
+
+        # Get fixed load data by `load_name`.
+        ev_charger = ev_charger_data.ev_chargers.loc[load_name, :]
+
+        # Construct active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']]['apparent_power_per_unit']
+            * ev_charger['scaling_factor']
+            * ev_charger['active_power']
+            * -1.0  # Load / demand is negative.
+        )
+        self.reactive_power_nominal_timeseries = (
+            ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']]['apparent_power_per_unit']
+            * ev_charger['scaling_factor']
+            * ev_charger['reactive_power']
             * -1.0  # Load / demand is negative.
         )

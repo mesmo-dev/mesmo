@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import matplotlib.pyplot as plt
 import os
 
 # Path definitions.
@@ -16,12 +17,16 @@ timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 solver_name = 'gurobi'  # Must be valid input string for Pyomo's `SolverFactory`.
 solver_output = False  # If True, activate verbose solver output.
 
+# Plotting settings.
+plt.style.use('seaborn-colorblind')
+
 # Test settings.
 test_scenario_name = 'singapore_6node'
 test_data_path = os.path.join(fledge_path, 'tests', 'data')
+test_plots = True  # If True, tests may produce plots.
 
 # Logger settings.
-logging_level = logging.DEBUG
+logging_level = logging.INFO
 logging_handler = logging.StreamHandler()
 logging_handler.setFormatter(logging.Formatter('%(levelname)s | %(name)s | %(message)s'))
 # logging_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s'))

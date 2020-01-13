@@ -8,6 +8,7 @@ setuptools.setup(
     py_modules=setuptools.find_packages(),
     install_requires=[
         'hvplot',
+        'matplotlib',
         'multimethod',
         'natsort',
         'numpy',

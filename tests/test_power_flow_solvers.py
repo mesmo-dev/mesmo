@@ -1,5 +1,6 @@
 """Test power flow solvers."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -117,12 +118,53 @@ class TestPowerFlowSolvers(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test get_loss_fixed_point: Completed in {round(time_end - time_start, 6)} seconds.")
 
-    def test_power_flow_solution_fixed_point(self):
+    def test_power_flow_solution_fixed_point_1(self):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name)
         time_end = time.time()
-        logger.info(f"Test PowerFlowSolutionFixedPoint: Completed in {round(time_end - time_start, 6)} seconds.")
+        logger.info(f"Test PowerFlowSolutionFixedPoint #1: Completed in {round(time_end - time_start, 6)} seconds.")
+
+    def test_power_flow_solution_fixed_point_2(self):
+        # Obtain test data.
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(fledge.config.test_scenario_name)
+        node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
+
+        # Define expected result.
+        fledge.electric_grid_models.initialize_opendss_model(fledge.config.test_scenario_name)
+        node_voltage_vector_opendss = abs(fledge.power_flow_solvers.get_voltage_opendss())
+
+        # Get result.
+        time_start = time.time()
+        node_voltage_vector_fixed_point = abs(
+            fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name).node_voltage_vector
+        )
+        time_end = time.time()
+        logger.info(f"Test PowerFlowSolutionFixedPoint #2: Completed in {round(time_end - time_start, 6)} seconds.")
+
+        # Display results.
+        if fledge.config.test_plots:
+            comparison = pd.DataFrame(
+                np.hstack([
+                    node_voltage_vector_opendss / node_voltage_vector_no_load,
+                    node_voltage_vector_fixed_point / node_voltage_vector_no_load]),
+                index=electric_grid_model.index.nodes_phases,
+                columns=['OpenDSS', 'Fixed Point']
+            )
+            comparison.plot(kind='bar')
+            plt.show()
+
+            absolute_error = pd.DataFrame(
+                (node_voltage_vector_fixed_point - node_voltage_vector_opendss) / node_voltage_vector_no_load,
+                index=electric_grid_model.index.nodes_phases,
+                columns=['Absolute error']
+            )
+            absolute_error.plot(kind='bar')
+            plt.show()
+
+        # Compare expected and actual.
+        # TODO: Enable result check.
+        # np.testing.assert_array_almost_equal(node_voltage_vector_opendss, node_voltage_vector_fixed_point, decimal=0)
 
 
 if __name__ == '__main__':

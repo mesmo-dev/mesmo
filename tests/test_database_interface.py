@@ -35,6 +35,13 @@ class TestDatabaseInterface(unittest.TestCase):
         # Compare expected and actual.
         self.assertEqual(actual, expected)
 
+    def test_scenario_data(self):
+        # Get result.
+        time_start = time.time()
+        fledge.database_interface.ScenarioData(fledge.config.test_scenario_name)
+        time_end = time.time()
+        logger.info(f"Test ScenarioData: Completed in {round(time_end - time_start, 6)} seconds.")
+
     def test_electric_grid_data(self):
         # Get result.
         time_start = time.time()

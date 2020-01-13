@@ -77,6 +77,51 @@ def connect_database(
     return database_connection
 
 
+class ScenarioData(object):
+    """scenario data data object."""
+
+    scenario: pd.Series
+    timesteps: pd.Index
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=connect_database()
+    ):
+        """Load scenario data for given `scenario_name`."""
+
+        self.scenario = (
+            pd.read_sql(
+                """
+                SELECT * FROM scenarios
+                WHERE scenario_name = ?
+                """,
+                con=database_connection,
+                params=[scenario_name],
+                parse_dates=[
+                    'timestep_start',
+                    'timestep_end'
+                ]
+            ).iloc[0]  # TODO: Check needed for redundant `scenario_name` in database?
+        )
+        # TODO: Refactor `timestep_interval_seconds` to `timestep_interval`.
+        self.scenario['timestep_interval'] = (
+             pd.to_timedelta(int(self.scenario['timestep_interval_seconds']), unit='second')
+        )
+
+        # Instantiate timestep series.
+        self.timesteps = (
+            pd.Index(
+                pd.date_range(
+                    start=self.scenario['timestep_start'],
+                    end=self.scenario['timestep_end'],
+                    freq=self.scenario['timestep_interval']
+                ),
+                name='time'
+            )
+        )
+
+
 class ElectricGridData(object):
     """Electric grid data object."""
 

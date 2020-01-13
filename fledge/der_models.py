@@ -36,13 +36,17 @@ class FixedLoadModel(DERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            fixed_load_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']]['apparent_power_per_unit']
+            fixed_load_data.fixed_load_timeseries_dict[
+                fixed_load['timeseries_name']
+            ]['apparent_power_per_unit'].rename('active_power')
             * fixed_load['scaling_factor']
             * fixed_load['active_power']
             * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
-            fixed_load_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']]['apparent_power_per_unit']
+            fixed_load_data.fixed_load_timeseries_dict[
+                fixed_load['timeseries_name']
+            ]['apparent_power_per_unit'].rename('reactive_power')
             * fixed_load['scaling_factor']
             * fixed_load['reactive_power']
             * -1.0  # Load / demand is negative.
@@ -64,20 +68,42 @@ class EVChargerModel(DERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']]['apparent_power_per_unit']
+            ev_charger_data.ev_charger_timeseries_dict[
+                ev_charger['timeseries_name']
+            ]['apparent_power_per_unit'].rename('active_power')
             * ev_charger['scaling_factor']
             * ev_charger['active_power']
             * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
-            ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']]['apparent_power_per_unit']
+            ev_charger_data.ev_charger_timeseries_dict[
+                ev_charger['timeseries_name']
+            ]['apparent_power_per_unit'].rename('reactive_power')
             * ev_charger['scaling_factor']
             * ev_charger['reactive_power']
             * -1.0  # Load / demand is negative.
         )
 
 
-class FlexibleLoadModel(DERModel):
+class FlexibleDERModel(DERModel):
+    """Flexible DER model, e.g., flexible load, object."""
+
+    state_names: pd.Index
+    control_names: pd.Index
+    disturbance_names: pd.Index
+    output_names: pd.Index
+    state_matrix: pd.DataFrame
+    control_matrix: pd.DataFrame
+    disturbance_matrix: pd.DataFrame
+    state_output_matrix: pd.DataFrame
+    control_output_matrix: pd.DataFrame
+    disturbance_output_matrix: pd.DataFrame
+    disturbance_timeseries: pd.DataFrame
+    output_maximum_timeseries: pd.DataFrame
+    output_minimum_timeseries: pd.DataFrame
+
+
+class FlexibleLoadModel(FlexibleDERModel):
     """Flexible load model object."""
 
     def __init__(
@@ -92,14 +118,124 @@ class FlexibleLoadModel(DERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']]['apparent_power_per_unit']
+            flexible_load_data.flexible_load_timeseries_dict[
+                flexible_load['timeseries_name']
+            ]['apparent_power_per_unit'].rename('active_power')
             * flexible_load['scaling_factor']
             * flexible_load['active_power']
             * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
-            flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']]['apparent_power_per_unit']
+            flexible_load_data.flexible_load_timeseries_dict[
+                flexible_load['timeseries_name']
+            ]['apparent_power_per_unit'].rename('reactive_power')
             * flexible_load['scaling_factor']
             * flexible_load['reactive_power']
             * -1.0  # Load / demand is negative.
+        )
+
+        # Calculate nominal accumulated energy timeseries.
+        # TODO: Consider reactive power in accumulated energy.
+        accumulated_energy_nominal_timeseries = (
+            self.active_power_nominal_timeseries.rename('accumulated_energy')
+        )
+
+        # Instantiate indexes.
+        self.state_names = pd.Index(['accumulated_energy'])
+        self.control_names = pd.Index(['active_power', 'reactive_power'])
+        self.disturbance_names = pd.Index([])
+        self.output_names = pd.Index(['accumulated_energy', 'active_power', 'reactive_power'])
+
+        # Instantiate state space matrices.
+        # TODO: Consolidate indexing approach with electric grid model.
+        self.state_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.state_names), len(self.state_names)), dtype=np.float),
+                index=self.state_names,
+                columns=self.state_names
+            )
+        )
+        self.state_matrix['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.control_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.state_names), len(self.control_names)), dtype=np.float),
+                index=self.state_names,
+                columns=self.control_names
+            )
+        )
+        self.control_matrix['accumulated_energy', 'active_power'] = 1.0
+        self.disturbance_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.state_names), len(self.disturbance_names)), dtype=np.float),
+                index=self.state_names,
+                columns=self.disturbance_names
+            )
+        )
+        self.state_output_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.output_names), len(self.state_names)), dtype=np.float),
+                index=self.output_names,
+                columns=self.state_names
+            )
+        )
+        self.state_output_matrix['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.control_output_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.output_names), len(self.control_names)), dtype=np.float),
+                index=self.output_names,
+                columns=self.control_names
+            )
+        )
+        self.control_output_matrix['active_power', 'active_power'] = 1.0
+        self.control_output_matrix['reactive_power', 'reactive_power'] = 1.0
+        self.disturbance_output_matrix = (
+            pd.DataFrame.sparse.from_spmatrix(
+                scipy.sparse.csr_matrix((len(self.output_names), len(self.disturbance_names)), dtype=np.float),
+                index=self.output_names,
+                columns=self.disturbance_names
+            )
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.DataFrame(
+                0.0,
+                index=self.active_power_nominal_timeseries.index,
+                columns=self.disturbance_names
+            )
+        )
+
+        # Construct output constraint timeseries
+        # TODO: Fix offset of accumulated energy constraints.
+        self.output_maximum_timeseries = (
+            pd.concat([
+                (
+                    accumulated_energy_nominal_timeseries
+                    - accumulated_energy_nominal_timeseries[int(flexible_load['time_period_power_shift_maximum'])]
+                ),
+                (
+                    (1.0 - flexible_load['power_decrease_percentage_maximum'])
+                    * self.active_power_nominal_timeseries
+                ),
+                (
+                    (1.0 - flexible_load['power_decrease_percentage_maximum'])
+                    * self.reactive_power_nominal_timeseries
+                )
+            ], axis='columns')
+        )
+        self.output_minimum_timeseries = (
+            pd.concat([
+                (
+                    accumulated_energy_nominal_timeseries
+                    + accumulated_energy_nominal_timeseries[int(flexible_load['time_period_power_shift_maximum'])]
+                ),
+                (
+                    (1.0 - flexible_load['power_increase_percentage_maximum'])
+                    * self.active_power_nominal_timeseries
+                ),
+                (
+                    (1.0 - flexible_load['power_increase_percentage_maximum'])
+                    * self.reactive_power_nominal_timeseries
+                )
+            ], axis='columns')
         )

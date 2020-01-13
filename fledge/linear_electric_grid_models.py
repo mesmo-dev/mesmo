@@ -250,11 +250,11 @@ class LinearElectricGridModel(object):
 
         self.sensitivity_branch_power_1_by_power_wye_active = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_wye_active)
@@ -267,11 +267,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_1_by_power_wye_reactive = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
@@ -284,11 +284,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_1_by_power_delta_active = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_delta_active)
@@ -301,11 +301,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_1_by_power_delta_reactive = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)
@@ -319,11 +319,11 @@ class LinearElectricGridModel(object):
 
         self.sensitivity_branch_power_2_by_power_wye_active = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_wye_active)
@@ -336,11 +336,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_2_by_power_wye_reactive = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
@@ -353,11 +353,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_2_by_power_delta_active = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_delta_active)
@@ -370,11 +370,11 @@ class LinearElectricGridModel(object):
         )
         self.sensitivity_branch_power_2_by_power_delta_reactive = (
             2.0
-            * np.hstack([
+            * scipy.sparse.hstack([
                 scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
                 scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
             ])
-            @ np.vstack([
+            @ scipy.sparse.vstack([
                 np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)

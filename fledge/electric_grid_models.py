@@ -161,7 +161,7 @@ class ElectricGridIndex(object):
         nodes['node_type'] = 'no_source'
         # Set `node_type` for source node.
         nodes.loc[
-            nodes['node_name'] == (electric_grid_data.electric_grids['source_node_name'][0]),
+            nodes['node_name'] == (electric_grid_data.electric_grid['source_node_name']),
             'node_type'
         ] = 'source'
         # TODO: Sort nodes
@@ -865,7 +865,7 @@ class ElectricGridModel(object):
             # Obtain source node.
             node = (
                 electric_grid_data.electric_grid_nodes.loc[
-                    electric_grid_data.electric_grids.at[0, 'source_node_name'],
+                    electric_grid_data.electric_grid['source_node_name'],
                     :
                 ]
             )
@@ -915,7 +915,7 @@ class ElectricGridModel(object):
 
         # Construct nominal load power vector.
         self.load_power_vector_nominal = (
-            electric_grid_data.electric_grids.at[0, 'load_multiplier']
+            electric_grid_data.electric_grid['load_multiplier']
             * (
                 electric_grid_data.electric_grid_loads.loc[:, 'active_power']
                 + 1j * electric_grid_data.electric_grid_loads.loc[:, 'reactive_power']

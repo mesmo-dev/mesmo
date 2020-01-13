@@ -126,7 +126,7 @@ class ScenarioData(object):
 class ElectricGridData(object):
     """Electric grid data object."""
 
-    electric_grids: pd.DataFrame
+    electric_grid: pd.DataFrame
     electric_grid_nodes: pd.DataFrame
     electric_grid_loads: pd.DataFrame
     electric_grid_lines: pd.DataFrame
@@ -145,7 +145,7 @@ class ElectricGridData(object):
 
         # TODO: Define indexes & convert to series where appropriate.
 
-        self.electric_grids = (
+        self.electric_grid = (
             pd.read_sql(
                 """
                 SELECT * FROM electric_grids
@@ -156,7 +156,7 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ).iloc[0]  # TODO: Check needed for redundant `electric_grid_name` in database?
         )
         self.electric_grid_nodes = (
             pd.read_sql(

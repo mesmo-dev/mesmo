@@ -566,3 +566,83 @@ class FlexibleLoadData(object):
                     limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
                 )
             )
+
+
+class PriceData(object):
+    """Price data object."""
+
+    price_timeseries_dict: dict
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=connect_database()
+    ):
+        """Load price data object from database for a given `scenario_name`."""
+
+        # Obtain scenario data.
+        scenario_data = ScenarioData(scenario_name)
+
+        self.__init__(
+            scenario_data,
+            database_connection=database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_data: ScenarioData,
+            database_connection=connect_database()
+    ):
+        """Load price data object from database for a given `scenario_data`."""
+
+        # Obtain shorthand for `scenario_name`.
+        scenario_name = scenario_data.scenario['scenario_name']
+
+        # Instantiate dictionary for unique `price_name`.
+        price_names = (
+            pd.read_sql(
+                """
+                SELECT DISTINCT price_name FROM price_timeseries
+                """,
+                con=database_connection,
+            )
+        )
+        self.price_timeseries_dict = dict.fromkeys(price_names.values.flatten())
+
+        # Load timeseries for each `price_name`.
+        # TODO: Resample / interpolate timeseries depending on timestep interval.
+        for price_name in self.price_timeseries_dict:
+            self.price_timeseries_dict[price_name] = (
+                pd.read_sql(
+                    """
+                    SELECT * FROM price_timeseries
+                    WHERE price_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[
+                        price_name,
+                        scenario_name,
+                        scenario_name
+                    ],
+                    parse_dates=['time'],
+                    index_col=['time']
+                ).reindex(
+                    scenario_data.timesteps
+                ).interpolate(
+                    'quadratic'
+                ).bfill(  # Backward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                ).ffill(  # Forward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                )
+            )

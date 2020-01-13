@@ -70,6 +70,13 @@ class TestDatabaseInterface(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test FlexibleLoadData: Completed in {round(time_end - time_start, 6)} seconds.")
 
+    def test_price_data(self):
+        # Get result.
+        time_start = time.time()
+        fledge.database_interface.PriceData(fledge.config.test_scenario_name)
+        time_end = time.time()
+        logger.info(f"Test PriceData: Completed in {round(time_end - time_start, 6)} seconds.")
+
 
 if __name__ == '__main__':
     unittest.main()

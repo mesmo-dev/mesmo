@@ -116,6 +116,8 @@ class ElectricGridIndex(object):
 
         # Define load dimension, i.e., number of all loads, which
         # will be the second dimension of the load incidence matrix.
+        # - Nodes are sorted to match the order returned from `fledge.power_flow_solvers.get_voltage_opendss`
+        #   to enable comparing results.
         self.load_dimension = (
             electric_grid_data.electric_grid_loads.shape[0]
         )
@@ -165,7 +167,8 @@ class ElectricGridIndex(object):
             nodes['node_name'] == (electric_grid_data.electric_grid['source_node_name']),
             'node_type'
         ] = 'source'
-        # TODO: Sort nodes
+        # Sort nodes to match order in `fledge.power_flow_solvers.get_voltage_opendss`.
+        nodes.sort_values(['node_name', 'phase'], inplace=True)
 
         # Create `branches` data frame, i.e., collection of phases of all branches
         # for generating indexing functions for the branch admittance matrices.
@@ -229,7 +232,7 @@ class ElectricGridIndex(object):
                 np.repeat('transformer', transformer_dimension)
             ])
         )
-        # TODO: Sort branches
+        branches.sort_values(['branch_type', 'branch_name', 'phase'], inplace=True)
 
         # Define index vectors for various element types
         # for easier index definitions, e.g., in the optimization problem.

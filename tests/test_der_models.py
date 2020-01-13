@@ -38,6 +38,19 @@ class TestDERModels(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test EVChargerModel: Completed in {round(time_end - time_start, 6)} seconds.")
 
+    def test_flexible_load_model(self):
+        # Obtain test data.
+        flexible_load_data = fledge.database_interface.FlexibleLoadData(fledge.config.test_scenario_name)
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.FlexibleLoadModel(
+            flexible_load_data,
+            flexible_load_data.flexible_loads.index[0]  # Take `load_name` of first row.
+        )
+        time_end = time.time()
+        logger.info(f"Test FlexibleLoadModel: Completed in {round(time_end - time_start, 6)} seconds.")
+
 
 if __name__ == '__main__':
     unittest.main()

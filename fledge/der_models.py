@@ -29,7 +29,7 @@ class FixedLoadModel(DERModel):
             fixed_load_data: fledge.database_interface.FixedLoadData,
             load_name: str
     ):
-        """Construct fixed load model object by fixed load data and load name."""
+        """Construct fixed load model object by `fixed_load_data` and `load_name`."""
 
         # Get fixed load data by `load_name`.
         fixed_load = fixed_load_data.fixed_loads.loc[load_name, :]
@@ -57,7 +57,7 @@ class EVChargerModel(DERModel):
             ev_charger_data: fledge.database_interface.EVChargerData,
             load_name: str
     ):
-        """Construct EV charger model object by fixed load data and load name."""
+        """Construct EV charger model object by `ev_charger_data` and `load_name`."""
 
         # Get fixed load data by `load_name`.
         ev_charger = ev_charger_data.ev_chargers.loc[load_name, :]
@@ -73,5 +73,33 @@ class EVChargerModel(DERModel):
             ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']]['apparent_power_per_unit']
             * ev_charger['scaling_factor']
             * ev_charger['reactive_power']
+            * -1.0  # Load / demand is negative.
+        )
+
+
+class FlexibleLoadModel(DERModel):
+    """Flexible load model object."""
+
+    def __init__(
+            self,
+            flexible_load_data: fledge.database_interface.FlexibleLoadData,
+            load_name: str
+    ):
+        """Construct flexible load model object by `flexible_load_data` and `load_name`."""
+
+        # Get fixed load data by `load_name`.
+        flexible_load = flexible_load_data.flexible_loads.loc[load_name, :]
+
+        # Construct active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']]['apparent_power_per_unit']
+            * flexible_load['scaling_factor']
+            * flexible_load['active_power']
+            * -1.0  # Load / demand is negative.
+        )
+        self.reactive_power_nominal_timeseries = (
+            flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']]['apparent_power_per_unit']
+            * flexible_load['scaling_factor']
+            * flexible_load['reactive_power']
             * -1.0  # Load / demand is negative.
         )

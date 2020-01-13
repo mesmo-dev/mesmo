@@ -1,7 +1,9 @@
 """Power flow solvers."""
 
 from multimethod import multimethod
+import natsort
 import numpy as np
+import opendssdirect
 import pandas as pd
 import scipy.sparse
 import scipy.sparse.linalg
@@ -205,6 +207,36 @@ def get_voltage_fixed_point(
         )
 
     return node_voltage_vector_solution_no_source
+
+
+def get_voltage_opendss():
+    """Get nodal voltage vector by solving OpenDSS model.
+
+    - This expects an OpenDSS model to be readily set up with the desired
+      power being set for all loads.
+    """
+
+    # Solve OpenDSS model.
+    opendssdirect.run_command("solve")
+
+    # Extract nodal voltage vector.
+    # - Voltages are sorted by node names in the fashion as nodes are sorted in
+    #   `nodes` in `fledge.electric_grid_models.ElectricGridModelIndex()`.
+    node_voltage_vector_solution = (
+        np.transpose([
+            pd.Series(
+                (
+                    np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
+                    + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
+                ),
+                index=opendssdirect.Circuit.AllNodeNames()
+            ).reindex(
+                natsort.natsorted(opendssdirect.Circuit.AllNodeNames())
+            ).values
+        ])
+    )
+
+    return node_voltage_vector_solution
 
 
 @multimethod

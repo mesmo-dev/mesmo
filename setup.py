@@ -9,6 +9,7 @@ setuptools.setup(
     install_requires=[
         'hvplot',
         'multimethod',
+        'natsort',
         'numpy',
         'OpenDSSDirect.py',
         'pandas',

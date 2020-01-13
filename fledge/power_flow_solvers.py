@@ -393,6 +393,17 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Obtain `electric_grid_model`.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
 
+        self.__init__(electric_grid_model)
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+    ):
+        """Instantiate fixed point power flow solution object for given `electric_grid_model`
+        assuming nominal loading conditions.
+        """
+
         # Obtain `load_power_vector` assuming nominal loading conditions.
         load_power_vector = electric_grid_model.load_power_vector_nominal
 
@@ -423,6 +434,23 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 @ load_power_vector
             ])
         )
+
+        self.__init__(
+            electric_grid_model,
+            node_power_vector_wye,
+            node_power_vector_delta
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            node_power_vector_wye: np.ndarray,
+            node_power_vector_delta: np.ndarray
+    ):
+        """Instantiate fixed point power flow solution object for given `electric_grid_model`,
+        `node_power_vector_wye` and `node_power_vector_delta`.
+        """
 
         # Obtain voltage solution.
         self.node_voltage_vector = (

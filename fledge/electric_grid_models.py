@@ -2,6 +2,7 @@
 
 from multimethod import multimethod
 import numpy as np
+import opendssdirect
 import pandas as pd
 import scipy.sparse
 import scipy.sparse.linalg
@@ -251,6 +252,7 @@ class ElectricGridIndex(object):
         #   and stored into data frames.
 
         # Index by node name.
+        # TODO: Add index by `line_name` / `transformer_name`.
         self.node_by_node_name = dict.fromkeys(self.node_names)
         for node_name in self.node_names:
             self.node_by_node_name[node_name] = np.nonzero(nodes['node_name'] == node_name)[0].tolist()
@@ -921,3 +923,335 @@ class ElectricGridModel(object):
                 + 1j * electric_grid_data.electric_grid_loads.loc[:, 'reactive_power']
             ).values
         )
+
+
+@multimethod
+def initialize_opendss_model(
+        scenario_name: str
+):
+    """Initialize OpenDSS model for given `scenario_name`."""
+
+    # Obtain electric grid data.
+    electric_grid_data = (
+        fledge.database_interface.ElectricGridData(scenario_name)
+    )
+
+    initialize_opendss_model(electric_grid_data)
+
+
+@multimethod
+def initialize_opendss_model(
+        electric_grid_data: fledge.database_interface.ElectricGridData
+):
+    """Initialize OpenDSS circuit model for given `electric_grid_data`.
+
+    - Instantiates OpenDSS model.
+    - No object is returned because the OpenDSS model lives in memory and
+      can be accessed with the API of the `OpenDSS.jl` package.
+    """
+
+    def get_node_phases_string(element):
+        """Utility function for creating the node phases string for OpenDSS."""
+
+        node_phases_string = ""
+        if element['is_phase_0_connected'] == 1:
+            node_phases_string += ".0"
+        if element['is_phase_1_connected'] == 1:
+            node_phases_string += ".1"
+        if element['is_phase_2_connected'] == 1:
+            node_phases_string += ".2"
+        if element['is_phase_3_connected'] == 1:
+            node_phases_string += ".3"
+
+        return node_phases_string
+
+    # Clear OpenDSS.
+    opendss_command_string = "clear"
+    logger.debug(f"opendss_command_string = {opendss_command_string}")
+    opendssdirect.run_command(opendss_command_string)
+
+    # Obtain extra definitions string.
+    if pd.isnull(electric_grid_data.electric_grid['extra_definitions_string']):
+        extra_definitions_string = ""
+    else:
+        extra_definitions_string = (
+            electric_grid_data.electric_grid['extra_definitions_string']
+        )
+
+    # Add circuit info to OpenDSS command string.
+    opendss_command_string = (
+        f"new circuit.{electric_grid_data.electric_grid['electric_grid_name']}"
+        + f" phases={electric_grid_data.electric_grid['n_phases']}"
+        + f" bus1={electric_grid_data.electric_grid['source_node_name']}"
+        + f" basekv={electric_grid_data.electric_grid['source_voltage'] / 1e3}"
+        + f" {extra_definitions_string}"
+    )
+
+    # Create circuit in OpenDSS.
+    logger.debug(f"opendss_command_string = {opendss_command_string}")
+    opendssdirect.run_command(opendss_command_string)
+
+    # Define line codes.
+    for line_type_index, line_type in electric_grid_data.electric_grid_line_types.iterrows():
+        # Obtain line resistance and reactance matrix entries for the line.
+        matrices = (
+            electric_grid_data.electric_grid_line_types_matrices.loc[
+                electric_grid_data.electric_grid_line_types_matrices['line_type'] == line_type['line_type'],
+                ['r', 'x', 'c']
+            ]
+        )
+
+        # Add line type name and number of phases to OpenDSS command string.
+        opendss_command_string = (
+            f"new linecode.{line_type['line_type']}"
+            + f" nphases={line_type['n_phases']}"
+        )
+
+        # Add resistance and reactance matrix entries to OpenDSS command string,
+        # with formatting depending on number of phases.
+        if line_type['n_phases'] == 1:
+            opendss_command_string += (
+                " rmatrix = "
+                + "[{:.8f}]".format(*matrices['r'])
+                + " xmatrix = "
+                + "[{:.8f}]".format(*matrices['x'])
+                + " cmatrix = "
+                + "[{:.8f}]".format(*matrices['c'])
+            )
+        elif line_type['n_phases'] == 2:
+            opendss_command_string += (
+                " rmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['r'])
+                + " xmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['x'])
+                + " cmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['c'])
+            )
+        elif line_type['n_phases'] == 3:
+            opendss_command_string += (
+                " rmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['r'])
+                + f" xmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['x'])
+                + f" cmatrix = "
+                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['c'])
+            )
+
+        # Create line code in OpenDSS.
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
+
+    # Define lines.
+    for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
+        # Obtain number of phases for the load.
+        n_phases = (
+            int(sum([
+                line['is_phase_1_connected'],
+                line['is_phase_2_connected'],
+                line['is_phase_3_connected']
+            ]))
+        )
+
+        # Add line name, phases, node connections, line type and length
+        # to OpenDSS command string.
+        opendss_command_string = (
+            f"new line.{line['line_name']}"
+            + f" phases={line['n_phases']}"
+            + f" bus1={line['node_1_name']}{get_node_phases_string(line)}"
+            + f" bus2={line['node_2_name']}{get_node_phases_string(line)}"
+            + f" linecode={line['line_type']}"
+            + f" length={line['length']}"
+        )
+
+        # Create line in OpenDSS.
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
+
+    # Define transformers.
+    # - Note: This setup only works for transformers with
+    #   identical number of phases at each winding / side.
+    for transformer_index, transformer in (
+            electric_grid_data.electric_grid_transformers.loc[
+                electric_grid_data.electric_grid_transformers['winding'] == 1,
+                :
+            ].iterrows()
+    ):
+        # Obtain number of phases for the transformer.
+        # This assumes identical number of phases at all windings.
+        n_phases = (
+            int(sum([
+                transformer['is_phase_1_connected'],
+                transformer['is_phase_2_connected'],
+                transformer['is_phase_3_connected']
+            ]))
+        )
+
+        # Obtain windings for the transformer.
+        windings = (
+            electric_grid_data.electric_grid_transformers.loc[
+                (
+                    electric_grid_data.electric_grid_transformers['transformer_name']
+                    == transformer['transformer_name']
+                ),
+                :
+            ]
+        )
+
+        # Obtain reactances for the transformer.
+        reactances = (
+            electric_grid_data.electric_grid_transformer_reactances.loc[
+                (
+                    electric_grid_data.electric_grid_transformer_reactances['transformer_name']
+                    == transformer['transformer_name']
+                ),
+                :
+            ]
+        )
+
+        # Obtain taps for the transformer.
+        taps = (
+            electric_grid_data.electric_grid_transformer_taps.loc[
+                (
+                    electric_grid_data.electric_grid_transformer_taps['transformer_name']
+                    == transformer['transformer_name']
+                ),
+                :
+            ]
+        )
+
+        # Add transformer name, number of phases / windings and reactances
+        # to OpenDSS command string.
+        opendss_command_string = (
+            f"new transformer.{transformer['transformer_name']}"
+            + f" phases={n_phases}"
+            + f" windings={len(windings['winding'])}"
+            + f" xscarray={[x for x in reactances['reactance_percentage']]}"
+        )
+        for winding_index, winding in windings.iterrows():
+            # Obtain nominal voltage level for each winding.
+            voltage = electric_grid_data.electric_grid_nodes.at[winding['node_name'], 'voltage']
+
+            # Obtain node phases connection string for each winding.
+            if winding['connection'] == "wye":
+                if winding['is_phase_0_connected'] == 0:
+                    # Enforce wye-open connection according to:
+                    # OpenDSS Manual April 2018, page 136, "rneut".
+                    node_phases_string = (
+                        get_node_phases_string(winding)
+                        + ".4"
+                    )
+                elif winding['is_phase_0_connected'] == 1:
+                    # Enforce wye-grounded connection.
+                    node_phases_string = (
+                        get_node_phases_string(winding)
+                        + ".0"
+                    )
+                    # Remove leading ".0".
+                    node_phases_string = node_phases_string[2:]
+            elif winding['connection'] == "delta":
+                if winding['is_phase_0_connected'] == 0:
+                    node_phases_string = (
+                        get_node_phases_string(winding)
+                    )
+                elif winding['is_phase_0_connected'] == 1:
+                    node_phases_string = (
+                        get_node_phases_string(winding)
+                    )
+                    # Remove leading ".0"
+                    node_phases_string = node_phases_string[2:]
+                    logger.warn(
+                        "No ground connection possible for delta-connected"
+                        + f" transformer {transformer['transformer_name']}."
+                    )
+            else:
+                logger.error(f"Unknown transformer connection type: {winding['connection']}")
+
+            # Add node connection, nominal voltage / power and resistance
+            # to OpenDSS command string for each winding.
+            opendss_command_string += (
+                f" wdg={winding['winding']}"
+                + f" bus={winding['node_name']}" + node_phases_string
+                + f" conn={winding['connection']}"
+                + f" kv={voltage / 1000}"
+                + f" kva={winding['power'] / 1000}"
+                + f" %r={winding['resistance_percentage']}"
+            )
+
+            # Add maximum / minimum level
+            # to OpenDSS command string for each winding.
+            for winding_index in np.nonzero(taps['winding'] == winding['winding'])[0]:
+                opendss_command_string += (
+                    " maxtap="
+                    + f"{taps.at[winding_index, 'tap_maximum_voltage_per_unit']}"
+                    + f" mintap="
+                    + f"{taps.at[winding_index, 'tap_minimum_voltage_per_unit']}"
+                )
+
+        # Create transformer in OpenDSS.
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
+
+    # Define loads.
+    for load_index, load in electric_grid_data.electric_grid_loads.iterrows():
+        # Obtain number of phases for the load.
+        n_phases = (
+            int(sum([
+                load['is_phase_1_connected'],
+                load['is_phase_2_connected'],
+                load['is_phase_3_connected']
+            ]))
+        )
+
+        # Obtain nominal voltage level for the load.
+        voltage = electric_grid_data.electric_grid_nodes.at[load['node_name'], 'voltage']
+        # Convert to line-to-neutral voltage for single-phase loads, according to:
+        # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
+        if n_phases == 1:
+            voltage /= 3 ** 0.5
+
+        # Add node connection, model type, voltage, nominal power
+        # to OpenDSS command string.
+        opendss_command_string = (
+            f"new load.{load['load_name']}"
+            # TODO: Check if any difference without ".0" for wye-connected loads.
+            + f" bus1={load['node_name']}{get_node_phases_string(load)}"
+            + f" phases={n_phases}"
+            + f" conn={load['connection']}"
+            # All loads are modelled as constant P/Q according to:
+            # OpenDSS Manual April 2018, page 150, "Model"
+            + f" model=1"
+            + f" kv={voltage / 1000}"
+            + f" kw={load['active_power'] / 1000}"
+            + f" kvar={load['reactive_power'] / 1000}"
+            # Set low V_min to avoid switching to impedance model according to:
+            # OpenDSS Manual April 2018, page 150, "Vminpu"
+            + f" vminpu=0.6"
+            # Set high V_max to avoid switching to impedance model according to:
+            # OpenDSS Manual April 2018, page 150, "Vmaxpu"
+            + f" vmaxpu=1.4"
+        )
+
+        # Create load in OpenDSS.
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
+
+    # TODO: Add switches.
+
+    # Set control mode and voltage bases.
+    opendss_command_string = (
+        "set voltagebases="
+        + f"{electric_grid_data.electric_grid['voltage_bases_string']}"
+        + "\nset controlmode="
+        + f"{electric_grid_data.electric_grid['control_mode_string']}"
+        + "\nset loadmult="
+        + f"{electric_grid_data.electric_grid['load_multiplier']}"
+        + "\ncalcvoltagebases"
+    )
+    logger.debug(f"opendss_command_string = {opendss_command_string}")
+    opendssdirect.run_command(opendss_command_string)
+
+    # Set solution mode to "single snapshot power flow" according to:
+    # OpenDSSComDoc, November 2016, page 1
+    opendss_command_string = "set mode=0"
+    logger.debug(f"opendss_command_string = {opendss_command_string}")
+    opendssdirect.run_command(opendss_command_string)

@@ -10,6 +10,7 @@ setuptools.setup(
         'hvplot',
         'multimethod',
         'numpy',
+        'OpenDSSDirect.py',
         'pandas',
         'parameterized',  # For tests.
         'pyomo',

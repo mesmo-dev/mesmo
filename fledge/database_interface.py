@@ -1,6 +1,7 @@
 """Database interface."""
 
 import glob
+from multimethod import multimethod
 import os
 import pandas as pd
 import sqlite3
@@ -282,12 +283,32 @@ class FixedLoadData(object):
     fixed_loads: pd.DataFrame
     fixed_load_timeseries_dict: dict
 
+    @multimethod
     def __init__(
             self,
             scenario_name: str,
             database_connection=connect_database()
     ):
         """Load fixed load data from database for given `scenario_name`."""
+
+        # Obtain scenario data.
+        scenario_data = ScenarioData(scenario_name)
+
+        self.__init__(
+            scenario_data,
+            database_connection=database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_data: ScenarioData,
+            database_connection=connect_database()
+    ):
+        """Load fixed load data from database for given `scenario_data`."""
+
+        # Obtain shorthand for `scenario_name`.
+        scenario_name = scenario_data.scenario['scenario_name']
 
         self.fixed_loads = (
             pd.read_sql(
@@ -339,7 +360,16 @@ class FixedLoadData(object):
                         scenario_name,
                         scenario_name
                     ],
-                    parse_dates=['time']
+                    parse_dates=['time'],
+                    index_col=['time']
+                ).reindex(
+                    scenario_data.timesteps
+                ).interpolate(
+                    'quadratic'
+                ).bfill(  # Backward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                ).ffill(  # Forward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
                 )
             )
 
@@ -350,12 +380,32 @@ class EVChargerData(object):
     ev_chargers: pd.DataFrame
     ev_charger_timeseries_dict: dict
 
+    @multimethod
     def __init__(
             self,
             scenario_name: str,
             database_connection=connect_database()
     ):
         """Load EV charger data from database for given `scenario_name`."""
+
+        # Obtain scenario data.
+        scenario_data = ScenarioData(scenario_name)
+
+        self.__init__(
+            scenario_data,
+            database_connection=database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_data: ScenarioData,
+            database_connection=connect_database()
+    ):
+        """Load EV charger data from database for given `scenario_data`."""
+
+        # Obtain shorthand for `scenario_name`.
+        scenario_name = scenario_data.scenario['scenario_name']
 
         self.ev_chargers = (
             pd.read_sql(
@@ -407,7 +457,16 @@ class EVChargerData(object):
                         scenario_name,
                         scenario_name
                     ],
-                    parse_dates=['time']
+                    parse_dates=['time'],
+                    index_col=['time']
+                ).reindex(
+                    scenario_data.timesteps
+                ).interpolate(
+                    'quadratic'
+                ).bfill(  # Backward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                ).ffill(  # Forward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
                 )
             )
 
@@ -418,12 +477,32 @@ class FlexibleLoadData(object):
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: dict
 
+    @multimethod
     def __init__(
             self,
             scenario_name: str,
             database_connection=connect_database()
     ):
         """Load flexible load data from database for given `scenario_name`."""
+
+        # Obtain scenario data.
+        scenario_data = ScenarioData(scenario_name)
+
+        self.__init__(
+            scenario_data,
+            database_connection=database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_data: ScenarioData,
+            database_connection=connect_database()
+    ):
+        """Load flexible load data from database for given `scenario_data`."""
+
+        # Obtain shorthand for `scenario_name`.
+        scenario_name = scenario_data.scenario['scenario_name']
 
         self.flexible_loads = (
             pd.read_sql(
@@ -475,6 +554,15 @@ class FlexibleLoadData(object):
                         scenario_name,
                         scenario_name
                     ],
-                    parse_dates=['time']
+                    parse_dates=['time'],
+                    index_col=['time']
+                ).reindex(
+                    scenario_data.timesteps
+                ).interpolate(
+                    'quadratic'
+                ).bfill(  # Backward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                ).ffill(  # Forward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
                 )
             )

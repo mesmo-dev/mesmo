@@ -38,11 +38,16 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_electric_grid_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.ElectricGridData(
-            scenario_name=fledge.config.test_scenario_name
-        )
+        fledge.database_interface.ElectricGridData(fledge.config.test_scenario_name)
         time_end = time.time()
         logger.info(f"Test ElectricGridData: Completed in {round(time_end - time_start, 6)} seconds.")
+
+    def test_fixed_load_data(self):
+        # Get result.
+        time_start = time.time()
+        fledge.database_interface.FixedLoadData(fledge.config.test_scenario_name)
+        time_end = time.time()
+        logger.info(f"Test FixedLoadData: Completed in {round(time_end - time_start, 6)} seconds.")
 
 
 if __name__ == '__main__':

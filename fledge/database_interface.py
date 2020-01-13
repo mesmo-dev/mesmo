@@ -229,3 +229,71 @@ class ElectricGridData(object):
                 params=[scenario_name]
             )
         )
+
+
+class FixedLoadData(object):
+    """Fixed load data object."""
+
+    fixed_loads: pd.DataFrame
+    fixed_load_timeseries_dict: dict
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=connect_database()
+    ):
+        """Load fixed load data from database for given `scenario_name`."""
+
+        self.fixed_loads = (
+            pd.read_sql(
+                """
+                SELECT * FROM fixed_loads
+                JOIN electric_grid_loads USING (model_name)
+                WHERE model_type = 'fixed_load'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                AND case_name = (
+                    SELECT case_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[
+                    scenario_name,
+                    scenario_name
+                ]
+            )
+        )
+        self.fixed_loads.index = self.fixed_loads['load_name']
+
+        # Instantiate dictionary for unique `timeseries_name`.
+        self.fixed_load_timeseries_dict = dict.fromkeys(self.fixed_loads['timeseries_name'].unique())
+
+        # Load timeseries for each `timeseries_name`.
+        # TODO: Resample / interpolate timeseries depending on timestep interval.
+        for timeseries_name in self.fixed_load_timeseries_dict:
+            self.fixed_load_timeseries_dict[timeseries_name] = (
+                pd.read_sql(
+                    """
+                    SELECT * FROM fixed_load_timeseries
+                    WHERE timeseries_name = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[
+                        timeseries_name,
+                        scenario_name,
+                        scenario_name
+                    ],
+                    parse_dates=['time']
+                )
+            )

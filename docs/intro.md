@@ -26,11 +26,7 @@ If you are running into errors when installing or running CoBMo, this may be due
 
 ## Examples
 
-The `examples` directory contains run scripts which demonstrate possible usages of FLEDGE.
-
-## Usage
-
-There are currently no examples / tutorials as the repository is still work-in-progress. Please see the [test directory](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/tree/develop/test) for preliminary examples.
+The `examples` directory contains run scripts which demonstrate possible usages of FLEDGE. You may also check the `test` directory for further examples.
 
 ## Contributing
 

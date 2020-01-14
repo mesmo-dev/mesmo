@@ -435,6 +435,21 @@ def get_loss_fixed_point(
     return loss
 
 
+def get_loss_opendss():
+    """Get total loss by solving OpenDSS model.
+
+    - OpenDSS model must be readily set up, with the desired power being set for all loads.
+    """
+
+    # Solve OpenDSS model.
+    opendssdirect.run_command("solve")
+
+    # Obtain loss.
+    loss = opendssdirect.Circuit.Losses()[0] + 1.0j * opendssdirect.Circuit.Losses()[1]
+
+    return loss
+
+
 class PowerFlowSolution(object):
     """Power flow solution object."""
 

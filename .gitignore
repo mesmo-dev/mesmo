@@ -3,16 +3,20 @@
 
 \.vscode/
 
-\.pytest_cache/
-
 *.egg-info/
 
 */__pycache__/
 
 *.pyc
 
+\.pytest_cache/
+
 *.sqlite
 
 *.DS_Store
 
-docs/build/
+docs/_build/
+
+results/*
+
+!results/README\.md

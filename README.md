@@ -21,24 +21,25 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for the 
     - [ ] Linear models for energy storage systems.
 - Power flow solver
     - [x] Iterative fixed-point power solver.
-    - [x] Integrated benchmarking against OpenDSS through [OpenDSSDirect](https://github.com/dss-extensions/OpenDSSDirect.jl).
+    - [x] Integrated benchmarking against OpenDSS through [OpenDSSDirect](https://github.com/dss-extensions/OpenDSSDirect.py).
 - Optimal power flow solver
     - [ ] Setup of centralized social welfare maximization problem.
-    - [ ] Interfacing convex optimization solvers through [JuMP](https://github.com/JuliaOpt/JuMP.jl).
+    - [ ] Interfacing convex optimization solvers through [Pyomo](https://github.com/Pyomo/pyomo).
 
 ## Documentation
 
-The preliminary documentation is located at [tumcreate-estl.github.io/FLEDGE.jl](https://tumcreate-estl.github.io/FLEDGE.jl/dev/).
+The preliminary documentation is located at [fledge.readthedocs.io](https://fledge.readthedocs.io/).
 
 ## Installation
 
 1. Check requirements:
-    - [Julia 1.3](https://julialang.org/downloads/)
+    - Python 3.7
+    - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository.
-3. In Julia, run `]activate path_to_fledge_repository; instantiate; precompile`.
+3. In your Python environment, run `pip install -e path_to_fledge_repository`.
 
-Please also see [docs/src/intro.md](./docs/src/intro.md).
+Please also read [docs/intro.md](./docs/intro.md).
 
 ## Contributing
 
-If you are keen to contribute to this project, please see [docs/src/contributing.md](./docs/src/contributing.md).
+If you are keen to contribute to this project, please see [docs/contributing.md](./docs/contributing.md).

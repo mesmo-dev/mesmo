@@ -1,11 +1,11 @@
-# FLEDGE - Flexible Distribution Grid Demonstrator
+## FLEDGE - Flexible Distribution Grid Demonstrator
 
 The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for the computation of operation problems for electric distribution grids along with distributed energy resources (DERs), such as flexible loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) energy resource models, 3) power flow solver and 4) optimal power flow solver.
 
 ## Work in Progress
 
 1. This repository is under active development and not all features listed below have yet been implemented.
-2. Please create an [issue](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/issues) if you find this project interesting and have ideas / comments / criticism that may help to make it more relevant or useful for your type of problems.
+2. Please create an [issue](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/issues) if you find this project interesting and have ideas / comments / criticism that may help to make FLEDGE more relevant or useful for your type of problems.
 
 ## Features
 
@@ -26,20 +26,14 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for the 
     - [ ] Setup of centralized social welfare maximization problem.
     - [ ] Interfacing convex optimization solvers through [Pyomo](https://github.com/Pyomo/pyomo).
 
-## Documentation
+## Contents
 
-The preliminary documentation is located at [fledge.readthedocs.io](https://fledge.readthedocs.io/).
+``` toctree::
+    :maxdepth: 2
 
-## Installation
-
-1. Check requirements:
-    - Python 3.7
-    - [Gurobi Optimizer](http://www.gurobi.com/)
-2. Clone or download repository.
-3. In your Python environment, run `pip install -e path_to_fledge_repository`.
-
-Please also read [docs/intro.md](./docs/intro.md).
-
-## Contributing
-
-If you are keen to contribute to this project, please see [docs/contributing.md](./docs/contributing.md).
+    intro
+    architecture
+    api
+    data
+    contributing
+```

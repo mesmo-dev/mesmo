@@ -2,14 +2,20 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 
+import fledge.config
 import fledge.linear_electric_grid_models
 import fledge.electric_grid_models
 import fledge.power_flow_solvers
 
+
 # Settings.
 scenario_name = 'singapore_6node'
+plots = True  # If True, script may produce plots.
+results_path = os.path.join(fledge.config.results_path, f'run_linear_electric_grid_model_{fledge.config.timestamp}')
+os.mkdir(results_path) if plots else None  # Instantiate results directory.
 
 # Obtain electric grid model.
 electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
@@ -318,21 +324,50 @@ linear_electric_grid_model_error = (
 )
 print(round(linear_electric_grid_model_error, 2).to_string())
 
-# Plot some results.
+# Plot results.
+if plots:
 
-# Voltage magnitude.
-for node_phase in range(4, 6):
-    plt.plot(power_multipliers, node_voltage_vector_magnitude_power_flow[node_phase, :], label='Power flow')
-    plt.plot(power_multipliers, node_voltage_vector_magnitude_linear_model[node_phase, :], label='Linear model')
-    plt.scatter([1.0], [abs(node_voltage_vector_initial[node_phase])], label='Initial')
+    # Voltage magnitude.
+    for node_phase_index, node_phase in enumerate(electric_grid_model.index.nodes_phases):
+        plt.plot(power_multipliers, node_voltage_vector_magnitude_power_flow[node_phase_index, :], label='Power flow')
+        plt.plot(power_multipliers, node_voltage_vector_magnitude_linear_model[node_phase_index, :], label='Linear model')
+        plt.scatter([1.0], [abs(node_voltage_vector_initial[node_phase_index])], label='Initial point')
+        plt.legend()
+        plt.title(f"Voltage magnitude node/phase: {node_phase}")
+        plt.savefig(os.path.join(results_path, f'voltage_magnitude_{node_phase}.png'))
+        plt.close()
+
+    # Branch flow.
+    for branch_phase_index, branch_phase in enumerate(electric_grid_model.index.branches_phases):
+        plt.plot(power_multipliers, branch_power_vector_1_squared_power_flow[branch_phase_index, :], label='Power flow')
+        plt.plot(power_multipliers, branch_power_vector_1_squared_linear_model[branch_phase_index, :], label='Linear model')
+        plt.scatter([1.0], [abs(branch_power_vector_1_initial[branch_phase_index] ** 2)], label='Initial point')
+        plt.legend()
+        plt.title(f"Branch flow 1 branch/phase/type: {branch_phase}")
+        plt.savefig(os.path.join(results_path, f'branch_power_1_{branch_phase}.png'))
+        plt.close()
+
+        plt.plot(power_multipliers, branch_power_vector_2_squared_power_flow[branch_phase_index, :], label='Power flow')
+        plt.plot(power_multipliers, branch_power_vector_2_squared_linear_model[branch_phase_index, :], label='Linear model')
+        plt.scatter([1.0], [abs(branch_power_vector_2_initial[branch_phase_index] ** 2)], label='Initial point')
+        plt.legend()
+        plt.title(f"Branch flow 2 branch/phase/type: {branch_phase}")
+        plt.savefig(os.path.join(results_path, f'branch_power_2_{branch_phase}.png'))
+        plt.close()
+
+    # Loss.
+    plt.plot(power_multipliers, loss_active_power_flow, label='Power flow')
+    plt.plot(power_multipliers, loss_active_linear_model, label='Linear model')
+    plt.scatter([1.0], [np.real([loss_initial])], label='Initial point')
     plt.legend()
-    plt.title(f"Voltage magnitude node/phase #{node_phase}")
-    plt.show()
+    plt.title("Loss active")
+    plt.savefig(os.path.join(results_path, f'loss_active.png'))
+    plt.close()
 
-# Loss.
-plt.plot(power_multipliers, loss_active_power_flow, label='Power flow')
-plt.plot(power_multipliers, loss_active_linear_model, label='Linear model')
-plt.scatter([1.0], [np.real([loss_initial])], label='Initial')
-plt.legend()
-plt.title("Loss active")
-plt.show()
+    plt.plot(power_multipliers, loss_reactive_power_flow, label='Power flow')
+    plt.plot(power_multipliers, loss_reactive_linear_model, label='Linear model')
+    plt.scatter([1.0], [np.imag([loss_initial])], label='Initial point')
+    plt.legend()
+    plt.title("Loss reactive")
+    plt.savefig(os.path.join(results_path, f'loss_reactive.png'))
+    plt.close()

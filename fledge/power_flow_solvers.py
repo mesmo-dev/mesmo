@@ -425,10 +425,10 @@ def get_loss_fixed_point(
     loss = (
         np.conj(
             np.transpose(node_voltage_vector)
-            @ np.transpose([(
+            @ (
                 node_admittance_matrix
                 @ node_voltage_vector
-            )])
+            )
         )
     )
 

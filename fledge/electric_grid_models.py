@@ -484,22 +484,22 @@ class ElectricGridModel(object):
             )
 
             # Add line element matrices to the nodal admittance matrix.
-            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] = admittance_matrix_11
-            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] = admittance_matrix_12
-            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] = admittance_matrix_21
-            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] = admittance_matrix_22
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] += admittance_matrix_11
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] += admittance_matrix_12
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] += admittance_matrix_21
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] += admittance_matrix_22
 
             # Add line element matrices to the branch admittance matrices.
-            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_11
-            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_12
-            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_21
-            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_22
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] += admittance_matrix_11
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] += admittance_matrix_12
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] += admittance_matrix_21
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] += admittance_matrix_22
 
             # Add line element matrices to the branch incidence matrices.
-            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] = (
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += (
                 np.identity(len(branch_index), dtype=np.int)
             )
-            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] = (
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += (
                  np.identity(len(branch_index), dtype=np.int)
             )
 
@@ -715,22 +715,22 @@ class ElectricGridModel(object):
             )
 
             # Add transformer element matrices to the nodal admittance matrix.
-            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] = admittance_matrix_11
-            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] = admittance_matrix_12
-            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] = admittance_matrix_21
-            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] = admittance_matrix_22
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_1)] += admittance_matrix_11
+            self.node_admittance_matrix[np.ix_(node_index_1, node_index_2)] += admittance_matrix_12
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_1)] += admittance_matrix_21
+            self.node_admittance_matrix[np.ix_(node_index_2, node_index_2)] += admittance_matrix_22
 
             # Add transformer element matrices to the branch admittance matrices.
-            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_11
-            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_12
-            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] = admittance_matrix_21
-            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] = admittance_matrix_22
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_1)] += admittance_matrix_11
+            self.branch_admittance_1_matrix[np.ix_(branch_index, node_index_2)] += admittance_matrix_12
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_1)] += admittance_matrix_21
+            self.branch_admittance_2_matrix[np.ix_(branch_index, node_index_2)] += admittance_matrix_22
 
             # Add transformer element matrices to the branch incidence matrices.
-            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] = (
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += (
                 np.identity(len(branch_index), dtype=np.int)
             )
-            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] = (
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += (
                 np.identity(len(branch_index), dtype=np.int)
             )
 

@@ -133,7 +133,7 @@ def main():
             ==
             pyo.quicksum(
                 electric_grid_model.load_incidence_wye_matrix[node_phase_index, load_index]
-                * (-1.0 * optimization_problem.load_active_power_vector_change[load_name])
+                * optimization_problem.load_active_power_vector_change[load_name]
                 for load_index, load_name in enumerate(electric_grid_index.load_names)
             )
         )
@@ -143,7 +143,7 @@ def main():
             ==
             pyo.quicksum(
                 electric_grid_model.load_incidence_wye_matrix[node_phase_index, load_index]
-                * (-1.0 * optimization_problem.load_reactive_power_vector_change[load_name])
+                * optimization_problem.load_reactive_power_vector_change[load_name]
                 for load_index, load_name in enumerate(electric_grid_index.load_names)
             )
         )
@@ -153,7 +153,7 @@ def main():
             ==
             pyo.quicksum(
                 electric_grid_model.load_incidence_delta_matrix[node_phase_index, load_index]
-                * (-1.0 * optimization_problem.load_active_power_vector_change[load_name])
+                * optimization_problem.load_active_power_vector_change[load_name]
                 for load_index, load_name in enumerate(electric_grid_index.load_names)
             )
         )
@@ -163,7 +163,7 @@ def main():
             ==
             pyo.quicksum(
                 electric_grid_model.load_incidence_delta_matrix[node_phase_index, load_index]
-                * (-1.0 * optimization_problem.load_reactive_power_vector_change[load_name])
+                * optimization_problem.load_reactive_power_vector_change[load_name]
                 for load_index, load_name in enumerate(electric_grid_index.load_names)
             )
         )

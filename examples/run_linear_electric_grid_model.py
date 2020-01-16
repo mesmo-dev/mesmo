@@ -14,6 +14,7 @@ import fledge.power_flow_solvers
 # Settings.
 scenario_name = 'singapore_6node'
 plots = True  # If True, script may produce plots.
+
 results_path = os.path.join(fledge.config.results_path, f'run_linear_electric_grid_model_{fledge.config.timestamp}')
 os.mkdir(results_path) if plots else None  # Instantiate results directory.
 
@@ -64,7 +65,7 @@ branch_power_vector_2_initial = power_flow_solution_initial.branch_power_vector_
 loss_initial = power_flow_solution_initial.loss
 
 # Define power vector multipliers for testing of linear model at different loading conditions.
-power_multipliers = np.arange(0.8, 1.25, 0.05)
+power_multipliers = np.arange(0.1, 1.5, 0.1)
 
 # Instantiate testing arrays.
 node_voltage_vector_magnitude_power_flow = (
@@ -371,3 +372,6 @@ if plots:
     plt.title("Loss reactive")
     plt.savefig(os.path.join(results_path, f'loss_reactive.png'))
     plt.close()
+
+    # Store CSV file.
+    linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))

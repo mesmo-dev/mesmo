@@ -224,7 +224,8 @@ def get_voltage_opendss():
     node_voltage_vector_solution = (
         np.transpose([
             pd.Series(
-                (
+                np.sqrt(3)
+                * (
                     np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
                     + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
                 ),

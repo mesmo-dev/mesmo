@@ -35,11 +35,21 @@ author = 'TUMCREATE'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx_markdown_tables',  # TODO: `sphinx_markdown_tables` doesn't support Readthedocs PDF properly.
     'sphinx.ext.napoleon',
-    'sphinx.ext.autodoc',
+    'sphinx_markdown_tables',  # TODO: `sphinx_markdown_tables` doesn't support Readthedocs PDF properly.
     'sphinx.ext.mathjax'
 ]
+
+# Extension settings
+# - sphinx.ext.autodoc: <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>
+# - sphinx.ext.napoleon: <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>
+autoclass_content = 'both'
+autodoc_default_options = {
+    'members': True,
+    'undoc-members': True
+}
+autodoc_typehints= 'none'
+napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']

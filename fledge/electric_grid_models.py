@@ -328,9 +328,42 @@ class ElectricGridIndex(object):
 
 
 class ElectricGridModel(object):
-    """Electric grid model object."""
+    """ElectricGridModel(...)
 
-    electric_grid_data: fledge.database_interface.ElectricGridData
+    Electric grid model object consisting of nodal admittance / transformation matrices, branch admittance / incidence
+    matrices, load incidence matrices and no load voltage vector as well as nominal load vector.
+
+    Syntax
+        - ``ElectricGridModel(electric_grid_data)``: Instantiate electric grid model for given
+          `electric_grid_data`.
+        - ``ElectricGridModel(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
+          The required `electric_grid_data` is obtained from the database.
+
+    Arguments:
+        scenario_name (str): FLEDGE scenario name.
+        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+
+    Keyword Arguments:
+        voltage_no_load_method (str): Choices: `by_definition`, `by_calculation`. Default: `by_definition`.
+            Defines the construction method for the no load voltage vector.
+            If `by_definition`, the nodal voltage definition in the database is taken.
+            If `by_calculation`, the no load voltage is calculated from the source node voltage
+            and the nodal admittance matrix.
+
+    Attributes:
+        index (ElectricGridIndex): Electric grid index object.
+        node_admittance_matrix (scipy.sparse.spmatrix): Nodal admittance matrix.
+        node_transformation_matrix (scipy.sparse.spmatrix): Nodal transformation matrix.
+        branch_admittance_1_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'from' direction.
+        branch_admittance_2_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'to' direction.
+        branch_incidence_1_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'from' direction.
+        branch_incidence_2_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'to' direction.
+        load_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' loads.
+        load_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' loads.
+        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no-load conditions.
+        load_power_vector_nominal (np.ndarray): Load power vector at nominal-load conditions.
+    """
+
     index: ElectricGridIndex
     node_admittance_matrix: scipy.sparse.spmatrix
     node_transformation_matrix: scipy.sparse.spmatrix
@@ -349,7 +382,6 @@ class ElectricGridModel(object):
             scenario_name: str,
             **kwargs
     ):
-        """Instantiate electric grid model object for given `scenario_name`."""
 
         # Obtain electric grid data.
         electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
@@ -363,14 +395,6 @@ class ElectricGridModel(object):
             electric_grid_data: fledge.database_interface.ElectricGridData,
             voltage_no_load_method='by_definition'
     ):
-        """Instantiate electric grid model object for given `electric_grid_data`.
-
-        - The nodal no-load voltage vector can be constructed by
-          1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
-          definition in the database is taken, or by
-          2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
-          calculated from the source node voltage and the nodal admittance matrix.
-        """
 
         # Obtain electric grid index.
         self.index = ElectricGridIndex(electric_grid_data)

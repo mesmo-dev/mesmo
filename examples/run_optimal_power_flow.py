@@ -369,46 +369,49 @@ def main():
         print(f"load_reactive_power_vector_change = {load_reactive_power_vector_change.ravel()}")
         print(f"load_power_vector_change_max = {load_power_vector_change_max}")
 
-        # Get new load vector and power flow solution candidate.
-        load_power_vector_reference_candidate = (
-            load_power_vector_reference
-            + load_active_power_vector_change.ravel()
-            + 1.0j * load_reactive_power_vector_change.ravel()
-        )
-        power_flow_solution_candidate = (
-            fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
-                electric_grid_model,
-                load_power_vector_reference_candidate
+        # Check trust-region conditions and obtain load vector and power flow solution candidates for next iteration.
+        # - Only if termination condition is not met, otherwise risk of division by zero.
+        if load_power_vector_change_max > epsilon:
+            # Get new load vector and power flow solution candidate.
+            load_power_vector_reference_candidate = (
+                load_power_vector_reference
+                + load_active_power_vector_change.ravel()
+                + 1.0j * load_reactive_power_vector_change.ravel()
             )
-        )
+            power_flow_solution_candidate = (
+                fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
+                    electric_grid_model,
+                    load_power_vector_reference_candidate
+                )
+            )
 
-        # Obtain objective values.
-        objective_power_flow = (
-            sum(np.real(load_power_vector_reference_candidate).ravel())
-            + sum(np.imag(load_power_vector_reference_candidate).ravel())
-            + sum(np.real(power_flow_solution_candidate.loss.ravel()))
-            # + sum(np.imag(power_flow_solution_candidate.loss.ravel()))
-        )
-        objective_linear_model = (
-            pyo.value(optimization_problem.objective)
-        )
+            # Obtain objective values.
+            objective_power_flow = (
+                sum(np.real(load_power_vector_reference_candidate).ravel())
+                + sum(np.imag(load_power_vector_reference_candidate).ravel())
+                + sum(np.real(power_flow_solution_candidate.loss.ravel()))
+                # + sum(np.imag(power_flow_solution_candidate.loss.ravel()))
+            )
+            objective_linear_model = (
+                pyo.value(optimization_problem.objective)
+            )
 
-        # Check trust-region range conditions.
-        sigma = (
-            (objective_power_flows[-1] - objective_power_flow)
-            / (objective_power_flows[-1] - objective_linear_model)
-        )
-        if sigma <= eta:
-            delta *= gamma
-        elif sigma > (1.0 - eta):
-            delta = min(2 * delta, delta_max)
+            # Check trust-region range conditions.
+            sigma = (
+                (objective_power_flows[-1] - objective_power_flow)
+                / (objective_power_flows[-1] - objective_linear_model)
+            )
+            if sigma <= eta:
+                delta *= gamma
+            elif sigma > (1.0 - eta):
+                delta = min(2 * delta, delta_max)
 
-        # Print trust-region parameters.
-        print(f"objective_power_flow = {objective_power_flow}")
-        print(f"objective_linear_model = {objective_linear_model}")
-        print(f"objective_power_flows[-1] = {objective_power_flows[-1]}")
-        print(f"sigma = {sigma}")
-        print(f"delta = {delta}")
+            # Print trust-region parameters.
+            print(f"objective_power_flow = {objective_power_flow}")
+            print(f"objective_linear_model = {objective_linear_model}")
+            print(f"objective_power_flows[-1] = {objective_power_flows[-1]}")
+            print(f"sigma = {sigma}")
+            print(f"delta = {delta}")
 
         # Iterate counter.
         trust_region_iteration_count += 1

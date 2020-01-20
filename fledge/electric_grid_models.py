@@ -1,4 +1,4 @@
-"""Electric grid models."""
+"""Electric grid models module."""
 
 from multimethod import multimethod
 import numpy as np
@@ -14,7 +14,46 @@ logger = fledge.config.get_logger(__name__)
 
 
 class ElectricGridIndex(object):
-    """Electric grid index object."""
+    """Electric grid index object consisting of the nodal / branch / load dimensions, the index sets
+    for node names / branch names / load names / phases / node types / branch types and indexing dictionaries
+    which help to obtain the matrix / vector indexes by node names / branch names / load names / phases /
+    node types / branch types.
+
+    :syntax:
+        - ``ElectricGridIndex(electric_grid_data)``: Obtain the electric grdi index for given `electric_grid_data`.
+        - ``ElectricGridIndex(scenario_name)``: Obtain the electric grdi index for given `scenario_name`.
+          The required `electric_grid_data` is obtained from the database.
+
+    Arguments:
+        scenario_name (str): FLEDGE scenario name.
+        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+
+    Attributes:
+        node_dimension (int): Dimension of nodal matrices / vectors.
+        branch_dimension (int): Dimension of branch matrices / vectors.
+        load_dimension (int): Dimension of load matrices / vectors.
+        phases (pd.Index): Index set of the phases.
+        node_names (pd.Index): Index set of the node names.
+        node_types (pd.Index): Index set of the node types.
+        nodes_phases (pd.Index): Multi-level / tuple index set of the node names and phases
+            corresponding to `node_dimension`.
+        line_names (pd.Index): Index set of the line names.
+        transformer_names (pd.Index): Index set of the transformer names.
+        branch_names (pd.Index): Index set of the branch names, i.e., all line names and transformer names.
+        branch_types (pd.Index): Index set of the branch types.
+        branches_phases (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to `branch_dimension`.
+        load_names (pd.Index): Index set of the load names.
+        node_by_node_name (dict): Index dictionary for `node_dimension` / `nodes_phases` by node name.
+        node_by_phase (dict): Index dictionary for `node_dimension` / `nodes_phases` by phase.
+        node_by_node_type (dict): Index dictionary for `node_dimension` / `nodes_phases` by node type.
+        node_by_load_name (dict): Index dictionary for `node_dimension` / `nodes_phases` by load name.
+        branch_by_line_name (dict): Index dictionary for `branch_dimension` / `branches_phases` by line name.
+        branch_by_transformer_name (dict): Index dictionary for `branch_dimension` / `branches_phases`
+            by transformer name.
+        branch_by_phase (dict): Index dictionary for `branch_dimension` / `branches_phases` by phase.
+        load_by_load_name (dict): Index dictionary for `load_dimension` / `load_names` by load name.
+    """
 
     node_dimension: int
     branch_dimension: int
@@ -43,7 +82,6 @@ class ElectricGridIndex(object):
             self,
             scenario_name: str
     ):
-        """Instantiate electric grid index object for given `scenario_name`."""
 
         # Obtain electric grid data.
         electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
@@ -56,7 +94,6 @@ class ElectricGridIndex(object):
             self,
             electric_grid_data: fledge.database_interface.ElectricGridData
     ):
-        """Instantiate electric grid index object for given `electric_grid_data`."""
 
         # Obtain transformers for one / first winding.
         electric_grid_transformers_one_winding = (
@@ -328,12 +365,10 @@ class ElectricGridIndex(object):
 
 
 class ElectricGridModel(object):
-    """ElectricGridModel(...)
+    """Electric grid model object consisting of nodal admittance / transformation matrices, branch admittance /
+    incidence matrices, load incidence matrices and no load voltage vector as well as nominal load vector.
 
-    Electric grid model object consisting of nodal admittance / transformation matrices, branch admittance / incidence
-    matrices, load incidence matrices and no load voltage vector as well as nominal load vector.
-
-    Syntax
+    :syntax:
         - ``ElectricGridModel(electric_grid_data)``: Instantiate electric grid model for given
           `electric_grid_data`.
         - ``ElectricGridModel(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
@@ -364,6 +399,7 @@ class ElectricGridModel(object):
         load_power_vector_nominal (np.ndarray): Load power vector at nominal-load conditions.
     """
 
+    # Define expected attribute types.
     index: ElectricGridIndex
     node_admittance_matrix: scipy.sparse.spmatrix
     node_transformation_matrix: scipy.sparse.spmatrix
@@ -953,8 +989,24 @@ class ElectricGridModel(object):
 @multimethod
 def initialize_opendss_model(
         scenario_name: str
-):
-    """Initialize OpenDSS model for given `scenario_name`."""
+) -> None:
+    """Initialize OpenDSS model.
+
+    - Instantiate OpenDSS circuit by running generating OpenDSS commands corresponding to given `electric_grid_data`,
+      utilizing the `OpenDSSDirect.py` package.
+    - No object is returned, but the OpenDSS circuit can be accessed with the API of
+      `OpenDSSDirect.py`: http://dss-extensions.org/OpenDSSDirect.py/opendssdirect.html
+
+    :syntax:
+        - ``initialize_opendss_model(electric_grid_data)``: Initialize OpenDSS circuit model for given
+          `electric_grid_data`.
+        - ``initialize_opendss_model(scenario_name)`` for given `scenario_name`.
+          The required `electric_grid_data` is obtained from the database.
+
+    Parameters:
+        scenario_name (str): FLEDGE scenario name.
+        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+    """
 
     # Obtain electric grid data.
     electric_grid_data = (
@@ -968,12 +1020,6 @@ def initialize_opendss_model(
 def initialize_opendss_model(
         electric_grid_data: fledge.database_interface.ElectricGridData
 ):
-    """Initialize OpenDSS circuit model for given `electric_grid_data`.
-
-    - Instantiates OpenDSS model.
-    - No object is returned because the OpenDSS model lives in memory and
-      can be accessed with the API of the `OpenDSS.jl` package.
-    """
 
     def get_node_phases_string(element):
         """Utility function for creating the node phases string for OpenDSS."""

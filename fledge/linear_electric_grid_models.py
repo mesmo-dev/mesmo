@@ -1,4 +1,4 @@
-"""Linear electric grid models."""
+"""Linear electric grid models module."""
 
 from multimethod import multimethod
 import numpy as np
@@ -14,7 +14,71 @@ logger = fledge.config.get_logger(__name__)
 
 
 class LinearElectricGridModel(object):
-    """Linear electric grid model object."""
+    """Linear electric grid model object consisting of the sensitivity matrices for voltage / voltage magnitude /
+    squared branch power / active loss / reactive loss by changes in nodal wye power / nodal delta power.
+
+    :syntax:
+        - ``LinearElectricGridModel(electric_grid_model, power_flow_solution)``: Instantiate linear electric grid model
+          object for given `electric_grid_model` and `power_flow_solution`.
+        - ``LinearElectricGridModel(scenario_name)``: Instantiate linear electric grid model for given `scenario_name`.
+          The required `electric_grid_model` is obtained for given `scenario_name` and the `power_flow_solution` is
+          obtained for nominal load conditions.
+
+    Parameters:
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
+        power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Power flow solution object.
+        scenario_name (str): FLEDGE scenario name.
+
+    Attributes:
+        sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
+            by active wye power vector.
+        sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
+            vector by reactive wye power vector.
+        sensitivity_voltage_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
+            by active delta power vector.
+        sensitivity_voltage_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
+            vector by reactive delta power vector.
+        sensitivity_voltage_magnitude_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for voltage
+            magnitude vector by active wye power vector.
+        sensitivity_voltage_magnitude_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by reactive wye power vector.
+        sensitivity_voltage_magnitude_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by active delta power vector.
+        sensitivity_voltage_magnitude_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by reactive delta power vector.
+        sensitivity_branch_power_1_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by active wye power vector.
+        sensitivity_branch_power_1_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by reactive wye power vector.
+        sensitivity_branch_power_1_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by active delta power vector.
+        sensitivity_branch_power_1_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by reactive delta power vector.
+        sensitivity_branch_power_2_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by active wye power vector.
+        sensitivity_branch_power_2_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by reactive wye power vector.
+        sensitivity_branch_power_2_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by active delta power vector.
+        sensitivity_branch_power_2_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by reactive delta power vector.
+        sensitivity_loss_active_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by active wye power vector.
+        sensitivity_loss_active_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by reactive wye power vector.
+        sensitivity_loss_active_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by active delta power vector.
+        sensitivity_loss_active_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by active delta power vector.
+        sensitivity_loss_reactive_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by active wye power vector.
+        sensitivity_loss_reactive_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by reactive wye power vector.
+        sensitivity_loss_reactive_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by active delta power vector.
+        sensitivity_loss_reactive_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by reactive delta power vector.
+    """
 
     sensitivity_voltage_by_power_wye_active: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_wye_reactive: scipy.sparse.spmatrix
@@ -46,11 +110,6 @@ class LinearElectricGridModel(object):
             self,
             scenario_name: str,
     ):
-        """Instantiate linear electric grid model object for given `scenario_name`.
-
-        - Power flow solution is obtained for nominal loading conditions
-          via fixed point solution.
-        """
 
         # Obtain electric grid model.
         electric_grid_model = (
@@ -81,9 +140,6 @@ class LinearElectricGridModel(object):
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     ):
-        """Instantiate linear electric grid model object for given `electric_grid_model`
-        and `power_flow_solution`.
-        """
 
         # Obtain vectors.
         node_voltage_vector = power_flow_solution.node_voltage_vector

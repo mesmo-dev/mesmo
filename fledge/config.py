@@ -14,7 +14,7 @@ results_path = os.path.join(fledge_path, 'results')
 timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 # Optimization solver settings.
-solver_name = 'gurobi'  # Must be valid input string for Pyomo's `SolverFactory`.
+solver_name = 'glpk'  # Must be valid input string for Pyomo's `SolverFactory`.
 solver_output = False  # If True, activate verbose solver output.
 
 # Plotting settings.

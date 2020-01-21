@@ -13,14 +13,14 @@ logger = fledge.config.get_logger(__name__)
 
 class TestDatabaseInterface(unittest.TestCase):
 
-    def test_create_database(self):
+    def test_recreate_database(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.create_database(
+        fledge.database_interface.recreate_database(
             database_path=os.path.join(fledge.config.data_path, 'database.sqlite')
         )
         time_end = time.time()
-        logger.info(f"Test create_database: Completed in {round(time_end - time_start, 6)} seconds.")
+        logger.info(f"Test recreate_database: Completed in {round(time_end - time_start, 6)} seconds.")
 
     def test_connect_database(self):
         # Define expected result.

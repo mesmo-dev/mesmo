@@ -8,6 +8,8 @@ import os
 # Path definitions.
 fledge_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
 data_path = os.path.join(fledge_path, 'data')
+database_path = os.path.join(data_path, 'database.sqlite')
+# database_path = 'file:database?mode=memory&cache=shared'
 results_path = os.path.join(fledge_path, 'results')
 
 # Generate timestamp (for saving results with timestamp).

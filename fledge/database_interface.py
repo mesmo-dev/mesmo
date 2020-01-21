@@ -11,12 +11,12 @@ import fledge.config
 logger = fledge.config.get_logger(__name__)
 
 
-def create_database(
-        database_path,
-        database_schema_path=os.path.join(fledge.config.fledge_path, 'fledge', 'database_schema.sql'),
-        csv_path=fledge.config.data_path
-):
-    """Create SQLITE database from SQL schema file and CSV files."""
+def recreate_database(
+        database_path: str = fledge.config.database_path,
+        database_schema_path: str = os.path.join(fledge.config.fledge_path, 'fledge', 'database_schema.sql'),
+        csv_path: str = fledge.config.data_path
+) -> None:
+    """Recreate SQLITE database from SQL schema file and CSV files."""
 
     # Connect SQLITE database (creates file, if none).
     database_connection = sqlite3.connect(database_path)
@@ -62,14 +62,14 @@ def create_database(
 
 
 def connect_database(
-        database_path=os.path.join(fledge.config.data_path, 'database.sqlite'),
-        overwrite_database=False
-):
+        database_path: str = fledge.config.database_path
+) -> sqlite3.Connection:
     """Connect to the database at given `data_path` and return connection handle."""
 
-    # Create database, if `overwrite_database` or no database exists.
-    if overwrite_database or not os.path.isfile(database_path):
-        create_database(
+    # Recreate database, if no database exists.
+    if not os.path.isfile(database_path):
+        logger.debug(f"Database does not exist and is recreated at: {database_path}")
+        recreate_database(
             database_path=database_path
         )
 

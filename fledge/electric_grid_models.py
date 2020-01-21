@@ -923,6 +923,7 @@ class ElectricGridModel(object):
                     np.transpose([
                         voltage
                         * voltage_phase_factors[phases]
+                        / np.sqrt(3)
                     ])
                 )
         elif voltage_no_load_method == 'by_calculation':
@@ -951,6 +952,7 @@ class ElectricGridModel(object):
                 np.transpose([
                     voltage
                     * voltage_phase_factors[phases]
+                    / np.sqrt(3)
                 ])
             )
 

@@ -47,7 +47,7 @@ def main():
 
     # Define trust-region parameters.
     delta = 0.1  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
-    delta_max = 1.0  # 4.0 / 1.0
+    delta_max = 0.2  # 4.0 / 1.0
     gamma = 0.5  # 0.5 / range: (0, 1)
     eta = 0.1  # 0.1 / range: (0, 0.5]
     tau = 0.1  # 0.1 / range: [0, 0.25)
@@ -280,6 +280,21 @@ def main():
         )
 
         # Trust region.
+
+        # Load.
+        for load_index, load_name in enumerate(electric_grid_index.load_names):
+            optimization_problem.constraints.add(
+                optimization_problem.load_active_power_vector_change[load_name]
+                >=
+                -delta * np.real(electric_grid_model.load_power_vector_nominal.ravel()[load_index])
+            )
+            optimization_problem.constraints.add(
+                optimization_problem.load_active_power_vector_change[load_name]
+                <=
+                delta * np.real(electric_grid_model.load_power_vector_nominal.ravel()[load_index])
+            )
+
+        # Voltage.
         for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
             optimization_problem.constraints.add(
                 optimization_problem.voltage_magnitude_vector_change[node_phase]
@@ -291,6 +306,51 @@ def main():
                 <=
                 delta * np.abs(electric_grid_model.node_voltage_vector_no_load.ravel()[node_phase_index])
             )
+
+        # Branch flows.
+        for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
+            optimization_problem.constraints.add(
+                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+                >=
+                -delta * np.abs(power_flow_solutions[0].branch_power_vector_1.ravel()[branch_phase_index] ** 2)
+            )
+            optimization_problem.constraints.add(
+                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+                <=
+                delta * np.abs(power_flow_solutions[0].branch_power_vector_1.ravel()[branch_phase_index] ** 2)
+            )
+            optimization_problem.constraints.add(
+                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
+                >=
+                -delta * np.abs(power_flow_solutions[0].branch_power_vector_2.ravel()[branch_phase_index] ** 2)
+            )
+            optimization_problem.constraints.add(
+                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
+                <=
+                delta * np.abs(power_flow_solutions[0].branch_power_vector_2.ravel()[branch_phase_index] ** 2)
+            )
+
+        # Loss.
+        optimization_problem.constraints.add(
+            optimization_problem.loss_active_change
+            >=
+            -delta * np.sum(np.real(power_flow_solutions[0].loss))
+        )
+        optimization_problem.constraints.add(
+            optimization_problem.loss_active_change
+            <=
+            delta * np.sum(np.real(power_flow_solutions[0].loss))
+        )
+        optimization_problem.constraints.add(
+            optimization_problem.loss_reactive_change
+            >=
+            -delta * np.sum(np.imag(power_flow_solutions[0].loss))
+        )
+        optimization_problem.constraints.add(
+            optimization_problem.loss_reactive_change
+            <=
+            delta * np.sum(np.imag(power_flow_solutions[0].loss))
+        )
 
         # Define objective.
         cost = 0.0

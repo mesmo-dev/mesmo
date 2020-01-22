@@ -44,7 +44,7 @@ def main():
         )
     )
 
-    # Obtain nodal power vectors assuming nominal loading conditions.
+    # Obtain reference node power vectors.
     node_power_vector_wye_initial = (
         np.transpose([
             electric_grid_model.load_incidence_wye_matrix
@@ -130,20 +130,12 @@ def main():
     # Evaluate linear model errors for each power multiplier.
     for (multiplier_index, power_multiplier) in enumerate(power_multipliers):
 
-        # Obtain nodal power vectors depending on multiplier.
-        node_power_vector_wye_candidate = power_multiplier * node_power_vector_wye_initial
-        node_power_vector_delta_candidate = power_multiplier * node_power_vector_delta_initial
-        node_power_vector_wye_active_candidate = np.real(node_power_vector_wye_candidate)
-        node_power_vector_wye_reactive_candidate = np.imag(node_power_vector_wye_candidate)
-        node_power_vector_delta_active_candidate = np.real(node_power_vector_delta_candidate)
-        node_power_vector_delta_reactive_candidate = np.imag(node_power_vector_delta_candidate)
-
-        # Obtain fixed-point power flow solution.
+        # Obtain fixed-point power flow solution depending on multiplier.
         power_flow_solution = (
             fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
                 electric_grid_model,
-                node_power_vector_wye_candidate,
-                node_power_vector_delta_candidate
+                power_multiplier * node_power_vector_wye_initial,
+                power_multiplier * node_power_vector_delta_initial
             )
         )
         node_voltage_vector_power_flow[:, multiplier_index] = (
@@ -165,68 +157,78 @@ def main():
             np.imag([power_flow_solution.loss]).flatten()
         )
 
+        # Obtain node power vectors depending on multiplier.
+        node_power_vector_wye_active_change = (power_multiplier - 1) * np.real(node_power_vector_wye_initial)
+        node_power_vector_wye_reactive_change = (power_multiplier - 1) * np.imag(node_power_vector_wye_initial)
+        node_power_vector_delta_active_change = (power_multiplier - 1) * np.real(node_power_vector_delta_initial)
+        node_power_vector_delta_reactive_change = (power_multiplier - 1) * np.imag(node_power_vector_delta_initial)
+
         # Calculate approximate voltage, power vectors and total losses.
         node_voltage_vector_linear_model[:, multiplier_index] = (
-            node_voltage_vector_no_load
+            power_flow_solution_initial.node_voltage_vector
             + linear_electric_grid_model.sensitivity_voltage_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_voltage_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_voltage_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_voltage_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
         node_voltage_vector_magnitude_linear_model[:, multiplier_index] = (
-            abs(node_voltage_vector_no_load)
+            np.abs(power_flow_solution_initial.node_voltage_vector)
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
         branch_power_vector_1_squared_linear_model[:, multiplier_index] = (
-            linear_electric_grid_model.sensitivity_branch_power_1_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)
+            + linear_electric_grid_model.sensitivity_branch_power_1_by_power_wye_active
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_branch_power_1_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_branch_power_1_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_branch_power_1_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
         branch_power_vector_2_squared_linear_model[:, multiplier_index] = (
-            linear_electric_grid_model.sensitivity_branch_power_2_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            np.abs(power_flow_solution_initial.branch_power_vector_2 ** 2)
+            + linear_electric_grid_model.sensitivity_branch_power_2_by_power_wye_active
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_branch_power_2_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_branch_power_2_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_branch_power_2_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
         loss_active_linear_model[multiplier_index] = (
-            linear_electric_grid_model.sensitivity_loss_active_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            np.real(power_flow_solution_initial.loss)
+            + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_active
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_loss_active_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_loss_active_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
         loss_reactive_linear_model[multiplier_index] = (
-            linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_active
-            @ node_power_vector_wye_active_candidate
+            np.imag(power_flow_solution_initial.loss)
+            + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_active
+            @ node_power_vector_wye_active_change
             + linear_electric_grid_model.sensitivity_loss_reactive_by_power_wye_reactive
-            @ node_power_vector_wye_reactive_candidate
+            @ node_power_vector_wye_reactive_change
             + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_active
-            @ node_power_vector_delta_active_candidate
+            @ node_power_vector_delta_active_change
             + linear_electric_grid_model.sensitivity_loss_reactive_by_power_delta_reactive
-            @ node_power_vector_delta_reactive_candidate
+            @ node_power_vector_delta_reactive_change
         ).flatten()
 
         # Calculate errors for voltage, power vectors and total losses.

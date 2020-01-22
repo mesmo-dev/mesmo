@@ -88,7 +88,6 @@ def main():
 
         # Instantiate / reset optimization problem.
         optimization_problem = pyo.ConcreteModel()
-        optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
 
         # Define variables.
 
@@ -375,9 +374,12 @@ def main():
         )
 
         # Solve optimization problem.
+        optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
         optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
         optimization_problems.append(optimization_problem)
-        print(f"optimization_result.solver.termination_condition = {optimization_result.solver.termination_condition}")
+        if optimization_result.solver.termination_condition is not pyo.TerminationCondition.optimal:
+            raise Exception(f"Invalid solver termination condition: {optimization_result.solver.termination_condition}")
+
         # optimization_problem.display()
 
         # Obtain load change value.

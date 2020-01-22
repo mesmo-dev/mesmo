@@ -82,9 +82,7 @@ def main():
             # Store objective value.
             objective_power_flow = (
                 sum(np.real(load_power_vector_reference_candidate).ravel())
-                + sum(np.imag(load_power_vector_reference_candidate).ravel())
                 + sum(np.real(power_flow_solution_candidate.loss.ravel()))
-                # + sum(np.imag(power_flow_solution_candidate.loss.ravel()))
             )
             objective_power_flows.append(objective_power_flow)
 
@@ -164,13 +162,10 @@ def main():
             )
             optimization_problem.constraints.add(
                 optimization_problem.load_reactive_power_vector[load_name]
-                >=
-                0.5 * np.imag(electric_grid_model.load_power_vector_nominal[load_index])
-            )
-            optimization_problem.constraints.add(
-                optimization_problem.load_reactive_power_vector[load_name]
-                <=
-                1.5 * np.imag(electric_grid_model.load_power_vector_nominal[load_index])
+                ==
+                optimization_problem.load_active_power_vector[load_name]
+                * np.imag(electric_grid_model.load_power_vector_nominal[load_index])
+                / np.real(electric_grid_model.load_power_vector_nominal[load_index])
             )
 
         for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
@@ -371,22 +366,16 @@ def main():
         # Define objective.
         cost = 0.0
         cost += (
-            # Active / reactive load power.
+            # Active load power.
             pyo.quicksum(
                 optimization_problem.load_active_power_vector[load_name]
                 for load_name in electric_grid_index.load_names
             )
-            + pyo.quicksum(
-                optimization_problem.load_reactive_power_vector[load_name]
-                for load_name in electric_grid_index.load_names
-            )
         )
         cost += (
-            # Active / reactive loss.
+            # Active loss.
             float(sum(np.real(power_flow_solution.loss.ravel())))
             + optimization_problem.loss_active_change
-            # + float(sum(np.imag(power_flow_solution.loss.ravel())))
-            # + optimization_problem.loss_reactive_change
         )
         optimization_problem.objective = (
             pyo.Objective(
@@ -398,6 +387,7 @@ def main():
         # Solve optimization problem.
         optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
         optimization_problems.append(optimization_problem)
+        print(f"optimization_result.solver.termination_condition = {optimization_result.solver.termination_condition}")
         # optimization_problem.display()
 
         # Obtain load change value.
@@ -447,9 +437,7 @@ def main():
             # Obtain objective values.
             objective_power_flow = (
                 sum(np.real(load_power_vector_reference_candidate).ravel())
-                + sum(np.imag(load_power_vector_reference_candidate).ravel())
                 + sum(np.real(power_flow_solution_candidate.loss.ravel()))
-                # + sum(np.imag(power_flow_solution_candidate.loss.ravel()))
             )
             objective_linear_model = (
                 pyo.value(optimization_problem.objective)

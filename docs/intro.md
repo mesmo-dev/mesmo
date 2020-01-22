@@ -6,6 +6,7 @@
 
 1. Check requirements:
     - Python 3.7
+    - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository.
 3. In your Python environment, run `pip install -e path_to_fledge_repository`.
 
@@ -31,6 +32,7 @@ If you are running into errors when installing or running FLEDGE, this may be du
 1. Check requirements:
     - Windows 10
     - [Anaconda Distribution](https://www.anaconda.com/distribution/) (Python 3.x version)
+    - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository.
 4. In Anaconda Prompt, run:
     1. `conda env create -f path_to_fledge_repository/environment.yml`

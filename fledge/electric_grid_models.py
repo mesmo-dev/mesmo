@@ -14,9 +14,9 @@ logger = fledge.config.get_logger(__name__)
 
 
 class ElectricGridIndex(object):
-    """Electric grid index object consisting of the nodal / branch / load dimensions, the index sets
-    for node names / branch names / load names / phases / node types / branch types and indexing dictionaries
-    which help to obtain the matrix / vector indexes by node names / branch names / load names / phases /
+    """Electric grid index object consisting of the nodal / branch / der dimensions, the index sets
+    for node names / branch names / der names / phases / node types / branch types and indexing dictionaries
+    which help to obtain the matrix / vector indexes by node names / branch names / der names / phases /
     node types / branch types.
 
     :syntax:
@@ -31,7 +31,7 @@ class ElectricGridIndex(object):
     Attributes:
         node_dimension (int): Dimension of nodal matrices / vectors.
         branch_dimension (int): Dimension of branch matrices / vectors.
-        load_dimension (int): Dimension of load matrices / vectors.
+        der_dimension (int): Dimension of der matrices / vectors.
         phases (pd.Index): Index set of the phases.
         node_names (pd.Index): Index set of the node names.
         node_types (pd.Index): Index set of the node types.
@@ -43,21 +43,21 @@ class ElectricGridIndex(object):
         branch_types (pd.Index): Index set of the branch types.
         branches_phases (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
             corresponding to `branch_dimension`.
-        load_names (pd.Index): Index set of the load names.
+        der_names (pd.Index): Index set of the der names.
         node_by_node_name (dict): Index dictionary for `node_dimension` / `nodes_phases` by node name.
         node_by_phase (dict): Index dictionary for `node_dimension` / `nodes_phases` by phase.
         node_by_node_type (dict): Index dictionary for `node_dimension` / `nodes_phases` by node type.
-        node_by_load_name (dict): Index dictionary for `node_dimension` / `nodes_phases` by load name.
+        node_by_der_name (dict): Index dictionary for `node_dimension` / `nodes_phases` by der name.
         branch_by_line_name (dict): Index dictionary for `branch_dimension` / `branches_phases` by line name.
         branch_by_transformer_name (dict): Index dictionary for `branch_dimension` / `branches_phases`
             by transformer name.
         branch_by_phase (dict): Index dictionary for `branch_dimension` / `branches_phases` by phase.
-        load_by_load_name (dict): Index dictionary for `load_dimension` / `load_names` by load name.
+        der_by_der_name (dict): Index dictionary for `der_dimension` / `der_names` by der name.
     """
 
     node_dimension: int
     branch_dimension: int
-    load_dimension: int
+    der_dimension: int
     phases: pd.Index
     node_names: pd.Index
     node_types: pd.Index
@@ -67,15 +67,15 @@ class ElectricGridIndex(object):
     branch_names: pd.Index
     branch_types: pd.Index
     branches_phases: pd.Index
-    load_names: pd.Index
+    der_names: pd.Index
     node_by_node_name: dict
     node_by_phase: dict
     node_by_node_type: dict
-    node_by_load_name: dict
+    node_by_der_name: dict
     branch_by_line_name: dict
     branch_by_transformer_name: dict
     branch_by_phase: dict
-    load_by_load_name: dict
+    der_by_der_name: dict
 
     @multimethod
     def __init__(
@@ -151,12 +151,12 @@ class ElectricGridIndex(object):
         )
         self.branch_dimension = line_dimension + transformer_dimension
 
-        # Define load dimension, i.e., number of all loads, which
-        # will be the second dimension of the load incidence matrix.
+        # Define der dimension, i.e., number of all ders, which
+        # will be the second dimension of the der incidence matrix.
         # - Nodes are sorted to match the order returned from `fledge.power_flow_solvers.get_voltage_opendss`
         #   to enable comparing results.
-        self.load_dimension = (
-            electric_grid_data.electric_grid_loads.shape[0]
+        self.der_dimension = (
+            electric_grid_data.electric_grid_ders.shape[0]
         )
 
         # Create `nodes` data frame, i.e., collection of all phases of all nodes
@@ -282,7 +282,7 @@ class ElectricGridIndex(object):
         self.branch_names = pd.Index(branches['branch_name'])
         self.branch_types = pd.Index(['line', 'transformer'])
         self.branches_phases = pd.Index(zip(branches['branch_name'], branches['phase'], branches['branch_type']))
-        self.load_names = pd.Index(electric_grid_data.electric_grid_loads['load_name'])
+        self.der_names = pd.Index(electric_grid_data.electric_grid_ders['der_name'])
 
         # Generate indexing dictionaries for the nodal admittance matrix,
         # i.e., for all phases of all nodes.
@@ -304,25 +304,25 @@ class ElectricGridIndex(object):
         self.node_by_node_type = dict.fromkeys(self.node_types)
         for node_type in self.node_types:
             self.node_by_node_type[node_type] = np.nonzero(nodes['node_type'] == node_type)[0].tolist()
-        # Index by load name.
-        self.node_by_load_name = dict.fromkeys(self.load_names)
-        # TODO: Find a more efficient way to represent load / node / phase comparison.
-        for load_name in self.load_names:
-            load_phases = (
+        # Index by der name.
+        self.node_by_der_name = dict.fromkeys(self.der_names)
+        # TODO: Find a more efficient way to represent der / node / phase comparison.
+        for der_name in self.der_names:
+            der_phases = (
                 np.where(
                     [
-                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_1_connected'] == 1,
-                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_2_connected'] == 1,
-                        electric_grid_data.electric_grid_loads.at[load_name, 'is_phase_3_connected'] == 1
+                        electric_grid_data.electric_grid_ders.at[der_name, 'is_phase_1_connected'] == 1,
+                        electric_grid_data.electric_grid_ders.at[der_name, 'is_phase_2_connected'] == 1,
+                        electric_grid_data.electric_grid_ders.at[der_name, 'is_phase_3_connected'] == 1
                     ],
                     ['1', '2', '3'],
                     [None, None, None]
                 )
             )
-            self.node_by_load_name[load_name] = (
+            self.node_by_der_name[der_name] = (
                 np.nonzero(
-                    (nodes['node_name'] == electric_grid_data.electric_grid_loads.at[load_name, 'node_name'])
-                    & (nodes['phase'].isin(load_phases))
+                    (nodes['node_name'] == electric_grid_data.electric_grid_ders.at[der_name, 'node_name'])
+                    & (nodes['phase'].isin(der_phases))
                 )[0].tolist()
             )
 
@@ -356,17 +356,17 @@ class ElectricGridIndex(object):
         for phase in self.phases:
             self.branch_by_phase[phase] = np.nonzero(branches['phase'] == phase)[0].tolist()
 
-        # Generate indexing dictionary for the load incidence matrix.
+        # Generate indexing dictionary for the der incidence matrix.
 
-        # Index by load name.
-        self.load_by_load_name = (
-            dict(zip(self.load_names, np.arange(len(self.load_names))[np.newaxis].transpose().tolist()))
+        # Index by der name.
+        self.der_by_der_name = (
+            dict(zip(self.der_names, np.arange(len(self.der_names))[np.newaxis].transpose().tolist()))
         )
 
 
 class ElectricGridModel(object):
     """Electric grid model object consisting of nodal admittance / transformation matrices, branch admittance /
-    incidence matrices, load incidence matrices and no load voltage vector as well as nominal load vector.
+    incidence matrices, der incidence matrices and no load voltage vector as well as nominal power vector.
 
     :syntax:
         - ``ElectricGridModel(electric_grid_data)``: Instantiate electric grid model for given
@@ -393,10 +393,10 @@ class ElectricGridModel(object):
         branch_admittance_2_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'to' direction.
         branch_incidence_1_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'from' direction.
         branch_incidence_2_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'to' direction.
-        load_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' loads.
-        load_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' loads.
-        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no-load conditions.
-        load_power_vector_nominal (np.ndarray): Load power vector at nominal-load conditions.
+        der_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' ders.
+        der_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' ders.
+        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no load conditions.
+        der_power_vector_nominal (np.ndarray): Load power vector at nominal power conditions.
     """
 
     # Define expected attribute types.
@@ -407,10 +407,10 @@ class ElectricGridModel(object):
     branch_admittance_2_matrix: scipy.sparse.spmatrix
     branch_incidence_1_matrix: scipy.sparse.spmatrix
     branch_incidence_2_matrix: scipy.sparse.spmatrix
-    load_incidence_wye_matrix: scipy.sparse.spmatrix
-    load_incidence_delta_matrix: scipy.sparse.spmatrix
+    der_incidence_wye_matrix: scipy.sparse.spmatrix
+    der_incidence_delta_matrix: scipy.sparse.spmatrix
     node_voltage_vector_no_load: np.ndarray
-    load_power_vector_nominal: np.ndarray
+    der_power_vector_nominal: np.ndarray
 
     @multimethod
     def __init__(
@@ -436,7 +436,7 @@ class ElectricGridModel(object):
         self.index = ElectricGridIndex(electric_grid_data)
 
         # Define sparse matrices for nodal admittance, nodal transformation,
-        # branch admittance, branch incidence and load matrix matrix entries.
+        # branch admittance, branch incidence and der incidence matrix entries.
         self.node_admittance_matrix = (
              scipy.sparse.dok_matrix((self.index.node_dimension, self.index.node_dimension), dtype=np.complex)
         )
@@ -455,11 +455,11 @@ class ElectricGridModel(object):
         self.branch_incidence_2_matrix = (
              scipy.sparse.dok_matrix((self.index.branch_dimension, self.index.node_dimension), dtype=np.int)
         )
-        self.load_incidence_wye_matrix = (
-             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.load_dimension), dtype=np.float)
+        self.der_incidence_wye_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.der_dimension), dtype=np.float)
         )
-        self.load_incidence_delta_matrix = (
-             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.load_dimension), dtype=np.float)
+        self.der_incidence_delta_matrix = (
+             scipy.sparse.dok_matrix((self.index.node_dimension, self.index.der_dimension), dtype=np.float)
         )
 
         # Add lines to admittance, transformation and incidence matrices.
@@ -827,54 +827,54 @@ class ElectricGridModel(object):
             # Add node transformation matrix to full transformation matrix.
             self.node_transformation_matrix[np.ix_(node_index, node_index)] = transformation_matrix
 
-        # Add loads to load incidence matrix.
-        for load_index, load in electric_grid_data.electric_grid_loads.iterrows():
-            # Obtain load connection type.
-            connection = load['connection']
+        # Add ders to der incidence matrix.
+        for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
+            # Obtain der connection type.
+            connection = der['connection']
 
-            # Obtain indexes for positioning load in incidence matrix.
-            node_index = self.index.node_by_load_name[load['load_name']]
-            load_index = self.index.load_by_load_name[load['load_name']]
+            # Obtain indexes for positioning der in incidence matrix.
+            node_index = self.index.node_by_der_name[der['der_name']]
+            der_index = self.index.der_by_der_name[der['der_name']]
 
             if connection == "wye":
                 # Define incidence matrix entries.
-                # - Wye loads are represented as balanced loads across all
+                # - Wye ders are represented as balanced ders across all
                 #   their connected phases.
                 incidence_matrix = (
-                    - np.ones((len(node_index), 1), dtype=np.float)
+                    np.ones((len(node_index), 1), dtype=np.float)
                     / len(node_index)
                 )
-                self.load_incidence_wye_matrix[np.ix_(node_index, load_index)] = incidence_matrix
+                self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             elif connection == "delta":
-                # Obtain phases of the delta load.
+                # Obtain phases of the delta der.
                 phases = (
                     np.nonzero([
-                        load['is_phase_1_connected'] == 1,
-                        load['is_phase_2_connected'] == 1,
-                        load['is_phase_3_connected'] == 1
+                        der['is_phase_1_connected'] == 1,
+                        der['is_phase_2_connected'] == 1,
+                        der['is_phase_3_connected'] == 1
                     ])[0].tolist()
                 )
 
-                # Select connection node based on phase arrangement of delta load.
-                # - Delta loads must be single-phase.
+                # Select connection node based on phase arrangement of delta der.
+                # - Delta ders must be single-phase.
                 if phases in ([1, 2], [2, 3]):
                     node_index = [node_index[1]]
                 elif phases == [1, 3]:
                     node_index = [node_index[2]]
                 else:
-                    logger.error(f"Unknown delta load phase arrangement: {phases}")
+                    logger.error(f"Unknown delta der phase arrangement: {phases}")
 
                 # Define incidence matrix entry.
-                # - Delta loads are assumed to be single-phase.
-                incidence_matrix = np.array([- 1])
-                self.load_incidence_wye_matrix[np.ix_(node_index, load_index)] = incidence_matrix
+                # - Delta ders are assumed to be single-phase.
+                incidence_matrix = np.array([1])
+                self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             else:
-                logger.error(f"Unknown load connection type: {connection}")
+                logger.error(f"Unknown der connection type: {connection}")
 
         # Convert sparse matrices for nodal admittance, nodal transformation,
-        # branch admittance, branch incidence and load incidence matrices.
+        # branch admittance, branch incidence and der incidence matrices.
         # - Converting from DOK to CSR format for more efficient calculations
         #   according to <https://docs.scipy.org/doc/scipy/reference/sparse.html>.
         self.node_admittance_matrix = self.node_admittance_matrix.tocsr(copy=False)
@@ -883,16 +883,16 @@ class ElectricGridModel(object):
         self.branch_admittance_2_matrix = self.branch_admittance_2_matrix.tocsr(copy=False)
         self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr(copy=False)
         self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr(copy=False)
-        self.load_incidence_wye_matrix = self.load_incidence_wye_matrix.tocsr(copy=False)
-        self.load_incidence_delta_matrix = self.load_incidence_delta_matrix.tocsr(copy=False)
+        self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr(copy=False)
+        self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr(copy=False)
 
-        # Construct no-load voltage vector for the grid.
-        # - The nodal no-load voltage vector can be constructed by
+        # Construct no load voltage vector for the grid.
+        # - The nodal no load voltage vector can be constructed by
         #   1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
         #   definition in the database is taken, or by
-        #   2) `voltage_no_load_method="by_calculation"`, i.e., the no-load voltage is
+        #   2) `voltage_no_load_method="by_calculation"`, i.e., the no load voltage is
         #   calculated from the source node voltage and the nodal admittance matrix.
-        # - TODO: Check if no-load voltage divide by sqrt(3) is correct.
+        # - TODO: Check if no load voltage divide by sqrt(3) is correct.
         self.node_voltage_vector_no_load = (
             np.zeros((self.index.node_dimension, 1), dtype=np.complex)
         )
@@ -956,8 +956,8 @@ class ElectricGridModel(object):
                 ])
             )
 
-            # Calculate all remaining no-load node voltages.
-            # TODO: Debug no-load voltage calculation.
+            # Calculate all remaining no load node voltages.
+            # TODO: Debug no load voltage calculation.
             self.node_voltage_vector_no_load[self.index.node_by_node_type['no_source']] = (
                 np.transpose([
                     scipy.sparse.linalg.spsolve(
@@ -978,12 +978,13 @@ class ElectricGridModel(object):
                 ])
             )
 
-        # Construct nominal load power vector.
-        self.load_power_vector_nominal = (
+        # Construct nominal der power vector.
+        self.der_power_vector_nominal = (
+            # TODO: Remove load multiplier.
             electric_grid_data.electric_grid['load_multiplier']
             * (
-                electric_grid_data.electric_grid_loads.loc[:, 'active_power']
-                + 1j * electric_grid_data.electric_grid_loads.loc[:, 'reactive_power']
+                electric_grid_data.electric_grid_ders.loc[:, 'active_power']
+                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
             ).values
         )
 
@@ -1116,7 +1117,7 @@ def initialize_opendss_model(
 
     # Define lines.
     for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
-        # Obtain number of phases for the load.
+        # Obtain number of phases for the line.
         n_phases = (
             int(sum([
                 line['is_phase_1_connected'],
@@ -1264,38 +1265,39 @@ def initialize_opendss_model(
         logger.debug(f"opendss_command_string = {opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
-    # Define loads.
-    for load_index, load in electric_grid_data.electric_grid_loads.iterrows():
-        # Obtain number of phases for the load.
+    # Define ders.
+    # TODO: At the moment, all ders are modelled as loads in OpenDSS.
+    for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
+        # Obtain number of phases for the der.
         n_phases = (
             int(sum([
-                load['is_phase_1_connected'],
-                load['is_phase_2_connected'],
-                load['is_phase_3_connected']
+                der['is_phase_1_connected'],
+                der['is_phase_2_connected'],
+                der['is_phase_3_connected']
             ]))
         )
 
-        # Obtain nominal voltage level for the load.
-        voltage = electric_grid_data.electric_grid_nodes.at[load['node_name'], 'voltage']
-        # Convert to line-to-neutral voltage for single-phase loads, according to:
+        # Obtain nominal voltage level for the der.
+        voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
+        # Convert to line-to-neutral voltage for single-phase ders, according to:
         # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
         if n_phases == 1:
-            voltage /= 3 ** 0.5
+            voltage /= np.sqrt(3)
 
         # Add node connection, model type, voltage, nominal power
         # to OpenDSS command string.
         opendss_command_string = (
-            f"new load.{load['load_name']}"
-            # TODO: Check if any difference without ".0" for wye-connected loads.
-            + f" bus1={load['node_name']}{get_node_phases_string(load)}"
+            f"new load.{der['der_name']}"
+            # TODO: Check if any difference without ".0" for wye-connected ders.
+            + f" bus1={der['node_name']}{get_node_phases_string(der)}"
             + f" phases={n_phases}"
-            + f" conn={load['connection']}"
+            + f" conn={der['connection']}"
             # All loads are modelled as constant P/Q according to:
             # OpenDSS Manual April 2018, page 150, "Model"
             + f" model=1"
             + f" kv={voltage / 1000}"
-            + f" kw={load['active_power'] / 1000}"
-            + f" kvar={load['reactive_power'] / 1000}"
+            + f" kw={- der['active_power'] / 1000}"
+            + f" kvar={- der['reactive_power'] / 1000}"
             # Set low V_min to avoid switching to impedance model according to:
             # OpenDSS Manual April 2018, page 150, "Vminpu"
             + f" vminpu=0.6"
@@ -1304,7 +1306,7 @@ def initialize_opendss_model(
             + f" vmaxpu=1.4"
         )
 
-        # Create load in OpenDSS.
+        # Create der in OpenDSS.
         logger.debug(f"opendss_command_string = {opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 

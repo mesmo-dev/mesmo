@@ -128,7 +128,7 @@ class ElectricGridData(object):
 
     electric_grid: pd.DataFrame
     electric_grid_nodes: pd.DataFrame
-    electric_grid_loads: pd.DataFrame
+    electric_grid_ders: pd.DataFrame
     electric_grid_lines: pd.DataFrame
     electric_grid_line_types: pd.DataFrame
     electric_grid_line_types_matrices: pd.DataFrame
@@ -172,10 +172,10 @@ class ElectricGridData(object):
             )
         )
         self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
-        self.electric_grid_loads = (
+        self.electric_grid_ders = (
             pd.read_sql(
                 """
-                SELECT * FROM electric_grid_loads
+                SELECT * FROM electric_grid_ders
                 WHERE electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -185,7 +185,7 @@ class ElectricGridData(object):
                 params=[scenario_name]
             )
         )
-        self.electric_grid_loads.index = self.electric_grid_loads['load_name']
+        self.electric_grid_ders.index = self.electric_grid_ders['der_name']
         self.electric_grid_lines = (
             pd.read_sql(
                 """
@@ -314,8 +314,8 @@ class FixedLoadData(object):
             pd.read_sql(
                 """
                 SELECT * FROM fixed_loads
-                JOIN electric_grid_loads USING (model_name)
-                WHERE model_type = 'fixed_load'
+                JOIN electric_grid_ders USING (model_name)
+                WHERE der_type = 'fixed_load'
                 AND electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -332,7 +332,7 @@ class FixedLoadData(object):
                 ]
             )
         )
-        self.fixed_loads.index = self.fixed_loads['load_name']
+        self.fixed_loads.index = self.fixed_loads['der_name']
 
         # Instantiate dictionary for unique `timeseries_name`.
         self.fixed_load_timeseries_dict = dict.fromkeys(self.fixed_loads['timeseries_name'].unique())
@@ -411,8 +411,8 @@ class EVChargerData(object):
             pd.read_sql(
                 """
                 SELECT * FROM ev_chargers
-                JOIN electric_grid_loads USING (model_name)
-                WHERE model_type = 'ev_charger'
+                JOIN electric_grid_ders USING (model_name)
+                WHERE der_type = 'ev_charger'
                 AND electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -429,7 +429,7 @@ class EVChargerData(object):
                 ]
             )
         )
-        self.ev_chargers.index = self.ev_chargers['load_name']
+        self.ev_chargers.index = self.ev_chargers['der_name']
 
         # Instantiate dictionary for unique `timeseries_name`.
         self.ev_charger_timeseries_dict = dict.fromkeys(self.ev_chargers['timeseries_name'].unique())
@@ -508,8 +508,8 @@ class FlexibleLoadData(object):
             pd.read_sql(
                 """
                 SELECT * FROM flexible_loads
-                JOIN electric_grid_loads USING (model_name)
-                WHERE model_type = 'flexible_load'
+                JOIN electric_grid_ders USING (model_name)
+                WHERE der_type = 'flexible_load'
                 AND electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -526,7 +526,7 @@ class FlexibleLoadData(object):
                 ]
             )
         )
-        self.flexible_loads.index = self.flexible_loads['load_name']
+        self.flexible_loads.index = self.flexible_loads['der_name']
 
         # Instantiate dictionary for unique `timeseries_name`.
         self.flexible_load_timeseries_dict = dict.fromkeys(self.flexible_loads['timeseries_name'].unique())

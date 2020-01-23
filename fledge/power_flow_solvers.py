@@ -23,21 +23,21 @@ def get_voltage_fixed_point(
     """
     Get nodal voltage vector by solving with the fixed point algorithm.
 
-    - Obtains nodal power vectors assuming nominal loading conditions from an
+    - Obtains nodal power vectors assuming nominal power conditions from an
       `electric_grid_model` object.
     """
 
-    # Obtain nodal power vectors assuming nominal loading conditions.
+    # Obtain nodal power vectors assuming nominal power conditions.
     node_power_vector_wye = (
         np.transpose([
-            electric_grid_model.load_incidence_wye_matrix
-            @ electric_grid_model.load_power_vector_nominal
+            electric_grid_model.der_incidence_wye_matrix
+            @ electric_grid_model.der_power_vector_nominal
         ])
     )
     node_power_vector_delta = (
         np.transpose([
-            electric_grid_model.load_incidence_delta_matrix
-            @ electric_grid_model.load_power_vector_nominal
+            electric_grid_model.der_incidence_delta_matrix
+            @ electric_grid_model.der_power_vector_nominal
         ])
     )
 
@@ -64,9 +64,9 @@ def get_voltage_fixed_point(
     - Takes nodal wye-power, delta-power vectors as inputs.
     - Obtains the nodal admittance, transformation matrices and
       initial nodal wye-power, delta-power and voltage vectors as well as
-      nodal no-load voltage vector without source nodes from an
+      nodal no load voltage vector without source nodes from an
       `electric_grid_model` object.
-    - Assumes no-load conditions for initial nodal power and voltage vectors.
+    - Assumes no load conditions for initial nodal power and voltage vectors.
     """
 
     # Obtain no-source variables for fixed point equation.
@@ -94,7 +94,7 @@ def get_voltage_fixed_point(
         electric_grid_model.node_voltage_vector_no_load[electric_grid_model.index.node_by_node_type['no_source']]
     )
 
-    # Define initial nodal power and voltage vectors as no-load conditions.
+    # Define initial nodal power and voltage vectors as no load conditions.
     node_power_vector_wye_initial_no_source = np.zeros(node_power_vector_wye_no_source.shape, dtype=complex)
     node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
     node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
@@ -212,7 +212,7 @@ def get_voltage_fixed_point(
 def get_voltage_opendss():
     """Get nodal voltage vector by solving OpenDSS model.
 
-    - OpenDSS model must be readily set up, with the desired power being set for all loads.
+    - OpenDSS model must be readily set up, with the desired power being set for all ders.
     """
 
     # Solve OpenDSS model.
@@ -321,7 +321,7 @@ def get_branch_power_fixed_point(
 def get_branch_power_opendss():
     """Get branch power vectors by solving OpenDSS model.
 
-    - OpenDSS model must be readily set up, with the desired power being set for all loads.
+    - OpenDSS model must be readily set up, with the desired power being set for all ders.
     """
 
     # Solve OpenDSS model.
@@ -438,7 +438,7 @@ def get_loss_fixed_point(
 def get_loss_opendss():
     """Get total loss by solving OpenDSS model.
 
-    - OpenDSS model must be readily set up, with the desired power being set for all loads.
+    - OpenDSS model must be readily set up, with the desired power being set for all ders.
     """
 
     # Solve OpenDSS model.
@@ -468,7 +468,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             scenario_name: str
     ):
         """Instantiate fixed point power flow solution object for given `scenario_name`
-        assuming nominal loading conditions.
+        assuming nominal power conditions.
         """
 
         # Obtain `electric_grid_model`.
@@ -482,37 +482,37 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel
     ):
         """Instantiate fixed point power flow solution object for given `electric_grid_model`
-        assuming nominal loading conditions.
+        assuming nominal power conditions.
         """
 
-        # Obtain `load_power_vector` assuming nominal loading conditions.
-        load_power_vector = electric_grid_model.load_power_vector_nominal
+        # Obtain `der_power_vector` assuming nominal power conditions.
+        der_power_vector = electric_grid_model.der_power_vector_nominal
 
         self.__init__(
             electric_grid_model,
-            load_power_vector
+            der_power_vector
         )
 
     @multimethod
     def __init__(
             self,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-            load_power_vector: np.ndarray
+            der_power_vector: np.ndarray
     ):
-        """Instantiate fixed point power flow solution object for given `electric_grid_model` and `load_power_vector`.
+        """Instantiate fixed point power flow solution object for given `electric_grid_model` and `der_power_vector`.
         """
 
         # Obtain node power vectors.
         node_power_vector_wye = (
             np.transpose([
-                electric_grid_model.load_incidence_wye_matrix
-                @ load_power_vector
+                electric_grid_model.der_incidence_wye_matrix
+                @ der_power_vector
             ])
         )
         node_power_vector_delta = (
             np.transpose([
-                electric_grid_model.load_incidence_delta_matrix
-                @ load_power_vector
+                electric_grid_model.der_incidence_delta_matrix
+                @ der_power_vector
             ])
         )
 

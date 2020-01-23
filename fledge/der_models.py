@@ -27,12 +27,12 @@ class FixedLoadModel(DERModel):
     def __init__(
             self,
             fixed_load_data: fledge.database_interface.FixedLoadData,
-            load_name: str
+            der_name: str
     ):
-        """Construct fixed load model object by `fixed_load_data` and `load_name`."""
+        """Construct fixed load model object by `fixed_load_data` and `der_name`."""
 
-        # Get fixed load data by `load_name`.
-        fixed_load = fixed_load_data.fixed_loads.loc[load_name, :]
+        # Get fixed load data by `der_name`.
+        fixed_load = fixed_load_data.fixed_loads.loc[der_name, :]
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -59,12 +59,12 @@ class EVChargerModel(DERModel):
     def __init__(
             self,
             ev_charger_data: fledge.database_interface.EVChargerData,
-            load_name: str
+            der_name: str
     ):
-        """Construct EV charger model object by `ev_charger_data` and `load_name`."""
+        """Construct EV charger model object by `ev_charger_data` and `der_name`."""
 
-        # Get fixed load data by `load_name`.
-        ev_charger = ev_charger_data.ev_chargers.loc[load_name, :]
+        # Get fixed load data by `der_name`.
+        ev_charger = ev_charger_data.ev_chargers.loc[der_name, :]
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -109,12 +109,12 @@ class FlexibleLoadModel(FlexibleDERModel):
     def __init__(
             self,
             flexible_load_data: fledge.database_interface.FlexibleLoadData,
-            load_name: str
+            der_name: str
     ):
-        """Construct flexible load model object by `flexible_load_data` and `load_name`."""
+        """Construct flexible load model object by `flexible_load_data` and `der_name`."""
 
-        # Get fixed load data by `load_name`.
-        flexible_load = flexible_load_data.flexible_loads.loc[load_name, :]
+        # Get fixed load data by `der_name`.
+        flexible_load = flexible_load_data.flexible_loads.loc[der_name, :]
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (

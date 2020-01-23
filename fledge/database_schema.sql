@@ -119,10 +119,10 @@ CREATE TABLE IF NOT EXISTS "electric_grid_switches" (
 	"is_closed"	INTEGER,
 	PRIMARY KEY("switch_name","electric_grid_name")
 );
-CREATE TABLE IF NOT EXISTS "electric_grid_loads" (
-	"load_name"	TEXT,
+CREATE TABLE IF NOT EXISTS "electric_grid_ders" (
+	"der_name"	TEXT,
 	"electric_grid_name"	TEXT,
-	"model_type"	TEXT,
+	"der_type"	TEXT,
 	"model_name"	TEXT,
 	"node_name"	TEXT,
 	"is_phase_0_connected"	INTEGER,
@@ -131,11 +131,9 @@ CREATE TABLE IF NOT EXISTS "electric_grid_loads" (
 	"is_phase_3_connected"	INTEGER,
 	"n_phases"	INTEGER,
 	"connection"	TEXT,
-	"load_model_opendss"	TEXT,
-	"voltage_minimum_pu"	REAL,
 	"active_power"	REAL,
 	"reactive_power"	REAL,
-	PRIMARY KEY("load_name","electric_grid_name")
+	PRIMARY KEY("der_name","electric_grid_name")
 );
 CREATE TABLE IF NOT EXISTS "electric_grid_lines" (
 	"line_name"	TEXT,

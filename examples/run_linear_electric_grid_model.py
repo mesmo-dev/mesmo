@@ -33,10 +33,10 @@ def main():
     # Obtain electric grid model.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
 
-    # Obtain power flow solution for nominal loading conditions.
+    # Obtain power flow solution for nominal power conditions.
     power_flow_solution_initial = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
 
-    # Obtain linear electric grid model for nominal loading conditions.
+    # Obtain linear electric grid model for nominal power conditions.
     linear_electric_grid_model = (
         fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -47,21 +47,21 @@ def main():
     # Obtain reference node power vectors.
     node_power_vector_wye_initial = (
         np.transpose([
-            electric_grid_model.load_incidence_wye_matrix
-            @ electric_grid_model.load_power_vector_nominal
+            electric_grid_model.der_incidence_wye_matrix
+            @ electric_grid_model.der_power_vector_nominal
         ])
     )
     node_power_vector_delta_initial = (
         np.transpose([
-            electric_grid_model.load_incidence_delta_matrix
-            @ electric_grid_model.load_power_vector_nominal
+            electric_grid_model.der_incidence_delta_matrix
+            @ electric_grid_model.der_power_vector_nominal
         ])
     )
 
-    # Obtain no-load voltage vector.
+    # Obtain no load voltage vector.
     node_voltage_vector_no_load = electric_grid_model.node_voltage_vector_no_load
 
-    # Define power vector multipliers for testing of linear model at different loading conditions.
+    # Define power vector multipliers for testing of linear model at different power conditions.
     power_multipliers = np.arange(-0.2, 1.2, 0.1)
 
     # Instantiate testing arrays.

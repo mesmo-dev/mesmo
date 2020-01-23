@@ -109,7 +109,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
           model object for given `electric_grid_model` and `power_flow_solution`.
         - ``LinearElectricGridModelGlobal(scenario_name)``: Instantiate linear electric grid model for given
           `scenario_name`. The required `electric_grid_model` is obtained for given `scenario_name` and the
-          `power_flow_solution` is obtained for nominal load conditions.
+          `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
         electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
@@ -178,16 +178,16 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.electric_grid_models.ElectricGridModel(scenario_name)
         )
 
-        # Obtain load power vector.
-        load_power_vector = (
-            electric_grid_model.load_power_vector_nominal
+        # Obtain der power vector.
+        der_power_vector = (
+            electric_grid_model.der_power_vector_nominal
         )
 
         # Obtain power flow solution.
         power_flow_solution = (
             fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
                 electric_grid_model,
-                load_power_vector
+                der_power_vector
             )
         )
 
@@ -202,7 +202,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     ):
-        # TODO: Validate linear model with delta loads.
+        # TODO: Validate linear model with delta ders.
 
         # Obtain vectors.
         node_voltage_vector = power_flow_solution.node_voltage_vector

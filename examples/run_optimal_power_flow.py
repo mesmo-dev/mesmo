@@ -27,18 +27,18 @@ def main():
         fledge.electric_grid_models.ElectricGridModel(scenario_name)
     )
 
-    # Define initial load vector and power flow solution.
-    load_power_vector_reference_candidate = electric_grid_model.load_power_vector_nominal
+    # Define initial der power vector and power flow solution.
+    der_power_vector_reference_candidate = electric_grid_model.der_power_vector_nominal
     power_flow_solution_candidate = (
         fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
             electric_grid_model,
-            load_power_vector_reference_candidate
+            der_power_vector_reference_candidate
         )
     )
 
     # Instantiate iteration variables.
     sigma = 0.0
-    load_power_vector_change_max = np.inf
+    der_power_vector_change_max = np.inf
     trust_region_iteration_count = 0
     power_flow_solutions = []
     linear_electric_grid_models = []
@@ -55,7 +55,7 @@ def main():
     trust_region_iteration_limit = 100
 
     while (
-            (load_power_vector_change_max > epsilon)
+            (der_power_vector_change_max > epsilon)
             and (trust_region_iteration_count < trust_region_iteration_limit)
     ):
 
@@ -65,8 +65,8 @@ def main():
         # Check trust-region solution acceptance conditions.
         if (trust_region_iteration_count == 0) or (sigma > tau):
 
-            # Accept load vector and power flow solution candidate.
-            load_power_vector_reference = load_power_vector_reference_candidate
+            # Accept der power vector and power flow solution candidate.
+            der_power_vector_reference = der_power_vector_reference_candidate
             power_flow_solution = power_flow_solution_candidate
             power_flow_solutions.append(power_flow_solution)
 
@@ -81,7 +81,7 @@ def main():
 
             # Store objective value.
             objective_power_flow = (
-                np.sum(np.real(load_power_vector_reference_candidate).ravel())
+                - np.sum(np.real(der_power_vector_reference_candidate).ravel())
                 + np.sum(np.real(power_flow_solution_candidate.loss.ravel()))
             )
             objective_power_flows.append(objective_power_flow)
@@ -91,12 +91,13 @@ def main():
 
         # Define variables.
 
-        # Load.
-        optimization_problem.load_active_power_vector_change = (
-            pyo.Var(electric_grid_index.load_names.to_list())
+        # DER.
+        # TODO: DERs are currently assumed to be onyl loads, hence negative values.
+        optimization_problem.der_active_power_vector_change = (
+            pyo.Var(electric_grid_index.der_names.to_list())
         )
-        optimization_problem.load_reactive_power_vector_change = (
-            pyo.Var(electric_grid_index.load_names.to_list())
+        optimization_problem.der_reactive_power_vector_change = (
+            pyo.Var(electric_grid_index.der_names.to_list())
         )
 
         # Power.
@@ -133,27 +134,27 @@ def main():
         # Define constraints.
         optimization_problem.constraints = pyo.ConstraintList()
 
-        # Load.
-        for load_index, load_name in enumerate(electric_grid_index.load_names):
+        # DER.
+        for der_index, der_name in enumerate(electric_grid_index.der_names):
             optimization_problem.constraints.add(
-                optimization_problem.load_active_power_vector_change[load_name]
-                >=
-                0.5 * np.real(electric_grid_model.load_power_vector_nominal[load_index])
-                - np.real(load_power_vector_reference[load_index])
-            )
-            optimization_problem.constraints.add(
-                optimization_problem.load_active_power_vector_change[load_name]
+                optimization_problem.der_active_power_vector_change[der_name]
                 <=
-                1.5 * np.real(electric_grid_model.load_power_vector_nominal[load_index])
-                - np.real(load_power_vector_reference[load_index])
+                0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+                - np.real(der_power_vector_reference[der_index])
             )
-            # Fixed power factor for reactive loads based on nominal load power factor.
             optimization_problem.constraints.add(
-                optimization_problem.load_reactive_power_vector_change[load_name]
+                optimization_problem.der_active_power_vector_change[der_name]
+                >=
+                1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+                - np.real(der_power_vector_reference[der_index])
+            )
+            # Fixed power factor for reactive power based on nominal power factor.
+            optimization_problem.constraints.add(
+                optimization_problem.der_reactive_power_vector_change[der_name]
                 ==
-                optimization_problem.load_active_power_vector_change[load_name]
-                * np.imag(electric_grid_model.load_power_vector_nominal[load_index])
-                / np.real(electric_grid_model.load_power_vector_nominal[load_index])
+                optimization_problem.der_active_power_vector_change[der_name]
+                * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
+                / np.real(electric_grid_model.der_power_vector_nominal[der_index])
             )
 
         for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
@@ -163,36 +164,36 @@ def main():
                 optimization_problem.node_power_vector_wye_active_change[node_phase]
                 ==
                 pyo.quicksum(
-                    electric_grid_model.load_incidence_wye_matrix[node_phase_index, load_index]
-                    * optimization_problem.load_active_power_vector_change[load_name]
-                    for load_index, load_name in enumerate(electric_grid_index.load_names)
+                    electric_grid_model.der_incidence_wye_matrix[node_phase_index, der_index]
+                    * optimization_problem.der_active_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(electric_grid_index.der_names)
                 )
             )
             optimization_problem.constraints.add(
                 optimization_problem.node_power_vector_wye_reactive_change[node_phase]
                 ==
                 pyo.quicksum(
-                    electric_grid_model.load_incidence_wye_matrix[node_phase_index, load_index]
-                    * optimization_problem.load_reactive_power_vector_change[load_name]
-                    for load_index, load_name in enumerate(electric_grid_index.load_names)
+                    electric_grid_model.der_incidence_wye_matrix[node_phase_index, der_index]
+                    * optimization_problem.der_reactive_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(electric_grid_index.der_names)
                 )
             )
             optimization_problem.constraints.add(
                 optimization_problem.node_power_vector_delta_active_change[node_phase]
                 ==
                 pyo.quicksum(
-                    electric_grid_model.load_incidence_delta_matrix[node_phase_index, load_index]
-                    * optimization_problem.load_active_power_vector_change[load_name]
-                    for load_index, load_name in enumerate(electric_grid_index.load_names)
+                    electric_grid_model.der_incidence_delta_matrix[node_phase_index, der_index]
+                    * optimization_problem.der_active_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(electric_grid_index.der_names)
                 )
             )
             optimization_problem.constraints.add(
                 optimization_problem.node_power_vector_delta_reactive_change[node_phase]
                 ==
                 pyo.quicksum(
-                    electric_grid_model.load_incidence_delta_matrix[node_phase_index, load_index]
-                    * optimization_problem.load_reactive_power_vector_change[load_name]
-                    for load_index, load_name in enumerate(electric_grid_index.load_names)
+                    electric_grid_model.der_incidence_delta_matrix[node_phase_index, der_index]
+                    * optimization_problem.der_reactive_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(electric_grid_index.der_names)
                 )
             )
 
@@ -280,17 +281,17 @@ def main():
 
         # Trust region.
 
-        # Load.
-        for load_index, load_name in enumerate(electric_grid_index.load_names):
+        # DER.
+        for der_index, der_name in enumerate(electric_grid_index.der_names):
             optimization_problem.constraints.add(
-                optimization_problem.load_active_power_vector_change[load_name]
-                >=
-                -delta * np.real(electric_grid_model.load_power_vector_nominal.ravel()[load_index])
+                optimization_problem.der_active_power_vector_change[der_name]
+                <=
+                -delta * np.real(electric_grid_model.der_power_vector_nominal.ravel()[der_index])
             )
             optimization_problem.constraints.add(
-                optimization_problem.load_active_power_vector_change[load_name]
-                <=
-                delta * np.real(electric_grid_model.load_power_vector_nominal.ravel()[load_index])
+                optimization_problem.der_active_power_vector_change[der_name]
+                >=
+                delta * np.real(electric_grid_model.der_power_vector_nominal.ravel()[der_index])
             )
 
         # Voltage.
@@ -354,11 +355,11 @@ def main():
         # Define objective.
         cost = 0.0
         cost += (
-            # Active load power.
-            pyo.quicksum(
-                optimization_problem.load_active_power_vector_change[load_name]
-                + np.real(load_power_vector_reference[load_index])
-                for load_index, load_name in enumerate(electric_grid_index.load_names)
+            # Active der power.
+            -1.0 * pyo.quicksum(
+                optimization_problem.der_active_power_vector_change[der_name]
+                + np.real(der_power_vector_reference[der_index])
+                for der_index, der_name in enumerate(electric_grid_index.der_names)
             )
         )
         cost += (
@@ -382,51 +383,51 @@ def main():
 
         # optimization_problem.display()
 
-        # Obtain load change value.
-        load_active_power_vector_change = (
-            np.zeros((len(electric_grid_index.load_names), 1), dtype=np.float)
+        # Obtain der power change value.
+        der_active_power_vector_change = (
+            np.zeros((len(electric_grid_index.der_names), 1), dtype=np.float)
         )
-        load_reactive_power_vector_change = (
-            np.zeros((len(electric_grid_index.load_names), 1), dtype=np.float)
+        der_reactive_power_vector_change = (
+            np.zeros((len(electric_grid_index.der_names), 1), dtype=np.float)
         )
-        for load_index, load_name in enumerate(electric_grid_index.load_names):
-            load_active_power_vector_change[load_index] = (
-                optimization_problem.load_active_power_vector_change[load_name].value
+        for der_index, der_name in enumerate(electric_grid_index.der_names):
+            der_active_power_vector_change[der_index] = (
+                optimization_problem.der_active_power_vector_change[der_name].value
             )
-            load_reactive_power_vector_change[load_index] = (
-                optimization_problem.load_reactive_power_vector_change[load_name].value
+            der_reactive_power_vector_change[der_index] = (
+                optimization_problem.der_reactive_power_vector_change[der_name].value
             )
-        load_power_vector_change_max = (
+        der_power_vector_change_max = (
             max(
-                np.max(abs(load_active_power_vector_change).ravel()),
-                np.max(abs(load_reactive_power_vector_change).ravel())
+                np.max(abs(der_active_power_vector_change).ravel()),
+                np.max(abs(der_reactive_power_vector_change).ravel())
             )
         )
 
         # Print change variables.
-        print(f"load_active_power_vector_change = {load_active_power_vector_change.ravel()}")
-        print(f"load_reactive_power_vector_change = {load_reactive_power_vector_change.ravel()}")
-        print(f"load_power_vector_change_max = {load_power_vector_change_max}")
+        print(f"der_active_power_vector_change = {der_active_power_vector_change.ravel()}")
+        print(f"der_reactive_power_vector_change = {der_reactive_power_vector_change.ravel()}")
+        print(f"der_power_vector_change_max = {der_power_vector_change_max}")
 
-        # Check trust-region conditions and obtain load vector and power flow solution candidates for next iteration.
+        # Check trust-region conditions and obtain der power vector and power flow solution candidates for next iteration.
         # - Only if termination condition is not met, otherwise risk of division by zero.
-        if load_power_vector_change_max > epsilon:
-            # Get new load vector and power flow solution candidate.
-            load_power_vector_reference_candidate = (
-                load_power_vector_reference
-                + load_active_power_vector_change.ravel()
-                + 1.0j * load_reactive_power_vector_change.ravel()
+        if der_power_vector_change_max > epsilon:
+            # Get new der vector and power flow solution candidate.
+            der_power_vector_reference_candidate = (
+                der_power_vector_reference
+                + der_active_power_vector_change.ravel()
+                + 1.0j * der_reactive_power_vector_change.ravel()
             )
             power_flow_solution_candidate = (
                 fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
                     electric_grid_model,
-                    load_power_vector_reference_candidate
+                    der_power_vector_reference_candidate
                 )
             )
 
             # Obtain objective values.
             objective_power_flow = (
-                np.sum(np.real(load_power_vector_reference_candidate).ravel())
+                - np.sum(np.real(der_power_vector_reference_candidate).ravel())
                 + np.sum(np.real(power_flow_solution_candidate.loss.ravel()))
             )
             objective_linear_model = (
@@ -455,12 +456,12 @@ def main():
 
     # Instantiate results variables.
 
-    # Load.
-    load_active_power_vector = (
-        pd.DataFrame(columns=electric_grid_index.load_names, index=[0], dtype=np.float)
+    # DER.
+    der_active_power_vector = (
+        pd.DataFrame(columns=electric_grid_index.der_names, index=[0], dtype=np.float)
     )
-    load_reactive_power_vector = (
-        pd.DataFrame(columns=electric_grid_index.load_names, index=[0], dtype=np.float)
+    der_reactive_power_vector = (
+        pd.DataFrame(columns=electric_grid_index.der_names, index=[0], dtype=np.float)
     )
 
     # Voltage.
@@ -482,15 +483,15 @@ def main():
 
     # Obtain results.
 
-    # Load.
-    for load_index, load_name in enumerate(electric_grid_index.load_names):
-        load_active_power_vector[load_name] = (
-            optimization_problem.load_active_power_vector_change[load_name].value
-            + np.real(load_power_vector_reference[load_index])
+    # DER.
+    for der_index, der_name in enumerate(electric_grid_index.der_names):
+        der_active_power_vector[der_name] = (
+            optimization_problem.der_active_power_vector_change[der_name].value
+            + np.real(der_power_vector_reference[der_index])
         )
-        load_reactive_power_vector[load_name] = (
-            optimization_problem.load_reactive_power_vector_change[load_name].value
-            + np.imag(load_power_vector_reference[load_index])
+        der_reactive_power_vector[der_name] = (
+            optimization_problem.der_reactive_power_vector_change[der_name].value
+            + np.imag(der_power_vector_reference[der_index])
         )
 
     # Voltage.
@@ -527,16 +528,16 @@ def main():
             / abs(power_flow_solutions[0].node_voltage_vector.transpose())
     )
     voltage_magnitude_vector_per_unit['mean'] = voltage_magnitude_vector_per_unit.mean(axis=1)
-    load_active_power_vector_per_unit = (
-            load_active_power_vector
-            / np.real(electric_grid_model.load_power_vector_nominal.transpose())
+    der_active_power_vector_per_unit = (
+            der_active_power_vector
+            / np.real(electric_grid_model.der_power_vector_nominal.transpose())
     )
-    load_active_power_vector_per_unit['mean'] = load_active_power_vector_per_unit.mean(axis=1)
-    load_reactive_power_vector_per_unit = (
-            load_reactive_power_vector
-            / np.imag(electric_grid_model.load_power_vector_nominal.transpose())
+    der_active_power_vector_per_unit['mean'] = der_active_power_vector_per_unit.mean(axis=1)
+    der_reactive_power_vector_per_unit = (
+            der_reactive_power_vector
+            / np.imag(electric_grid_model.der_power_vector_nominal.transpose())
     )
-    load_reactive_power_vector_per_unit['mean'] = load_reactive_power_vector_per_unit.mean(axis=1)
+    der_reactive_power_vector_per_unit['mean'] = der_reactive_power_vector_per_unit.mean(axis=1)
     branch_power_vector_1_squared_per_unit = (
             branch_power_vector_1_squared
             / abs(power_flow_solutions[0].branch_power_vector_1.transpose() ** 2)
@@ -549,8 +550,8 @@ def main():
 
     # Print some results.
     print(f"voltage_magnitude_vector_per_unit = \n{voltage_magnitude_vector_per_unit.to_string()}")
-    print(f"load_active_power_vector_per_unit = \n{load_active_power_vector_per_unit.to_string()}")
-    print(f"load_reactive_power_vector_per_unit = \n{load_reactive_power_vector_per_unit.to_string()}")
+    print(f"der_active_power_vector_per_unit = \n{der_active_power_vector_per_unit.to_string()}")
+    print(f"der_reactive_power_vector_per_unit = \n{der_reactive_power_vector_per_unit.to_string()}")
     print(f"branch_power_vector_1_squared_per_unit = \n{branch_power_vector_1_squared_per_unit.to_string()}")
     print(f"loss_active_per_unit = \n{loss_active_per_unit.to_string()}")
 

@@ -20,7 +20,7 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FixedLoadModel(
             fixed_load_data,
-            fixed_load_data.fixed_loads.index[0]  # Take `load_name` of first row.
+            fixed_load_data.fixed_loads.index[0]  # Take `der_name` of first row.
         )
         time_end = time.time()
         logger.info(f"Test FixedLoadModel: Completed in {round(time_end - time_start, 6)} seconds.")
@@ -33,7 +33,7 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.EVChargerModel(
             ev_charger_data,
-            ev_charger_data.ev_chargers.index[0]  # Take `load_name` of first row.
+            ev_charger_data.ev_chargers.index[0]  # Take `der_name` of first row.
         )
         time_end = time.time()
         logger.info(f"Test EVChargerModel: Completed in {round(time_end - time_start, 6)} seconds.")
@@ -46,7 +46,7 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FlexibleLoadModel(
             flexible_load_data,
-            flexible_load_data.flexible_loads.index[0]  # Take `load_name` of first row.
+            flexible_load_data.flexible_loads.index[0]  # Take `der_name` of first row.
         )
         time_end = time.time()
         logger.info(f"Test FlexibleLoadModel: Completed in {round(time_end - time_start, 6)} seconds.")

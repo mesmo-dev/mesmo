@@ -19,9 +19,9 @@ class TestLinearElectricGridModels(unittest.TestCase):
     def test_linear_electric_grid_model_1(self):
         # Get result.
         time_start = time.time()
-        fledge.linear_electric_grid_models.LinearElectricGridModel(fledge.config.test_scenario_name)
+        fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(fledge.config.test_scenario_name)
         time_end = time.time()
-        logger.info(f"Test LinearElectricGridModel #1: Completed in {round(time_end - time_start, 6)} seconds.")
+        logger.info(f"Test LinearElectricGridModelGlobal #1: Completed in {round(time_end - time_start, 6)} seconds.")
 
     def test_linear_electric_grid_model_2(self):
         # Obtain electric grid model.
@@ -32,7 +32,7 @@ class TestLinearElectricGridModels(unittest.TestCase):
 
         # Obtain linear electric grid model for nominal loading conditions.
         linear_electric_grid_model = (
-            fledge.linear_electric_grid_models.LinearElectricGridModel(
+            fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
                 electric_grid_model,
                 power_flow_solution_initial
             )

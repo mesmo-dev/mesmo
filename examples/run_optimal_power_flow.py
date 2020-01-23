@@ -72,7 +72,7 @@ def main():
 
             # Obtain new
             linear_electric_grid_model = (
-                fledge.linear_electric_grid_models.LinearElectricGridModel(
+                fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
                     electric_grid_model,
                     power_flow_solution
                 )

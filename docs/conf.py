@@ -31,7 +31,8 @@ extensions = [
 autoclass_content = 'both'
 autodoc_default_options = {
     'members': None,
-    'undoc-members': None
+    'undoc-members': None,
+    'show-inheritance': None
 }
 autodoc_typehints = 'none'
 napoleon_use_ivar = True

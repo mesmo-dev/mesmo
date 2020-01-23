@@ -100,22 +100,8 @@ def main():
             pyo.Var(electric_grid_index.der_names.to_list())
         )
 
-        # Voltage.
-        optimization_problem.voltage_magnitude_vector_change = (
-            pyo.Var(electric_grid_index.nodes_phases.to_list())
-        )
-
-        # Branch flows.
-        optimization_problem.branch_power_vector_1_squared_change = (
-            pyo.Var(electric_grid_index.branches_phases.to_list())
-        )
-        optimization_problem.branch_power_vector_2_squared_change = (
-            pyo.Var(electric_grid_index.branches_phases.to_list())
-        )
-
-        # Loss.
-        optimization_problem.loss_active_change = pyo.Var()
-        optimization_problem.loss_reactive_change = pyo.Var()
+        # Electric grid.
+        linear_electric_grid_model.define_optimization_variables(optimization_problem)
 
         # Define constraints.
         optimization_problem.constraints = pyo.ConstraintList()
@@ -143,67 +129,11 @@ def main():
                 / np.real(electric_grid_model.der_power_vector_nominal[der_index])
             )
 
-        # Voltage.
-        for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
-            optimization_problem.constraints.add(
-                optimization_problem.voltage_magnitude_vector_change[node_phase]
-                ==
-                pyo.quicksum(
-                    linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active[node_phase_index, der_index]
-                    * optimization_problem.der_active_power_vector_change[der_name]
-                    + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive[node_phase_index, der_index]
-                    * optimization_problem.der_reactive_power_vector_change[der_name]
-                    for der_index, der_name in enumerate(electric_grid_index.der_names)
-                )
-            )
-
-        # Branch flows.
-        for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
-            optimization_problem.constraints.add(
-                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
-                ==
-                pyo.quicksum(
-                    linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_active[branch_phase_index, der_index]
-                    * optimization_problem.der_active_power_vector_change[der_name]
-                    + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_reactive[branch_phase_index, der_index]
-                    * optimization_problem.der_reactive_power_vector_change[der_name]
-                    for der_index, der_name in enumerate(electric_grid_index.der_names)
-                )
-            )
-            optimization_problem.constraints.add(
-                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
-                ==
-                pyo.quicksum(
-                    linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_active[branch_phase_index, der_index]
-                    * optimization_problem.der_active_power_vector_change[der_name]
-                    + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_reactive[branch_phase_index, der_index]
-                    * optimization_problem.der_reactive_power_vector_change[der_name]
-                    for der_index, der_name in enumerate(electric_grid_index.der_names)
-                )
-            )
-
-        # Loss.
-        optimization_problem.constraints.add(
-            optimization_problem.loss_active_change
-            ==
-            pyo.quicksum(
-                linear_electric_grid_model.sensitivity_loss_active_by_der_power_active[0, der_index]
-                * optimization_problem.der_active_power_vector_change[der_name]
-                + linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive[0, der_index]
-                * optimization_problem.der_reactive_power_vector_change[der_name]
-                for der_index, der_name in enumerate(electric_grid_index.der_names)
-            )
-        )
-        optimization_problem.constraints.add(
-            optimization_problem.loss_reactive_change
-            ==
-            pyo.quicksum(
-                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active[0, der_index]
-                * optimization_problem.der_active_power_vector_change[der_name]
-                + linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive[0, der_index]
-                * optimization_problem.der_reactive_power_vector_change[der_name]
-                for der_index, der_name in enumerate(electric_grid_index.der_names)
-            )
+        # Electric grid.
+        linear_electric_grid_model.define_optimization_constraints(
+            optimization_problem,
+            optimization_problem.der_active_power_vector_change,
+            optimization_problem.der_reactive_power_vector_change
         )
 
         # Trust region.

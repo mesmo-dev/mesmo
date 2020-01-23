@@ -3,6 +3,8 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import pyomo.core
+import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -23,6 +25,7 @@ class LinearElectricGridModel(object):
         but does not implement any functionality.
 
     Attributes:
+        electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
@@ -97,6 +100,7 @@ class LinearElectricGridModel(object):
             reactive loss by DER reactive power vector.
     """
 
+    electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
     sensitivity_voltage_by_power_wye_active: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_wye_reactive: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_delta_active: scipy.sparse.spmatrix
@@ -153,6 +157,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         scenario_name (str): FLEDGE scenario name.
 
     Attributes:
+        electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
@@ -268,6 +273,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         node_voltage_vector = power_flow_solution.node_voltage_vector
         branch_power_vector_1 = power_flow_solution.branch_power_vector_1
         branch_power_vector_2 = power_flow_solution.branch_power_vector_2
+
+        # Obtain electric grid index.
+        self.electric_grid_index = electric_grid_model.index
 
         # Obtain no_source matrices and vectors.
         node_admittance_matrix_no_source = (
@@ -689,4 +697,101 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             @ electric_grid_model.der_incidence_wye_matrix
             + self.sensitivity_loss_reactive_by_power_delta_reactive
             @ electric_grid_model.der_incidence_delta_matrix
+        )
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+    ):
+        """Define decision variables for given `optimization_problem`."""
+
+        # Voltage.
+        optimization_problem.voltage_magnitude_vector_change = (
+            pyo.Var(self.electric_grid_index.nodes_phases.to_list())
+        )
+
+        # Branch flows.
+        optimization_problem.branch_power_vector_1_squared_change = (
+            pyo.Var(self.electric_grid_index.branches_phases.to_list())
+        )
+        optimization_problem.branch_power_vector_2_squared_change = (
+            pyo.Var(self.electric_grid_index.branches_phases.to_list())
+        )
+
+        # Loss.
+        optimization_problem.loss_active_change = pyo.Var()
+        optimization_problem.loss_reactive_change = pyo.Var()
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            der_active_power_vector_change: pyomo.core.base.var.IndexedVar,
+            der_reactive_power_vector_change: pyomo.core.base.var.IndexedVar
+    ):
+        """Define constraints to express the linear electric grid model equations for given `optimization_problem`."""
+
+        # Instantiate constraint list.
+        optimization_problem.linear_electric_grid_model_constraints = pyo.ConstraintList()
+
+        # Voltage.
+        for node_phase_index, node_phase in enumerate(self.electric_grid_index.nodes_phases):
+            optimization_problem.linear_electric_grid_model_constraints.add(
+                optimization_problem.voltage_magnitude_vector_change[node_phase]
+                ==
+                pyo.quicksum(
+                    self.sensitivity_voltage_magnitude_by_der_power_active[node_phase_index, der_index]
+                    * der_active_power_vector_change[der_name]
+                    + self.sensitivity_voltage_magnitude_by_der_power_reactive[node_phase_index, der_index]
+                    * der_reactive_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                )
+            )
+
+        # Branch flows.
+        for branch_phase_index, branch_phase in enumerate(self.electric_grid_index.branches_phases):
+            optimization_problem.linear_electric_grid_model_constraints.add(
+                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+                ==
+                pyo.quicksum(
+                    self.sensitivity_branch_power_1_by_der_power_active[branch_phase_index, der_index]
+                    * der_active_power_vector_change[der_name]
+                    + self.sensitivity_branch_power_1_by_der_power_reactive[branch_phase_index, der_index]
+                    * der_reactive_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                )
+            )
+            optimization_problem.linear_electric_grid_model_constraints.add(
+                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
+                ==
+                pyo.quicksum(
+                    self.sensitivity_branch_power_2_by_der_power_active[branch_phase_index, der_index]
+                    * der_active_power_vector_change[der_name]
+                    + self.sensitivity_branch_power_2_by_der_power_reactive[branch_phase_index, der_index]
+                    * der_reactive_power_vector_change[der_name]
+                    for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                )
+            )
+
+        # Loss.
+        optimization_problem.linear_electric_grid_model_constraints.add(
+            optimization_problem.loss_active_change
+            ==
+            pyo.quicksum(
+                self.sensitivity_loss_active_by_der_power_active[0, der_index]
+                * der_active_power_vector_change[der_name]
+                + self.sensitivity_loss_active_by_der_power_reactive[0, der_index]
+                * der_reactive_power_vector_change[der_name]
+                for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+            )
+        )
+        optimization_problem.linear_electric_grid_model_constraints.add(
+            optimization_problem.loss_reactive_change
+            ==
+            pyo.quicksum(
+                self.sensitivity_loss_reactive_by_der_power_active[0, der_index]
+                * der_active_power_vector_change[der_name]
+                + self.sensitivity_loss_reactive_by_der_power_reactive[0, der_index]
+                * der_reactive_power_vector_change[der_name]
+                for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+            )
         )

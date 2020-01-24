@@ -297,72 +297,17 @@ def main():
         # Iterate counter.
         trust_region_iteration_count += 1
 
-    # Instantiate results variables.
-
-    # DER.
-    der_active_power_vector = (
-        pd.DataFrame(columns=electric_grid_index.der_names, index=[0], dtype=np.float)
-    )
-    der_reactive_power_vector = (
-        pd.DataFrame(columns=electric_grid_index.der_names, index=[0], dtype=np.float)
-    )
-
-    # Voltage.
-    voltage_magnitude_vector = (
-        pd.DataFrame(columns=electric_grid_index.nodes_phases, index=[0], dtype=np.float)
-    )
-
-    # Branch flows.
-    branch_power_vector_1_squared = (
-        pd.DataFrame(columns=electric_grid_index.branches_phases, index=[0], dtype=np.float)
-    )
-    branch_power_vector_2_squared = (
-        pd.DataFrame(columns=electric_grid_index.branches_phases, index=[0], dtype=np.float)
-    )
-
-    # Loss.
-    loss_active = pd.DataFrame(columns=['total'], index=[0], dtype=np.float)
-    loss_reactive = pd.DataFrame(columns=['total'], index=[0], dtype=np.float)
-
     # Obtain results.
-
-    # DER.
-    for der_index, der_name in enumerate(electric_grid_index.der_names):
-        der_active_power_vector[der_name] = (
-            optimization_problem.der_active_power_vector_change[der_name].value
-            + np.real(der_power_vector_reference[der_index])
-        )
-        der_reactive_power_vector[der_name] = (
-            optimization_problem.der_reactive_power_vector_change[der_name].value
-            + np.imag(der_power_vector_reference[der_index])
-        )
-
-    # Voltage.
-    for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
-        voltage_magnitude_vector[node_phase] = (
-            optimization_problem.voltage_magnitude_vector_change[node_phase].value
-            + np.abs(power_flow_solution.node_voltage_vector[node_phase_index])
-        )
-
-    # Branch flows.
-    for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
-        branch_power_vector_1_squared[branch_phase] = (
-            optimization_problem.branch_power_vector_1_squared_change[branch_phase].value
-            + np.abs(power_flow_solution.branch_power_vector_1[branch_phase_index] ** 2)
-        )
-        branch_power_vector_2_squared[branch_phase] = (
-            optimization_problem.branch_power_vector_2_squared_change[branch_phase].value
-            + np.abs(power_flow_solution.branch_power_vector_2[branch_phase_index] ** 2)
-        )
-
-    # Loss.
-    loss_active['total'] = (
-        optimization_problem.loss_active_change.value
-        + np.real(power_flow_solution.loss)
-    )
-    loss_reactive['total'] = (
-        optimization_problem.loss_reactive_change.value
-        + np.imag(power_flow_solution.loss)
+    (
+        der_active_power_vector,
+        der_reactive_power_vector,
+        voltage_magnitude_vector,
+        branch_power_vector_1_squared,
+        branch_power_vector_2_squared,
+        loss_active,
+        loss_reactive
+    ) = linear_electric_grid_model.get_optimization_results(
+        optimization_problem
     )
 
     # Post-processing results.

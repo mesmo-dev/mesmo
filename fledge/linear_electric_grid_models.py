@@ -26,6 +26,7 @@ class LinearElectricGridModel(object):
 
     Attributes:
         electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
+        power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
@@ -101,6 +102,7 @@ class LinearElectricGridModel(object):
     """
 
     electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
+    power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     sensitivity_voltage_by_power_wye_active: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_wye_reactive: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_delta_active: scipy.sparse.spmatrix
@@ -158,6 +160,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
 
     Attributes:
         electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
+        power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
@@ -267,17 +270,15 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     ):
-        # TODO: Validate linear model with delta ders.
+        # TODO: Validate linear model with delta DERs.
 
-        # Obtain vectors.
-        node_voltage_vector = power_flow_solution.node_voltage_vector
-        branch_power_vector_1 = power_flow_solution.branch_power_vector_1
-        branch_power_vector_2 = power_flow_solution.branch_power_vector_2
+        # Store power flow solution.
+        self.power_flow_solution = power_flow_solution
 
         # Obtain electric grid index.
         self.electric_grid_index = electric_grid_model.index
 
-        # Obtain no_source matrices and vectors.
+        # Obtain shorthands for no-source matrices and vectors.
         node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
                 electric_grid_model.index.node_by_node_type['no_source'],
@@ -291,11 +292,11 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )]
         )
         node_voltage_no_source = (
-            node_voltage_vector[
+            self.power_flow_solution.node_voltage_vector[
                 electric_grid_model.index.node_by_node_type['no_source']
             ]
         )
-    
+
         # Instantiate voltage sensitivity matrices.
         self.sensitivity_voltage_by_power_wye_active = (
             scipy.sparse.dok_matrix(
@@ -321,7 +322,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
                 dtype=complex
             )
         )
-    
+
         # Calculate voltage sensitivity matrices.
         # TODO: Document the change in sign in the reactive part compared to Hanif.
         self.sensitivity_voltage_by_power_wye_active[np.ix_(
@@ -391,30 +392,30 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         self.sensitivity_voltage_magnitude_by_power_wye_active = (
-            scipy.sparse.diags(abs(node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
                 @ self.sensitivity_voltage_by_power_wye_active
             )
         )
         self.sensitivity_voltage_magnitude_by_power_wye_reactive = (
-            scipy.sparse.diags(abs(node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
                 @ self.sensitivity_voltage_by_power_wye_reactive
             )
         )
         self.sensitivity_voltage_magnitude_by_power_delta_active = (
-            scipy.sparse.diags(abs(node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
                 @ self.sensitivity_voltage_by_power_delta_active
             )
         )
         self.sensitivity_voltage_magnitude_by_power_delta_reactive = (
-            scipy.sparse.diags(abs(node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
                 @ self.sensitivity_voltage_by_power_delta_reactive
             )
         )
@@ -437,32 +438,32 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         sensitivity_branch_power_1_by_voltage = (
             scipy.sparse.diags(np.conj(
                 electric_grid_model.branch_admittance_1_matrix
-                @ node_voltage_vector
+                @ self.power_flow_solution.node_voltage_vector
             ).ravel())
             @ electric_grid_model.branch_incidence_1_matrix
             + scipy.sparse.diags((
                 electric_grid_model.branch_incidence_1_matrix
-                @ node_voltage_vector
+                @ self.power_flow_solution.node_voltage_vector
             ).ravel())
             @ np.conj(electric_grid_model.branch_admittance_1_matrix)
         )
         sensitivity_branch_power_2_by_voltage = (
             scipy.sparse.diags(np.conj(
                 electric_grid_model.branch_admittance_2_matrix
-                @ node_voltage_vector
+                @ self.power_flow_solution.node_voltage_vector
             ).ravel())
             @ electric_grid_model.branch_incidence_2_matrix
             + scipy.sparse.diags((
                 electric_grid_model.branch_incidence_2_matrix
-                @ node_voltage_vector
+                @ self.power_flow_solution.node_voltage_vector
             ).ravel())
             @ np.conj(electric_grid_model.branch_admittance_2_matrix)
         )
 
         self.sensitivity_branch_power_1_by_power_wye_active = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -477,8 +478,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_1_by_power_wye_reactive = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -493,8 +494,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_1_by_power_delta_active = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -509,8 +510,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_1_by_power_delta_reactive = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_1).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -525,8 +526,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_2_by_power_wye_active = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_2).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -541,8 +542,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_2_by_power_wye_reactive = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_2).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -557,8 +558,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_2_by_power_delta_active = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_2).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -573,8 +574,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
         self.sensitivity_branch_power_2_by_power_delta_reactive = (
             scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(branch_power_vector_2).ravel())
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
             ])
             @ scipy.sparse.vstack([
                 np.real(
@@ -616,11 +617,11 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         # Caculate loss sensitivity matrices.
         # TODO: Document the inverted real / imag parts compared to Hanif.
         sensitivity_loss_by_voltage = (
-            np.transpose(node_voltage_vector)
+            np.transpose(self.power_flow_solution.node_voltage_vector)
             @ np.conj(electric_grid_model.node_admittance_matrix)
             + np.transpose(
                 electric_grid_model.node_admittance_matrix
-                @ node_voltage_vector
+                @ self.power_flow_solution.node_voltage_vector
             )
         )
 
@@ -800,4 +801,87 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
                 * optimization_problem.der_reactive_power_vector_change[der_name]
                 for der_index, der_name in enumerate(self.electric_grid_index.der_names)
             )
+        )
+
+    def get_optimization_results(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+
+        # Instantiate results variables.
+
+        # DER.
+        der_active_power_vector = (
+            pd.DataFrame(columns=self.electric_grid_index.der_names, index=[0], dtype=np.float)
+        )
+        der_reactive_power_vector = (
+            pd.DataFrame(columns=self.electric_grid_index.der_names, index=[0], dtype=np.float)
+        )
+
+        # Voltage.
+        voltage_magnitude_vector = (
+            pd.DataFrame(columns=self.electric_grid_index.nodes_phases, index=[0], dtype=np.float)
+        )
+
+        # Branch flows.
+        branch_power_vector_1_squared = (
+            pd.DataFrame(columns=self.electric_grid_index.branches_phases, index=[0], dtype=np.float)
+        )
+        branch_power_vector_2_squared = (
+            pd.DataFrame(columns=self.electric_grid_index.branches_phases, index=[0], dtype=np.float)
+        )
+
+        # Loss.
+        loss_active = pd.DataFrame(columns=['total'], index=[0], dtype=np.float)
+        loss_reactive = pd.DataFrame(columns=['total'], index=[0], dtype=np.float)
+
+        # Obtain results.
+
+        # DER.
+        for der_index, der_name in enumerate(self.electric_grid_index.der_names):
+            der_active_power_vector[der_name] = (
+                optimization_problem.der_active_power_vector_change[der_name].value
+                + np.real(self.power_flow_solution.der_power_vector[der_index])
+            )
+            der_reactive_power_vector[der_name] = (
+                optimization_problem.der_reactive_power_vector_change[der_name].value
+                + np.imag(self.power_flow_solution.der_power_vector[der_index])
+            )
+
+        # Voltage.
+        for node_phase_index, node_phase in enumerate(self.electric_grid_index.nodes_phases):
+            voltage_magnitude_vector[node_phase] = (
+                optimization_problem.voltage_magnitude_vector_change[node_phase].value
+                + np.abs(self.power_flow_solution.node_voltage_vector[node_phase_index])
+            )
+
+        # Branch flows.
+        for branch_phase_index, branch_phase in enumerate(self.electric_grid_index.branches_phases):
+            branch_power_vector_1_squared[branch_phase] = (
+                optimization_problem.branch_power_vector_1_squared_change[branch_phase].value
+                + np.abs(self.power_flow_solution.branch_power_vector_1[branch_phase_index] ** 2)
+            )
+            branch_power_vector_2_squared[branch_phase] = (
+                optimization_problem.branch_power_vector_2_squared_change[branch_phase].value
+                + np.abs(self.power_flow_solution.branch_power_vector_2[branch_phase_index] ** 2)
+            )
+
+        # Loss.
+        loss_active['total'] = (
+            optimization_problem.loss_active_change.value
+            + np.real(self.power_flow_solution.loss)
+        )
+        loss_reactive['total'] = (
+            optimization_problem.loss_reactive_change.value
+            + np.imag(self.power_flow_solution.loss)
+        )
+
+        return (
+            der_active_power_vector,
+            der_reactive_power_vector,
+            voltage_magnitude_vector,
+            branch_power_vector_1_squared,
+            branch_power_vector_2_squared,
+            loss_active,
+            loss_reactive
         )

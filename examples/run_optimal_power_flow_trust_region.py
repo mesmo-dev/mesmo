@@ -17,9 +17,6 @@ def main():
     scenario_name = "singapore_6node"
 
     # Get model.
-    electric_grid_data = (
-        fledge.database_interface.ElectricGridData(scenario_name)
-    )
     electric_grid_index = (
         fledge.electric_grid_models.ElectricGridIndex(scenario_name)
     )

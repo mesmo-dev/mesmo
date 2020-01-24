@@ -453,6 +453,9 @@ def get_loss_opendss():
 class PowerFlowSolution(object):
     """Power flow solution object."""
 
+    der_power_vector: np.ndarray
+    node_power_vector_wye: np.ndarray
+    node_power_vector_delta: np.ndarray
     node_voltage_vector: np.ndarray
     branch_power_vector_1: np.ndarray
     branch_power_vector_2: np.ndarray
@@ -502,43 +505,29 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         """Instantiate fixed point power flow solution object for given `electric_grid_model` and `der_power_vector`.
         """
 
+        # Store DER power vector.
+        self.der_power_vector = der_power_vector
+
         # Obtain node power vectors.
-        node_power_vector_wye = (
+        self.node_power_vector_wye = (
             np.transpose([
                 electric_grid_model.der_incidence_wye_matrix
-                @ der_power_vector
+                @ self.der_power_vector
             ])
         )
-        node_power_vector_delta = (
+        self.node_power_vector_delta = (
             np.transpose([
                 electric_grid_model.der_incidence_delta_matrix
-                @ der_power_vector
+                @ self.der_power_vector
             ])
         )
-
-        self.__init__(
-            electric_grid_model,
-            node_power_vector_wye,
-            node_power_vector_delta
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-            node_power_vector_wye: np.ndarray,
-            node_power_vector_delta: np.ndarray
-    ):
-        """Instantiate fixed point power flow solution object for given `electric_grid_model`,
-        `node_power_vector_wye` and `node_power_vector_delta`.
-        """
 
         # Obtain voltage solution.
         self.node_voltage_vector = (
             fledge.power_flow_solvers.get_voltage_fixed_point(
                 electric_grid_model,
-                node_power_vector_wye,
-                node_power_vector_delta
+                self.node_power_vector_wye,
+                self.node_power_vector_delta
             )
         )
 

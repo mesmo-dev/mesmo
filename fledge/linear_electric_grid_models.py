@@ -705,6 +705,14 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
     ):
         """Define decision variables for given `optimization_problem`."""
 
+        # DERs.
+        optimization_problem.der_active_power_vector_change = (
+            pyo.Var(self.electric_grid_index.der_names.to_list())
+        )
+        optimization_problem.der_reactive_power_vector_change = (
+            pyo.Var(self.electric_grid_index.der_names.to_list())
+        )
+
         # Voltage.
         optimization_problem.voltage_magnitude_vector_change = (
             pyo.Var(self.electric_grid_index.nodes_phases.to_list())
@@ -725,8 +733,6 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
     def define_optimization_constraints(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            der_active_power_vector_change: pyomo.core.base.var.IndexedVar,
-            der_reactive_power_vector_change: pyomo.core.base.var.IndexedVar
     ):
         """Define constraints to express the linear electric grid model equations for given `optimization_problem`."""
 
@@ -740,9 +746,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
                 ==
                 pyo.quicksum(
                     self.sensitivity_voltage_magnitude_by_der_power_active[node_phase_index, der_index]
-                    * der_active_power_vector_change[der_name]
+                    * optimization_problem.der_active_power_vector_change[der_name]
                     + self.sensitivity_voltage_magnitude_by_der_power_reactive[node_phase_index, der_index]
-                    * der_reactive_power_vector_change[der_name]
+                    * optimization_problem.der_reactive_power_vector_change[der_name]
                     for der_index, der_name in enumerate(self.electric_grid_index.der_names)
                 )
             )
@@ -754,9 +760,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
                 ==
                 pyo.quicksum(
                     self.sensitivity_branch_power_1_by_der_power_active[branch_phase_index, der_index]
-                    * der_active_power_vector_change[der_name]
+                    * optimization_problem.der_active_power_vector_change[der_name]
                     + self.sensitivity_branch_power_1_by_der_power_reactive[branch_phase_index, der_index]
-                    * der_reactive_power_vector_change[der_name]
+                    * optimization_problem.der_reactive_power_vector_change[der_name]
                     for der_index, der_name in enumerate(self.electric_grid_index.der_names)
                 )
             )
@@ -765,9 +771,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
                 ==
                 pyo.quicksum(
                     self.sensitivity_branch_power_2_by_der_power_active[branch_phase_index, der_index]
-                    * der_active_power_vector_change[der_name]
+                    * optimization_problem.der_active_power_vector_change[der_name]
                     + self.sensitivity_branch_power_2_by_der_power_reactive[branch_phase_index, der_index]
-                    * der_reactive_power_vector_change[der_name]
+                    * optimization_problem.der_reactive_power_vector_change[der_name]
                     for der_index, der_name in enumerate(self.electric_grid_index.der_names)
                 )
             )
@@ -778,9 +784,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             ==
             pyo.quicksum(
                 self.sensitivity_loss_active_by_der_power_active[0, der_index]
-                * der_active_power_vector_change[der_name]
+                * optimization_problem.der_active_power_vector_change[der_name]
                 + self.sensitivity_loss_active_by_der_power_reactive[0, der_index]
-                * der_reactive_power_vector_change[der_name]
+                * optimization_problem.der_reactive_power_vector_change[der_name]
                 for der_index, der_name in enumerate(self.electric_grid_index.der_names)
             )
         )
@@ -789,9 +795,9 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             ==
             pyo.quicksum(
                 self.sensitivity_loss_reactive_by_der_power_active[0, der_index]
-                * der_active_power_vector_change[der_name]
+                * optimization_problem.der_active_power_vector_change[der_name]
                 + self.sensitivity_loss_reactive_by_der_power_reactive[0, der_index]
-                * der_reactive_power_vector_change[der_name]
+                * optimization_problem.der_reactive_power_vector_change[der_name]
                 for der_index, der_name in enumerate(self.electric_grid_index.der_names)
             )
         )

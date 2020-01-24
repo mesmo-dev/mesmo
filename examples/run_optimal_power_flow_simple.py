@@ -77,14 +77,15 @@ def main():
 
     # Define branch limit constraints.
     # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
-    optimization_problem.branch_limit_constraints = pyo.ConstraintList()
-    for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
-        optimization_problem.branch_limit_constraints.add(
+    optimization_problem.branch_limit_constraints = pyo.Constraint(
+        electric_grid_index.branches_phases.to_list(),
+        rule=lambda optimization_problem, *branch_phase: (
             optimization_problem.branch_power_vector_1_squared_change[branch_phase]
             >=
-            0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[branch_phase_index] ** 2)
-            - np.abs(power_flow_solution.branch_power_vector_1.ravel()[branch_phase_index] ** 2)
+            0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
+            - np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
         )
+    )
 
     # Define objective.
     cost = 0.0
@@ -169,7 +170,7 @@ def main():
     )
     for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
         branch_limit_duals[branch_phase] = (
-            optimization_problem.dual[optimization_problem.branch_limit_constraints[branch_phase_index + 1]]
+            optimization_problem.dual[optimization_problem.branch_limit_constraints[branch_phase]]
         )
     print(f"branch_limit_duals = {branch_limit_duals.to_string()}")
 

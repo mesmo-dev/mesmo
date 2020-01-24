@@ -75,6 +75,17 @@ def main():
             / np.real(electric_grid_model.der_power_vector_nominal[der_index])
         )
 
+    # Define branch limit constraints.
+    # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
+    optimization_problem.branch_limit_constraints = pyo.ConstraintList()
+    for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
+        optimization_problem.branch_limit_constraints.add(
+            optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+            >=
+            0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[branch_phase_index] ** 2)
+            - np.abs(power_flow_solution.branch_power_vector_1.ravel()[branch_phase_index] ** 2)
+        )
+
     # Define objective.
     cost = 0.0
     cost += (
@@ -99,6 +110,7 @@ def main():
     )
 
     # Solve optimization problem.
+    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
     optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
     if optimization_result.solver.termination_condition is not pyo.TerminationCondition.optimal:
@@ -150,6 +162,16 @@ def main():
     print(f"der_reactive_power_vector_per_unit = \n{der_reactive_power_vector_per_unit.to_string()}")
     print(f"branch_power_vector_1_squared_per_unit = \n{branch_power_vector_1_squared_per_unit.to_string()}")
     print(f"loss_active_per_unit = \n{loss_active_per_unit.to_string()}")
+
+    # Obtain duals.
+    branch_limit_duals = (
+        pd.DataFrame(columns=electric_grid_index.branches_phases, index=[0], dtype=np.float)
+    )
+    for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
+        branch_limit_duals[branch_phase] = (
+            optimization_problem.dual[optimization_problem.branch_limit_constraints[branch_phase_index + 1]]
+        )
+    print(f"branch_limit_duals = {branch_limit_duals.to_string()}")
 
 
 if __name__ == '__main__':

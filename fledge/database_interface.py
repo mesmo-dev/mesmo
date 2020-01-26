@@ -118,7 +118,7 @@ class ScenarioData(object):
                     end=self.scenario['timestep_end'],
                     freq=self.scenario['timestep_interval']
                 ),
-                name='time'
+                name='timestep'
             )
         )
 

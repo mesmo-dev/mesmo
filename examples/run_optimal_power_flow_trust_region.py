@@ -97,22 +97,22 @@ def main():
         optimization_problem.der_constraints = pyo.ConstraintList()
         for der_index, der_name in enumerate(electric_grid_index.der_names):
             optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 <=
                 0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
                 - np.real(der_power_vector_reference[der_index])
             )
             optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 >=
                 1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
                 - np.real(der_power_vector_reference[der_index])
             )
             # Fixed power factor for reactive power based on nominal power factor.
             optimization_problem.der_constraints.add(
-                optimization_problem.der_reactive_power_vector_change[der_name]
+                optimization_problem.der_reactive_power_vector_change[0, der_name]
                 ==
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
                 / np.real(electric_grid_model.der_power_vector_nominal[der_index])
             )
@@ -124,12 +124,12 @@ def main():
         # TODO: DERs are currently assumed to be only loads, hence negative values.
         for der_index, der_name in enumerate(electric_grid_index.der_names):
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 <=
                 -delta * np.real(electric_grid_model.der_power_vector_nominal.ravel()[der_index])
             )
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 >=
                 delta * np.real(electric_grid_model.der_power_vector_nominal.ravel()[der_index])
             )
@@ -137,12 +137,12 @@ def main():
         # Voltage.
         for node_phase_index, node_phase in enumerate(electric_grid_index.nodes_phases):
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.voltage_magnitude_vector_change[node_phase]
+                optimization_problem.voltage_magnitude_vector_change[0, node_phase]
                 >=
                 -delta * np.abs(electric_grid_model.node_voltage_vector_no_load.ravel()[node_phase_index])
             )
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.voltage_magnitude_vector_change[node_phase]
+                optimization_problem.voltage_magnitude_vector_change[0, node_phase]
                 <=
                 delta * np.abs(electric_grid_model.node_voltage_vector_no_load.ravel()[node_phase_index])
             )
@@ -150,44 +150,44 @@ def main():
         # Branch flows.
         for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+                optimization_problem.branch_power_vector_1_squared_change[0, branch_phase]
                 >=
                 -delta * np.abs(power_flow_solutions[0].branch_power_vector_1.ravel()[branch_phase_index] ** 2)
             )
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_1_squared_change[branch_phase]
+                optimization_problem.branch_power_vector_1_squared_change[0, branch_phase]
                 <=
                 delta * np.abs(power_flow_solutions[0].branch_power_vector_1.ravel()[branch_phase_index] ** 2)
             )
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
+                optimization_problem.branch_power_vector_2_squared_change[0, branch_phase]
                 >=
                 -delta * np.abs(power_flow_solutions[0].branch_power_vector_2.ravel()[branch_phase_index] ** 2)
             )
             optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_2_squared_change[branch_phase]
+                optimization_problem.branch_power_vector_2_squared_change[0, branch_phase]
                 <=
                 delta * np.abs(power_flow_solutions[0].branch_power_vector_2.ravel()[branch_phase_index] ** 2)
             )
 
         # Loss.
         optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_active_change
+            optimization_problem.loss_active_change[0]
             >=
             -delta * np.sum(np.real(power_flow_solutions[0].loss))
         )
         optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_active_change
+            optimization_problem.loss_active_change[0]
             <=
             delta * np.sum(np.real(power_flow_solutions[0].loss))
         )
         optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_reactive_change
+            optimization_problem.loss_reactive_change[0]
             >=
             -delta * np.sum(np.imag(power_flow_solutions[0].loss))
         )
         optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_reactive_change
+            optimization_problem.loss_reactive_change[0]
             <=
             delta * np.sum(np.imag(power_flow_solutions[0].loss))
         )
@@ -198,14 +198,14 @@ def main():
             # DER active power.
             # TODO: DERs are currently assumed to be only loads, hence negative values.
             -1.0 * pyo.quicksum(
-                optimization_problem.der_active_power_vector_change[der_name]
+                optimization_problem.der_active_power_vector_change[0, der_name]
                 + np.real(der_power_vector_reference[der_index])
                 for der_index, der_name in enumerate(electric_grid_index.der_names)
             )
         )
         cost += (
             # Active loss.
-            optimization_problem.loss_active_change
+            optimization_problem.loss_active_change[0]
             + np.sum(np.real(power_flow_solution.loss))
         )
         optimization_problem.objective = (
@@ -232,10 +232,10 @@ def main():
         )
         for der_index, der_name in enumerate(electric_grid_index.der_names):
             der_active_power_vector_change[der_index] = (
-                optimization_problem.der_active_power_vector_change[der_name].value
+                optimization_problem.der_active_power_vector_change[0, der_name].value
             )
             der_reactive_power_vector_change[der_index] = (
-                optimization_problem.der_reactive_power_vector_change[der_name].value
+                optimization_problem.der_reactive_power_vector_change[0, der_name].value
             )
         der_power_vector_change_max = (
             max(

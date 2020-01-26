@@ -16,6 +16,9 @@ def main():
     # Settings.
     scenario_name = "singapore_6node"
 
+    # Obtain scenario data.
+    scenario_data = fledge.database_interface.ScenarioData(scenario_name)
+
     # Get model.
     electric_grid_index = (
         fledge.electric_grid_models.ElectricGridIndex(scenario_name)
@@ -45,42 +48,44 @@ def main():
     optimization_problem = pyo.ConcreteModel()
 
     # Define linear electric grid model variables.
-    linear_electric_grid_model.define_optimization_variables(optimization_problem)
+    linear_electric_grid_model.define_optimization_variables(optimization_problem, scenario_data.timesteps)
 
     # Define linear electric grid model constraints.
-    linear_electric_grid_model.define_optimization_constraints(optimization_problem)
+    linear_electric_grid_model.define_optimization_constraints(optimization_problem, scenario_data.timesteps)
 
     # Define DER constraints.
     # TODO: DERs are currently assumed to be only loads, hence negative values.
     optimization_problem.der_constraints = pyo.ConstraintList()
-    for der_index, der_name in enumerate(electric_grid_index.der_names):
-        optimization_problem.der_constraints.add(
-            optimization_problem.der_active_power_vector_change[0, der_name]
-            <=
-            0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-            - np.real(der_power_vector_reference[der_index])
-        )
-        optimization_problem.der_constraints.add(
-            optimization_problem.der_active_power_vector_change[0, der_name]
-            >=
-            1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-            - np.real(der_power_vector_reference[der_index])
-        )
-        # Fixed power factor for reactive power based on nominal power factor.
-        optimization_problem.der_constraints.add(
-            optimization_problem.der_reactive_power_vector_change[0, der_name]
-            ==
-            optimization_problem.der_active_power_vector_change[0, der_name]
-            * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
-            / np.real(electric_grid_model.der_power_vector_nominal[der_index])
-        )
+    for timestep in scenario_data.timesteps:
+        for der_index, der_name in enumerate(electric_grid_index.der_names):
+            optimization_problem.der_constraints.add(
+                optimization_problem.der_active_power_vector_change[timestep, der_name]
+                <=
+                0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+                - np.real(der_power_vector_reference[der_index])
+            )
+            optimization_problem.der_constraints.add(
+                optimization_problem.der_active_power_vector_change[timestep, der_name]
+                >=
+                1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+                - np.real(der_power_vector_reference[der_index])
+            )
+            # Fixed power factor for reactive power based on nominal power factor.
+            optimization_problem.der_constraints.add(
+                optimization_problem.der_reactive_power_vector_change[timestep, der_name]
+                ==
+                optimization_problem.der_active_power_vector_change[timestep, der_name]
+                * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
+                / np.real(electric_grid_model.der_power_vector_nominal[der_index])
+            )
 
     # Define branch limit constraints.
     # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
     optimization_problem.branch_limit_constraints = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
         electric_grid_index.branches_phases.to_list(),
-        rule=lambda optimization_problem, *branch_phase: (
-            optimization_problem.branch_power_vector_1_squared_change[0, branch_phase]
+        rule=lambda optimization_problem, timestep, *branch_phase: (
+            optimization_problem.branch_power_vector_1_squared_change[timestep, branch_phase]
             >=
             0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
             - np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
@@ -93,14 +98,18 @@ def main():
         # DER active power.
         # TODO: DERs are currently assumed to be only loads, hence negative values.
         -1.0 * pyo.quicksum(
-            optimization_problem.der_active_power_vector_change[0, der_name]
+            optimization_problem.der_active_power_vector_change[timestep, der_name]
             + np.real(der_power_vector_reference[der_index])
+            for timestep in scenario_data.timesteps
             for der_index, der_name in enumerate(electric_grid_index.der_names)
         )
     )
     cost += (
         # Active loss.
-        optimization_problem.loss_active_change[0]
+        pyo.quicksum(
+            optimization_problem.loss_active_change[timestep]
+            for timestep in scenario_data.timesteps
+        )
         + np.sum(np.real(power_flow_solution.loss))
     )
     optimization_problem.objective = (
@@ -128,7 +137,8 @@ def main():
         loss_active,
         loss_reactive
     ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem
+        optimization_problem,
+        scenario_data.timesteps
     )
 
     # Post-processing results.
@@ -166,12 +176,13 @@ def main():
 
     # Obtain duals.
     branch_limit_duals = (
-        pd.DataFrame(columns=electric_grid_index.branches_phases, index=[0], dtype=np.float)
+        pd.DataFrame(columns=electric_grid_index.branches_phases, index=scenario_data.timesteps, dtype=np.float)
     )
-    for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
-        branch_limit_duals[branch_phase] = (
-            optimization_problem.dual[optimization_problem.branch_limit_constraints[branch_phase]]
-        )
+    for timestep in scenario_data.timesteps:
+        for branch_phase_index, branch_phase in enumerate(electric_grid_index.branches_phases):
+            branch_limit_duals.at[timestep, branch_phase] = (
+                optimization_problem.dual[optimization_problem.branch_limit_constraints[timestep, branch_phase]]
+            )
     print(f"branch_limit_duals = {branch_limit_duals.to_string()}")
 
 

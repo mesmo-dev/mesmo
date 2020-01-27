@@ -123,7 +123,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             ]['apparent_power_per_unit'].rename('active_power')
             * flexible_load['scaling_factor']
             * flexible_load['active_power']
-            * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
             flexible_load_data.flexible_load_timeseries_dict[
@@ -131,13 +130,12 @@ class FlexibleLoadModel(FlexibleDERModel):
             ]['apparent_power_per_unit'].rename('reactive_power')
             * flexible_load['scaling_factor']
             * flexible_load['reactive_power']
-            * -1.0  # Load / demand is negative.
         )
 
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.
         accumulated_energy_nominal_timeseries = (
-            self.active_power_nominal_timeseries.rename('accumulated_energy')
+            self.active_power_nominal_timeseries.cumsum().rename('accumulated_energy')
         )
 
         # Instantiate indexes.
@@ -149,60 +147,32 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Instantiate state space matrices.
         # TODO: Consolidate indexing approach with electric grid model.
         self.state_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.state_names), len(self.state_names)), dtype=np.float),
-                index=self.state_names,
-                columns=self.state_names
-            )
+            pd.DataFrame(0.0, index=self.state_names, columns=self.state_names)
         )
-        self.state_matrix['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.state_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
         self.control_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.state_names), len(self.control_names)), dtype=np.float),
-                index=self.state_names,
-                columns=self.control_names
-            )
+            pd.DataFrame(0.0, index=self.state_names, columns=self.control_names)
         )
-        self.control_matrix['accumulated_energy', 'active_power'] = 1.0
+        self.control_matrix.at['accumulated_energy', 'active_power'] = 1.0
         self.disturbance_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.state_names), len(self.disturbance_names)), dtype=np.float),
-                index=self.state_names,
-                columns=self.disturbance_names
-            )
+            pd.DataFrame(0.0, index=self.state_names, columns=self.disturbance_names)
         )
         self.state_output_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.output_names), len(self.state_names)), dtype=np.float),
-                index=self.output_names,
-                columns=self.state_names
-            )
+            pd.DataFrame(0.0, index=self.output_names, columns=self.state_names)
         )
-        self.state_output_matrix['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.state_output_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
         self.control_output_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.output_names), len(self.control_names)), dtype=np.float),
-                index=self.output_names,
-                columns=self.control_names
-            )
+            pd.DataFrame(0.0, index=self.output_names, columns=self.control_names)
         )
-        self.control_output_matrix['active_power', 'active_power'] = 1.0
-        self.control_output_matrix['reactive_power', 'reactive_power'] = 1.0
+        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
         self.disturbance_output_matrix = (
-            pd.DataFrame.sparse.from_spmatrix(
-                scipy.sparse.csr_matrix((len(self.output_names), len(self.disturbance_names)), dtype=np.float),
-                index=self.output_names,
-                columns=self.disturbance_names
-            )
+            pd.DataFrame(0.0, index=self.output_names, columns=self.disturbance_names)
         )
 
         # Instantiate disturbance timeseries.
         self.disturbance_timeseries = (
-            pd.DataFrame(
-                0.0,
-                index=self.active_power_nominal_timeseries.index,
-                columns=self.disturbance_names
-            )
+            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbance_names)
         )
 
         # Construct output constraint timeseries
@@ -230,11 +200,11 @@ class FlexibleLoadModel(FlexibleDERModel):
                     + accumulated_energy_nominal_timeseries[int(flexible_load['time_period_power_shift_maximum'])]
                 ),
                 (
-                    (1.0 - flexible_load['power_increase_percentage_maximum'])
+                    (1.0 + flexible_load['power_increase_percentage_maximum'])
                     * self.active_power_nominal_timeseries
                 ),
                 (
-                    (1.0 - flexible_load['power_increase_percentage_maximum'])
+                    (1.0 + flexible_load['power_increase_percentage_maximum'])
                     * self.reactive_power_nominal_timeseries
                 )
             ], axis='columns')

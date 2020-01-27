@@ -276,12 +276,12 @@ class ElectricGridIndex(object):
         self.phases = pd.Index(['1', '2', '3'])
         self.node_names = pd.Index(electric_grid_data.electric_grid_nodes['node_name'])
         self.node_types = pd.Index(['source', 'no_source'])
-        self.nodes_phases = pd.Index(zip(nodes['node_name'], nodes['phase']))
+        self.nodes_phases = pd.Index(zip(nodes['node_type'], nodes['node_name'], nodes['phase']))
         self.line_names = pd.Index(electric_grid_data.electric_grid_lines['line_name'])
         self.transformer_names = pd.Index(electric_grid_transformers_one_winding['transformer_name'])
         self.branch_names = pd.Index(branches['branch_name'])
         self.branch_types = pd.Index(['line', 'transformer'])
-        self.branches_phases = pd.Index(zip(branches['branch_name'], branches['phase'], branches['branch_type']))
+        self.branches_phases = pd.Index(zip(branches['branch_type'], branches['branch_name'], branches['phase']))
         self.der_names = pd.Index(electric_grid_data.electric_grid_ders['der_name'])
 
         # Generate indexing dictionaries for the nodal admittance matrix,

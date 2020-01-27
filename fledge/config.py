@@ -4,6 +4,7 @@ import datetime
 import logging
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 
 # Path definitions.
 fledge_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
@@ -21,6 +22,7 @@ solver_output = False  # If True, activate verbose solver output.
 
 # Plotting settings.
 plt.style.use('seaborn-colorblind')
+pd.plotting.register_matplotlib_converters()
 
 # Test settings.
 test_scenario_name = 'singapore_6node'

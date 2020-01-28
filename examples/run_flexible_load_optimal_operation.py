@@ -18,15 +18,6 @@ def main():
     # Settings.
     scenario_name = "singapore_6node"
     plots = True  # If True, script may produce plots.
-    results_path = (
-        os.path.join(
-            fledge.config.results_path,
-            f'run_linear_electric_grid_model_{fledge.config.timestamp}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path) if plots else None
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
@@ -127,7 +118,7 @@ def main():
         pyo.quicksum(
             -1.0
             * price_data.price_timeseries_dict[price_name].at[timestep, 'price_value']
-            * optimization_problem.output_vector[output_name, timestep]
+            * optimization_problem.output_vector[timestep, output_name]
             for timestep in scenario_data.timesteps
             for output_name in ['active_power', 'reactive_power']
         )
@@ -186,7 +177,6 @@ def main():
         plt.title(f"Price: {price_name}")
         plt.show()
         plt.close()
-
 
 
 if __name__ == '__main__':

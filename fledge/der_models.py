@@ -1,12 +1,8 @@
 """Distributed energy resource (DER) models."""
 
-# TODO: Fix apparent power to active/reactive power ratio.
-
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import scipy.sparse
-import scipy.sparse.linalg
 
 import fledge.config
 import fledge.database_interface
@@ -142,7 +138,7 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.state_names = pd.Index(['accumulated_energy'])
         self.control_names = pd.Index(['active_power', 'reactive_power'])
         self.disturbance_names = pd.Index([])
-        self.output_names = pd.Index(['accumulated_energy', 'active_power', 'reactive_power'])
+        self.output_names = pd.Index(['accumulated_energy', 'active_power', 'reactive_power', 'power_factor_constant'])
 
         # Instantiate state space matrices.
         # TODO: Consolidate indexing approach with electric grid model.
@@ -166,6 +162,8 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
+        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_load['active_power']
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_load['reactive_power']
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.output_names, columns=self.disturbance_names)
         )
@@ -190,7 +188,8 @@ class FlexibleLoadModel(FlexibleDERModel):
                 (
                     (1.0 - flexible_load['power_decrease_percentage_maximum'])
                     * self.reactive_power_nominal_timeseries
-                )
+                ),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
@@ -206,6 +205,7 @@ class FlexibleLoadModel(FlexibleDERModel):
                 (
                     (1.0 + flexible_load['power_increase_percentage_maximum'])
                     * self.reactive_power_nominal_timeseries
-                )
+                ),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
             ], axis='columns')
         )

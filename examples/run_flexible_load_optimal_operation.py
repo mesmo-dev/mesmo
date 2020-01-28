@@ -2,7 +2,6 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
 import pyomo.environ as pyo
 
@@ -33,82 +32,10 @@ def main():
     optimization_problem = pyo.ConcreteModel()
 
     # Define variables.
-    optimization_problem.state_vector = pyo.Var(scenario_data.timesteps, flexible_load_model.state_names)
-    optimization_problem.control_vector = pyo.Var(scenario_data.timesteps, flexible_load_model.control_names)
-    optimization_problem.output_vector = pyo.Var(scenario_data.timesteps, flexible_load_model.output_names)
+    flexible_load_model.define_optimization_variables(optimization_problem)
 
     # Define constraints.
-    optimization_problem.constraints = pyo.ConstraintList()
-
-    # Initial state.
-    # TODO: Define initial state in model.
-    for state_name in flexible_load_model.state_names:
-        optimization_problem.constraints.add(
-            optimization_problem.state_vector[scenario_data.timesteps[0], state_name]
-            ==
-            0.0
-        )
-
-    for timestep in scenario_data.timesteps[:-1]:
-
-        # State equation.
-        for state_name in flexible_load_model.state_names:
-            optimization_problem.constraints.add(
-                optimization_problem.state_vector[timestep + timestep_interval, state_name]
-                ==
-                pyo.quicksum(
-                    flexible_load_model.state_matrix.at[state_name, state_name_other]
-                    * optimization_problem.state_vector[timestep, state_name_other]
-                    for state_name_other in flexible_load_model.state_names
-                )
-                + pyo.quicksum(
-                    flexible_load_model.control_matrix.at[state_name, control_name]
-                    * optimization_problem.control_vector[timestep, control_name]
-                    for control_name in flexible_load_model.control_names
-                )
-                + pyo.quicksum(
-                    flexible_load_model.disturbance_matrix.at[state_name, disturbance_name]
-                    * flexible_load_model.disturbance_timeseries.at[timestep, disturbance_name]
-                    for disturbance_name in flexible_load_model.disturbance_names
-                )
-            )
-
-    for timestep in scenario_data.timesteps:
-
-        # Output equation.
-        for output_name in flexible_load_model.output_names:
-            optimization_problem.constraints.add(
-                optimization_problem.output_vector[timestep, output_name]
-                ==
-                pyo.quicksum(
-                    flexible_load_model.state_output_matrix.at[output_name, state_name]
-                    * optimization_problem.state_vector[timestep, state_name]
-                    for state_name in flexible_load_model.state_names
-                )
-                + pyo.quicksum(
-                    flexible_load_model.control_output_matrix.at[output_name, control_name]
-                    * optimization_problem.control_vector[timestep, control_name]
-                    for control_name in flexible_load_model.control_names
-                )
-                + pyo.quicksum(
-                    flexible_load_model.disturbance_output_matrix.at[output_name, disturbance_name]
-                    * flexible_load_model.disturbance_timeseries.at[timestep, disturbance_name]
-                    for disturbance_name in flexible_load_model.disturbance_names
-                )
-            )
-
-        # Output limits.
-        for output_name in flexible_load_model.output_names:
-            optimization_problem.constraints.add(
-                optimization_problem.output_vector[timestep, output_name]
-                >=
-                flexible_load_model.output_minimum_timeseries.at[timestep, output_name]
-            )
-            optimization_problem.constraints.add(
-                optimization_problem.output_vector[timestep, output_name]
-                <=
-                flexible_load_model.output_maximum_timeseries.at[timestep, output_name]
-            )
+    flexible_load_model.define_optimization_constraints(optimization_problem)
 
     # Define objective.
     price_name = 'energy'
@@ -138,23 +65,13 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
-    state_vector = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=flexible_load_model.state_names)
-    control_vector = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=flexible_load_model.control_names)
-    output_vector = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=flexible_load_model.output_names)
-
-    for timestep in scenario_data.timesteps:
-        for state_name in flexible_load_model.state_names:
-            state_vector.at[timestep, state_name] = (
-                optimization_problem.state_vector[timestep, state_name].value
-            )
-        for control_name in flexible_load_model.control_names:
-            control_vector.at[timestep, control_name] = (
-                optimization_problem.control_vector[timestep, control_name].value
-            )
-        for output_name in flexible_load_model.output_names:
-            output_vector.at[timestep, output_name] = (
-                optimization_problem.output_vector[timestep, output_name].value
-            )
+    (
+        state_vector,
+        control_vector,
+        output_vector
+    ) = flexible_load_model.get_optimization_results(
+        optimization_problem
+    )
 
     # Print results.
     print(f"state_name = \n{state_vector.to_string()}")

@@ -3,6 +3,8 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import pyomo.core
+import pyomo.environ as pyo
 
 import fledge.config
 import fledge.database_interface
@@ -13,8 +15,17 @@ logger = fledge.config.get_logger(__name__)
 class DERModel(object):
     """DER model object."""
 
+    der_name: str
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
+
+    def __init__(
+            self,
+            der_name: str
+    ):
+
+        # Store DER name.
+        self.der_name = der_name
 
 
 class FixedLoadModel(DERModel):
@@ -27,8 +38,11 @@ class FixedLoadModel(DERModel):
     ):
         """Construct fixed load model object by `fixed_load_data` and `der_name`."""
 
+        # Initialize inherited properties.
+        super(FixedLoadModel, self).__init__(der_name)
+
         # Get fixed load data by `der_name`.
-        fixed_load = fixed_load_data.fixed_loads.loc[der_name, :]
+        fixed_load = fixed_load_data.fixed_loads.loc[self.der_name, :]
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -59,8 +73,11 @@ class EVChargerModel(DERModel):
     ):
         """Construct EV charger model object by `ev_charger_data` and `der_name`."""
 
+        # Initialize inherited properties.
+        super(EVChargerModel, self).__init__(der_name)
+
         # Get fixed load data by `der_name`.
-        ev_charger = ev_charger_data.ev_chargers.loc[der_name, :]
+        ev_charger = ev_charger_data.ev_chargers.loc[self.der_name, :]
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -84,6 +101,7 @@ class EVChargerModel(DERModel):
 class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 
+    timesteps: pd.Index
     state_names: pd.Index
     control_names: pd.Index
     disturbance_names: pd.Index
@@ -98,6 +116,129 @@ class FlexibleDERModel(DERModel):
     output_maximum_timeseries: pd.DataFrame
     output_minimum_timeseries: pd.DataFrame
 
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+    ):
+
+        # Define variables.
+        optimization_problem.state_vector = pyo.Var(self.timesteps, self.state_names)
+        optimization_problem.control_vector = pyo.Var(self.timesteps, self.control_names)
+        optimization_problem.output_vector = pyo.Var(self.timesteps, self.output_names)
+
+    def define_optimization_constraints(
+        self,
+        optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+
+        # Define shorthand for indexing 't+1'.
+        # TODO: Is inferring timestep_interval from timesteps guaranteed to work?
+        timestep_interval = self.timesteps[1] - self.timesteps[0]
+
+        # Define constraints.
+        optimization_problem.flexible_der_model_constraints = pyo.ConstraintList()
+
+        # Initial state.
+        # TODO: Define initial state in model.
+        for state_name in self.state_names:
+            optimization_problem.flexible_der_model_constraints.add(
+                optimization_problem.state_vector[self.timesteps[0], state_name]
+                ==
+                0.0
+            )
+
+        for timestep in self.timesteps[:-1]:
+
+            # State equation.
+            for state_name in self.state_names:
+                optimization_problem.flexible_der_model_constraints.add(
+                    optimization_problem.state_vector[timestep + timestep_interval, state_name]
+                    ==
+                    pyo.quicksum(
+                        self.state_matrix.at[state_name, state_name_other]
+                        * optimization_problem.state_vector[timestep, state_name_other]
+                        for state_name_other in self.state_names
+                    )
+                    + pyo.quicksum(
+                        self.control_matrix.at[state_name, control_name]
+                        * optimization_problem.control_vector[timestep, control_name]
+                        for control_name in self.control_names
+                    )
+                    + pyo.quicksum(
+                        self.disturbance_matrix.at[state_name, disturbance_name]
+                        * self.disturbance_timeseries.at[timestep, disturbance_name]
+                        for disturbance_name in self.disturbance_names
+                    )
+                )
+
+        for timestep in self.timesteps:
+
+            # Output equation.
+            for output_name in self.output_names:
+                optimization_problem.flexible_der_model_constraints.add(
+                    optimization_problem.output_vector[timestep, output_name]
+                    ==
+                    pyo.quicksum(
+                        self.state_output_matrix.at[output_name, state_name]
+                        * optimization_problem.state_vector[timestep, state_name]
+                        for state_name in self.state_names
+                    )
+                    + pyo.quicksum(
+                        self.control_output_matrix.at[output_name, control_name]
+                        * optimization_problem.control_vector[timestep, control_name]
+                        for control_name in self.control_names
+                    )
+                    + pyo.quicksum(
+                        self.disturbance_output_matrix.at[output_name, disturbance_name]
+                        * self.disturbance_timeseries.at[timestep, disturbance_name]
+                        for disturbance_name in self.disturbance_names
+                    )
+                )
+
+            # Output limits.
+            for output_name in self.output_names:
+                optimization_problem.flexible_der_model_constraints.add(
+                    optimization_problem.output_vector[timestep, output_name]
+                    >=
+                    self.output_minimum_timeseries.at[timestep, output_name]
+                )
+                optimization_problem.flexible_der_model_constraints.add(
+                    optimization_problem.output_vector[timestep, output_name]
+                    <=
+                    self.output_maximum_timeseries.at[timestep, output_name]
+                )
+
+    def get_optimization_results(
+            self,
+            optimization_problem
+    ):
+
+        # Instantiate results variables.
+        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.state_names)
+        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.control_names)
+        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.output_names)
+
+        # Obtain results.
+        for timestep in self.timesteps:
+            for state_name in self.state_names:
+                state_vector.at[timestep, state_name] = (
+                    optimization_problem.state_vector[timestep, state_name].value
+                )
+            for control_name in self.control_names:
+                control_vector.at[timestep, control_name] = (
+                    optimization_problem.control_vector[timestep, control_name].value
+                )
+            for output_name in self.output_names:
+                output_vector.at[timestep, output_name] = (
+                    optimization_problem.output_vector[timestep, output_name].value
+                )
+
+        return (
+            state_vector,
+            control_vector,
+            output_vector
+        )
+
 
 class FlexibleLoadModel(FlexibleDERModel):
     """Flexible load model object."""
@@ -109,8 +250,14 @@ class FlexibleLoadModel(FlexibleDERModel):
     ):
         """Construct flexible load model object by `flexible_load_data` and `der_name`."""
 
-        # Get fixed load data by `der_name`.
+        # Initialize inherited properties.
+        super(FlexibleDERModel, self).__init__(der_name)
+
+        # Get flexible load data by `der_name`.
         flexible_load = flexible_load_data.flexible_loads.loc[der_name, :]
+
+        # Store timesteps index.
+        self.timesteps = flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (

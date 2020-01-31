@@ -19,14 +19,6 @@ class DERModel(object):
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
 
-    def __init__(
-            self,
-            der_name: str
-    ):
-
-        # Store DER name.
-        self.der_name = der_name
-
 
 class FixedLoadModel(DERModel):
     """Fixed load model object."""
@@ -38,8 +30,8 @@ class FixedLoadModel(DERModel):
     ):
         """Construct fixed load model object by `fixed_load_data` and `der_name`."""
 
-        # Initialize inherited properties.
-        super(FixedLoadModel, self).__init__(der_name)
+        # Store DER name.
+        self.der_name = der_name
 
         # Get fixed load data by `der_name`.
         fixed_load = fixed_load_data.fixed_loads.loc[self.der_name, :]
@@ -73,8 +65,8 @@ class EVChargerModel(DERModel):
     ):
         """Construct EV charger model object by `ev_charger_data` and `der_name`."""
 
-        # Initialize inherited properties.
-        super(EVChargerModel, self).__init__(der_name)
+        # Store DER name.
+        self.der_name = der_name
 
         # Get fixed load data by `der_name`.
         ev_charger = ev_charger_data.ev_chargers.loc[self.der_name, :]
@@ -250,8 +242,8 @@ class FlexibleLoadModel(FlexibleDERModel):
     ):
         """Construct flexible load model object by `flexible_load_data` and `der_name`."""
 
-        # Initialize inherited properties.
-        super(FlexibleDERModel, self).__init__(der_name)
+        # Store DER name.
+        self.der_name = der_name
 
         # Get flexible load data by `der_name`.
         flexible_load = flexible_load_data.flexible_loads.loc[der_name, :]

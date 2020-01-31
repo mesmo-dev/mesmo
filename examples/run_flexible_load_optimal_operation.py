@@ -45,7 +45,7 @@ def main():
         pyo.quicksum(
             -1.0
             * price_data.price_timeseries_dict[price_name].at[timestep, 'price_value']
-            * optimization_problem.output_vector[timestep, output_name]
+            * optimization_problem.output_vector[timestep, der_name, output_name]
             for timestep in scenario_data.timesteps
             for output_name in ['active_power', 'reactive_power']
         )

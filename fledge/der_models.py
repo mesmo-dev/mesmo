@@ -114,9 +114,9 @@ class FlexibleDERModel(DERModel):
     ):
 
         # Define variables.
-        optimization_problem.state_vector = pyo.Var(self.timesteps, self.state_names)
-        optimization_problem.control_vector = pyo.Var(self.timesteps, self.control_names)
-        optimization_problem.output_vector = pyo.Var(self.timesteps, self.output_names)
+        optimization_problem.state_vector = pyo.Var(self.timesteps, [self.der_name], self.state_names)
+        optimization_problem.control_vector = pyo.Var(self.timesteps, [self.der_name], self.control_names)
+        optimization_problem.output_vector = pyo.Var(self.timesteps, [self.der_name], self.output_names)
 
     def define_optimization_constraints(
         self,
@@ -134,7 +134,7 @@ class FlexibleDERModel(DERModel):
         # TODO: Define initial state in model.
         for state_name in self.state_names:
             optimization_problem.flexible_der_model_constraints.add(
-                optimization_problem.state_vector[self.timesteps[0], state_name]
+                optimization_problem.state_vector[self.timesteps[0], self.der_name, state_name]
                 ==
                 0.0
             )
@@ -144,16 +144,16 @@ class FlexibleDERModel(DERModel):
             # State equation.
             for state_name in self.state_names:
                 optimization_problem.flexible_der_model_constraints.add(
-                    optimization_problem.state_vector[timestep + timestep_interval, state_name]
+                    optimization_problem.state_vector[timestep + timestep_interval, self.der_name, state_name]
                     ==
                     pyo.quicksum(
                         self.state_matrix.at[state_name, state_name_other]
-                        * optimization_problem.state_vector[timestep, state_name_other]
+                        * optimization_problem.state_vector[timestep, self.der_name, state_name_other]
                         for state_name_other in self.state_names
                     )
                     + pyo.quicksum(
                         self.control_matrix.at[state_name, control_name]
-                        * optimization_problem.control_vector[timestep, control_name]
+                        * optimization_problem.control_vector[timestep, self.der_name, control_name]
                         for control_name in self.control_names
                     )
                     + pyo.quicksum(
@@ -168,16 +168,16 @@ class FlexibleDERModel(DERModel):
             # Output equation.
             for output_name in self.output_names:
                 optimization_problem.flexible_der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output_name]
                     ==
                     pyo.quicksum(
                         self.state_output_matrix.at[output_name, state_name]
-                        * optimization_problem.state_vector[timestep, state_name]
+                        * optimization_problem.state_vector[timestep, self.der_name, state_name]
                         for state_name in self.state_names
                     )
                     + pyo.quicksum(
                         self.control_output_matrix.at[output_name, control_name]
-                        * optimization_problem.control_vector[timestep, control_name]
+                        * optimization_problem.control_vector[timestep, self.der_name, control_name]
                         for control_name in self.control_names
                     )
                     + pyo.quicksum(
@@ -190,12 +190,12 @@ class FlexibleDERModel(DERModel):
             # Output limits.
             for output_name in self.output_names:
                 optimization_problem.flexible_der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output_name]
                     >=
                     self.output_minimum_timeseries.at[timestep, output_name]
                 )
                 optimization_problem.flexible_der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output_name]
                     <=
                     self.output_maximum_timeseries.at[timestep, output_name]
                 )
@@ -214,15 +214,15 @@ class FlexibleDERModel(DERModel):
         for timestep in self.timesteps:
             for state_name in self.state_names:
                 state_vector.at[timestep, state_name] = (
-                    optimization_problem.state_vector[timestep, state_name].value
+                    optimization_problem.state_vector[timestep, self.der_name, state_name].value
                 )
             for control_name in self.control_names:
                 control_vector.at[timestep, control_name] = (
-                    optimization_problem.control_vector[timestep, control_name].value
+                    optimization_problem.control_vector[timestep, self.der_name, control_name].value
                 )
             for output_name in self.output_names:
                 output_vector.at[timestep, output_name] = (
-                    optimization_problem.output_vector[timestep, output_name].value
+                    optimization_problem.output_vector[timestep, self.der_name, output_name].value
                 )
 
         return (

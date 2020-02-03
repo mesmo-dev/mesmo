@@ -8,6 +8,8 @@ import pyomo.environ as pyo
 
 import fledge.config
 import fledge.database_interface
+import fledge.electric_grid_models
+import fledge.power_flow_solvers
 
 logger = fledge.config.get_logger(__name__)
 
@@ -23,6 +25,48 @@ class DERModel(object):
 
 class FixedDERModel(DERModel):
     """Fixed DER model object."""
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+    ):
+        pass
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+        pass
+
+    def define_optimization_connection_electric_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
+    ):
+
+        # Define connection constraints.
+        if optimization_problem.find_component('der_connection_constraints') is None:
+            optimization_problem.der_connection_constraints = pyo.ConstraintList()
+        for timestep in self.timesteps:
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_active_power_vector_change[timestep, self.der_name]
+                ==
+                self.active_power_nominal_timeseries.at[timestep]
+                - np.real(power_flow_solution.der_power_vector[electric_grid_index.der_by_der_name[self.der_name][0]])
+            )
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_reactive_power_vector_change[timestep, self.der_name]
+                ==
+                self.reactive_power_nominal_timeseries.at[timestep]
+                - np.imag(power_flow_solution.der_power_vector[electric_grid_index.der_by_der_name[self.der_name][0]])
+            )
+
+    def get_optimization_results(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+        return None
 
 
 class FixedLoadModel(FixedDERModel):
@@ -207,9 +251,33 @@ class FlexibleDERModel(DERModel):
                     self.output_maximum_timeseries.at[timestep, output_name]
                 )
 
+    def define_optimization_connection_electric_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
+    ):
+
+        # Define connection constraints.
+        if optimization_problem.find_component('der_connection_constraints') is None:
+            optimization_problem.der_connection_constraints = pyo.ConstraintList()
+        for timestep in self.timesteps:
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_active_power_vector_change[timestep, self.der_name]
+                ==
+                optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                - np.real(power_flow_solution.der_power_vector[electric_grid_index.der_by_der_name[self.der_name][0]])
+            )
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_reactive_power_vector_change[timestep, self.der_name]
+                ==
+                optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
+                - np.imag(power_flow_solution.der_power_vector[electric_grid_index.der_by_der_name[self.der_name][0]])
+            )
+
     def get_optimization_results(
             self,
-            optimization_problem
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
     ):
 
         # Instantiate results variables.

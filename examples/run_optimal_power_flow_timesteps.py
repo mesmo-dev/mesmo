@@ -6,6 +6,7 @@ import pyomo.environ as pyo
 
 import fledge.config
 import fledge.database_interface
+import fledge.der_models
 import fledge.linear_electric_grid_models
 import fledge.electric_grid_models
 import fledge.power_flow_solvers
@@ -16,16 +17,46 @@ def main():
     # Settings.
     scenario_name = "singapore_6node"
 
-    # Obtain scenario data.
+    # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
+    fixed_load_data = fledge.database_interface.FixedLoadData(scenario_name)
+    ev_charger_data = fledge.database_interface.EVChargerData(scenario_name)
+    flexible_load_data = fledge.database_interface.FlexibleLoadData(scenario_name)
 
-    # Get model.
+    # Obtain models.
     electric_grid_index = (
         fledge.electric_grid_models.ElectricGridIndex(scenario_name)
     )
     electric_grid_model = (
         fledge.electric_grid_models.ElectricGridModel(scenario_name)
     )
+    der_models = dict.fromkeys(electric_grid_index.der_names)
+    flexible_load_der_names = []
+    for der_name in electric_grid_index.der_names:
+        if der_name in fixed_load_data.fixed_loads['der_name']:
+            der_models[der_name] = (
+                fledge.der_models.FixedLoadModel(
+                    fixed_load_data,
+                    der_name
+                )
+            )
+        elif der_name in ev_charger_data.ev_chargers['der_name']:
+            der_models[der_name] = (
+                fledge.der_models.EVChargerModel(
+                    ev_charger_data,
+                    der_name
+                )
+            )
+        elif der_name in flexible_load_data.flexible_loads['der_name']:
+            der_models[der_name] = (
+                fledge.der_models.FlexibleLoadModel(
+                    flexible_load_data,
+                    der_name
+                )
+            )
+            flexible_load_der_names.append(der_name)
+        else:
+            raise ValueError(f"Cannot determine DER type of DER: {der_name}")
 
     # Obtain reference DER power vector and power flow solution.
     der_power_vector_reference = electric_grid_model.der_power_vector_nominal
@@ -53,31 +84,60 @@ def main():
     # Define linear electric grid model constraints.
     linear_electric_grid_model.define_optimization_constraints(optimization_problem, scenario_data.timesteps)
 
+    # Define flexible DER variables.
+    der_state_names = [
+        (der_name, state_name)
+        for der_name in flexible_load_der_names
+        for state_name in der_models[der_name].state_names
+    ]
+    der_control_names = [
+        (der_name, control_name)
+        for der_name in flexible_load_der_names
+        for control_name in der_models[der_name].control_names
+    ]
+    der_output_names = [
+        (der_name, output_name)
+        for der_name in flexible_load_der_names
+        for output_name in der_models[der_name].output_names
+    ]
+    optimization_problem.state_vector = pyo.Var(scenario_data.timesteps, der_state_names)
+    optimization_problem.control_vector = pyo.Var(scenario_data.timesteps, der_control_names)
+    optimization_problem.output_vector = pyo.Var(scenario_data.timesteps, der_output_names)
+
     # Define DER constraints.
-    # TODO: DERs are currently assumed to be only loads, hence negative values.
     optimization_problem.der_constraints = pyo.ConstraintList()
-    for timestep in scenario_data.timesteps:
-        for der_index, der_name in enumerate(electric_grid_index.der_names):
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[timestep, der_name]
-                <=
-                0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-                - np.real(der_power_vector_reference[der_index])
-            )
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[timestep, der_name]
-                >=
-                1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-                - np.real(der_power_vector_reference[der_index])
-            )
-            # Fixed power factor for reactive power based on nominal power factor.
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                ==
-                optimization_problem.der_active_power_vector_change[timestep, der_name]
-                * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
-                / np.real(electric_grid_model.der_power_vector_nominal[der_index])
-            )
+    for der_index, der_name in enumerate(electric_grid_index.der_names):
+        der_model = der_models[der_name]
+        for timestep in scenario_data.timesteps:
+            if isinstance(der_model, fledge.der_models.FixedDERModel):
+                optimization_problem.der_constraints.add(
+                    optimization_problem.der_active_power_vector_change[timestep, der_name]
+                    ==
+                    der_model.active_power_nominal_timeseries.at[timestep]
+                    - np.real(der_power_vector_reference[der_index])
+                )
+                optimization_problem.der_constraints.add(
+                    optimization_problem.der_reactive_power_vector_change[timestep, der_name]
+                    ==
+                    der_model.reactive_power_nominal_timeseries.at[timestep]
+                    - np.imag(der_power_vector_reference[der_index])
+                )
+
+            elif isinstance(der_model, fledge.der_models.FlexibleDERModel):
+                der_model.define_optimization_constraints(optimization_problem)
+
+                optimization_problem.der_constraints.add(
+                    optimization_problem.der_active_power_vector_change[timestep, der_name]
+                    ==
+                    optimization_problem.output_vector[timestep, der_name, 'active_power']
+                    - np.real(der_power_vector_reference[der_index])
+                )
+                optimization_problem.der_constraints.add(
+                    optimization_problem.der_reactive_power_vector_change[timestep, der_name]
+                    ==
+                    optimization_problem.output_vector[timestep, der_name, 'reactive_power']
+                    - np.imag(der_power_vector_reference[der_index])
+                )
 
     # Define branch limit constraints.
     # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
@@ -87,7 +147,7 @@ def main():
         rule=lambda optimization_problem, timestep, *branch_phase: (
             optimization_problem.branch_power_vector_1_squared_change[timestep, branch_phase]
             >=
-            0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
+            0.3 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
             - np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_index.branches_phases.get_loc(branch_phase)] ** 2)
         )
     )

@@ -16,6 +16,7 @@ class DERModel(object):
     """DER model object."""
 
     der_name: str
+    timesteps: pd.Index
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
 
@@ -39,6 +40,9 @@ class FixedLoadModel(FixedDERModel):
 
         # Get fixed load data by `der_name`.
         fixed_load = fixed_load_data.fixed_loads.loc[self.der_name, :]
+
+        # Store timesteps index.
+        self.timesteps = fixed_load_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -73,6 +77,9 @@ class EVChargerModel(FixedDERModel):
         # Get fixed load data by `der_name`.
         ev_charger = ev_charger_data.ev_chargers.loc[self.der_name, :]
 
+        # Store timesteps index.
+        self.timesteps = ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
+
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
             ev_charger_data.ev_charger_timeseries_dict[
@@ -93,7 +100,6 @@ class EVChargerModel(FixedDERModel):
 class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 
-    timesteps: pd.Index
     state_names: pd.Index
     control_names: pd.Index
     disturbance_names: pd.Index

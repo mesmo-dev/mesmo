@@ -43,7 +43,6 @@ class FixedLoadModel(DERModel):
             ]['apparent_power_per_unit'].rename('active_power')
             * fixed_load['scaling_factor']
             * fixed_load['active_power']
-            * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
             fixed_load_data.fixed_load_timeseries_dict[
@@ -51,7 +50,6 @@ class FixedLoadModel(DERModel):
             ]['apparent_power_per_unit'].rename('reactive_power')
             * fixed_load['scaling_factor']
             * fixed_load['reactive_power']
-            * -1.0  # Load / demand is negative.
         )
 
 
@@ -78,7 +76,6 @@ class EVChargerModel(DERModel):
             ]['apparent_power_per_unit'].rename('active_power')
             * ev_charger['scaling_factor']
             * ev_charger['active_power']
-            * -1.0  # Load / demand is negative.
         )
         self.reactive_power_nominal_timeseries = (
             ev_charger_data.ev_charger_timeseries_dict[
@@ -86,7 +83,6 @@ class EVChargerModel(DERModel):
             ]['apparent_power_per_unit'].rename('reactive_power')
             * ev_charger['scaling_factor']
             * ev_charger['reactive_power']
-            * -1.0  # Load / demand is negative.
         )
 
 
@@ -128,7 +124,8 @@ class FlexibleDERModel(DERModel):
         timestep_interval = self.timesteps[1] - self.timesteps[0]
 
         # Define constraints.
-        optimization_problem.flexible_der_model_constraints = pyo.ConstraintList()
+        if optimization_problem.find_component('flexible_der_model_constraints') is None:
+            optimization_problem.flexible_der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
         # TODO: Define initial state in model.

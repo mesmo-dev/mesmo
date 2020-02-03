@@ -134,8 +134,7 @@ def main():
         power_flow_solution = (
             fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
                 electric_grid_model,
-                power_multiplier * node_power_vector_wye_initial,
-                power_multiplier * node_power_vector_delta_initial
+                power_multiplier * electric_grid_model.der_power_vector_nominal
             )
         )
         node_voltage_vector_power_flow[:, multiplier_index] = (

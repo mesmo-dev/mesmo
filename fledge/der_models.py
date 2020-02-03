@@ -20,7 +20,11 @@ class DERModel(object):
     reactive_power_nominal_timeseries: pd.Series
 
 
-class FixedLoadModel(DERModel):
+class FixedDERModel(DERModel):
+    """Fixed DER model object."""
+
+
+class FixedLoadModel(FixedDERModel):
     """Fixed load model object."""
 
     def __init__(
@@ -53,7 +57,7 @@ class FixedLoadModel(DERModel):
         )
 
 
-class EVChargerModel(DERModel):
+class EVChargerModel(FixedDERModel):
     """EV charger model object."""
 
     def __init__(

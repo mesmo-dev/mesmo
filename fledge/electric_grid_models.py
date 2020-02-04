@@ -295,15 +295,15 @@ class ElectricGridIndex(object):
         # TODO: Add index by `line_name` / `transformer_name`.
         self.node_by_node_name = dict.fromkeys(self.node_names)
         for node_name in self.node_names:
-            self.node_by_node_name[node_name] = np.nonzero(nodes['node_name'] == node_name)[0].tolist()
+            self.node_by_node_name[node_name] = np.flatnonzero(nodes['node_name'] == node_name).tolist()
         # Index by phase.
         self.node_by_phase = dict.fromkeys(self.phases)
         for phase in self.phases:
-            self.node_by_phase[phase] = np.nonzero(nodes['phase'] == phase)[0].tolist()
+            self.node_by_phase[phase] = np.flatnonzero(nodes['phase'] == phase).tolist()
         # Index by node type.
         self.node_by_node_type = dict.fromkeys(self.node_types)
         for node_type in self.node_types:
-            self.node_by_node_type[node_type] = np.nonzero(nodes['node_type'] == node_type)[0].tolist()
+            self.node_by_node_type[node_type] = np.flatnonzero(nodes['node_type'] == node_type).tolist()
         # Index by der name.
         self.node_by_der_name = dict.fromkeys(self.der_names)
         # TODO: Find a more efficient way to represent der / node / phase comparison.
@@ -320,10 +320,10 @@ class ElectricGridIndex(object):
                 )
             )
             self.node_by_der_name[der_name] = (
-                np.nonzero(
+                np.flatnonzero(
                     (nodes['node_name'] == electric_grid_data.electric_grid_ders.at[der_name, 'node_name'])
                     & (nodes['phase'].isin(der_phases))
-                )[0].tolist()
+                ).tolist()
             )
 
         # Generate indexing dictionaries for the branch admittance matrices,
@@ -337,24 +337,24 @@ class ElectricGridIndex(object):
         self.branch_by_line_name = dict.fromkeys(self.line_names)
         for line_name in self.line_names:
             self.branch_by_line_name[line_name] = (
-                np.nonzero(
+                np.flatnonzero(
                     (branches['branch_name'] == line_name)
                     & (branches['branch_type'] == 'line')
-                )[0].tolist()
+                ).tolist()
             )
         # Index by transformer name.
         self.branch_by_transformer_name = dict.fromkeys(self.transformer_names)
         for transformer_name in self.transformer_names:
             self.branch_by_transformer_name[transformer_name] = (
-                np.nonzero(
+                np.flatnonzero(
                     (branches['branch_name'] == transformer_name)
                     & (branches['branch_type'] == 'transformer')
-                )[0].tolist()
+                ).tolist()
             )
         # Index by phase.
         self.branch_by_phase = dict.fromkeys(self.phases)
         for phase in self.phases:
-            self.branch_by_phase[phase] = np.nonzero(branches['phase'] == phase)[0].tolist()
+            self.branch_by_phase[phase] = np.flatnonzero(branches['phase'] == phase).tolist()
 
         # Generate indexing dictionary for the der incidence matrix.
 
@@ -806,11 +806,11 @@ class ElectricGridModel(object):
         for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
             # Obtain node transformation matrix index.
             transformation_index = (
-                np.nonzero([
+                np.flatnonzero([
                     node['is_phase_1_connected'] == 1,
                     node['is_phase_2_connected'] == 1,
                     node['is_phase_3_connected'] == 1
-                ])[0].tolist()
+                ]).tolist()
             )
 
             # Construct node transformation matrix.
@@ -849,11 +849,11 @@ class ElectricGridModel(object):
             elif connection == "delta":
                 # Obtain phases of the delta der.
                 phases = (
-                    np.nonzero([
+                    np.flatnonzero([
                         der['is_phase_1_connected'] == 1,
                         der['is_phase_2_connected'] == 1,
                         der['is_phase_3_connected'] == 1
-                    ])[0].tolist()
+                    ]).tolist()
                 )
 
                 # Select connection node based on phase arrangement of delta der.
@@ -908,11 +908,11 @@ class ElectricGridModel(object):
             for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
                 # Obtain phases for node.
                 phases = (
-                    np.nonzero([
+                    np.flatnonzero([
                         node['is_phase_1_connected'] == 1,
                         node['is_phase_2_connected'] == 1,
                         node['is_phase_3_connected'] == 1
-                    ])[0].tolist()
+                    ]).tolist()
                 )
 
                 # Obtain node voltage level.
@@ -937,11 +937,11 @@ class ElectricGridModel(object):
 
             # Obtain phases for source node.
             phases = (
-                np.nonzero([
+                np.flatnonzero([
                     node['is_phase_1_connected'] == 1,
                     node['is_phase_2_connected'] == 1,
                     node['is_phase_3_connected'] == 1
-                ])[0].tolist()
+                ]).tolist()
             )
 
             # Obtain source node voltage level.
@@ -1253,7 +1253,7 @@ def initialize_opendss_model(
 
             # Add maximum / minimum level
             # to OpenDSS command string for each winding.
-            for winding_index in np.nonzero(taps['winding'] == winding['winding'])[0]:
+            for winding_index in np.flatnonzero(taps['winding'] == winding['winding']):
                 opendss_command_string += (
                     " maxtap="
                     + f"{taps.at[winding_index, 'tap_maximum_voltage_per_unit']}"

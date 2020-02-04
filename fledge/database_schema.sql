@@ -215,10 +215,63 @@ CREATE TABLE IF NOT EXISTS "ev_chargers" (
 	PRIMARY KEY("model_name","case_name")
 );
 CREATE TABLE IF NOT EXISTS "ev_charger_timeseries" (
-	"timeseries_name"	TEXT DEFAULT 'ev_charger_dummy',
+	"timeseries_name"	TEXT,
 	"time"	TEXT,
 	"apparent_power"	REAL,
 	"apparent_power_per_unit"	REAL,
 	PRIMARY KEY("timeseries_name","time")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grid_cooling_plant_types" (
+	"cooling_plant_type"	TEXT,
+	"pumping_total_efficiency"	REAL,
+	"pump_head_cooling_water"	REAL,
+	"pump_head_evaporators"	REAL,
+	"chiller_set_beta"	REAL,
+	"chiller_set_delta_temperature_cnd_min"	REAL,
+	"chiller_set_evaporation_temperature"	REAL,
+	"chiller_set_cooling_capacity"	REAL,
+	"cooling_water_delta_temperature"	REAL,
+	"cooling_tower_set_reference_temperature_cooling_water_supply"	REAL,
+	"cooling_tower_set_reference_temperature_wet_bulb"	REAL,
+	"cooling_tower_set_reference_temperature_slope"	REAL,
+	"cooling_tower_set_ventilation_factor"	REAL,
+	PRIMARY KEY("cooling_plant_type")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grid_ders" (
+	"thermal_grid_name"	TEXT,
+	"der_name"	TEXT,
+	"der_type"	TEXT,
+	"model_name"	TEXT,
+	PRIMARY KEY("thermal_grid_name","der_name")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grid_lines" (
+	"thermal_grid_name"	TEXT,
+	"line_name"	TEXT,
+	"node_1_name"	TEXT,
+	"node_2_name"	TEXT,
+	"length"	REAL,
+	"diameter"	REAL,
+	"absolute_roughness"	REAL,
+	PRIMARY KEY("thermal_grid_name","line_name")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grid_nodes" (
+	"thermal_grid_name"	TEXT,
+	"node_name"	TEXT,
+	"node_type"	TEXT,
+	"latitude"	REAL,
+	"longitude"	REAL,
+	PRIMARY KEY("thermal_grid_name","node_name")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grids" (
+	"thermal_grid_name"	TEXT,
+	"enthalpy_difference_distribution_water"	REAL,
+	"enthalpy_difference_cooling_water"	REAL,
+	"water_density"	REAL,
+	"water_kinematic_viscosity"	REAL,
+	"pump_efficiency_secondary_pump"	REAL,
+	"ets_head_loss"	REAL,
+	"pipe_velocity_maximum"	REAL,
+	"cooling_plant_type"	TEXT,
+	PRIMARY KEY("thermal_grid_name")
 );
 COMMIT;

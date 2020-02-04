@@ -19,44 +19,11 @@ def main():
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-    fixed_load_data = fledge.database_interface.FixedLoadData(scenario_name)
-    ev_charger_data = fledge.database_interface.EVChargerData(scenario_name)
-    flexible_load_data = fledge.database_interface.FlexibleLoadData(scenario_name)
 
     # Obtain models.
-    electric_grid_index = (
-        fledge.electric_grid_models.ElectricGridIndex(scenario_name)
-    )
-    electric_grid_model = (
-        fledge.electric_grid_models.ElectricGridModel(scenario_name)
-    )
-    der_models = dict.fromkeys(electric_grid_index.der_names)
-    flexible_load_der_names = []
-    for der_name in electric_grid_index.der_names:
-        if der_name in fixed_load_data.fixed_loads['der_name']:
-            der_models[der_name] = (
-                fledge.der_models.FixedLoadModel(
-                    fixed_load_data,
-                    der_name
-                )
-            )
-        elif der_name in ev_charger_data.ev_chargers['der_name']:
-            der_models[der_name] = (
-                fledge.der_models.EVChargerModel(
-                    ev_charger_data,
-                    der_name
-                )
-            )
-        elif der_name in flexible_load_data.flexible_loads['der_name']:
-            der_models[der_name] = (
-                fledge.der_models.FlexibleLoadModel(
-                    flexible_load_data,
-                    der_name
-                )
-            )
-            flexible_load_der_names.append(der_name)
-        else:
-            raise ValueError(f"Cannot determine DER type of DER: {der_name}")
+    electric_grid_index = fledge.electric_grid_models.ElectricGridIndex(scenario_name)
+    electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Obtain reference DER power vector and power flow solution.
     power_flow_solution = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
@@ -78,38 +45,20 @@ def main():
     # Define linear electric grid model constraints.
     linear_electric_grid_model.define_optimization_constraints(optimization_problem, scenario_data.timesteps)
 
-    # Define flexible DER variables.
-    der_state_names = [
-        (der_name, state_name)
-        for der_name in flexible_load_der_names
-        for state_name in der_models[der_name].state_names
-    ]
-    der_control_names = [
-        (der_name, control_name)
-        for der_name in flexible_load_der_names
-        for control_name in der_models[der_name].control_names
-    ]
-    der_output_names = [
-        (der_name, output_name)
-        for der_name in flexible_load_der_names
-        for output_name in der_models[der_name].output_names
-    ]
-    optimization_problem.state_vector = pyo.Var(scenario_data.timesteps, der_state_names)
-    optimization_problem.control_vector = pyo.Var(scenario_data.timesteps, der_control_names)
-    optimization_problem.output_vector = pyo.Var(scenario_data.timesteps, der_output_names)
+    # Define DER variables.
+    der_model_set.define_optimization_variables(optimization_problem)
 
     # Define DER constraints.
-    for der_model in der_models.values():
-        # Internal DER constraints (for flexible DERs).
-        der_model.define_optimization_constraints(
-            optimization_problem
-        )
-        # Constraints for the connection with the DER power vector of the electric grid.
-        der_model.define_optimization_connection_electric_grid(
-            optimization_problem,
-            power_flow_solution,
-            electric_grid_index
-        )
+    der_model_set.define_optimization_constraints(
+        optimization_problem
+    )
+
+    # Define constraints for the connection with the DER power vector of the electric grid.
+    der_model_set.define_optimization_connection_electric_grid(
+        optimization_problem,
+        power_flow_solution,
+        electric_grid_index
+    )
 
     # Define branch limit constraints.
     # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.

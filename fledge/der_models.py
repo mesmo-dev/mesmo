@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pyomo.core
 import pyomo.environ as pyo
+import typing
 
 import fledge.config
 import fledge.database_interface
@@ -423,3 +424,115 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
             ], axis='columns')
         )
+
+
+class DERModelSet(object):
+    """DER model set object."""
+
+    timesteps: pd.Index
+    der_names: pd.Index
+    fixed_der_names: pd.Index
+    flexible_der_names: pd.Index
+    der_models: typing.Dict[str, DERModel]
+    fixed_der_models: typing.Dict[str, FixedDERModel]
+    flexible_der_models: typing.Dict[str, FlexibleDERModel]
+
+    def __init__(
+            self,
+            scenario_name: str
+    ):
+
+        # Obtain data.
+        scenario_data = fledge.database_interface.ScenarioData(scenario_name)
+        fixed_load_data = fledge.database_interface.FixedLoadData(scenario_name)
+        ev_charger_data = fledge.database_interface.EVChargerData(scenario_name)
+        flexible_load_data = fledge.database_interface.FlexibleLoadData(scenario_name)
+
+        # Obtain timesteps.
+        self.timesteps = scenario_data.timesteps
+
+        # Obtain DER names.
+        electric_grid_index = fledge.electric_grid_models.ElectricGridIndex(scenario_name)
+        self.der_names = electric_grid_index.der_names
+        self.flexible_der_names = self.der_names[self.der_names.isin(flexible_load_data.flexible_loads['der_name'])]
+        self.fixed_der_names = self.der_names[~self.der_names.isin(self.flexible_der_names)]
+
+        # Obtain models.
+        self.der_models = dict.fromkeys(self.der_names)
+        self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
+        self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
+        for der_name in electric_grid_index.der_names:
+            if der_name in fixed_load_data.fixed_loads['der_name']:
+                self.der_models[der_name] = self.fixed_der_models[der_name] = (
+                    fledge.der_models.FixedLoadModel(
+                        fixed_load_data,
+                        der_name
+                    )
+                )
+            elif der_name in ev_charger_data.ev_chargers['der_name']:
+                self.der_models[der_name] = self.fixed_der_models[der_name] = (
+                    fledge.der_models.EVChargerModel(
+                        ev_charger_data,
+                        der_name
+                    )
+                )
+            elif der_name in flexible_load_data.flexible_loads['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    fledge.der_models.FlexibleLoadModel(
+                        flexible_load_data,
+                        der_name
+                    )
+                )
+            else:
+                raise logger.error(f"Cannot determine type of DER: {der_name}")
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+
+        # Define flexible DER variables.
+        der_state_names = [
+            (der_name, state_name)
+            for der_name in self.flexible_der_names
+            for state_name in self.flexible_der_models[der_name].state_names
+        ]
+        der_control_names = [
+            (der_name, control_name)
+            for der_name in self.flexible_der_names
+            for control_name in self.flexible_der_models[der_name].control_names
+        ]
+        der_output_names = [
+            (der_name, output_name)
+            for der_name in self.flexible_der_names
+            for output_name in self.flexible_der_models[der_name].output_names
+        ]
+        optimization_problem.state_vector = pyo.Var(self.timesteps, der_state_names)
+        optimization_problem.control_vector = pyo.Var(self.timesteps, der_control_names)
+        optimization_problem.output_vector = pyo.Var(self.timesteps, der_output_names)
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+    ):
+
+        # Define DER constraints, only for flexible DERs.
+        for der_name in self.flexible_der_names:
+            self.flexible_der_models[der_name].define_optimization_constraints(
+                optimization_problem
+            )
+
+    def define_optimization_connection_electric_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
+    ):
+
+        # Define constraints for the connection with the DER power vector of the electric grid.
+        for der_name in self.der_names:
+            self.der_models[der_name].define_optimization_connection_electric_grid(
+                optimization_problem,
+                power_flow_solution,
+                electric_grid_index
+            )

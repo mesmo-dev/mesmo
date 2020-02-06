@@ -877,14 +877,14 @@ class ElectricGridModel(object):
         # branch admittance, branch incidence and der incidence matrices.
         # - Converting from DOK to CSR format for more efficient calculations
         #   according to <https://docs.scipy.org/doc/scipy/reference/sparse.html>.
-        self.node_admittance_matrix = self.node_admittance_matrix.tocsr(copy=False)
-        self.node_transformation_matrix = self.node_transformation_matrix.tocsr(copy=False)
-        self.branch_admittance_1_matrix = self.branch_admittance_1_matrix.tocsr(copy=False)
-        self.branch_admittance_2_matrix = self.branch_admittance_2_matrix.tocsr(copy=False)
-        self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr(copy=False)
-        self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr(copy=False)
-        self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr(copy=False)
-        self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr(copy=False)
+        self.node_admittance_matrix = self.node_admittance_matrix.tocsr()
+        self.node_transformation_matrix = self.node_transformation_matrix.tocsr()
+        self.branch_admittance_1_matrix = self.branch_admittance_1_matrix.tocsr()
+        self.branch_admittance_2_matrix = self.branch_admittance_2_matrix.tocsr()
+        self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr()
+        self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
+        self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
+        self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
         # Construct no load voltage vector for the grid.
         # - The nodal no load voltage vector can be constructed by

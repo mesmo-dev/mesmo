@@ -49,6 +49,13 @@ class TestDatabaseInterface(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test ElectricGridData: Completed in {round(time_end - time_start, 6)} seconds.")
 
+    def test_thermal_grid_data(self):
+        # Get result.
+        time_start = time.time()
+        fledge.database_interface.ThermalGridData('singapore_tanjongpagar')
+        time_end = time.time()
+        logger.info(f"Test ThermalGridData: Completed in {round(time_end - time_start, 6)} seconds.")
+
     def test_fixed_load_data(self):
         # Get result.
         time_start = time.time()

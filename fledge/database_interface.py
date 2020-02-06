@@ -277,6 +277,79 @@ class ElectricGridData(object):
         )
 
 
+class ThermalGridData(object):
+    """Thermal grid data object."""
+
+    thermal_grid: pd.DataFrame
+    thermal_grid_nodes: pd.DataFrame
+    thermal_grid_ders: pd.DataFrame
+    thermal_grid_lines: pd.DataFrame
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=connect_database()
+    ):
+        """Load thermal grid data from database for given `scenario_name`."""
+
+        self.thermal_grid = (
+            pd.read_sql(
+                """
+                SELECT * FROM thermal_grids
+                JOIN thermal_grid_cooling_plant_types USING (cooling_plant_type)
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ).iloc[0]  # TODO: Check needed for redundant `thermal_grid_name` in database?
+        )
+        self.thermal_grid_nodes = (
+            pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_nodes
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
+        self.thermal_grid_ders = (
+            pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_ders
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
+        self.thermal_grid_lines = (
+            pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_lines
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
+
+
 class FixedLoadData(object):
     """Fixed load data object."""
 

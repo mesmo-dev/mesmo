@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS "scenarios" (
 	"scenario_name"	TEXT,
 	"display_id"	TEXT,
 	"electric_grid_name"	TEXT,
+	"thermal_grid_name"	TEXT,
 	"case_name"	TEXT,
 	"optimal_scheduling_problem_name"	TEXT,
 	"timestep_start"	TEXT,

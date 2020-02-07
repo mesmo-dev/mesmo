@@ -436,6 +436,184 @@ class ElectricGridModel(object):
         # Obtain electric grid index.
         self.index = ElectricGridIndex(electric_grid_data)
 
+        # Obtain transformer data for first winding for generating index sets.
+        electric_grid_transformers_first_winding = (
+            electric_grid_data.electric_grid_transformers.loc[
+                electric_grid_data.electric_grid_transformers['winding'] == 1,
+                :
+            ]
+        )
+
+        # Obtain index sets for phases / node names / node types / line names / transformer names /
+        # branch types / DER names.
+        self.phases = pd.Index(['1', '2', '3'])
+        self.node_names = pd.Index(electric_grid_data.electric_grid_nodes['node_name'])
+        self.node_types = pd.Index(['source', 'no_source'])
+        self.line_names = pd.Index(electric_grid_data.electric_grid_lines['line_name'])
+        self.transformer_names = pd.Index(electric_grid_transformers_first_winding['transformer_name'])
+        self.branch_types = pd.Index(['line', 'transformer'])
+        self.der_names = pd.Index(electric_grid_data.electric_grid_ders['der_name'])
+
+        # Obtain nodes index set, i.e., collection of all phases of all nodes
+        # for generating indexing functions for the admittance matrix.
+        # - The admittance matrix has one entry for each phase of each node in
+        #   both dimensions.
+        # - There cannot be "empty" dimensions for missing phases of nodes,
+        #   because the matrix would become singular.
+        # - Therefore the admittance matrix must have the exact number of existing
+        #   phases of all nodes.
+        # - Nodes are sorted to match the order returned from OpenDSS
+        #   to enable comparing results.
+        node_dimension = (
+            electric_grid_data.electric_grid_nodes.loc[
+                :,
+                [
+                    'is_phase_1_connected',
+                    'is_phase_2_connected',
+                    'is_phase_3_connected'
+                ]
+            ].sum().sum()
+        )
+        self.nodes = (
+            pd.DataFrame(
+                None,
+                index=range(node_dimension),
+                columns=[
+                    'node_type',
+                    'node_name',
+                    'phase'
+                ]
+            )
+        )
+        # Fill `node_name`.
+        self.nodes['node_name'] = (
+            pd.concat([
+                electric_grid_data.electric_grid_nodes.loc[
+                    electric_grid_data.electric_grid_nodes['is_phase_1_connected'] == 1,
+                    'node_name'
+                ],
+                electric_grid_data.electric_grid_nodes.loc[
+                    electric_grid_data.electric_grid_nodes['is_phase_2_connected'] == 1,
+                    'node_name'
+                ],
+                electric_grid_data.electric_grid_nodes.loc[
+                    electric_grid_data.electric_grid_nodes['is_phase_3_connected'] == 1,
+                    'node_name'
+                ]
+            ], ignore_index=True)
+        )
+        # Fill `phase`.
+        self.nodes['phase'] = (
+            np.concatenate([
+                np.repeat('1', sum(electric_grid_data.electric_grid_nodes['is_phase_1_connected'] == 1)),
+                np.repeat('2', sum(electric_grid_data.electric_grid_nodes['is_phase_2_connected'] == 1)),
+                np.repeat('3', sum(electric_grid_data.electric_grid_nodes['is_phase_3_connected'] == 1))
+            ])
+        )
+        # Fill `node_type`.
+        self.nodes['node_type'] = 'no_source'
+        # Set `node_type` for source node.
+        self.nodes.loc[
+            self.nodes['node_name'] == (electric_grid_data.electric_grid['source_node_name']),
+            'node_type'
+        ] = 'source'
+        # Sort nodes to match order in `fledge.power_flow_solvers.get_voltage_opendss`.
+        self.nodes.sort_values(['node_name', 'phase'], inplace=True)
+        self.nodes = pd.MultiIndex.from_frame(self.nodes)
+
+        # Obtain branches index set, i.e., collection of phases of all branches
+        # for generating indexing functions for the branch admittance matrices.
+        # - Branches consider all power delivery elements, i.e., lines as well as
+        #   transformers.
+        # - The second dimension of the branch admittance matrices is the number of
+        #   phases of all nodes.
+        # - Transformers must have same number of phases per winding and exactly
+        #   two windings.
+        # - TODO: Add switches.
+        line_dimension = (
+            electric_grid_data.electric_grid_lines.loc[
+                :,
+                [
+                    'is_phase_1_connected',
+                    'is_phase_2_connected',
+                    'is_phase_3_connected'
+                ]
+            ].sum().sum()
+        )
+        transformer_dimension = (
+            electric_grid_transformers_first_winding.loc[
+                :,
+                [
+                    'is_phase_1_connected',
+                    'is_phase_2_connected',
+                    'is_phase_3_connected'
+                ]
+            ].sum().sum()
+        )
+        self.branches = (
+            pd.DataFrame(
+                None,
+                index=range(line_dimension + transformer_dimension),
+                columns=[
+                    'branch_type',
+                    'branch_name',
+                    'phase'
+                ]
+            )
+        )
+        # Fill `branch_name`.
+        self.branches['branch_name'] = (
+            pd.concat([
+                electric_grid_data.electric_grid_lines.loc[
+                    electric_grid_data.electric_grid_lines['is_phase_1_connected'] == 1,
+                    'line_name'
+                ],
+                electric_grid_data.electric_grid_lines.loc[
+                    electric_grid_data.electric_grid_lines['is_phase_2_connected'] == 1,
+                    'line_name'
+                ],
+                electric_grid_data.electric_grid_lines.loc[
+                    electric_grid_data.electric_grid_lines['is_phase_3_connected'] == 1,
+                    'line_name'
+                ],
+                electric_grid_transformers_first_winding.loc[
+                    electric_grid_transformers_first_winding['is_phase_1_connected'] == 1,
+                    'transformer_name'
+                ],
+                electric_grid_transformers_first_winding.loc[
+                    electric_grid_transformers_first_winding['is_phase_2_connected'] == 1,
+                    'transformer_name'
+                ],
+                electric_grid_transformers_first_winding.loc[
+                    electric_grid_transformers_first_winding['is_phase_3_connected'] == 1,
+                    'transformer_name'
+                ]
+            ], ignore_index=True)
+        )
+        # Fill `phase`.
+        self.branches['phase'] = (
+            np.concatenate([
+                np.repeat('1', sum(electric_grid_data.electric_grid_lines['is_phase_1_connected'] == 1)),
+                np.repeat('2', sum(electric_grid_data.electric_grid_lines['is_phase_2_connected'] == 1)),
+                np.repeat('3', sum(electric_grid_data.electric_grid_lines['is_phase_3_connected'] == 1)),
+                np.repeat('1', sum(electric_grid_transformers_first_winding['is_phase_1_connected'] == 1)),
+                np.repeat('2', sum(electric_grid_transformers_first_winding['is_phase_2_connected'] == 1)),
+                np.repeat('3', sum(electric_grid_transformers_first_winding['is_phase_3_connected'] == 1))
+            ])
+        )
+        # Fill `branch_type`.
+        self.branches['branch_type'] = (
+            np.concatenate([
+                np.repeat('line', line_dimension),
+                np.repeat('transformer', transformer_dimension)
+            ])
+        )
+        self.branches.sort_values(['branch_type', 'branch_name', 'phase'], inplace=True)
+        self.branches = pd.MultiIndex.from_frame(self.branches)
+
+        # Obtain index set for DERs.
+        self.ders = self.der_names
+
         # Define sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrix entries.
         self.node_admittance_matrix = (

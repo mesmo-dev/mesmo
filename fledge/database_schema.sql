@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS "thermal_grid_cooling_plant_types" (
 CREATE TABLE IF NOT EXISTS "thermal_grid_ders" (
 	"thermal_grid_name"	TEXT,
 	"der_name"	TEXT,
+	"node_name"	TEXT,
 	"der_type"	TEXT,
 	"model_name"	TEXT,
 	PRIMARY KEY("thermal_grid_name","der_name")

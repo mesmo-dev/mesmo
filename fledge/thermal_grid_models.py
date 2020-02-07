@@ -18,8 +18,11 @@ class ThermalGridModel(object):
     node_names: pd.Index
     line_names: pd.Index
     der_names: pd.Index
-    node: pd.Index
-    line_incidence_matrix: scipy.sparse.spmatrix
+    nodes: pd.Index
+    branches: pd.Index
+    ders = pd.Index
+    branch_node_incidence_matrix: scipy.sparse.spmatrix
+    der_node_incidence_matrix: scipy.sparse.spmatrix
 
     def __init__(
             self,
@@ -34,17 +37,28 @@ class ThermalGridModel(object):
         self.line_names = pd.Index(thermal_grid_data.thermal_grid_lines['line_name'])
         self.der_names = pd.Index(thermal_grid_data.thermal_grid_ders['der_name'])
 
-        # Obtain node index set.
+        # Obtain node / branch / DER index set.
         self.nodes = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_nodes[['node_name', 'node_type']])
+        self.branches = self.line_names
+        self.ders = self.der_names
 
-        # Define line incidence_matrix.
-        self.line_incidence_matrix = (
-            scipy.sparse.dok_matrix((len(self.line_names), len(self.node_names)), dtype=np.int)
+        # Define branch to node incidence matrix.
+        self.branch_node_incidence_matrix = (
+            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=np.int)
         )
-        for node_index, node_name in enumerate(self.node_names):
-            for line_index, line_name in enumerate(self.line_names):
-                if node_name == thermal_grid_data.thermal_grid_lines.at[line_name, 'node_1_name']:
-                    self.line_incidence_matrix[line_index, node_index] += -1
-                elif node_name == thermal_grid_data.thermal_grid_lines.at[line_name, 'node_2_name']:
-                    self.line_incidence_matrix[line_index, node_index] += +1
-        self.line_incidence_matrix = self.line_incidence_matrix.tocsr()
+        for node_index, node in enumerate(self.nodes):
+            for branch_index, branch in enumerate(self.branches):
+                if node[0] == thermal_grid_data.thermal_grid_lines.at[branch, 'node_1_name']:
+                    self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
+                elif node[0] == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
+                    self.branch_node_incidence_matrix[node_index, branch_index] += +1.0
+        self.branch_node_incidence_matrix = self.branch_node_incidence_matrix.tocsr()
+
+        # Define DER to node incidence matrix.
+        self.der_node_incidence_matrix = (
+            scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=np.int)
+        )
+        for node_index, node in enumerate(self.nodes):
+            for der_index, der in enumerate(self.ders):
+                if node[0] == thermal_grid_data.thermal_grid_ders.at[der, 'node_name']:
+                    self.der_node_incidence_matrix[node_index, der_index] = -1.0

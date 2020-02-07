@@ -9,6 +9,7 @@ import scipy.sparse.linalg
 
 import fledge.config
 import fledge.database_interface
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -805,13 +806,7 @@ class ElectricGridModel(object):
         )
         for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
             # Obtain node transformation matrix index.
-            transformation_index = (
-                np.flatnonzero([
-                    node['is_phase_1_connected'] == 1,
-                    node['is_phase_2_connected'] == 1,
-                    node['is_phase_3_connected'] == 1
-                ]).tolist()
-            )
+            transformation_index = fledge.utils.get_element_phases_list(node)
 
             # Construct node transformation matrix.
             transformation_matrix = (
@@ -848,22 +843,16 @@ class ElectricGridModel(object):
 
             elif connection == "delta":
                 # Obtain phases of the delta der.
-                phases = (
-                    np.flatnonzero([
-                        der['is_phase_1_connected'] == 1,
-                        der['is_phase_2_connected'] == 1,
-                        der['is_phase_3_connected'] == 1
-                    ]).tolist()
-                )
+                phases_list = fledge.utils.get_element_phases_list(der)
 
                 # Select connection node based on phase arrangement of delta der.
                 # - Delta ders must be single-phase.
-                if phases in ([1, 2], [2, 3]):
+                if phases_list in ([1, 2], [2, 3]):
                     node_index = [node_index[1]]
-                elif phases == [1, 3]:
+                elif phases_list == [1, 3]:
                     node_index = [node_index[2]]
                 else:
-                    logger.error(f"Unknown delta der phase arrangement: {phases}")
+                    logger.error(f"Unknown delta der phase arrangement: {phases_list}")
 
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
@@ -907,13 +896,7 @@ class ElectricGridModel(object):
         if voltage_no_load_method == 'by_definition':
             for node_index, node in electric_grid_data.electric_grid_nodes.iterrows():
                 # Obtain phases for node.
-                phases = (
-                    np.flatnonzero([
-                        node['is_phase_1_connected'] == 1,
-                        node['is_phase_2_connected'] == 1,
-                        node['is_phase_3_connected'] == 1
-                    ]).tolist()
-                )
+                phases_list = fledge.utils.get_element_phases_list(node)
 
                 # Obtain node voltage level.
                 voltage = node['voltage']
@@ -922,7 +905,7 @@ class ElectricGridModel(object):
                 self.node_voltage_vector_no_load[self.index.node_by_node_name[node['node_name']]] = (
                     np.transpose([
                         voltage
-                        * voltage_phase_factors[phases]
+                        * voltage_phase_factors[phases_list]
                         / np.sqrt(3)
                     ])
                 )
@@ -936,13 +919,7 @@ class ElectricGridModel(object):
             )
 
             # Obtain phases for source node.
-            phases = (
-                np.flatnonzero([
-                    node['is_phase_1_connected'] == 1,
-                    node['is_phase_2_connected'] == 1,
-                    node['is_phase_3_connected'] == 1
-                ]).tolist()
-            )
+            phases_list = fledge.utils.get_element_phases_list(node)
 
             # Obtain source node voltage level.
             voltage = node['voltage']
@@ -951,7 +928,7 @@ class ElectricGridModel(object):
             self.node_voltage_vector_no_load[self.index.node_by_node_type['source']] = (
                 np.transpose([
                     voltage
-                    * voltage_phase_factors[phases]
+                    * voltage_phase_factors[phases_list]
                     / np.sqrt(3)
                 ])
             )
@@ -1023,21 +1000,6 @@ def initialize_opendss_model(
 def initialize_opendss_model(
         electric_grid_data: fledge.database_interface.ElectricGridData
 ):
-
-    def get_node_phases_string(element):
-        """Utility function for creating the node phases string for OpenDSS."""
-
-        node_phases_string = ""
-        if element['is_phase_0_connected'] == 1:
-            node_phases_string += ".0"
-        if element['is_phase_1_connected'] == 1:
-            node_phases_string += ".1"
-        if element['is_phase_2_connected'] == 1:
-            node_phases_string += ".2"
-        if element['is_phase_3_connected'] == 1:
-            node_phases_string += ".3"
-
-        return node_phases_string
 
     # Clear OpenDSS.
     opendss_command_string = "clear"
@@ -1118,21 +1080,15 @@ def initialize_opendss_model(
     # Define lines.
     for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
         # Obtain number of phases for the line.
-        n_phases = (
-            int(sum([
-                line['is_phase_1_connected'],
-                line['is_phase_2_connected'],
-                line['is_phase_3_connected']
-            ]))
-        )
+        n_phases = len(fledge.utils.get_element_phases_list(line))
 
         # Add line name, phases, node connections, line type and length
         # to OpenDSS command string.
         opendss_command_string = (
             f"new line.{line['line_name']}"
             + f" phases={line['n_phases']}"
-            + f" bus1={line['node_1_name']}{get_node_phases_string(line)}"
-            + f" bus2={line['node_2_name']}{get_node_phases_string(line)}"
+            + f" bus1={line['node_1_name']}{fledge.utils.get_element_phases_string(line)}"
+            + f" bus2={line['node_2_name']}{fledge.utils.get_element_phases_string(line)}"
             + f" linecode={line['line_type']}"
             + f" length={line['length']}"
         )
@@ -1152,13 +1108,7 @@ def initialize_opendss_model(
     ):
         # Obtain number of phases for the transformer.
         # This assumes identical number of phases at all windings.
-        n_phases = (
-            int(sum([
-                transformer['is_phase_1_connected'],
-                transformer['is_phase_2_connected'],
-                transformer['is_phase_3_connected']
-            ]))
-        )
+        n_phases = len(fledge.utils.get_element_phases_list(transformer))
 
         # Obtain windings for the transformer.
         windings = (
@@ -1211,13 +1161,13 @@ def initialize_opendss_model(
                     # Enforce wye-open connection according to:
                     # OpenDSS Manual April 2018, page 136, "rneut".
                     node_phases_string = (
-                        get_node_phases_string(winding)
+                        fledge.utils.get_element_phases_string(winding)
                         + ".4"
                     )
                 elif winding['is_phase_0_connected'] == 1:
                     # Enforce wye-grounded connection.
                     node_phases_string = (
-                        get_node_phases_string(winding)
+                        fledge.utils.get_element_phases_string(winding)
                         + ".0"
                     )
                     # Remove leading ".0".
@@ -1225,11 +1175,11 @@ def initialize_opendss_model(
             elif winding['connection'] == "delta":
                 if winding['is_phase_0_connected'] == 0:
                     node_phases_string = (
-                        get_node_phases_string(winding)
+                        fledge.utils.get_element_phases_string(winding)
                     )
                 elif winding['is_phase_0_connected'] == 1:
                     node_phases_string = (
-                        get_node_phases_string(winding)
+                        fledge.utils.get_element_phases_string(winding)
                     )
                     # Remove leading ".0"
                     node_phases_string = node_phases_string[2:]
@@ -1269,13 +1219,7 @@ def initialize_opendss_model(
     # TODO: At the moment, all ders are modelled as loads in OpenDSS.
     for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
         # Obtain number of phases for the der.
-        n_phases = (
-            int(sum([
-                der['is_phase_1_connected'],
-                der['is_phase_2_connected'],
-                der['is_phase_3_connected']
-            ]))
-        )
+        n_phases = len(fledge.utils.get_element_phases_list(der))
 
         # Obtain nominal voltage level for the der.
         voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
@@ -1289,7 +1233,7 @@ def initialize_opendss_model(
         opendss_command_string = (
             f"new load.{der['der_name']}"
             # TODO: Check if any difference without ".0" for wye-connected ders.
-            + f" bus1={der['node_name']}{get_node_phases_string(der)}"
+            + f" bus1={der['node_name']}{fledge.utils.get_element_phases_string(der)}"
             + f" phases={n_phases}"
             + f" conn={der['connection']}"
             # All loads are modelled as constant P/Q according to:

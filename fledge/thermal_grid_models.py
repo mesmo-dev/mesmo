@@ -23,6 +23,7 @@ class ThermalGridModel(object):
     ders = pd.Index
     branch_node_incidence_matrix: scipy.sparse.spmatrix
     der_node_incidence_matrix: scipy.sparse.spmatrix
+    der_power_vector_nominal: np.ndarray
 
     def __init__(
             self,
@@ -62,3 +63,6 @@ class ThermalGridModel(object):
             for der_index, der in enumerate(self.ders):
                 if node[0] == thermal_grid_data.thermal_grid_ders.at[der, 'node_name']:
                     self.der_node_incidence_matrix[node_index, der_index] = -1.0
+
+        # Obtain DER nominal thermal power vector.
+        self.der_power_vector_nominal = thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values

@@ -38,16 +38,16 @@ def main():
     # TODO: Arbitrary constraints to demonstrate the functionality.
     optimization_problem.der_constraints = pyo.ConstraintList()
     for timestep in scenario_data.timesteps:
-        for der_name in thermal_grid_model.der_names:
+        for der_index, der_name in enumerate(thermal_grid_model.der_names):
             optimization_problem.der_constraints.add(
                 optimization_problem.der_flow_vector[timestep, der_name]
                 >=
-                0.5
+                0.5 * thermal_grid_model.der_power_vector_nominal[der_index]
             )
             optimization_problem.der_constraints.add(
                 optimization_problem.der_flow_vector[timestep, der_name]
                 <=
-                1.0
+                1.0 * thermal_grid_model.der_power_vector_nominal[der_index]
             )
 
     # Define thermal grid constraints.

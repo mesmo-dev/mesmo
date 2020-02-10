@@ -244,6 +244,7 @@ CREATE TABLE IF NOT EXISTS "thermal_grid_ders" (
 	"node_name"	TEXT,
 	"der_type"	TEXT,
 	"model_name"	TEXT,
+	"thermal_power_nominal"	REAL,
 	PRIMARY KEY("thermal_grid_name","der_name")
 );
 CREATE TABLE IF NOT EXISTS "thermal_grid_lines" (

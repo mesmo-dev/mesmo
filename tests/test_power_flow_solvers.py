@@ -168,7 +168,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
                 np.hstack([
                     node_voltage_vector_opendss / node_voltage_vector_no_load,
                     node_voltage_vector_fixed_point / node_voltage_vector_no_load]),
-                index=electric_grid_model.index.nodes_phases,
+                index=electric_grid_model.nodes,
                 columns=['OpenDSS', 'Fixed Point']
             )
             comparison.plot(kind='bar')
@@ -176,7 +176,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
             absolute_error = pd.DataFrame(
                 (node_voltage_vector_fixed_point - node_voltage_vector_opendss) / node_voltage_vector_no_load,
-                index=electric_grid_model.index.nodes_phases,
+                index=electric_grid_model.nodes,
                 columns=['Absolute error']
             )
             absolute_error.plot(kind='bar')

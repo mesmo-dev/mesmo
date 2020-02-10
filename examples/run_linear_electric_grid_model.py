@@ -66,28 +66,28 @@ def main():
 
     # Instantiate testing arrays.
     node_voltage_vector_magnitude_power_flow = (
-        np.zeros((electric_grid_model.index.node_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.nodes), len(power_multipliers)), dtype=np.float)
     )
     node_voltage_vector_magnitude_linear_model = (
-        np.zeros((electric_grid_model.index.node_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.nodes), len(power_multipliers)), dtype=np.float)
     )
     node_voltage_vector_power_flow = (
-        np.zeros((electric_grid_model.index.node_dimension, len(power_multipliers)), dtype=np.complex)
+        np.zeros((len(electric_grid_model.nodes), len(power_multipliers)), dtype=np.complex)
     )
     node_voltage_vector_linear_model = (
-        np.zeros((electric_grid_model.index.node_dimension, len(power_multipliers)), dtype=np.complex)
+        np.zeros((len(electric_grid_model.nodes), len(power_multipliers)), dtype=np.complex)
     )
     branch_power_vector_1_squared_power_flow = (
-        np.zeros((electric_grid_model.index.branch_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.branches), len(power_multipliers)), dtype=np.float)
     )
     branch_power_vector_1_squared_linear_model = (
-        np.zeros((electric_grid_model.index.branch_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.branches), len(power_multipliers)), dtype=np.float)
     )
     branch_power_vector_2_squared_power_flow = (
-        np.zeros((electric_grid_model.index.branch_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.branches), len(power_multipliers)), dtype=np.float)
     )
     branch_power_vector_2_squared_linear_model = (
-        np.zeros((electric_grid_model.index.branch_dimension, len(power_multipliers)), dtype=np.float)
+        np.zeros((len(electric_grid_model.branches), len(power_multipliers)), dtype=np.float)
     )
     loss_active_power_flow = (
         np.zeros(len(power_multipliers), dtype=np.float)
@@ -296,34 +296,34 @@ def main():
     if plots:
 
         # Voltage magnitude.
-        for node_phase_index, node_phase in enumerate(electric_grid_model.index.nodes_phases):
-            plt.plot(power_multipliers, node_voltage_vector_magnitude_power_flow[node_phase_index, :], label='Power flow')
-            plt.plot(power_multipliers, node_voltage_vector_magnitude_linear_model[node_phase_index, :], label='Linear model')
-            plt.scatter([0.0], [abs(node_voltage_vector_no_load[node_phase_index])], label='No load')
-            plt.scatter([1.0], [abs(power_flow_solution_initial.node_voltage_vector[node_phase_index])], label='Initial point')
+        for node_index, node in enumerate(electric_grid_model.nodes):
+            plt.plot(power_multipliers, node_voltage_vector_magnitude_power_flow[node_index, :], label='Power flow')
+            plt.plot(power_multipliers, node_voltage_vector_magnitude_linear_model[node_index, :], label='Linear model')
+            plt.scatter([0.0], [abs(node_voltage_vector_no_load[node_index])], label='No load')
+            plt.scatter([1.0], [abs(power_flow_solution_initial.node_voltage_vector[node_index])], label='Initial point')
             plt.legend()
-            plt.title(f"Voltage magnitude node/phase: {node_phase}")
-            plt.savefig(os.path.join(results_path, f'voltage_magnitude_{node_phase}.png'))
+            plt.title(f"Voltage magnitude node/phase: {node}")
+            plt.savefig(os.path.join(results_path, f'voltage_magnitude_{node}.png'))
             plt.close()
 
         # Branch flow.
-        for branch_phase_index, branch_phase in enumerate(electric_grid_model.index.branches_phases):
-            plt.plot(power_multipliers, branch_power_vector_1_squared_power_flow[branch_phase_index, :], label='Power flow')
-            plt.plot(power_multipliers, branch_power_vector_1_squared_linear_model[branch_phase_index, :], label='Linear model')
+        for branch_index, branch in enumerate(electric_grid_model.branches):
+            plt.plot(power_multipliers, branch_power_vector_1_squared_power_flow[branch_index, :], label='Power flow')
+            plt.plot(power_multipliers, branch_power_vector_1_squared_linear_model[branch_index, :], label='Linear model')
             plt.scatter([0.0], [0.0], label='No load')
-            plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_1[branch_phase_index] ** 2)], label='Initial point')
+            plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_1[branch_index] ** 2)], label='Initial point')
             plt.legend()
-            plt.title(f"Branch flow 1 branch/phase/type: {branch_phase}")
-            plt.savefig(os.path.join(results_path, f'branch_power_1_{branch_phase}.png'))
+            plt.title(f"Branch flow 1 branch/phase/type: {branch}")
+            plt.savefig(os.path.join(results_path, f'branch_power_1_{branch}.png'))
             plt.close()
 
-            plt.plot(power_multipliers, branch_power_vector_2_squared_power_flow[branch_phase_index, :], label='Power flow')
-            plt.plot(power_multipliers, branch_power_vector_2_squared_linear_model[branch_phase_index, :], label='Linear model')
+            plt.plot(power_multipliers, branch_power_vector_2_squared_power_flow[branch_index, :], label='Power flow')
+            plt.plot(power_multipliers, branch_power_vector_2_squared_linear_model[branch_index, :], label='Linear model')
             plt.scatter([0.0], [0.0], label='No load')
-            plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_2[branch_phase_index] ** 2)], label='Initial point')
+            plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_2[branch_index] ** 2)], label='Initial point')
             plt.legend()
-            plt.title(f"Branch flow 2 branch/phase/type: {branch_phase}")
-            plt.savefig(os.path.join(results_path, f'branch_power_2_{branch_phase}.png'))
+            plt.title(f"Branch flow 2 branch/phase/type: {branch}")
+            plt.savefig(os.path.join(results_path, f'branch_power_2_{branch}.png'))
             plt.close()
 
         # Loss.

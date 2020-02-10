@@ -11,6 +11,7 @@ import scipy.sparse.linalg
 import fledge.config
 import fledge.electric_grid_models
 import fledge.power_flow_solvers
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -25,7 +26,7 @@ class LinearElectricGridModel(object):
         but does not implement any functionality.
 
     Attributes:
-        electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
         power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -101,7 +102,7 @@ class LinearElectricGridModel(object):
             reactive loss by DER reactive power vector.
     """
 
-    electric_grid_index: fledge.electric_grid_models.ElectricGridIndex
+    electric_grid_model: fledge.electric_grid_models.ElectricGridModel
     power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     sensitivity_voltage_by_power_wye_active: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_wye_reactive: scipy.sparse.spmatrix
@@ -149,23 +150,23 @@ class LinearElectricGridModel(object):
 
         # DERs.
         optimization_problem.der_active_power_vector_change = (
-            pyo.Var(timesteps.to_list(), self.electric_grid_index.der_names.to_list())
+            pyo.Var(timesteps.to_list(), self.electric_grid_model.ders.to_list())
         )
         optimization_problem.der_reactive_power_vector_change = (
-            pyo.Var(timesteps.to_list(), self.electric_grid_index.der_names.to_list())
+            pyo.Var(timesteps.to_list(), self.electric_grid_model.ders.to_list())
         )
 
         # Voltage.
         optimization_problem.voltage_magnitude_vector_change = (
-            pyo.Var(timesteps.to_list(), self.electric_grid_index.nodes_phases.to_list())
+            pyo.Var(timesteps.to_list(), self.electric_grid_model.nodes.to_list())
         )
 
         # Branch flows.
         optimization_problem.branch_power_vector_1_squared_change = (
-            pyo.Var(timesteps.to_list(), self.electric_grid_index.branches_phases.to_list())
+            pyo.Var(timesteps.to_list(), self.electric_grid_model.branches.to_list())
         )
         optimization_problem.branch_power_vector_2_squared_change = (
-            pyo.Var(timesteps.to_list(), self.electric_grid_index.branches_phases.to_list())
+            pyo.Var(timesteps.to_list(), self.electric_grid_model.branches.to_list())
         )
 
         # Loss.
@@ -185,41 +186,41 @@ class LinearElectricGridModel(object):
         for timestep in timesteps:
 
             # Voltage.
-            for node_phase_index, node_phase in enumerate(self.electric_grid_index.nodes_phases):
+            for node_index, node in enumerate(self.electric_grid_model.nodes):
                 optimization_problem.linear_electric_grid_model_constraints.add(
-                    optimization_problem.voltage_magnitude_vector_change[timestep, node_phase]
+                    optimization_problem.voltage_magnitude_vector_change[timestep, node]
                     ==
                     pyo.quicksum(
-                        self.sensitivity_voltage_magnitude_by_der_power_active[node_phase_index, der_index]
-                        * optimization_problem.der_active_power_vector_change[timestep, der_name]
-                        + self.sensitivity_voltage_magnitude_by_der_power_reactive[node_phase_index, der_index]
-                        * optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                        for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                        self.sensitivity_voltage_magnitude_by_der_power_active[node_index, der_index]
+                        * optimization_problem.der_active_power_vector_change[timestep, der]
+                        + self.sensitivity_voltage_magnitude_by_der_power_reactive[node_index, der_index]
+                        * optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        for der_index, der in enumerate(self.electric_grid_model.ders)
                     )
                 )
 
             # Branch flows.
-            for branch_phase_index, branch_phase in enumerate(self.electric_grid_index.branches_phases):
+            for branch_index, branch in enumerate(self.electric_grid_model.branches):
                 optimization_problem.linear_electric_grid_model_constraints.add(
-                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch_phase]
+                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
                     ==
                     pyo.quicksum(
-                        self.sensitivity_branch_power_1_by_der_power_active[branch_phase_index, der_index]
-                        * optimization_problem.der_active_power_vector_change[timestep, der_name]
-                        + self.sensitivity_branch_power_1_by_der_power_reactive[branch_phase_index, der_index]
-                        * optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                        for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                        self.sensitivity_branch_power_1_by_der_power_active[branch_index, der_index]
+                        * optimization_problem.der_active_power_vector_change[timestep, der]
+                        + self.sensitivity_branch_power_1_by_der_power_reactive[branch_index, der_index]
+                        * optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        for der_index, der in enumerate(self.electric_grid_model.ders)
                     )
                 )
                 optimization_problem.linear_electric_grid_model_constraints.add(
-                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch_phase]
+                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
                     ==
                     pyo.quicksum(
-                        self.sensitivity_branch_power_2_by_der_power_active[branch_phase_index, der_index]
-                        * optimization_problem.der_active_power_vector_change[timestep, der_name]
-                        + self.sensitivity_branch_power_2_by_der_power_reactive[branch_phase_index, der_index]
-                        * optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                        for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                        self.sensitivity_branch_power_2_by_der_power_active[branch_index, der_index]
+                        * optimization_problem.der_active_power_vector_change[timestep, der]
+                        + self.sensitivity_branch_power_2_by_der_power_reactive[branch_index, der_index]
+                        * optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        for der_index, der in enumerate(self.electric_grid_model.ders)
                     )
                 )
 
@@ -229,10 +230,10 @@ class LinearElectricGridModel(object):
                 ==
                 pyo.quicksum(
                     self.sensitivity_loss_active_by_der_power_active[0, der_index]
-                    * optimization_problem.der_active_power_vector_change[timestep, der_name]
+                    * optimization_problem.der_active_power_vector_change[timestep, der]
                     + self.sensitivity_loss_active_by_der_power_reactive[0, der_index]
-                    * optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                    for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                    * optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    for der_index, der in enumerate(self.electric_grid_model.ders)
                 )
             )
             optimization_problem.linear_electric_grid_model_constraints.add(
@@ -240,10 +241,10 @@ class LinearElectricGridModel(object):
                 ==
                 pyo.quicksum(
                     self.sensitivity_loss_reactive_by_der_power_active[0, der_index]
-                    * optimization_problem.der_active_power_vector_change[timestep, der_name]
+                    * optimization_problem.der_active_power_vector_change[timestep, der]
                     + self.sensitivity_loss_reactive_by_der_power_reactive[0, der_index]
-                    * optimization_problem.der_reactive_power_vector_change[timestep, der_name]
-                    for der_index, der_name in enumerate(self.electric_grid_index.der_names)
+                    * optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    for der_index, der in enumerate(self.electric_grid_model.ders)
                 )
             )
 
@@ -257,23 +258,23 @@ class LinearElectricGridModel(object):
 
         # DER.
         der_active_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_index.der_names, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
         )
         der_reactive_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_index.der_names, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
         )
 
         # Voltage.
         voltage_magnitude_vector = (
-            pd.DataFrame(columns=self.electric_grid_index.nodes_phases, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
         # Branch flows.
         branch_power_vector_1_squared = (
-            pd.DataFrame(columns=self.electric_grid_index.branches_phases, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
         branch_power_vector_2_squared = (
-            pd.DataFrame(columns=self.electric_grid_index.branches_phases, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
 
         # Loss.
@@ -284,32 +285,32 @@ class LinearElectricGridModel(object):
         for timestep in timesteps:
 
             # DER.
-            for der_index, der_name in enumerate(self.electric_grid_index.der_names):
-                der_active_power_vector.at[timestep, der_name] = (
-                    optimization_problem.der_active_power_vector_change[timestep, der_name].value
+            for der_index, der in enumerate(self.electric_grid_model.ders):
+                der_active_power_vector.at[timestep, der] = (
+                    optimization_problem.der_active_power_vector_change[timestep, der].value
                     + np.real(self.power_flow_solution.der_power_vector[der_index])
                 )
-                der_reactive_power_vector.at[timestep, der_name] = (
-                    optimization_problem.der_reactive_power_vector_change[timestep, der_name].value
+                der_reactive_power_vector.at[timestep, der] = (
+                    optimization_problem.der_reactive_power_vector_change[timestep, der].value
                     + np.imag(self.power_flow_solution.der_power_vector[der_index])
                 )
 
             # Voltage.
-            for node_phase_index, node_phase in enumerate(self.electric_grid_index.nodes_phases):
-                voltage_magnitude_vector.at[timestep, node_phase] = (
-                    optimization_problem.voltage_magnitude_vector_change[timestep, node_phase].value
-                    + np.abs(self.power_flow_solution.node_voltage_vector[node_phase_index])
+            for node_index, node in enumerate(self.electric_grid_model.nodes):
+                voltage_magnitude_vector.at[timestep, node] = (
+                    optimization_problem.voltage_magnitude_vector_change[timestep, node].value
+                    + np.abs(self.power_flow_solution.node_voltage_vector[node_index])
                 )
 
             # Branch flows.
-            for branch_phase_index, branch_phase in enumerate(self.electric_grid_index.branches_phases):
-                branch_power_vector_1_squared.at[timestep, branch_phase] = (
-                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch_phase].value
-                    + np.abs(self.power_flow_solution.branch_power_vector_1[branch_phase_index] ** 2)
+            for branch_index, branch in enumerate(self.electric_grid_model.branches):
+                branch_power_vector_1_squared.at[timestep, branch] = (
+                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch].value
+                    + np.abs(self.power_flow_solution.branch_power_vector_1[branch_index] ** 2)
                 )
-                branch_power_vector_2_squared.at[timestep, branch_phase] = (
-                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch_phase].value
-                    + np.abs(self.power_flow_solution.branch_power_vector_2[branch_phase_index] ** 2)
+                branch_power_vector_2_squared.at[timestep, branch] = (
+                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch].value
+                    + np.abs(self.power_flow_solution.branch_power_vector_2[branch_index] ** 2)
                 )
 
             # Loss.
@@ -351,7 +352,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         scenario_name (str): FLEDGE scenario name.
 
     Attributes:
-        electric_grid_index (fledge.electric_grid_models.ElectricGridIndex): Electric grid index object.
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
         power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -467,50 +468,50 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         # Store power flow solution.
         self.power_flow_solution = power_flow_solution
 
-        # Obtain electric grid index.
-        self.electric_grid_index = electric_grid_model.index
+        # Store electric grid model.
+        self.electric_grid_model = electric_grid_model
 
         # Obtain shorthands for no-source matrices and vectors.
         node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
-                electric_grid_model.index.node_by_node_type['no_source'],
-                electric_grid_model.index.node_by_node_type['no_source']
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         node_transformation_matrix_no_source = (
             electric_grid_model.node_transformation_matrix[np.ix_(
-                electric_grid_model.index.node_by_node_type['no_source'],
-                electric_grid_model.index.node_by_node_type['no_source']
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         node_voltage_no_source = (
             self.power_flow_solution.node_voltage_vector[
-                electric_grid_model.index.node_by_node_type['no_source']
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             ]
         )
 
         # Instantiate voltage sensitivity matrices.
         self.sensitivity_voltage_by_power_wye_active = (
             scipy.sparse.dok_matrix(
-                (electric_grid_model.index.node_dimension, electric_grid_model.index.node_dimension),
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
                 dtype=complex
             )
         )
         self.sensitivity_voltage_by_power_wye_reactive = (
             scipy.sparse.dok_matrix(
-                (electric_grid_model.index.node_dimension, electric_grid_model.index.node_dimension),
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
                 dtype=complex
             )
         )
         self.sensitivity_voltage_by_power_delta_active = (
             scipy.sparse.dok_matrix(
-                (electric_grid_model.index.node_dimension, electric_grid_model.index.node_dimension),
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
                 dtype=complex
             )
         )
         self.sensitivity_voltage_by_power_delta_reactive = (
             scipy.sparse.dok_matrix(
-                (electric_grid_model.index.node_dimension, electric_grid_model.index.node_dimension),
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
                 dtype=complex
             )
         )
@@ -518,8 +519,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         # Calculate voltage sensitivity matrices.
         # TODO: Document the change in sign in the reactive part compared to Hanif.
         self.sensitivity_voltage_by_power_wye_active[np.ix_(
-            electric_grid_model.index.node_by_node_type['no_source'],
-            electric_grid_model.index.node_by_node_type['no_source']
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 node_admittance_matrix_no_source.tocsc(),
@@ -527,8 +528,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_wye_reactive[np.ix_(
-            electric_grid_model.index.node_by_node_type['no_source'],
-            electric_grid_model.index.node_by_node_type['no_source']
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 1.0j * node_admittance_matrix_no_source.tocsc(),
@@ -536,8 +537,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_delta_active[np.ix_(
-            electric_grid_model.index.node_by_node_type['no_source'],
-            electric_grid_model.index.node_by_node_type['no_source']
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 node_admittance_matrix_no_source.tocsc(),
@@ -553,8 +554,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_delta_reactive[np.ix_(
-            electric_grid_model.index.node_by_node_type['no_source'],
-            electric_grid_model.index.node_by_node_type['no_source']
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 1.0j * node_admittance_matrix_no_source.tocsc(),

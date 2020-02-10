@@ -11,13 +11,6 @@ logger = fledge.config.get_logger(__name__)
 
 class TestElectricGridModels(unittest.TestCase):
 
-    def test_electric_grid_index(self):
-        # Get result.
-        time_start = time.time()
-        fledge.electric_grid_models.ElectricGridIndex(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test ElectricGridIndex: Completed in {round(time_end - time_start, 6)} seconds.")
-
     def test_electric_grid_model(self):
         # Get result.
         time_start = time.time()

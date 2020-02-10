@@ -7,16 +7,29 @@ import fledge.config
 
 logger = fledge.config.get_logger(__name__)
 
+
 def get_index(
         index_set: pd.Index,
         **levels_values
 ):
     """Utility function for obtaining the integer index array for given index set / level / value list combination."""
 
-    # Obtain mask for each level / value list combination keyword arguments.
+    # Obtain mask for each level / values combination keyword arguments.
     mask = np.ones(len(index_set), dtype=np.bool)
     for level, values in levels_values.items():
-        values = [values] if type(values) is not list else values
+
+        # Ensure that values are passed as list.
+        if isinstance(values, (list, tuple)):
+            pass
+        elif isinstance(values, np.ndarray):
+            # Convert numpy arrays to list.
+            values = values.tolist()
+            values = [values] if not isinstance(values, list) else values
+        else:
+            # Convert single values into list with one item.
+            values = [values]
+
+        # Obtain mask.
         mask &= index_set.get_level_values(level).isin(values)
 
     # Obtain integer index array.
@@ -25,19 +38,20 @@ def get_index(
     return index
 
 
-def get_element_phases_list(element: pd.Series):
+def get_element_phases_array(element: pd.Series):
     """Utility function for obtaining the list of connected phases for given element data."""
 
     # Obtain list of connected phases.
-    phases_list = (
+    phases_array = (
         np.flatnonzero([
+            False,  # Ground / '0' phase connection is not considered.
             element['is_phase_1_connected'] == 1,
             element['is_phase_2_connected'] == 1,
             element['is_phase_3_connected'] == 1
-        ]).tolist()
+        ])
     )
 
-    return phases_list
+    return phases_array
 
 
 def get_element_phases_string(element):

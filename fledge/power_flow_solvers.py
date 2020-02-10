@@ -11,6 +11,7 @@ import scipy.sparse.linalg
 import fledge.config
 import fledge.database_interface
 import fledge.electric_grid_models
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -71,27 +72,31 @@ def get_voltage_fixed_point(
 
     # Obtain no-source variables for fixed point equation.
     node_admittance_matrix_no_source = (
-        electric_grid_model.node_admittance_matrix[
-            electric_grid_model.index.node_by_node_type['no_source'], :
-        ][
-            :, electric_grid_model.index.node_by_node_type['no_source']
-        ]
+        electric_grid_model.node_admittance_matrix[np.ix_(
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        )]
     )
     node_transformation_matrix_no_source = (
-        electric_grid_model.node_transformation_matrix[
-            electric_grid_model.index.node_by_node_type['no_source'], :
-        ][
-            :, electric_grid_model.index.node_by_node_type['no_source']
-        ]
+        electric_grid_model.node_transformation_matrix[np.ix_(
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        )]
     )
     node_power_vector_wye_no_source = (
-        node_power_vector_wye[electric_grid_model.index.node_by_node_type['no_source']]
+        node_power_vector_wye[
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        ]
     )
     node_power_vector_delta_no_source = (
-        node_power_vector_delta[electric_grid_model.index.node_by_node_type['no_source']]
+        node_power_vector_delta[
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        ]
     )
     node_voltage_vector_no_load_no_source = (
-        electric_grid_model.node_voltage_vector_no_load[electric_grid_model.index.node_by_node_type['no_source']]
+        electric_grid_model.node_voltage_vector_no_load[
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        ]
     )
 
     # Define initial nodal power and voltage vectors as no load conditions.
@@ -115,7 +120,9 @@ def get_voltage_fixed_point(
     # Get full voltage vector by concatenating source and calculated voltage.
     node_voltage_vector_solution = (
         np.vstack([
-            electric_grid_model.node_voltage_vector_no_load[electric_grid_model.index.node_by_node_type['source']],
+            electric_grid_model.node_voltage_vector_no_load[
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+            ],
             node_voltage_vector_solution
         ])
     )

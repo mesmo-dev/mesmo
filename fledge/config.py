@@ -29,6 +29,11 @@ test_scenario_name = 'singapore_6node'
 test_data_path = os.path.join(fledge_path, 'tests', 'data')
 test_plots = True  # If True, tests may produce plots.
 
+# Physical constants.
+water_density = 998.31  # [kg/m^3]
+water_kinematic_viscosity = 1.3504e-6  # [m^2/s]
+gravitational_acceleration = 9.81  # [m^2/s]
+
 # Logger settings.
 logging_level = logging.INFO
 logging_handler = logging.StreamHandler()

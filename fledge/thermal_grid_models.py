@@ -139,8 +139,14 @@ class ThermalPowerFlowSolution(object):
         # Obtain branch volume flow vector.
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
-                thermal_grid_model.branch_node_incidence_matrix[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'), :],
-                thermal_grid_model.der_node_incidence_matrix[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'), :]
+                thermal_grid_model.branch_node_incidence_matrix[
+                    fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                    :
+                ],
+                thermal_grid_model.der_node_incidence_matrix[
+                    fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                    :
+                ]
                 @ np.transpose([self.der_flow_vector])
             )
         )
@@ -215,7 +221,12 @@ class ThermalPowerFlowSolution(object):
         # Obtain nodal head vector.
         self.node_head_vector = (
             scipy.sparse.linalg.spsolve(
-                np.transpose(thermal_grid_model.branch_node_incidence_matrix[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'), :]),
+                np.transpose(
+                    thermal_grid_model.branch_node_incidence_matrix[
+                        fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                        :
+                    ]
+                ),
                 -1.0 * self.branch_head_vector
             )
         )

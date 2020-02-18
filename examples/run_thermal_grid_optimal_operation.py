@@ -83,7 +83,7 @@ def main():
     cost = 0.0
     cost += (
         sum(
-            optimization_problem.source_flow[timestep]
+            -1.0 * optimization_problem.source_flow[timestep]
             for timestep in scenario_data.timesteps
         )
     )

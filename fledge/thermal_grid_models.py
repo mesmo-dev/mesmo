@@ -76,7 +76,7 @@ class ThermalGridModel(object):
 
         # Obtain other system parameters.
         self.enthalpy_difference_distribution_water = (
-            thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water']
+            float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
 
 
@@ -131,9 +131,9 @@ class ThermalPowerFlowSolution(object):
 
         # Obtain DER volume flow vector.
         self.der_flow_vector = (
-                self.der_power_vector
-                / fledge.config.water_density
-                / thermal_grid_model.enthalpy_difference_distribution_water
+            self.der_power_vector
+            / fledge.config.water_density
+            / thermal_grid_model.enthalpy_difference_distribution_water
         )
 
         # Obtain branch volume flow vector.

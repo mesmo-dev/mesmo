@@ -45,6 +45,7 @@ class ElectricGridModel(object):
         branch_names (pd.Index): Index set of the branch names, i.e., all line names and transformer names.
         branch_types (pd.Index): Index set of the branch types.
         der_names (pd.Index): Index set of the DER names.
+        der_types (pd.Index): Index set of the DER types.
         branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
             corresponding to the dimension of the branch admittance matrices.
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
@@ -70,6 +71,7 @@ class ElectricGridModel(object):
     branch_names: pd.Index
     branch_types: pd.Index
     der_names: pd.Index
+    der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
     ders: pd.Index
@@ -121,6 +123,7 @@ class ElectricGridModel(object):
         self.transformer_names = pd.Index(electric_grid_transformers_first_winding['transformer_name'])
         self.branch_types = pd.Index(['line', 'transformer'])
         self.der_names = pd.Index(electric_grid_data.electric_grid_ders['der_name'])
+        self.der_types = pd.Index(electric_grid_data.electric_grid_ders['der_type'].unique())
 
         # Obtain nodes index set, i.e., collection of all phases of all nodes
         # for generating indexing functions for the admittance matrix.
@@ -280,7 +283,7 @@ class ElectricGridModel(object):
         self.branches = pd.MultiIndex.from_frame(self.branches)
 
         # Obtain index set for DERs.
-        self.ders = self.der_names
+        self.ders = pd.MultiIndex.from_frame(electric_grid_data.electric_grid_ders[['der_type', 'der_name']])
 
         # Define sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrix entries.

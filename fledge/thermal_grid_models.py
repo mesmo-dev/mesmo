@@ -21,6 +21,7 @@ class ThermalGridModel(object):
     node_names: pd.Index
     line_names: pd.Index
     der_names: pd.Index
+    der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
     ders = pd.Index
@@ -40,21 +41,22 @@ class ThermalGridModel(object):
         self.node_names = pd.Index(thermal_grid_data.thermal_grid_nodes['node_name'])
         self.line_names = pd.Index(thermal_grid_data.thermal_grid_lines['line_name'])
         self.der_names = pd.Index(thermal_grid_data.thermal_grid_ders['der_name'])
+        self.der_types = pd.Index(thermal_grid_data.thermal_grid_ders['der_type']).unique()
 
         # Obtain node / branch / DER index set.
-        self.nodes = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_nodes[['node_name', 'node_type']])
+        self.nodes = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_nodes[['node_type', 'node_name']])
         self.branches = self.line_names
-        self.ders = self.der_names
+        self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
         # Define branch to node incidence matrix.
         self.branch_node_incidence_matrix = (
             scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=np.int)
         )
-        for node_index, node in enumerate(self.nodes):
+        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for branch_index, branch in enumerate(self.branches):
-                if node[0] == thermal_grid_data.thermal_grid_lines.at[branch, 'node_1_name']:
+                if node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_1_name']:
                     self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
-                elif node[0] == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
+                elif node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
                     self.branch_node_incidence_matrix[node_index, branch_index] += +1.0
         self.branch_node_incidence_matrix = self.branch_node_incidence_matrix.tocsr()
 
@@ -62,14 +64,16 @@ class ThermalGridModel(object):
         self.der_node_incidence_matrix = (
             scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=np.int)
         )
-        for node_index, node in enumerate(self.nodes):
-            for der_index, der in enumerate(self.ders):
-                if node[0] == thermal_grid_data.thermal_grid_ders.at[der, 'node_name']:
+        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
+            for der_index, der_name in enumerate(self.der_names):
+                if node_name == thermal_grid_data.thermal_grid_ders.at[der_name, 'node_name']:
                     self.der_node_incidence_matrix[node_index, der_index] = 1.0
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
 
         # Obtain DER nominal thermal power vector.
-        self.der_thermal_power_vector_nominal = thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
+        self.der_thermal_power_vector_nominal = (
+            thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
+        )
 
         # Obtain line parameters.
         self.line_length_vector = thermal_grid_data.thermal_grid_lines['length'].values
@@ -89,10 +93,10 @@ class ThermalGridModel(object):
         """Define decision variables for given `optimization_problem`."""
 
         optimization_problem.der_thermal_power_vector = (
-            pyo.Var(timesteps.to_list(), self.ders)
+            pyo.Var(timesteps.to_list(), self.ders.to_list())
         )
         optimization_problem.branch_flow_vector = (
-            pyo.Var(timesteps.to_list(), self.branches)
+            pyo.Var(timesteps.to_list(), self.branches.to_list())
         )
         optimization_problem.source_flow = (
             pyo.Var(timesteps.to_list())
@@ -107,8 +111,8 @@ class ThermalGridModel(object):
 
         optimization_problem.thermal_grid_constraints = pyo.ConstraintList()
         for timestep in timesteps:
-            for node_index, node in enumerate(self.nodes):
-                if node[1] == 'source':
+            for node_index, node_type in enumerate(self.nodes.get_level_values('node_type')):
+                if node_type == 'source':
                     optimization_problem.thermal_grid_constraints.add(
                         -1.0 * optimization_problem.source_flow[timestep]
                         ==

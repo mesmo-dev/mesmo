@@ -56,7 +56,7 @@ def main():
         for node_index, node in enumerate(thermal_grid_model.nodes):
             if node[1] == 'source':
                 optimization_problem.thermal_grid_constraints.add(
-                    optimization_problem.source_flow[timestep]
+                    -1.0 * optimization_problem.source_flow[timestep]
                     ==
                     sum(
                         thermal_grid_model.branch_node_incidence_matrix[node_index, branch_index]
@@ -85,7 +85,7 @@ def main():
     cost = 0.0
     cost += (
         sum(
-            -1.0 * optimization_problem.source_flow[timestep]
+            optimization_problem.source_flow[timestep]
             for timestep in scenario_data.timesteps
         )
     )
@@ -101,7 +101,40 @@ def main():
     optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
     if optimization_result.solver.termination_condition is not pyo.TerminationCondition.optimal:
         raise Exception(f"Invalid solver termination condition: {optimization_result.solver.termination_condition}")
-    optimization_problem.display()
+    # optimization_problem.display()
+
+    # Instantiate results variables.
+    der_thermal_power_vector = (
+        pd.DataFrame(columns=thermal_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_flow_vector = (
+        pd.DataFrame(columns=thermal_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    source_flow = (
+        pd.DataFrame(columns=['total'], index=scenario_data.timesteps, dtype=np.float)
+    )
+
+    # Obtain results.
+    for timestep in scenario_data.timesteps:
+
+        for der in thermal_grid_model.ders:
+            der_thermal_power_vector.at[timestep, der] = (
+                optimization_problem.der_thermal_power_vector[timestep, der].value
+            )
+
+        for branch in thermal_grid_model.branches:
+            branch_flow_vector.at[timestep, branch] = (
+                optimization_problem.branch_flow_vector[timestep, branch].value
+            )
+
+        source_flow.at[timestep, 'total'] = (
+            optimization_problem.source_flow[timestep].value
+        )
+
+    # Print some results.
+    print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
+    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
+    print(f"source_flow = \n{source_flow.to_string()}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import pyomo.core
+import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -77,6 +79,100 @@ class ThermalGridModel(object):
         # Obtain other system parameters.
         self.enthalpy_difference_distribution_water = (
             float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
+        )
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+        """Define decision variables for given `optimization_problem`."""
+
+        optimization_problem.der_thermal_power_vector = (
+            pyo.Var(timesteps.to_list(), self.ders)
+        )
+        optimization_problem.branch_flow_vector = (
+            pyo.Var(timesteps.to_list(), self.branches)
+        )
+        optimization_problem.source_flow = (
+            pyo.Var(timesteps.to_list())
+        )
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+        """Define constraints to express the thermal grid model equations for given `optimization_problem`."""
+
+        optimization_problem.thermal_grid_constraints = pyo.ConstraintList()
+        for timestep in timesteps:
+            for node_index, node in enumerate(self.nodes):
+                if node[1] == 'source':
+                    optimization_problem.thermal_grid_constraints.add(
+                        -1.0 * optimization_problem.source_flow[timestep]
+                        ==
+                        sum(
+                            self.branch_node_incidence_matrix[node_index, branch_index]
+                            * optimization_problem.branch_flow_vector[timestep, branch]
+                            for branch_index, branch in enumerate(self.branches)
+                        )
+                    )
+                else:
+                    optimization_problem.thermal_grid_constraints.add(
+                        sum(
+                            self.der_node_incidence_matrix[node_index, der_index]
+                            * optimization_problem.der_thermal_power_vector[timestep, der]
+                            * self.enthalpy_difference_distribution_water
+                            / fledge.config.water_density
+                            for der_index, der in enumerate(self.ders)
+                        )
+                        ==
+                        sum(
+                            self.branch_node_incidence_matrix[node_index, branch_index]
+                            * optimization_problem.branch_flow_vector[timestep, branch]
+                            for branch_index, branch in enumerate(self.branches)
+                        )
+                    )
+
+    def get_optimization_results(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Instantiate results variables.
+        der_thermal_power_vector = (
+            pd.DataFrame(columns=self.ders, index=timesteps, dtype=np.float)
+        )
+        branch_flow_vector = (
+            pd.DataFrame(columns=self.ders, index=timesteps, dtype=np.float)
+        )
+        source_flow = (
+            pd.DataFrame(columns=['total'], index=timesteps, dtype=np.float)
+        )
+
+        # Obtain results.
+        for timestep in timesteps:
+
+            for der in self.ders:
+                der_thermal_power_vector.at[timestep, der] = (
+                    optimization_problem.der_thermal_power_vector[timestep, der].value
+                )
+
+            for branch in self.branches:
+                branch_flow_vector.at[timestep, branch] = (
+                    optimization_problem.branch_flow_vector[timestep, branch].value
+                )
+
+            source_flow.at[timestep, 'total'] = (
+                optimization_problem.source_flow[timestep].value
+            )
+
+        return (
+            der_thermal_power_vector,
+            branch_flow_vector,
+            source_flow
         )
 
 

@@ -24,15 +24,7 @@ def main():
     optimization_problem = pyo.ConcreteModel()
 
     # Define variables.
-    optimization_problem.der_thermal_power_vector = (
-        pyo.Var(scenario_data.timesteps.to_list(), thermal_grid_model.ders)
-    )
-    optimization_problem.branch_flow_vector = (
-        pyo.Var(scenario_data.timesteps.to_list(), thermal_grid_model.branches)
-    )
-    optimization_problem.source_flow = (
-        pyo.Var(scenario_data.timesteps.to_list())
-    )
+    thermal_grid_model.define_optimization_variables(optimization_problem, scenario_data.timesteps)
 
     # Define DER constraints.
     # TODO: Arbitrary constraints to demonstrate the functionality.
@@ -51,35 +43,7 @@ def main():
             )
 
     # Define thermal grid constraints.
-    optimization_problem.thermal_grid_constraints = pyo.ConstraintList()
-    for timestep in scenario_data.timesteps:
-        for node_index, node in enumerate(thermal_grid_model.nodes):
-            if node[1] == 'source':
-                optimization_problem.thermal_grid_constraints.add(
-                    -1.0 * optimization_problem.source_flow[timestep]
-                    ==
-                    sum(
-                        thermal_grid_model.branch_node_incidence_matrix[node_index, branch_index]
-                        * optimization_problem.branch_flow_vector[timestep, branch]
-                        for branch_index, branch in enumerate(thermal_grid_model.branches)
-                    )
-                )
-            else:
-                optimization_problem.thermal_grid_constraints.add(
-                    sum(
-                        thermal_grid_model.der_node_incidence_matrix[node_index, der_index]
-                        * optimization_problem.der_thermal_power_vector[timestep, der]
-                        * thermal_grid_model.enthalpy_difference_distribution_water
-                        / fledge.config.water_density
-                        for der_index, der in enumerate(thermal_grid_model.ders)
-                    )
-                    ==
-                    sum(
-                        thermal_grid_model.branch_node_incidence_matrix[node_index, branch_index]
-                        * optimization_problem.branch_flow_vector[timestep, branch]
-                        for branch_index, branch in enumerate(thermal_grid_model.branches)
-                    )
-                )
+    thermal_grid_model.define_optimization_constraints(optimization_problem, scenario_data.timesteps)
 
     # Define objective.
     cost = 0.0
@@ -103,33 +67,12 @@ def main():
         raise Exception(f"Invalid solver termination condition: {optimization_result.solver.termination_condition}")
     # optimization_problem.display()
 
-    # Instantiate results variables.
-    der_thermal_power_vector = (
-        pd.DataFrame(columns=thermal_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    branch_flow_vector = (
-        pd.DataFrame(columns=thermal_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    source_flow = (
-        pd.DataFrame(columns=['total'], index=scenario_data.timesteps, dtype=np.float)
-    )
-
     # Obtain results.
-    for timestep in scenario_data.timesteps:
-
-        for der in thermal_grid_model.ders:
-            der_thermal_power_vector.at[timestep, der] = (
-                optimization_problem.der_thermal_power_vector[timestep, der].value
-            )
-
-        for branch in thermal_grid_model.branches:
-            branch_flow_vector.at[timestep, branch] = (
-                optimization_problem.branch_flow_vector[timestep, branch].value
-            )
-
-        source_flow.at[timestep, 'total'] = (
-            optimization_problem.source_flow[timestep].value
-        )
+    (
+        der_thermal_power_vector,
+        branch_flow_vector,
+        source_flow
+    ) = thermal_grid_model.get_optimization_results(optimization_problem, scenario_data.timesteps)
 
     # Print some results.
     print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")

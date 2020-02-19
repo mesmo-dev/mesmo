@@ -24,7 +24,7 @@ class ThermalGridModel(object):
     ders = pd.Index
     branch_node_incidence_matrix: scipy.sparse.spmatrix
     der_node_incidence_matrix: scipy.sparse.spmatrix
-    der_power_vector_nominal: np.ndarray
+    der_thermal_power_vector_nominal: np.ndarray
 
     def __init__(
             self,
@@ -67,7 +67,7 @@ class ThermalGridModel(object):
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
 
         # Obtain DER nominal thermal power vector.
-        self.der_power_vector_nominal = thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
+        self.der_thermal_power_vector_nominal = thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
 
         # Obtain line parameters.
         self.line_length_vector = thermal_grid_data.thermal_grid_lines['length'].values
@@ -83,7 +83,7 @@ class ThermalGridModel(object):
 class ThermalPowerFlowSolution(object):
     """Thermal grid power flow solution object."""
 
-    der_power_vector: np.ndarray
+    der_thermal_power_vector: np.ndarray
     der_flow_vector: np.ndarray
     branch_flow_vector: np.ndarray
     branch_velocity_vector: np.ndarray
@@ -112,26 +112,26 @@ class ThermalPowerFlowSolution(object):
     ):
 
         # Obtain DER thermal power vector.
-        der_power_vector = thermal_grid_model.der_power_vector_nominal
+        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_nominal
 
         self.__init__(
             thermal_grid_model,
-            der_power_vector
+            der_thermal_power_vector
         )
 
     @multimethod
     def __init__(
             self,
             thermal_grid_model: ThermalGridModel,
-            der_power_vector: np.ndarray
+            der_thermal_power_vector: np.ndarray
     ):
 
         # Obtain DER thermal power vector.
-        self.der_power_vector = der_power_vector
+        self.der_thermal_power_vector = der_thermal_power_vector
 
         # Obtain DER volume flow vector.
         self.der_flow_vector = (
-            self.der_power_vector
+            self.der_thermal_power_vector
             / fledge.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
         )

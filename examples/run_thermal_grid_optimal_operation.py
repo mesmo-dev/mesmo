@@ -24,7 +24,7 @@ def main():
     optimization_problem = pyo.ConcreteModel()
 
     # Define variables.
-    optimization_problem.der_power_vector = (
+    optimization_problem.der_thermal_power_vector = (
         pyo.Var(scenario_data.timesteps.to_list(), thermal_grid_model.ders)
     )
     optimization_problem.branch_flow_vector = (
@@ -40,14 +40,14 @@ def main():
     for timestep in scenario_data.timesteps:
         for der_index, der in enumerate(thermal_grid_model.ders):
             optimization_problem.der_constraints.add(
-                optimization_problem.der_power_vector[timestep, der]
+                optimization_problem.der_thermal_power_vector[timestep, der]
                 >=
-                0.5 * thermal_grid_model.der_power_vector_nominal[der_index]
+                0.5 * thermal_grid_model.der_thermal_power_vector_nominal[der_index]
             )
             optimization_problem.der_constraints.add(
-                optimization_problem.der_power_vector[timestep, der]
+                optimization_problem.der_thermal_power_vector[timestep, der]
                 <=
-                1.0 * thermal_grid_model.der_power_vector_nominal[der_index]
+                1.0 * thermal_grid_model.der_thermal_power_vector_nominal[der_index]
             )
 
     # Define thermal grid constraints.
@@ -68,7 +68,7 @@ def main():
                 optimization_problem.thermal_grid_constraints.add(
                     sum(
                         thermal_grid_model.der_node_incidence_matrix[node_index, der_index]
-                        * optimization_problem.der_power_vector[timestep, der]
+                        * optimization_problem.der_thermal_power_vector[timestep, der]
                         * thermal_grid_model.enthalpy_difference_distribution_water
                         / fledge.config.water_density
                         for der_index, der in enumerate(thermal_grid_model.ders)

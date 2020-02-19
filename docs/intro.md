@@ -8,7 +8,9 @@
     - Python 3.7
     - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository.
-3. In your Python environment, run `pip install -e path_to_fledge_repository`.
+3. In your Python environment, run:
+    1. `pip install -e path_to_repository`
+    2. `pip install -e path_to_repository/cobmo`
 
 ### Recommended installation
 
@@ -22,7 +24,8 @@ The following installation procedure contains additional steps and requirements 
     1. `conda create -n fledge python=3.7`
     2. `conda activate fledge`
     3. `conda install pandas`
-    4. `pip install -e path_to_fledge_repository`.
+    4. `pip install -e path_to_repository`.
+    5. `pip install -e path_to_repository/cobmo`
 4. In `fledge/config.py`, change `solver_name` to `'gurobi'` or `'cplex'`.
 
 ### Alternative installation
@@ -37,7 +40,8 @@ If you are running into errors when installing or running FLEDGE, this may be du
 4. In Anaconda Prompt, run:
     1. `conda env create -f path_to_fledge_repository/environment.yml`
     2. `conda activate fledge`
-    3. `pip install -e path_to_fledge_repository`.
+    3. `pip install -e path_to_repository`.
+    4. `pip install -e path_to_repository/cobmo`
 
 ``` important::
     Please also create an issue on Github if you run into problems with the normal installation procedure.

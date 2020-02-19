@@ -150,7 +150,7 @@ class ThermalGridModel(object):
             pd.DataFrame(columns=self.ders, index=timesteps, dtype=np.float)
         )
         branch_flow_vector = (
-            pd.DataFrame(columns=self.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.branches, index=timesteps, dtype=np.float)
         )
         source_flow = (
             pd.DataFrame(columns=['total'], index=timesteps, dtype=np.float)

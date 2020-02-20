@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import sqlite3
 
+import cobmo.building_model
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
@@ -359,6 +360,8 @@ class ElectricGridDERData(object):
     ev_charger_timeseries_dict: dict
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: dict
+    flexible_buildings: pd.DataFrame
+    flexible_building_model_dict: dict
 
     @multimethod
     def __init__(
@@ -574,6 +577,37 @@ class ElectricGridDERData(object):
                     limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
                 ).ffill(  # Forward fill to handle edge definition gaps.
                     limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                )
+            )
+
+        # Obtain flexible building data.
+        self.flexible_buildings = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_ders
+                WHERE der_type = 'flexible_building'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.flexible_buildings.index = self.flexible_buildings['der_name']
+
+        # Instantiate dictionary for unique `timeseries_name`.
+        self.flexible_building_model_dict = dict.fromkeys(self.flexible_buildings['model_name'].unique())
+
+        # Obtain flexible building model.
+        for model_name in self.flexible_building_model_dict:
+            self.flexible_building_model_dict[model_name] = (
+                cobmo.building_model.BuildingModel(
+                    model_name,
+                    timestep_start=scenario_data.scenario['timestep_start'],
+                    timestep_end=scenario_data.scenario['timestep_end'],
+                    timestep_delta=scenario_data.scenario['timestep_interval']
                 )
             )
 

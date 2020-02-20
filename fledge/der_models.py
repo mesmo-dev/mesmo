@@ -443,6 +443,64 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
 
 
+class FlexibleBuildingModel(FlexibleDERModel):
+    """Flexible load model object."""
+
+    def __init__(
+            self,
+            der_data: fledge.database_interface.ElectricGridDERData,
+            der_name: str
+    ):
+        """Construct flexible building model object by `der_data` and `der_name`."""
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Obtain shorthands for flexible building data and model by `der_name`.
+        flexible_building = der_data.flexible_buildings.loc[der_name, :]
+        flexible_building_model = der_data.flexible_building_model_dict[flexible_building['model_name']]
+
+        # Store timesteps.
+        self.timesteps = flexible_building_model.set_timesteps
+
+        # Construct nominal active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(
+                1.0,
+                index=self.timesteps
+            )
+            * flexible_building['active_power']
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(
+                1.0,
+                index=self.timesteps
+            )
+            * flexible_building['reactive_power']
+        )
+
+        # Obtain indexes.
+        self.state_names = flexible_building_model.set_states
+        self.control_names = flexible_building_model.set_controls
+        self.disturbance_names = flexible_building_model.set_disturbances
+        self.output_names = flexible_building_model.set_outputs
+
+        # Obtain state space matrices.
+        self.state_matrix = flexible_building_model.state_matrix
+        self.control_matrix = flexible_building_model.control_matrix
+        self.disturbance_matrix = flexible_building_model.disturbance_matrix
+        self.state_output_matrix = flexible_building_model.state_output_matrix
+        self.control_output_matrix = flexible_building_model.control_output_matrix
+        self.disturbance_output_matrix = flexible_building_model.disturbance_output_matrix
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = flexible_building_model.disturbance_timeseries
+
+        # Obtain output constraint timeseries
+        self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
+        self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
+
+
 class DERModelSet(object):
     """DER model set object."""
 
@@ -469,7 +527,12 @@ class DERModelSet(object):
         # Obtain DER names.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
         self.der_names = electric_grid_model.der_names
-        self.flexible_der_names = self.der_names[self.der_names.isin(der_data.flexible_loads['der_name'])]
+        self.flexible_der_names = (
+            self.der_names[
+                self.der_names.isin(der_data.flexible_loads['der_name'])
+                | self.der_names.isin(der_data.flexible_buildings['der_name'])
+            ]
+        )
         self.fixed_der_names = self.der_names[~self.der_names.isin(self.flexible_der_names)]
 
         # Obtain models.
@@ -494,6 +557,13 @@ class DERModelSet(object):
             elif der_name in der_data.flexible_loads['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleLoadModel(
+                        der_data,
+                        der_name
+                    )
+                )
+            elif der_name in der_data.flexible_buildings['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    fledge.der_models.FlexibleBuildingModel(
                         der_data,
                         der_name
                     )

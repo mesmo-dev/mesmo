@@ -51,6 +51,19 @@ class TestDERModels(unittest.TestCase):
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleLoadModel: Completed in {time_duration:.6f} seconds.")
 
+    def test_flexible_building_model(self):
+        # Obtain test data.
+        der_data = fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.FlexibleBuildingModel(
+            der_data,
+            der_data.flexible_buildings.index[0]  # Take `der_name` of first row.
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test FlexibleBuildingModel: Completed in {time_duration:.6f} seconds.")
+
     def test_der_model_set(self):
         # Get result.
         time_start = time.time()

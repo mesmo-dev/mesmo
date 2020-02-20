@@ -33,8 +33,8 @@ if optimization_solver_available:
             # Get result.
             time_start = time.time()
             os.system(f'python {os.path.join(examples_path, example_script)}')
-            time_end = time.time()
-            logger.info(f"Test {example_script}: Completed in {round(time_end - time_start, 6)} seconds.")
+            time_duration = time.time() - time_start
+            logger.info(f"Test {example_script}: Completed in {time_duration:.6f} seconds.")
 
 
     if __name__ == '__main__':

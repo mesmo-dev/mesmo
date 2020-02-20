@@ -19,8 +19,8 @@ class TestDatabaseInterface(unittest.TestCase):
         fledge.database_interface.recreate_database(
             database_path=os.path.join(fledge.config.data_path, 'database.sqlite')
         )
-        time_end = time.time()
-        logger.info(f"Test recreate_database: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test recreate_database: Completed in {time_duration:.6f} seconds.")
 
     def test_connect_database(self):
         # Define expected result.
@@ -29,8 +29,8 @@ class TestDatabaseInterface(unittest.TestCase):
         # Get actual result.
         time_start = time.time()
         actual = type(fledge.database_interface.connect_database())
-        time_end = time.time()
-        logger.info(f"Test connect_database: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test connect_database: Completed in {time_duration:.6f} seconds.")
 
         # Compare expected and actual.
         self.assertEqual(actual, expected)
@@ -39,36 +39,36 @@ class TestDatabaseInterface(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.database_interface.ScenarioData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test ScenarioData: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test ScenarioData: Completed in {time_duration:.6f} seconds.")
 
     def test_electric_grid_data(self):
         # Get result.
         time_start = time.time()
         fledge.database_interface.ElectricGridData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test ElectricGridData: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test ElectricGridData: Completed in {time_duration:.6f} seconds.")
 
     def test_thermal_grid_data(self):
         # Get result.
         time_start = time.time()
         fledge.database_interface.ThermalGridData('singapore_tanjongpagar')
-        time_end = time.time()
-        logger.info(f"Test ThermalGridData: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test ThermalGridData: Completed in {time_duration:.6f} seconds.")
 
     def test_electric_grid_der_data(self):
         # Get result.
         time_start = time.time()
         fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test ElectricGridDERData: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test ElectricGridDERData: Completed in {time_duration:.6f} seconds.")
 
     def test_price_data(self):
         # Get result.
         time_start = time.time()
         fledge.database_interface.PriceData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test PriceData: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test PriceData: Completed in {time_duration:.6f} seconds.")
 
 
 if __name__ == '__main__':

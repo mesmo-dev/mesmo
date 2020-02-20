@@ -22,8 +22,8 @@ class TestDERModels(unittest.TestCase):
             der_data,
             der_data.fixed_loads.index[0]  # Take `der_name` of first row.
         )
-        time_end = time.time()
-        logger.info(f"Test FixedLoadModel: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test FixedLoadModel: Completed in {time_duration:.6f} seconds.")
 
     def test_ev_charger_model(self):
         # Obtain test data.
@@ -35,8 +35,8 @@ class TestDERModels(unittest.TestCase):
             der_data,
             der_data.ev_chargers.index[0]  # Take `der_name` of first row.
         )
-        time_end = time.time()
-        logger.info(f"Test EVChargerModel: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test EVChargerModel: Completed in {time_duration:.6f} seconds.")
 
     def test_flexible_load_model(self):
         # Obtain test data.
@@ -48,15 +48,15 @@ class TestDERModels(unittest.TestCase):
             der_data,
             der_data.flexible_loads.index[0]  # Take `der_name` of first row.
         )
-        time_end = time.time()
-        logger.info(f"Test FlexibleLoadModel: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test FlexibleLoadModel: Completed in {time_duration:.6f} seconds.")
 
     def test_der_model_set(self):
         # Get result.
         time_start = time.time()
         fledge.der_models.DERModelSet(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test DERModelSet: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test DERModelSet: Completed in {time_duration:.6f} seconds.")
 
 
 if __name__ == '__main__':

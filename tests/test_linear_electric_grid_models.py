@@ -20,8 +20,8 @@ class TestLinearElectricGridModels(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test LinearElectricGridModelGlobal: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test LinearElectricGridModelGlobal: Completed in {time_duration:.6f} seconds.")
 
 
 if __name__ == '__main__':

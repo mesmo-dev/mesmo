@@ -17,8 +17,8 @@ class TestTemplate(unittest.TestCase):
         # Get actual result.
         time_start = time.time()
         actual = 2 + 2
-        time_end = time.time()
-        logger.info("Test equal: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+        time_duration = time.time() - time_start
+        logger.info(f"Test equal: Completed in {time_duration:.6f} seconds.")
 
         # Compare expected and actual.
         self.assertEqual(actual, expected)
@@ -30,8 +30,8 @@ class TestTemplate(unittest.TestCase):
         # Get actual result.
         time_start = time.time()
         actual = 2 + 1
-        time_end = time.time()
-        logger.info("Test not equal: Completed in {} seconds.".format(round(time_end - time_start, 6)))
+        time_duration = time.time() - time_start
+        logger.info(f"Test not equal: Completed in {time_duration:.6f} seconds.")
 
         # Compare expected and actual.
         self.assertNotEqual(actual, expected)

@@ -62,9 +62,9 @@ class TestPowerFlowSolvers(unittest.TestCase):
             voltage_vector_no_load[3:],
             voltage_vector_no_load[3:]
         ))
-        time_end = time.time()
+        time_duration = time.time() - time_start
         logger.info(
-            f"Test get_voltage_fixed_point #1.{test_index}: Completed in {round(time_end - time_start, 6)} seconds."
+            f"Test get_voltage_fixed_point #1.{test_index}: Completed in {time_duration:.6f} seconds."
         )
 
         # Compare expected and actual.
@@ -77,8 +77,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.get_voltage_fixed_point(electric_grid_model)
-        time_end = time.time()
-        logger.info(f"Test get_voltage_fixed_point #2: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_voltage_fixed_point #2: Completed in {time_duration:.6f} seconds.")
 
     def test_get_voltage_opendss(self):
         # Initialize OpenDSS model.
@@ -87,8 +87,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.get_voltage_opendss()
-        time_end = time.time()
-        logger.info(f"Test get_voltage_opendss: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_voltage_opendss: Completed in {time_duration:.6f} seconds.")
 
     def test_get_branch_power_fixed_point(self):
         # Obtain test data.
@@ -101,8 +101,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
             electric_grid_model,
             node_voltage_vector
         )
-        time_end = time.time()
-        logger.info(f"Test get_branch_power_fixed_point: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_branch_power_fixed_point: Completed in {time_duration:.6f} seconds.")
 
     def test_get_branch_power_opendss(self):
         # Initialize OpenDSS model.
@@ -111,8 +111,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.get_branch_power_opendss()
-        time_end = time.time()
-        logger.info(f"Test get_branch_power_opendss: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_branch_power_opendss: Completed in {time_duration:.6f} seconds.")
 
     def test_get_loss_fixed_point(self):
         # Obtain test data.
@@ -125,8 +125,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
             electric_grid_model,
             node_voltage_vector
         )
-        time_end = time.time()
-        logger.info(f"Test get_loss_fixed_point: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_loss_fixed_point: Completed in {time_duration:.6f} seconds.")
 
     def test_get_loss_opendss(self):
         # Initialize OpenDSS model.
@@ -135,15 +135,15 @@ class TestPowerFlowSolvers(unittest.TestCase):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.get_loss_opendss()
-        time_end = time.time()
-        logger.info(f"Test get_loss_opendss: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test get_loss_opendss: Completed in {time_duration:.6f} seconds.")
 
     def test_power_flow_solution_fixed_point_1(self):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test PowerFlowSolutionFixedPoint #1: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test PowerFlowSolutionFixedPoint #1: Completed in {time_duration:.6f} seconds.")
 
     def test_power_flow_solution_fixed_point_2(self):
         # Obtain test data.
@@ -159,8 +159,8 @@ class TestPowerFlowSolvers(unittest.TestCase):
         node_voltage_vector_fixed_point = abs(
             fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name).node_voltage_vector
         )
-        time_end = time.time()
-        logger.info(f"Test PowerFlowSolutionFixedPoint #2: Completed in {round(time_end - time_start, 6)} seconds.")
+        time_duration = time.time() - time_start
+        logger.info(f"Test PowerFlowSolutionFixedPoint #2: Completed in {time_duration:.6f} seconds.")
 
         # Display results.
         if fledge.config.test_plots:

@@ -5,6 +5,7 @@ from multimethod import multimethod
 import os
 import pandas as pd
 import sqlite3
+import typing
 
 import cobmo.building_model
 import fledge.config
@@ -361,7 +362,7 @@ class ElectricGridDERData(object):
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: dict
     flexible_buildings: pd.DataFrame
-    flexible_building_model_dict: dict
+    flexible_building_model_dict: typing.Dict[str, cobmo.building_model.BuildingModel]
 
     @multimethod
     def __init__(

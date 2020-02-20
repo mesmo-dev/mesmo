@@ -350,11 +350,15 @@ class ThermalGridData(object):
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
 
 
-class FixedLoadData(object):
-    """Fixed load data object."""
+class ElectricGridDERData(object):
+    """DER data object."""
 
     fixed_loads: pd.DataFrame
     fixed_load_timeseries_dict: dict
+    ev_chargers: pd.DataFrame
+    ev_charger_timeseries_dict: dict
+    flexible_loads: pd.DataFrame
+    flexible_load_timeseries_dict: dict
 
     @multimethod
     def __init__(
@@ -378,11 +382,10 @@ class FixedLoadData(object):
             scenario_data: ScenarioData,
             database_connection=connect_database()
     ):
-        """Load fixed load data from database for given `scenario_data`."""
-
         # Obtain shorthand for `scenario_name`.
         scenario_name = scenario_data.scenario['scenario_name']
 
+        # Obtain fixed load data.
         self.fixed_loads = (
             pd.read_sql(
                 """
@@ -446,40 +449,7 @@ class FixedLoadData(object):
                 )
             )
 
-
-class EVChargerData(object):
-    """EV charger data object."""
-
-    ev_chargers: pd.DataFrame
-    ev_charger_timeseries_dict: dict
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_name: str,
-            database_connection=connect_database()
-    ):
-        """Load EV charger data from database for given `scenario_name`."""
-
-        # Obtain scenario data.
-        scenario_data = ScenarioData(scenario_name)
-
-        self.__init__(
-            scenario_data,
-            database_connection=database_connection
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_data: ScenarioData,
-            database_connection=connect_database()
-    ):
-        """Load EV charger data from database for given `scenario_data`."""
-
-        # Obtain shorthand for `scenario_name`.
-        scenario_name = scenario_data.scenario['scenario_name']
-
+        # Obtain EV charger data.
         self.ev_chargers = (
             pd.read_sql(
                 """
@@ -543,40 +513,7 @@ class EVChargerData(object):
                 )
             )
 
-
-class FlexibleLoadData(object):
-    """Flexible load data object."""
-
-    flexible_loads: pd.DataFrame
-    flexible_load_timeseries_dict: dict
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_name: str,
-            database_connection=connect_database()
-    ):
-        """Load flexible load data from database for given `scenario_name`."""
-
-        # Obtain scenario data.
-        scenario_data = ScenarioData(scenario_name)
-
-        self.__init__(
-            scenario_data,
-            database_connection=database_connection
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_data: ScenarioData,
-            database_connection=connect_database()
-    ):
-        """Load flexible load data from database for given `scenario_data`."""
-
-        # Obtain shorthand for `scenario_name`.
-        scenario_name = scenario_data.scenario['scenario_name']
-
+        # Obtain flexible load data.
         self.flexible_loads = (
             pd.read_sql(
                 """

@@ -84,30 +84,30 @@ class FixedLoadModel(FixedDERModel):
 
     def __init__(
             self,
-            fixed_load_data: fledge.database_interface.FixedLoadData,
+            der_data: fledge.database_interface.ElectricGridDERData,
             der_name: str
     ):
-        """Construct fixed load model object by `fixed_load_data` and `der_name`."""
+        """Construct fixed load model object by `der_data` and `der_name`."""
 
         # Store DER name.
         self.der_name = der_name
 
         # Get fixed load data by `der_name`.
-        fixed_load = fixed_load_data.fixed_loads.loc[self.der_name, :]
+        fixed_load = der_data.fixed_loads.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = fixed_load_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
+        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            fixed_load_data.fixed_load_timeseries_dict[
+            der_data.fixed_load_timeseries_dict[
                 fixed_load['timeseries_name']
             ]['apparent_power_per_unit'].rename('active_power')
             * fixed_load['scaling_factor']
             * fixed_load['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            fixed_load_data.fixed_load_timeseries_dict[
+            der_data.fixed_load_timeseries_dict[
                 fixed_load['timeseries_name']
             ]['apparent_power_per_unit'].rename('reactive_power')
             * fixed_load['scaling_factor']
@@ -120,30 +120,30 @@ class EVChargerModel(FixedDERModel):
 
     def __init__(
             self,
-            ev_charger_data: fledge.database_interface.EVChargerData,
+            der_data: fledge.database_interface.ElectricGridDERData,
             der_name: str
     ):
-        """Construct EV charger model object by `ev_charger_data` and `der_name`."""
+        """Construct EV charger model object by `der_data` and `der_name`."""
 
         # Store DER name.
         self.der_name = der_name
 
         # Get fixed load data by `der_name`.
-        ev_charger = ev_charger_data.ev_chargers.loc[self.der_name, :]
+        ev_charger = der_data.ev_chargers.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = ev_charger_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
+        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            ev_charger_data.ev_charger_timeseries_dict[
+            der_data.ev_charger_timeseries_dict[
                 ev_charger['timeseries_name']
             ]['apparent_power_per_unit'].rename('active_power')
             * ev_charger['scaling_factor']
             * ev_charger['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            ev_charger_data.ev_charger_timeseries_dict[
+            der_data.ev_charger_timeseries_dict[
                 ev_charger['timeseries_name']
             ]['apparent_power_per_unit'].rename('reactive_power')
             * ev_charger['scaling_factor']
@@ -330,30 +330,30 @@ class FlexibleLoadModel(FlexibleDERModel):
 
     def __init__(
             self,
-            flexible_load_data: fledge.database_interface.FlexibleLoadData,
+            der_data: fledge.database_interface.ElectricGridDERData,
             der_name: str
     ):
-        """Construct flexible load model object by `flexible_load_data` and `der_name`."""
+        """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Store DER name.
         self.der_name = der_name
 
         # Get flexible load data by `der_name`.
-        flexible_load = flexible_load_data.flexible_loads.loc[der_name, :]
+        flexible_load = der_data.flexible_loads.loc[der_name, :]
 
         # Store timesteps index.
-        self.timesteps = flexible_load_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
+        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            flexible_load_data.flexible_load_timeseries_dict[
+            der_data.flexible_load_timeseries_dict[
                 flexible_load['timeseries_name']
             ]['apparent_power_per_unit'].rename('active_power')
             * flexible_load['scaling_factor']
             * flexible_load['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            flexible_load_data.flexible_load_timeseries_dict[
+            der_data.flexible_load_timeseries_dict[
                 flexible_load['timeseries_name']
             ]['apparent_power_per_unit'].rename('reactive_power')
             * flexible_load['scaling_factor']
@@ -461,9 +461,7 @@ class DERModelSet(object):
 
         # Obtain data.
         scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-        fixed_load_data = fledge.database_interface.FixedLoadData(scenario_name)
-        ev_charger_data = fledge.database_interface.EVChargerData(scenario_name)
-        flexible_load_data = fledge.database_interface.FlexibleLoadData(scenario_name)
+        der_data = fledge.database_interface.ElectricGridDERData(scenario_name)
 
         # Obtain timesteps.
         self.timesteps = scenario_data.timesteps
@@ -471,7 +469,7 @@ class DERModelSet(object):
         # Obtain DER names.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
         self.der_names = electric_grid_model.der_names
-        self.flexible_der_names = self.der_names[self.der_names.isin(flexible_load_data.flexible_loads['der_name'])]
+        self.flexible_der_names = self.der_names[self.der_names.isin(der_data.flexible_loads['der_name'])]
         self.fixed_der_names = self.der_names[~self.der_names.isin(self.flexible_der_names)]
 
         # Obtain models.
@@ -479,24 +477,24 @@ class DERModelSet(object):
         self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
         self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
         for der_name in electric_grid_model.der_names:
-            if der_name in fixed_load_data.fixed_loads['der_name']:
+            if der_name in der_data.fixed_loads['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedLoadModel(
-                        fixed_load_data,
+                        der_data,
                         der_name
                     )
                 )
-            elif der_name in ev_charger_data.ev_chargers['der_name']:
+            elif der_name in der_data.ev_chargers['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.EVChargerModel(
-                        ev_charger_data,
+                        der_data,
                         der_name
                     )
                 )
-            elif der_name in flexible_load_data.flexible_loads['der_name']:
+            elif der_name in der_data.flexible_loads['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleLoadModel(
-                        flexible_load_data,
+                        der_data,
                         der_name
                     )
                 )

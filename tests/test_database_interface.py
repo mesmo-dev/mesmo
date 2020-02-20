@@ -56,26 +56,12 @@ class TestDatabaseInterface(unittest.TestCase):
         time_end = time.time()
         logger.info(f"Test ThermalGridData: Completed in {round(time_end - time_start, 6)} seconds.")
 
-    def test_fixed_load_data(self):
+    def test_electric_grid_der_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.FixedLoadData(fledge.config.test_scenario_name)
+        fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
         time_end = time.time()
-        logger.info(f"Test FixedLoadData: Completed in {round(time_end - time_start, 6)} seconds.")
-
-    def test_ev_charger_data(self):
-        # Get result.
-        time_start = time.time()
-        fledge.database_interface.EVChargerData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test EVChargerData: Completed in {round(time_end - time_start, 6)} seconds.")
-
-    def test_flexible_load_data(self):
-        # Get result.
-        time_start = time.time()
-        fledge.database_interface.FlexibleLoadData(fledge.config.test_scenario_name)
-        time_end = time.time()
-        logger.info(f"Test FlexibleLoadData: Completed in {round(time_end - time_start, 6)} seconds.")
+        logger.info(f"Test ElectricGridDERData: Completed in {round(time_end - time_start, 6)} seconds.")
 
     def test_price_data(self):
         # Get result.

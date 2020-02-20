@@ -20,13 +20,12 @@ def main():
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-    timestep_interval = scenario_data.scenario['timestep_interval']  # Define shorthand for indexing 't+1'.
-    flexible_load_data = fledge.database_interface.FlexibleLoadData(scenario_name)
+    der_data = fledge.database_interface.ElectricGridDERData(scenario_name)
     price_data = fledge.database_interface.PriceData(scenario_name)
 
     # Obtain model.
-    der_name = flexible_load_data.flexible_loads['der_name'][0]  # Pick first `der_name`.
-    flexible_load_model = fledge.der_models.FlexibleLoadModel(flexible_load_data, der_name)
+    der_name = der_data.flexible_loads['der_name'][0]  # Pick first `der_name`.
+    flexible_load_model = fledge.der_models.FlexibleLoadModel(der_data, der_name)
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()

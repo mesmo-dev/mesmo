@@ -293,6 +293,24 @@ class FlexibleDERModel(DERModel):
                 )
             )
 
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ):
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+        optimization_problem.objective.expr += (
+            sum(
+                -1.0
+                * price_timeseries.at[timestep, 'price_value']
+                * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                for timestep in self.timesteps
+            )
+        )
+
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
@@ -553,6 +571,23 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 )
             )
 
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ):
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+        optimization_problem.objective.expr += (
+            sum(
+                price_timeseries.at[timestep, 'price_value']
+                * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                for timestep in self.timesteps
+            )
+        )
+
 
 class DERModelSet(object):
     """DER model set object."""
@@ -673,4 +708,17 @@ class DERModelSet(object):
                 optimization_problem,
                 power_flow_solution,
                 electric_grid_model
+            )
+
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ):
+
+        # Define objective, only for flexible DERs.
+        for der_name in self.flexible_der_names:
+            self.flexible_der_models[der_name].define_optimization_objective(
+                optimization_problem,
+                price_timeseries
             )

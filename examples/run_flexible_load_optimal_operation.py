@@ -41,21 +41,7 @@ def main():
     flexible_load_model.define_optimization_constraints(optimization_problem)
 
     # Define objective.
-    optimization_problem.objective = (
-        pyo.Objective(
-            expr=0.0,
-            sense=pyo.minimize
-        )
-    )
-    optimization_problem.objective.expr += (
-        sum(
-            -1.0
-            * price_timeseries.at[timestep, 'price_value']
-            * optimization_problem.output_vector[timestep, der_name, output_name]
-            for timestep in scenario_data.timesteps
-            for output_name in ['active_power', 'reactive_power']
-        )
-    )
+    flexible_load_model.define_optimization_objective(optimization_problem, price_timeseries)
 
     # Solve optimization problem.
     optimization_solver = pyo.SolverFactory(fledge.config.solver_name)

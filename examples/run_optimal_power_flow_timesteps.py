@@ -19,6 +19,11 @@ def main():
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
+    price_data = fledge.database_interface.PriceData(scenario_name)
+
+    # Obtain price timeseries.
+    price_name = 'energy'
+    price_timeseries = price_data.price_timeseries_dict[price_name]
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
@@ -72,31 +77,22 @@ def main():
         )
     )
 
-    # Define objective.
-    optimization_problem.objective = (
-        pyo.Objective(
-            expr=0.0,
-            sense=pyo.minimize
-        )
-    )
+    # Define electric grid objective.
+    if optimization_problem.find_component('objective') is None:
+        optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
     optimization_problem.objective.expr += (
-        # DER active power.
-        # TODO: DERs are currently assumed to be only loads, hence negative values.
-        -1.0 * pyo.quicksum(
-            optimization_problem.der_active_power_vector_change[timestep, der]
-            + np.real(power_flow_solution.der_power_vector[der_index])
-            for timestep in scenario_data.timesteps
-            for der_index, der in enumerate(electric_grid_model.ders)
-        )
-    )
-    optimization_problem.objective.expr += (
-        # Active loss.
-        pyo.quicksum(
-            optimization_problem.loss_active_change[timestep]
+        sum(
+            price_timeseries.at[timestep, 'price_value']
+            * (
+                optimization_problem.loss_active_change[timestep]
+                + np.sum(np.real(power_flow_solution.loss))
+            )
             for timestep in scenario_data.timesteps
         )
-        + np.sum(np.real(power_flow_solution.loss))
     )
+
+    # Define DER objective.
+    der_model_set.define_optimization_objective(optimization_problem, price_timeseries)
 
     # Solve optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)

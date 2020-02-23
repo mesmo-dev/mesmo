@@ -536,7 +536,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             optimization_problem.der_connection_constraints.add(
                 optimization_problem.der_active_power_vector_change[timestep, der]
                 ==
-                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                 - np.real(
                     power_flow_solution.der_power_vector[der_index]
                 )
@@ -544,7 +544,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             optimization_problem.der_connection_constraints.add(
                 optimization_problem.der_reactive_power_vector_change[timestep, der]
                 ==
-                (
+                -1.0 * (
                     optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                     * np.tan(np.arccos(self.power_factor_nominal))
                 )

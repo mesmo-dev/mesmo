@@ -608,7 +608,9 @@ class ElectricGridDERData(object):
                     model_name,
                     timestep_start=scenario_data.scenario['timestep_start'],
                     timestep_end=scenario_data.scenario['timestep_end'],
-                    timestep_delta=scenario_data.scenario['timestep_interval']
+                    timestep_delta=scenario_data.scenario['timestep_interval'],
+                    connect_electric_grid=True,
+                    connect_thermal_grid_cooling=True
                 )
             )
 

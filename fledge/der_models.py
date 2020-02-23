@@ -571,6 +571,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 )
             )
 
+            # Disable thermal grid connection.
+            optimization_problem.der_connection_constraints.add(
+                0.0
+                ==
+                optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+            )
+
     def define_optimization_objective(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

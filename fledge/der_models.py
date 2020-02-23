@@ -158,6 +158,7 @@ class FlexibleDERModel(DERModel):
     control_names: pd.Index
     disturbance_names: pd.Index
     output_names: pd.Index
+    state_vector_initial: pd.Series
     state_matrix: pd.DataFrame
     control_matrix: pd.DataFrame
     disturbance_matrix: pd.DataFrame
@@ -192,12 +193,11 @@ class FlexibleDERModel(DERModel):
             optimization_problem.flexible_der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
-        # TODO: Define initial state in model.
         for state_name in self.state_names:
             optimization_problem.flexible_der_model_constraints.add(
                 optimization_problem.state_vector[self.timesteps[0], self.der_name, state_name]
                 ==
-                0.0
+                self.state_vector_initial.at[state_name]
             )
 
         for timestep in self.timesteps[:-1]:
@@ -372,6 +372,11 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.disturbance_names = pd.Index([])
         self.output_names = pd.Index(['accumulated_energy', 'active_power', 'reactive_power', 'power_factor_constant'])
 
+        # Instantiate initial state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.state_names)
+        )
+
         # Instantiate state space matrices.
         # TODO: Consolidate indexing approach with electric grid model.
         self.state_matrix = (
@@ -494,6 +499,9 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.control_names = flexible_building_model.set_controls
         self.disturbance_names = flexible_building_model.set_disturbances
         self.output_names = flexible_building_model.set_outputs
+
+        # Obtain initial state.
+        self.state_vector_initial = flexible_building_model.set_state_initial
 
         # Obtain state space matrices.
         self.state_matrix = flexible_building_model.state_matrix

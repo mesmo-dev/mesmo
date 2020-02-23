@@ -446,6 +446,8 @@ class FlexibleLoadModel(FlexibleDERModel):
 class FlexibleBuildingModel(FlexibleDERModel):
     """Flexible load model object."""
 
+    power_factor_nominal: np.float
+
     def __init__(
             self,
             der_data: fledge.database_interface.ElectricGridDERData,
@@ -462,6 +464,14 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Store timesteps.
         self.timesteps = flexible_building_model.set_timesteps
+
+        # Obtain nominal power factor.
+        self.power_factor_nominal = (
+            np.cos(np.arctan(
+                flexible_building['reactive_power']
+                / flexible_building['active_power']
+            ))
+        )
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -499,6 +509,41 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Obtain output constraint timeseries
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
+
+    def define_optimization_connection_electric_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+    ):
+
+        # Obtain DER index.
+        der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
+        der = electric_grid_model.ders[der_index]
+
+        # Define connection constraints.
+        if optimization_problem.find_component('der_connection_constraints') is None:
+            optimization_problem.der_connection_constraints = pyo.ConstraintList()
+        for timestep in self.timesteps:
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_active_power_vector_change[timestep, der]
+                ==
+                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                - np.real(
+                    power_flow_solution.der_power_vector[der_index]
+                )
+            )
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_reactive_power_vector_change[timestep, der]
+                ==
+                (
+                    optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                    * np.tan(np.arccos(self.power_factor_nominal))
+                )
+                - np.imag(
+                    power_flow_solution.der_power_vector[der_index]
+                )
+            )
 
 
 class DERModelSet(object):

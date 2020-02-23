@@ -447,9 +447,9 @@ class ElectricGridDERData(object):
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             )
 
@@ -511,9 +511,9 @@ class ElectricGridDERData(object):
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             )
 
@@ -575,9 +575,9 @@ class ElectricGridDERData(object):
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             )
 
@@ -686,8 +686,8 @@ class PriceData(object):
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / pd.to_timedelta(scenario_data.scenario['timestep_interval']))
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             )

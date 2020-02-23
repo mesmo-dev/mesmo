@@ -23,6 +23,10 @@ def main():
     der_data = fledge.database_interface.ElectricGridDERData(scenario_name)
     price_data = fledge.database_interface.PriceData(scenario_name)
 
+    # Obtain price timeseries.
+    price_name = 'energy'
+    price_timeseries = price_data.price_timeseries_dict[price_name]
+
     # Obtain model.
     der_name = der_data.flexible_buildings['der_name'][0]  # Pick first `der_name`.
     flexible_building_model = fledge.der_models.FlexibleBuildingModel(der_data, der_name)
@@ -37,22 +41,19 @@ def main():
     flexible_building_model.define_optimization_constraints(optimization_problem)
 
     # Define objective.
-    price_name = 'energy'
-
-    cost = 0.0
-    cost += (
-        pyo.quicksum(
+    optimization_problem.objective = (
+        pyo.Objective(
+            expr=0.0,
+            sense=pyo.minimize
+        )
+    )
+    optimization_problem.objective.expr += (
+        sum(
             +1.0
-            * price_data.price_timeseries_dict[price_name].at[timestep, 'price_value']
+            * price_timeseries.at[timestep, 'price_value']
             * optimization_problem.output_vector[timestep, der_name, output_name]
             for timestep in scenario_data.timesteps
             for output_name in ['grid_electric_power']
-        )
-    )
-    optimization_problem.objective = (
-        pyo.Objective(
-            expr=cost,
-            sense=pyo.minimize
         )
     )
 
@@ -89,7 +90,7 @@ def main():
             plt.show()
             plt.close()
 
-        plt.plot(price_data.price_timeseries_dict[price_name]['price_value'], drawstyle='steps-post')
+        plt.plot(price_timeseries['price_value'], drawstyle='steps-post')
         plt.title(f"Price: {price_name}")
         plt.show()
         plt.close()

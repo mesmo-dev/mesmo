@@ -73,8 +73,13 @@ def main():
     )
 
     # Define objective.
-    cost = 0.0
-    cost += (
+    optimization_problem.objective = (
+        pyo.Objective(
+            expr=0.0,
+            sense=pyo.minimize
+        )
+    )
+    optimization_problem.objective.expr += (
         # DER active power.
         # TODO: DERs are currently assumed to be only loads, hence negative values.
         -1.0 * pyo.quicksum(
@@ -84,19 +89,13 @@ def main():
             for der_index, der in enumerate(electric_grid_model.ders)
         )
     )
-    cost += (
+    optimization_problem.objective.expr += (
         # Active loss.
         pyo.quicksum(
             optimization_problem.loss_active_change[timestep]
             for timestep in scenario_data.timesteps
         )
         + np.sum(np.real(power_flow_solution.loss))
-    )
-    optimization_problem.objective = (
-        pyo.Objective(
-            expr=cost,
-            sense=pyo.minimize
-        )
     )
 
     # Solve optimization problem.

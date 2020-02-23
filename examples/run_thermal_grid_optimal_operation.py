@@ -46,17 +46,16 @@ def main():
     thermal_grid_model.define_optimization_constraints(optimization_problem, scenario_data.timesteps)
 
     # Define objective.
-    cost = 0.0
-    cost += (
+    optimization_problem.objective = (
+        pyo.Objective(
+            expr=0.0,
+            sense=pyo.minimize
+        )
+    )
+    optimization_problem.objective.expr += (
         sum(
             optimization_problem.source_flow[timestep]
             for timestep in scenario_data.timesteps
-        )
-    )
-    optimization_problem.objective = (
-        pyo.Objective(
-            expr=cost,
-            sense=pyo.minimize
         )
     )
 

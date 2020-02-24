@@ -2482,4 +2482,4 @@ ev_1,singapore_6node,ev_charger,ev_charger_default,6,1,1,0,0,1,wye,-150000.0,-75
 ev_2,singapore_6node,ev_charger,ev_charger_default,6,1,0,1,0,1,wye,-100000.0,-50000.0
 ev_3,singapore_6node,ev_charger,ev_charger_default,6,1,0,0,1,1,wye,-50000.0,-25000.0
 ev_4,singapore_6node,ev_charger,ev_charger_default,4,0,1,1,1,3,wye,-500000.0,-250000.0
-flex_5,singapore_6node,flexible_building,wtp_mix_medium_density_1,13,0,1,1,1,1,wye,-2414989.499,-793768.6625
+flex_5,singapore_6node,flexible_building,wtp_mix_medium_density_1,6,0,1,1,1,1,wye,-2414989.499,-793768.6625

@@ -1,22 +1,26 @@
-name: Python package
+name: Python tests
 
 on: [push]
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 4
+      max-parallel: 8
       matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
         python-version: [3.7]
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout repository
+      uses: actions/checkout@v2
     - name: Checkout submodules
-      uses: srt32/git-actions@v0.0.3
-      with:
-        args: git submodule update --init --recursive
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -31,9 +35,9 @@ jobs:
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # exit-zero treats all errors as warnings. Line lengths should not exceed 120 characters.
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest
+        pytest tests

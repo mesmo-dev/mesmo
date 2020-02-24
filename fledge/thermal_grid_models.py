@@ -292,7 +292,7 @@ class ThermalPowerFlowSolution(object):
 
             else:
                 logger.error(f"Invalid Reynolds coefficient: {reynold}")
-                friction_factor = None
+                raise ValueError
 
             return friction_factor
 

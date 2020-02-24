@@ -623,6 +623,7 @@ class ElectricGridModel(object):
                 )
             else:
                 logger.error(f"Unknown transformer type: {type}")
+                raise ValueError
 
             # Obtain indexes for positioning the transformer element
             # matrices in the full matrices.
@@ -738,6 +739,7 @@ class ElectricGridModel(object):
                     node_index = [node_index[2]]
                 else:
                     logger.error(f"Unknown delta phase arrangement: {phases_list}")
+                    raise ValueError
 
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
@@ -746,6 +748,7 @@ class ElectricGridModel(object):
 
             else:
                 logger.error(f"Unknown der connection type: {connection}")
+                raise ValueError
 
         # Convert sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrices.
@@ -1088,6 +1091,7 @@ def initialize_opendss_model(
                     )
             else:
                 logger.error(f"Unknown transformer connection type: {winding['connection']}")
+                raise ValueError
 
             # Add node connection, nominal voltage / power and resistance
             # to OpenDSS command string for each winding.

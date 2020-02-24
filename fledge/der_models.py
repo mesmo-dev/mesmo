@@ -664,7 +664,8 @@ class DERModelSet(object):
                     )
                 )
             else:
-                raise logger.error(f"Cannot determine type of DER: {der_name}")
+                logger.error(f"Cannot determine type of DER: {der_name}")
+                raise ValueError
 
     def define_optimization_variables(
             self,

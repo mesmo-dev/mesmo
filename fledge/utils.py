@@ -35,6 +35,13 @@ def get_index(
     # Obtain integer index array.
     index = np.flatnonzero(mask)
 
+    # Assert that index is not empty.
+    try:
+        assert len(index) > 0
+    except AssertionError:
+        logger.error(f"Empty index returned for: {levels_values}")
+        raise
+
     return index
 
 

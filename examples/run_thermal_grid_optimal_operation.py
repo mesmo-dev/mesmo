@@ -90,23 +90,22 @@ def main():
                 optimization_problem.der_constraints.add(
                     optimization_problem.node_head_vector[timestep, node]
                     ==
-                    optimization_problem.source_head[timestep]
+                    0.0
                 )
             else:
                 optimization_problem.der_constraints.add(
                     optimization_problem.node_head_vector[timestep, node]
                     ==
-                    optimization_problem.source_head[timestep]
-                    + sum(
+                    sum(
                         branch_node_incidence_matrix_inverse[node_index, branch_index]
                         * optimization_problem.branch_head_vector[timestep, branch]
                         for branch_index, branch in enumerate(thermal_grid_model.branches)
                     )
                 )
             optimization_problem.der_constraints.add(
-                optimization_problem.node_head_vector[timestep, node]
-                >=
-                0.0
+                -1.0 * optimization_problem.node_head_vector[timestep, node]
+                <=
+                optimization_problem.source_head[timestep]
             )
 
     # Define thermal grid constraints.

@@ -348,12 +348,8 @@ class ThermalPowerFlowSolution(object):
             np.max(np.abs(node_head_vector_no_source))
         )
         self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=np.float)
-        self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')] = (
-            self.source_head
-        )
         self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
             node_head_vector_no_source
-            + self.source_head
         )
 
         # Obtain secondary pump / cooling plant electric power.

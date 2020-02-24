@@ -55,9 +55,9 @@ class ThermalGridModel(object):
         for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for branch_index, branch in enumerate(self.branches):
                 if node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_1_name']:
-                    self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
-                elif node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
                     self.branch_node_incidence_matrix[node_index, branch_index] += +1.0
+                elif node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
+                    self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
         self.branch_node_incidence_matrix = self.branch_node_incidence_matrix.tocsr()
 
         # Define DER to node incidence matrix.
@@ -82,8 +82,12 @@ class ThermalGridModel(object):
 
         # Obtain other system parameters.
         self.enthalpy_difference_distribution_water = (
-            float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
+            np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
+        self.pump_efficiency_secondary_pump = (  # TODO: Rename to `secondary_pump_efficiency`.
+            np.float(thermal_grid_data.thermal_grid['pump_efficiency_secondary_pump'])
+        )
+        self.cooling_plant_efficiency = 5.0  # TODO: Define cooling plant model.
 
     def define_optimization_variables(
             self,
@@ -114,7 +118,7 @@ class ThermalGridModel(object):
             for node_index, node_type in enumerate(self.nodes.get_level_values('node_type')):
                 if node_type == 'source':
                     optimization_problem.thermal_grid_constraints.add(
-                        -1.0 * optimization_problem.source_flow[timestep]
+                        optimization_problem.source_flow[timestep]
                         ==
                         sum(
                             self.branch_node_incidence_matrix[node_index, branch_index]
@@ -127,8 +131,8 @@ class ThermalGridModel(object):
                         sum(
                             self.der_node_incidence_matrix[node_index, der_index]
                             * optimization_problem.der_thermal_power_vector[timestep, der]
-                            * self.enthalpy_difference_distribution_water
                             / fledge.config.water_density
+                            / self.enthalpy_difference_distribution_water
                             for der_index, der in enumerate(self.ders)
                         )
                         ==
@@ -185,12 +189,16 @@ class ThermalPowerFlowSolution(object):
 
     der_thermal_power_vector: np.ndarray
     der_flow_vector: np.ndarray
+    source_flow: np.float
     branch_flow_vector: np.ndarray
     branch_velocity_vector: np.ndarray
     branch_reynold_vector: np.ndarray
     branch_friction_factor_vector: np.ndarray
     branch_head_vector: np.ndarray
+    source_head: np.float
     node_head_vector: np.ndarray
+    source_electric_power_secondary_pump: np.float
+    source_electric_power_cooling_plant: np.float
 
     @multimethod
     def __init__(
@@ -229,11 +237,14 @@ class ThermalPowerFlowSolution(object):
         # Obtain DER thermal power vector.
         self.der_thermal_power_vector = der_thermal_power_vector
 
-        # Obtain DER volume flow vector.
+        # Obtain DER / source volume flow vector.
         self.der_flow_vector = (
             self.der_thermal_power_vector
             / fledge.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
+        )
+        self.source_flow = (
+            -1.0 * np.sum(self.der_flow_vector)
         )
 
         # Obtain branch volume flow vector.
@@ -318,8 +329,8 @@ class ThermalPowerFlowSolution(object):
             )
         )
 
-        # Obtain nodal head vector.
-        self.node_head_vector = (
+        # Obtain node / source head vector.
+        node_head_vector_no_source = (
             scipy.sparse.linalg.spsolve(
                 np.transpose(
                     thermal_grid_model.branch_node_incidence_matrix[
@@ -327,6 +338,32 @@ class ThermalPowerFlowSolution(object):
                         :
                     ]
                 ),
-                -1.0 * self.branch_head_vector
+                self.branch_head_vector
             )
+        )
+        self.source_head = (
+            np.max(np.abs(node_head_vector_no_source))
+        )
+        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=np.float)
+        self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')] = (
+            self.source_head
+        )
+        self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
+            node_head_vector_no_source
+            + self.source_head
+        )
+
+        # Obtain secondary pump / cooling plant electric power.
+        self.source_electric_power_secondary_pump = (
+            self.source_head
+            * self.source_flow
+            * fledge.config.water_density
+            * fledge.config.gravitational_acceleration
+            / thermal_grid_model.pump_efficiency_secondary_pump
+        )
+        self.source_electric_power_cooling_plant = (
+            self.source_flow
+            * thermal_grid_model.enthalpy_difference_distribution_water
+            * fledge.config.water_density
+            / thermal_grid_model.cooling_plant_efficiency
         )

@@ -172,7 +172,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
                 columns=['OpenDSS', 'Fixed Point']
             )
             comparison.plot(kind='bar')
-            plt.show()
+            plt.show(block=False)
 
             absolute_error = pd.DataFrame(
                 (node_voltage_vector_fixed_point - node_voltage_vector_opendss) / node_voltage_vector_no_load,
@@ -180,7 +180,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
                 columns=['Absolute error']
             )
             absolute_error.plot(kind='bar')
-            plt.show()
+            plt.show(block=False)
 
         # Compare expected and actual.
         # TODO: Enable result check.

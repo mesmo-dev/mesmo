@@ -161,6 +161,9 @@ def main():
     node_head_vector = (
         pd.DataFrame(columns=thermal_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
     )
+    source_head = (
+        pd.DataFrame(columns=['total'], index=scenario_data.timesteps, dtype=np.float)
+    )
 
     for timestep in scenario_data.timesteps:
 
@@ -174,12 +177,17 @@ def main():
                 optimization_problem.node_head_vector[timestep, node].value
             )
 
+        source_head.at[timestep, 'total'] = (
+            optimization_problem.source_head[timestep].value
+        )
+
     # Print some results.
     print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
     print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
     print(f"branch_head_vector = \n{branch_head_vector.to_string()}")
     print(f"node_head_vector = \n{node_head_vector.to_string()}")
     print(f"source_flow = \n{source_flow.to_string()}")
+    print(f"source_head = \n{source_head.to_string()}")
 
 
 if __name__ == "__main__":

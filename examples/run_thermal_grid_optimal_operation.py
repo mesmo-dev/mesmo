@@ -130,7 +130,10 @@ def main():
     )
     optimization_problem.objective.expr += (
         sum(
-            optimization_problem.source_head[timestep]
+            (
+                2.0 * optimization_problem.source_head[timestep]
+                + thermal_grid_model.ets_head_loss
+            )
             * thermal_power_flow_solution.source_flow
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration

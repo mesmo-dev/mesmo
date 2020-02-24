@@ -81,6 +81,9 @@ class ThermalGridModel(object):
         self.line_roughness_vector = thermal_grid_data.thermal_grid_lines['absolute_roughness'].values
 
         # Obtain other system parameters.
+        self.ets_head_loss = (
+            np.float(thermal_grid_data.thermal_grid['ets_head_loss'])
+        )
         self.enthalpy_difference_distribution_water = (
             np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
@@ -355,7 +358,10 @@ class ThermalPowerFlowSolution(object):
 
         # Obtain secondary pump / cooling plant electric power.
         self.source_electric_power_secondary_pump = (
-            self.source_head
+            (
+                2.0 * self.source_head
+                + thermal_grid_model.ets_head_loss
+            )
             * self.source_flow
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration

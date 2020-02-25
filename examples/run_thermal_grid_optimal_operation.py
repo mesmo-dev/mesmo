@@ -6,6 +6,7 @@ import pyomo.environ as pyo
 
 import fledge.config
 import fledge.database_interface
+import fledge.der_models
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -23,48 +24,48 @@ def main():
     price_name = 'energy'
     price_timeseries = price_data.price_timeseries_dict[price_name]
 
-    # Obtain model.
+    # Obtain models.
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()
 
-    # Define variables.
+    # Define thermal grid model variables.
     thermal_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
 
-    # Define DER constraints.
-    # TODO: Arbitrary constraints to demonstrate the functionality.
-    optimization_problem.der_constraints = pyo.ConstraintList()
-    for timestep in scenario_data.timesteps:
-        for der_index, der in enumerate(thermal_grid_model.ders):
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_thermal_power_vector[timestep, der]
-                <=
-                0.5 * thermal_grid_model.der_thermal_power_vector_nominal[der_index]
-            )
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_thermal_power_vector[timestep, der]
-                >=
-                1.0 * thermal_grid_model.der_thermal_power_vector_nominal[der_index]
-            )
-
-    # Define thermal grid constraints.
+    # Define thermal grid model constraints.
     thermal_grid_model.define_optimization_constraints(
         optimization_problem,
         thermal_power_flow_solution,
         scenario_data.timesteps
     )
 
+    # Define DER variables.
+    der_model_set.define_optimization_variables(optimization_problem)
+
+    # Define DER constraints.
+    der_model_set.define_optimization_constraints(
+        optimization_problem
+    )
+
+    # Define constraints for the connection with the DER power vector of the electric grid.
+    der_model_set.define_optimization_connection_grid(
+        optimization_problem,
+        thermal_power_flow_solution,
+        thermal_grid_model
+    )
+
     # Define objective.
     thermal_grid_model.define_optimization_objective(
-            optimization_problem,
-            thermal_power_flow_solution,
-            price_timeseries,
-            scenario_data.timesteps
+        optimization_problem,
+        thermal_power_flow_solution,
+        price_timeseries,
+        scenario_data.timesteps
     )
 
     # Solve optimization problem.

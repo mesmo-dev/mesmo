@@ -11,6 +11,7 @@ import fledge.config
 import fledge.database_interface
 import fledge.electric_grid_models
 import fledge.power_flow_solvers
+import fledge.thermal_grid_models
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -536,6 +537,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 
+    @multimethod
     def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
@@ -576,6 +578,35 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 0.0
                 ==
                 optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+            )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel
+    ):
+
+        # Obtain DER index.
+        der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
+        der = thermal_grid_model.ders[der_index]
+
+        # Define connection constraints.
+        if optimization_problem.find_component('der_connection_constraints') is None:
+            optimization_problem.der_connection_constraints = pyo.ConstraintList()
+        for timestep in self.timesteps:
+            optimization_problem.der_connection_constraints.add(
+                optimization_problem.der_thermal_power_vector[timestep, der]
+                ==
+                -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+            )
+
+            # Disable electric grid connection.
+            optimization_problem.der_connection_constraints.add(
+                0.0
+                ==
+                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
             )
 
     def define_optimization_objective(

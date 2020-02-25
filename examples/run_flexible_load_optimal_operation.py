@@ -20,7 +20,7 @@ def main():
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-    der_data = fledge.database_interface.ElectricGridDERData(scenario_name)
+    der_data = fledge.database_interface.DERData(scenario_name)
     price_data = fledge.database_interface.PriceData(scenario_name)
 
     # Obtain price timeseries.

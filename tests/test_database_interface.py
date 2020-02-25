@@ -59,9 +59,9 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_electric_grid_der_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+        fledge.database_interface.DERData(fledge.config.test_scenario_name)
         time_duration = time.time() - time_start
-        logger.info(f"Test ElectricGridDERData: Completed in {time_duration:.6f} seconds.")
+        logger.info(f"Test DERData: Completed in {time_duration:.6f} seconds.")
 
     def test_price_data(self):
         # Get result.

@@ -14,7 +14,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_fixed_load_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+        der_data = fledge.database_interface.DERData(fledge.config.test_scenario_name)
 
         # Get result.
         time_start = time.time()
@@ -27,7 +27,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_ev_charger_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+        der_data = fledge.database_interface.DERData(fledge.config.test_scenario_name)
 
         # Get result.
         time_start = time.time()
@@ -40,7 +40,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_flexible_load_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+        der_data = fledge.database_interface.DERData(fledge.config.test_scenario_name)
 
         # Get result.
         time_start = time.time()
@@ -53,7 +53,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_flexible_building_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.ElectricGridDERData(fledge.config.test_scenario_name)
+        der_data = fledge.database_interface.DERData(fledge.config.test_scenario_name)
 
         # Get result.
         time_start = time.time()

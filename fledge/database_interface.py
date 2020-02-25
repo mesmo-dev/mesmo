@@ -352,15 +352,15 @@ class ThermalGridData(object):
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
 
 
-class ElectricGridDERData(object):
+class DERData(object):
     """DER data object."""
 
     fixed_loads: pd.DataFrame
-    fixed_load_timeseries_dict: dict
+    fixed_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     ev_chargers: pd.DataFrame
-    ev_charger_timeseries_dict: dict
+    ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
-    flexible_load_timeseries_dict: dict
+    flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_buildings: pd.DataFrame
     flexible_building_model_dict: typing.Dict[str, cobmo.building_model.BuildingModel]
 
@@ -582,7 +582,9 @@ class ElectricGridDERData(object):
             )
 
         # Obtain flexible building data.
-        self.flexible_buildings = (
+        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
+        #   due to SQLITE missing full outer join syntax.
+        flexible_buildings_electric_grid = (
             pd.read_sql(
                 """
                 SELECT * FROM electric_grid_ders
@@ -594,6 +596,29 @@ class ElectricGridDERData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
+            )
+        )
+        flexible_buildings_thermal_grid = (
+            pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_ders
+                WHERE der_type = 'flexible_building'
+                AND thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.flexible_buildings = (
+            pd.merge(
+                flexible_buildings_electric_grid,
+                flexible_buildings_thermal_grid,
+                how='outer',
+                on=['der_name', 'der_type', 'model_name'],
+                suffixes=('_electric_grid', '_thermal_grid')
             )
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']

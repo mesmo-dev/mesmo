@@ -58,7 +58,7 @@ def main():
     )
 
     # Define constraints for the connection with the DER power vector of the electric grid.
-    der_model_set.define_optimization_connection_electric_grid(
+    der_model_set.define_optimization_connection_grid(
         optimization_problem,
         power_flow_solution,
         electric_grid_model

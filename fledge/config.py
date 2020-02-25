@@ -18,7 +18,7 @@ timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 # Optimization solver settings.
 solver_name = 'gurobi'  # Must be valid input string for Pyomo's `SolverFactory`.
-solver_output = False  # If True, activate verbose solver output.
+solver_output = True  # If True, activate verbose solver output.
 
 # Plotting settings.
 plt.style.use('seaborn-colorblind')

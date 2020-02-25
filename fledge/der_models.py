@@ -40,7 +40,7 @@ class FixedDERModel(DERModel):
     ):
         pass
 
-    def define_optimization_connection_electric_grid(
+    def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
@@ -84,7 +84,7 @@ class FixedLoadModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.ElectricGridDERData,
+            der_data: fledge.database_interface.DERData,
             der_name: str
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
@@ -120,7 +120,7 @@ class EVChargerModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.ElectricGridDERData,
+            der_data: fledge.database_interface.DERData,
             der_name: str
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
@@ -261,7 +261,7 @@ class FlexibleDERModel(DERModel):
                     self.output_maximum_timeseries.at[timestep, output_name]
                 )
 
-    def define_optimization_connection_electric_grid(
+    def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
@@ -348,7 +348,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.ElectricGridDERData,
+            der_data: fledge.database_interface.DERData,
             der_name: str
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
@@ -473,7 +473,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.ElectricGridDERData,
+            der_data: fledge.database_interface.DERData,
             der_name: str
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
@@ -536,7 +536,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 
-    def define_optimization_connection_electric_grid(
+    def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
@@ -614,27 +614,38 @@ class DERModelSet(object):
 
         # Obtain data.
         scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-        der_data = fledge.database_interface.ElectricGridDERData(scenario_name)
+        der_data = fledge.database_interface.DERData(scenario_name)
 
         # Obtain timesteps.
         self.timesteps = scenario_data.timesteps
 
         # Obtain DER names.
-        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
-        self.der_names = electric_grid_model.der_names
-        self.flexible_der_names = (
-            self.der_names[
-                self.der_names.isin(der_data.flexible_loads['der_name'])
-                | self.der_names.isin(der_data.flexible_buildings['der_name'])
-            ]
+        self.der_names = (
+            pd.Index(pd.concat([
+                der_data.fixed_loads['der_name'],
+                der_data.ev_chargers['der_name'],
+                der_data.flexible_loads['der_name'],
+                der_data.flexible_buildings['der_name']
+            ]))
         )
-        self.fixed_der_names = self.der_names[~self.der_names.isin(self.flexible_der_names)]
+        self.fixed_der_names = (
+            pd.Index(pd.concat([
+                der_data.fixed_loads['der_name'],
+                der_data.ev_chargers['der_name'],
+            ]))
+        )
+        self.flexible_der_names = (
+            pd.Index(pd.concat([
+                der_data.flexible_loads['der_name'],
+                der_data.flexible_buildings['der_name']
+            ]))
+        )
 
         # Obtain models.
         self.der_models = dict.fromkeys(self.der_names)
         self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
         self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
-        for der_name in electric_grid_model.der_names:
+        for der_name in self.der_names:
             if der_name in der_data.fixed_loads['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedLoadModel(
@@ -703,7 +714,7 @@ class DERModelSet(object):
                 optimization_problem
             )
 
-    def define_optimization_connection_electric_grid(
+    def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
@@ -712,7 +723,7 @@ class DERModelSet(object):
 
         # Define constraints for the connection with the DER power vector of the electric grid.
         for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_connection_electric_grid(
+            self.der_models[der_name].define_optimization_connection_grid(
                 optimization_problem,
                 power_flow_solution,
                 electric_grid_model

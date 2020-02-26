@@ -15,8 +15,11 @@ import fledge.power_flow_solvers
 def main():
 
     # Settings.
-    scenario_name = "singapore_6node"
+    scenario_name = 'singapore_6node'
     plots = True  # If True, script may produce plots.
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.database_interface.recreate_database()
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)

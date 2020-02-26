@@ -14,7 +14,10 @@ import fledge.power_flow_solvers
 def main():
 
     # Settings.
-    scenario_name = "singapore_6node"
+    scenario_name = 'singapore_6node'
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.database_interface.recreate_database()
 
     # Get model.
     electric_grid_model = (

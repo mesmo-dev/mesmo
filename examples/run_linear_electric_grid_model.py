@@ -15,7 +15,7 @@ import fledge.power_flow_solvers
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = "singapore_tanjongpagar"
     plots = True  # If True, script may produce plots.
     results_path = (
         os.path.join(
@@ -27,7 +27,7 @@ def main():
     # Instantiate results directory.
     os.mkdir(results_path) if plots else None
 
-    # Recreate / overwrite database to incorporate changes in the CSV files.
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.database_interface.recreate_database()
 
     # Obtain electric grid model.

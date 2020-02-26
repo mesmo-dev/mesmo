@@ -14,7 +14,10 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = "singapore_tanjongpagar"
+    scenario_name = 'singapore_tanjongpagar'
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.database_interface.recreate_database()
 
     # Obtain data.
     scenario_data = fledge.database_interface.ScenarioData(scenario_name)

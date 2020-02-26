@@ -68,31 +68,36 @@ def main():
     )
 
     # Define branch limit constraints.
-    # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
+    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
+        lambda branch:
+        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+    )
     optimization_problem.branch_limit_constraints = pyo.Constraint(
         scenario_data.timesteps.to_list(),
         electric_grid_model.branches.to_list(),
         rule=lambda optimization_problem, timestep, *branch: (
             optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
-            >=
-            0.3 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-            - np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+            / 1.0
+            + float(branch_power_vector_1_squared(branch))
+            <=
+            2.0 * float(branch_power_vector_1_squared(branch))
         )
     )
 
     # Define electric grid objective.
-    if optimization_problem.find_component('objective') is None:
-        optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-    optimization_problem.objective.expr += (
-        sum(
-            price_timeseries.at[timestep, 'price_value']
-            * (
-                optimization_problem.loss_active_change[timestep]
-                + np.sum(np.real(power_flow_solution.loss))
-            )
-            for timestep in scenario_data.timesteps
-        )
-    )
+    # TODO: Not considering loss costs due to unrealiable loss model.
+    # if optimization_problem.find_component('objective') is None:
+    #     optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+    # optimization_problem.objective.expr += (
+    #     sum(
+    #         price_timeseries.at[timestep, 'price_value']
+    #         * (
+    #             optimization_problem.loss_active_change[timestep]
+    #             + np.sum(np.real(power_flow_solution.loss))
+    #         )
+    #         for timestep in scenario_data.timesteps
+    #     )
+    # )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(optimization_problem, price_timeseries)

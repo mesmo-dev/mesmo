@@ -20,7 +20,7 @@ def main():
     results_path = (
         os.path.join(
             fledge.config.results_path,
-            f'run_linear_electric_grid_model_{fledge.config.timestamp}'
+            f'run_linear_electric_grid_model_validation_{fledge.config.timestamp}'
         )
     )
 
@@ -345,7 +345,7 @@ def main():
         plt.savefig(os.path.join(results_path, f'loss_reactive.png'))
         plt.close()
 
-        # Store CSV file.
+        # Store results as CSV.
         linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))
 
 

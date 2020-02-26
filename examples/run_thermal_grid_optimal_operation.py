@@ -1,6 +1,7 @@
 """Example script for setting up and solving a thermal grid optimal operation problem."""
 
 import numpy as np
+import os
 import pandas as pd
 import pyomo.environ as pyo
 
@@ -15,6 +16,15 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
+    results_path = (
+        os.path.join(
+            fledge.config.results_path,
+            f'run_thermal_grid_optimal_operation_{fledge.config.timestamp}'
+        )
+    )
+
+    # Instantiate results directory.
+    os.mkdir(results_path)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.database_interface.recreate_database()
@@ -49,7 +59,9 @@ def main():
     )
 
     # Define DER variables.
-    der_model_set.define_optimization_variables(optimization_problem)
+    der_model_set.define_optimization_variables(
+        optimization_problem
+    )
 
     # Define DER constraints.
     der_model_set.define_optimization_constraints(
@@ -88,15 +100,29 @@ def main():
         branch_head_vector,
         node_head_vector,
         source_head
-    ) = thermal_grid_model.get_optimization_results(optimization_problem, scenario_data.timesteps)
+    ) = thermal_grid_model.get_optimization_results(
+        optimization_problem,
+        thermal_power_flow_solution,
+        scenario_data.timesteps,
+        in_per_unit=True,
+        with_mean=True
+    )
 
-    # Print some results.
+    # Print results.
     print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
     print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
     print(f"branch_head_vector = \n{branch_head_vector.to_string()}")
     print(f"node_head_vector = \n{node_head_vector.to_string()}")
     print(f"source_flow = \n{source_flow.to_string()}")
     print(f"source_head = \n{source_head.to_string()}")
+
+    # Store results as CSV.
+    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
+    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
+    branch_head_vector.to_csv(os.path.join(results_path, 'branch_head_vector.csv'))
+    node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
+    source_flow.to_csv(os.path.join(results_path, 'source_flow.csv'))
+    source_head.to_csv(os.path.join(results_path, 'source_head.csv'))
 
 
 if __name__ == "__main__":

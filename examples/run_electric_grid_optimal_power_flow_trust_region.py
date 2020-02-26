@@ -1,6 +1,7 @@
 """Example script for setting up and solving an optimal power flow problem with trust-region algorithm."""
 
 import numpy as np
+import os
 import pandas as pd
 import pyomo.environ as pyo
 
@@ -16,15 +17,23 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
 
+    results_path = (
+        os.path.join(
+            fledge.config.results_path,
+            f'run_electric_grid_optimal_power_flow_trust_region_{fledge.config.timestamp}'
+        )
+    )
+
+    # Instantiate results directory.
+    os.mkdir(results_path)
+
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.database_interface.recreate_database()
 
-    # Get model.
+    # Obtain models.
     electric_grid_model = (
         fledge.electric_grid_models.ElectricGridModel(scenario_name)
     )
-
-    # Define initial der power vector and power flow solution.
     der_power_vector_reference_candidate = electric_grid_model.der_power_vector_nominal
     power_flow_solution_candidate = (
         fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
@@ -250,7 +259,7 @@ def main():
         print(f"der_reactive_power_vector_change = {der_reactive_power_vector_change.ravel()}")
         print(f"der_power_vector_change_max = {der_power_vector_change_max}")
 
-        # Check trust-region conditions and obtain der power vector and power flow solution candidates for next iteration.
+        # Check trust-region conditions and obtain DER power vector / power flow solution candidates for next iteration.
         # - Only if termination condition is not met, otherwise risk of division by zero.
         if der_power_vector_change_max > epsilon:
             # Get new der vector and power flow solution candidate.
@@ -305,41 +314,29 @@ def main():
         loss_active,
         loss_reactive
     ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem
+        optimization_problem,
+        power_flow_solutions[0],
+        in_per_unit=True,
+        with_mean=True
     )
 
-    # Post-processing results.
-    voltage_magnitude_vector_per_unit = (
-        voltage_magnitude_vector
-        / abs(power_flow_solutions[0].node_voltage_vector.transpose())
-    )
-    voltage_magnitude_vector_per_unit['mean'] = voltage_magnitude_vector_per_unit.mean(axis=1)
-    der_active_power_vector_per_unit = (
-        der_active_power_vector
-        / np.real(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_active_power_vector_per_unit['mean'] = der_active_power_vector_per_unit.mean(axis=1)
-    der_reactive_power_vector_per_unit = (
-        der_reactive_power_vector
-        / np.imag(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_reactive_power_vector_per_unit['mean'] = der_reactive_power_vector_per_unit.mean(axis=1)
-    branch_power_vector_1_squared_per_unit = (
-        branch_power_vector_1_squared
-        / abs(power_flow_solutions[0].branch_power_vector_1.transpose() ** 2)
-    )
-    branch_power_vector_1_squared_per_unit['mean'] = branch_power_vector_1_squared_per_unit.mean(axis=1)
-    loss_active_per_unit = (
-        loss_active
-        / np.real(power_flow_solutions[0].loss)
-    )
+    # Print results.
+    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
+    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
+    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
+    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
+    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
+    print(f"loss_active = \n{loss_active.to_string()}")
+    print(f"loss_reactive = \n{loss_reactive.to_string()}")
 
-    # Print some results.
-    print(f"voltage_magnitude_vector_per_unit = \n{voltage_magnitude_vector_per_unit.to_string()}")
-    print(f"der_active_power_vector_per_unit = \n{der_active_power_vector_per_unit.to_string()}")
-    print(f"der_reactive_power_vector_per_unit = \n{der_reactive_power_vector_per_unit.to_string()}")
-    print(f"branch_power_vector_1_squared_per_unit = \n{branch_power_vector_1_squared_per_unit.to_string()}")
-    print(f"loss_active_per_unit = \n{loss_active_per_unit.to_string()}")
+    # Store results as CSV.
+    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
+    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
+    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
+    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
+    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
+    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
+    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
 
 if __name__ == '__main__':

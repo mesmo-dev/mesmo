@@ -1,6 +1,7 @@
 """Example script for setting up and solving an optimal power flow problem."""
 
 import numpy as np
+import os
 import pandas as pd
 import pyomo.environ as pyo
 
@@ -15,22 +16,22 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
-
-    # Get model.
-    electric_grid_model = (
-        fledge.electric_grid_models.ElectricGridModel(scenario_name)
-    )
-
-    # Obtain reference DER power vector and power flow solution.
-    der_power_vector_reference = electric_grid_model.der_power_vector_nominal
-    power_flow_solution = (
-        fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
-            electric_grid_model,
-            der_power_vector_reference
+    results_path = (
+        os.path.join(
+            fledge.config.results_path,
+            f'run_electric_grid_optimal_power_flow_simple_{fledge.config.timestamp}'
         )
     )
 
-    # Obtain linear electric grid model.
+    # Instantiate results directory.
+    os.mkdir(results_path)
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.database_interface.recreate_database()
+
+    # Obtain models.
+    electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
+    power_flow_solution = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model = (
         fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -55,13 +56,13 @@ def main():
             optimization_problem.der_active_power_vector_change[0, der]
             <=
             0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-            - np.real(der_power_vector_reference[der_index])
+            - np.real(power_flow_solution.der_power_vector[der_index])
         )
         optimization_problem.der_constraints.add(
             optimization_problem.der_active_power_vector_change[0, der]
             >=
             1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
-            - np.real(der_power_vector_reference[der_index])
+            - np.real(power_flow_solution.der_power_vector[der_index])
         )
         # Fixed power factor for reactive power based on nominal power factor.
         optimization_problem.der_constraints.add(
@@ -74,13 +75,17 @@ def main():
 
     # Define branch limit constraints.
     # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
+    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
+        lambda branch:
+        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+    )
     optimization_problem.branch_limit_constraints = pyo.Constraint(
         electric_grid_model.branches.to_list(),
         rule=lambda optimization_problem, *branch: (
             optimization_problem.branch_power_vector_1_squared_change[0, branch]
+            + branch_power_vector_1_squared(branch)
             >=
-            0.8 * np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-            - np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+            0.8 * branch_power_vector_1_squared(branch)
         )
     )
 
@@ -96,7 +101,7 @@ def main():
         # TODO: DERs are currently assumed to be only loads, hence negative values.
         -1.0 * sum(
             optimization_problem.der_active_power_vector_change[0, der]
-            + np.real(der_power_vector_reference[der_index])
+            + np.real(power_flow_solution.der_power_vector[der_index])
             for der_index, der in enumerate(electric_grid_model.ders)
         )
     )
@@ -126,43 +131,31 @@ def main():
         loss_active,
         loss_reactive
     ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem
+        optimization_problem,
+        power_flow_solution,
+        in_per_unit=True,
+        with_mean=True
     )
 
-    # Post-processing results.
-    voltage_magnitude_vector_per_unit = (
-        voltage_magnitude_vector
-        / abs(power_flow_solution.node_voltage_vector.transpose())
-    )
-    voltage_magnitude_vector_per_unit['mean'] = voltage_magnitude_vector_per_unit.mean(axis=1)
-    der_active_power_vector_per_unit = (
-        der_active_power_vector
-        / np.real(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_active_power_vector_per_unit['mean'] = der_active_power_vector_per_unit.mean(axis=1)
-    der_reactive_power_vector_per_unit = (
-        der_reactive_power_vector
-        / np.imag(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_reactive_power_vector_per_unit['mean'] = der_reactive_power_vector_per_unit.mean(axis=1)
-    branch_power_vector_1_squared_per_unit = (
-        branch_power_vector_1_squared
-        / abs(power_flow_solution.branch_power_vector_1.transpose() ** 2)
-    )
-    branch_power_vector_1_squared_per_unit['mean'] = branch_power_vector_1_squared_per_unit.mean(axis=1)
-    loss_active_per_unit = (
-        loss_active
-        / np.real(power_flow_solution.loss)
-    )
+    # Print results.
+    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
+    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
+    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
+    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
+    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
+    print(f"loss_active = \n{loss_active.to_string()}")
+    print(f"loss_reactive = \n{loss_reactive.to_string()}")
 
-    # Print some results.
-    print(f"voltage_magnitude_vector_per_unit = \n{voltage_magnitude_vector_per_unit.to_string()}")
-    print(f"der_active_power_vector_per_unit = \n{der_active_power_vector_per_unit.to_string()}")
-    print(f"der_reactive_power_vector_per_unit = \n{der_reactive_power_vector_per_unit.to_string()}")
-    print(f"branch_power_vector_1_squared_per_unit = \n{branch_power_vector_1_squared_per_unit.to_string()}")
-    print(f"loss_active_per_unit = \n{loss_active_per_unit.to_string()}")
+    # Store results as CSV.
+    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
+    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
+    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
+    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
+    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
+    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
+    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
-    # Obtain duals.
+    # Obtain / print duals.
     branch_limit_duals = (
         pd.DataFrame(columns=electric_grid_model.branches, index=pd.Index([0], name='timestep'), dtype=np.float)
     )

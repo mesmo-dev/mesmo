@@ -1,6 +1,7 @@
 """Example script for setting up and solving a multi-grid optimal operation problem."""
 
 import numpy as np
+import os
 import pandas as pd
 import pyomo.environ as pyo
 
@@ -17,6 +18,15 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
+    results_path = (
+        os.path.join(
+            fledge.config.results_path,
+            f'run_multi_grid_optimal_operation_{fledge.config.timestamp}'
+        )
+    )
+
+    # Instantiate results directory.
+    os.mkdir(results_path)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.database_interface.recreate_database()
@@ -32,17 +42,15 @@ def main():
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
     power_flow_solution = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
-    thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
-    der_model_set = fledge.der_models.DERModelSet(scenario_name)
-
-    # Obtain linear electric grid model.
     linear_electric_grid_model = (
         fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
             power_flow_solution
         )
     )
+    thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()
@@ -132,7 +140,10 @@ def main():
     )
 
     # Define DER objective.
-    der_model_set.define_optimization_objective(optimization_problem, price_timeseries)
+    der_model_set.define_optimization_objective(
+        optimization_problem,
+        price_timeseries
+    )
 
     # Solve optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
@@ -155,7 +166,10 @@ def main():
         loss_reactive
     ) = linear_electric_grid_model.get_optimization_results(
         optimization_problem,
-        scenario_data.timesteps
+        power_flow_solution,
+        scenario_data.timesteps,
+        in_per_unit=True,
+        with_mean=True
     )
     (
         der_thermal_power_vector,
@@ -166,42 +180,20 @@ def main():
         source_head
     ) = thermal_grid_model.get_optimization_results(
         optimization_problem,
-        scenario_data.timesteps
+        thermal_power_flow_solution,
+        scenario_data.timesteps,
+        in_per_unit=True,
+        with_mean=True
     )
 
-    # Post-processing results.
-    voltage_magnitude_vector_per_unit = (
-        voltage_magnitude_vector
-        / abs(power_flow_solution.node_voltage_vector.transpose())
-    )
-    voltage_magnitude_vector_per_unit['mean'] = voltage_magnitude_vector_per_unit.mean(axis=1)
-    der_active_power_vector_per_unit = (
-        der_active_power_vector
-        / np.real(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_active_power_vector_per_unit['mean'] = der_active_power_vector_per_unit.mean(axis=1)
-    der_reactive_power_vector_per_unit = (
-        der_reactive_power_vector
-        / np.imag(electric_grid_model.der_power_vector_nominal.transpose())
-    )
-    der_reactive_power_vector_per_unit['mean'] = der_reactive_power_vector_per_unit.mean(axis=1)
-    branch_power_vector_1_squared_per_unit = (
-        branch_power_vector_1_squared
-        / abs(power_flow_solution.branch_power_vector_1.transpose() ** 2)
-    )
-    branch_power_vector_1_squared_per_unit['mean'] = branch_power_vector_1_squared_per_unit.mean(axis=1)
-    loss_active_per_unit = (
-        loss_active
-        / np.real(power_flow_solution.loss)
-    )
-
-    # Print some results.
-    print(f"voltage_magnitude_vector_per_unit = \n{voltage_magnitude_vector_per_unit.to_string()}")
-    print(f"der_active_power_vector_per_unit = \n{der_active_power_vector_per_unit.to_string()}")
-    print(f"der_reactive_power_vector_per_unit = \n{der_reactive_power_vector_per_unit.to_string()}")
-    print(f"branch_power_vector_1_squared_per_unit = \n{branch_power_vector_1_squared_per_unit.to_string()}")
-    print(f"loss_active_per_unit = \n{loss_active_per_unit.to_string()}")
-
+    # Print results.
+    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
+    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
+    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
+    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
+    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
+    print(f"loss_active = \n{loss_active.to_string()}")
+    print(f"loss_reactive = \n{loss_reactive.to_string()}")
     print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
     print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
     print(f"branch_head_vector = \n{branch_head_vector.to_string()}")
@@ -209,7 +201,22 @@ def main():
     print(f"source_flow = \n{source_flow.to_string()}")
     print(f"source_head = \n{source_head.to_string()}")
 
-    # Obtain duals.
+    # Store results as CSV.
+    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
+    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
+    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
+    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
+    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
+    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
+    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
+    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
+    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
+    branch_head_vector.to_csv(os.path.join(results_path, 'branch_head_vector.csv'))
+    node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
+    source_flow.to_csv(os.path.join(results_path, 'source_flow.csv'))
+    source_head.to_csv(os.path.join(results_path, 'source_head.csv'))
+
+    # Obtain / print duals.
     branch_limit_duals = (
         pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
     )

@@ -2,4 +2,4 @@ scenario_name,display_id,electric_grid_name,thermal_grid_name,case_name,optimal_
 ieee4_mod,,ieee_4_mod,,case_default,,2017-01-01T00:00:00,2017-01-02T00:00:00,3600
 singapore_6node,,singapore_6node,,case_default,optimal_scheduling_problem_default,2017-01-01T00:00:00,2017-01-02T00:00:00,3600
 hougang_405node,,hougang_405node,,case_1,,2017-01-01T00:00:00,2017-01-02T00:00:00,3600
-singapore_tanjongpagar,,,singapore_tanjongpagar,,,2017-01-01T00:00:00,2017-01-02T00:00:00,3600
+singapore_tanjongpagar,,singapore_tanjongpagar,singapore_tanjongpagar,,,2017-01-01T00:00:00,2017-01-02T00:00:00,3600

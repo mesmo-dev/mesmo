@@ -190,7 +190,7 @@ class LinearElectricGridModel(object):
                 optimization_problem.linear_electric_grid_model_constraints.add(
                     optimization_problem.voltage_magnitude_vector_change[timestep, node]
                     ==
-                    pyo.quicksum(
+                    sum(
                         self.sensitivity_voltage_magnitude_by_der_power_active[node_index, der_index]
                         * optimization_problem.der_active_power_vector_change[timestep, der]
                         + self.sensitivity_voltage_magnitude_by_der_power_reactive[node_index, der_index]
@@ -204,7 +204,7 @@ class LinearElectricGridModel(object):
                 optimization_problem.linear_electric_grid_model_constraints.add(
                     optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
                     ==
-                    pyo.quicksum(
+                    sum(
                         self.sensitivity_branch_power_1_by_der_power_active[branch_index, der_index]
                         * optimization_problem.der_active_power_vector_change[timestep, der]
                         + self.sensitivity_branch_power_1_by_der_power_reactive[branch_index, der_index]
@@ -215,7 +215,7 @@ class LinearElectricGridModel(object):
                 optimization_problem.linear_electric_grid_model_constraints.add(
                     optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
                     ==
-                    pyo.quicksum(
+                    sum(
                         self.sensitivity_branch_power_2_by_der_power_active[branch_index, der_index]
                         * optimization_problem.der_active_power_vector_change[timestep, der]
                         + self.sensitivity_branch_power_2_by_der_power_reactive[branch_index, der_index]
@@ -228,7 +228,7 @@ class LinearElectricGridModel(object):
             optimization_problem.linear_electric_grid_model_constraints.add(
                 optimization_problem.loss_active_change[timestep]
                 ==
-                pyo.quicksum(
+                sum(
                     self.sensitivity_loss_active_by_der_power_active[0, der_index]
                     * optimization_problem.der_active_power_vector_change[timestep, der]
                     + self.sensitivity_loss_active_by_der_power_reactive[0, der_index]
@@ -239,7 +239,7 @@ class LinearElectricGridModel(object):
             optimization_problem.linear_electric_grid_model_constraints.add(
                 optimization_problem.loss_reactive_change[timestep]
                 ==
-                pyo.quicksum(
+                sum(
                     self.sensitivity_loss_reactive_by_der_power_active[0, der_index]
                     * optimization_problem.der_active_power_vector_change[timestep, der]
                     + self.sensitivity_loss_reactive_by_der_power_reactive[0, der_index]

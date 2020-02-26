@@ -199,7 +199,7 @@ def main():
         optimization_problem.objective.expr += (
             # DER active power.
             # TODO: DERs are currently assumed to be only loads, hence negative values.
-            -1.0 * pyo.quicksum(
+            -1.0 * sum(
                 optimization_problem.der_active_power_vector_change[0, der]
                 + np.real(der_power_vector_reference[der_index])
                 for der_index, der in enumerate(electric_grid_model.ders)

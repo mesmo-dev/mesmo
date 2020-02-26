@@ -208,17 +208,17 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.flexible_der_model_constraints.add(
                     optimization_problem.state_vector[timestep + timestep_interval, self.der_name, state_name]
                     ==
-                    pyo.quicksum(
+                    sum(
                         self.state_matrix.at[state_name, state_name_other]
                         * optimization_problem.state_vector[timestep, self.der_name, state_name_other]
                         for state_name_other in self.state_names
                     )
-                    + pyo.quicksum(
+                    + sum(
                         self.control_matrix.at[state_name, control_name]
                         * optimization_problem.control_vector[timestep, self.der_name, control_name]
                         for control_name in self.control_names
                     )
-                    + pyo.quicksum(
+                    + sum(
                         self.disturbance_matrix.at[state_name, disturbance_name]
                         * self.disturbance_timeseries.at[timestep, disturbance_name]
                         for disturbance_name in self.disturbance_names
@@ -232,17 +232,17 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.flexible_der_model_constraints.add(
                     optimization_problem.output_vector[timestep, self.der_name, output_name]
                     ==
-                    pyo.quicksum(
+                    sum(
                         self.state_output_matrix.at[output_name, state_name]
                         * optimization_problem.state_vector[timestep, self.der_name, state_name]
                         for state_name in self.state_names
                     )
-                    + pyo.quicksum(
+                    + sum(
                         self.control_output_matrix.at[output_name, control_name]
                         * optimization_problem.control_vector[timestep, self.der_name, control_name]
                         for control_name in self.control_names
                     )
-                    + pyo.quicksum(
+                    + sum(
                         self.disturbance_output_matrix.at[output_name, disturbance_name]
                         * self.disturbance_timeseries.at[timestep, disturbance_name]
                         for disturbance_name in self.disturbance_names

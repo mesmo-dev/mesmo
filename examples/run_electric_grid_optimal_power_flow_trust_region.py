@@ -1,4 +1,4 @@
-"""Example script for setting up and solving an optimal power flow problem."""
+"""Example script for setting up and solving an optimal power flow problem with trust-region algorithm."""
 
 import numpy as np
 import pandas as pd

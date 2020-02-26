@@ -1,4 +1,4 @@
-"""Example script for testing the linear electric grid models."""
+"""Example script for testing / validating the linear electric grid model."""
 
 import matplotlib.pyplot as plt
 import numpy as np

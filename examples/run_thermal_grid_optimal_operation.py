@@ -1,4 +1,4 @@
-"""Example script for setting up and solving an thermal grid optimal operation problem."""
+"""Example script for setting up and solving a thermal grid optimal operation problem."""
 
 import numpy as np
 import pandas as pd

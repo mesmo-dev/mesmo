@@ -262,11 +262,39 @@ class FlexibleDERModel(DERModel):
                     self.output_maximum_timeseries.at[timestep, output_name]
                 )
 
+    @multimethod
     def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
+    ):
+
+        # Connect electric grid.
+        self.define_optimization_connection_grid(
+            optimization_problem,
+            power_flow_solution,
+            electric_grid_model,
+            disconnect_thermal_grid=False
+        )
+
+        # Connect thermal grid.
+        self.define_optimization_connection_grid(
+            optimization_problem,
+            thermal_power_flow_solution,
+            thermal_grid_model,
+            disconnect_electric_grid=False
+        )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            disconnect_thermal_grid=True
     ):
 
         # Obtain DER index.
@@ -293,6 +321,16 @@ class FlexibleDERModel(DERModel):
                     power_flow_solution.der_power_vector[der_index]
                 )
             )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
+            disconnect_electric_grid=True
+    ):
+        pass
 
     def define_optimization_objective(
             self,
@@ -542,7 +580,34 @@ class FlexibleBuildingModel(FlexibleDERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
+    ):
+
+        # Connect electric grid.
+        self.define_optimization_connection_grid(
+            optimization_problem,
+            power_flow_solution,
+            electric_grid_model,
+            disconnect_thermal_grid=False
+        )
+
+        # Connect thermal grid.
+        self.define_optimization_connection_grid(
+            optimization_problem,
+            thermal_power_flow_solution,
+            thermal_grid_model,
+            disconnect_electric_grid=False
+        )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            disconnect_thermal_grid=True
     ):
 
         # Obtain DER index.
@@ -574,18 +639,20 @@ class FlexibleBuildingModel(FlexibleDERModel):
             )
 
             # Disable thermal grid connection.
-            optimization_problem.der_connection_constraints.add(
-                0.0
-                ==
-                optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
-            )
+            if disconnect_thermal_grid:
+                optimization_problem.der_connection_constraints.add(
+                    0.0
+                    ==
+                    optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+                )
 
     @multimethod
     def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
+            disconnect_electric_grid=True
     ):
 
         # Obtain DER index.
@@ -603,11 +670,12 @@ class FlexibleBuildingModel(FlexibleDERModel):
             )
 
             # Disable electric grid connection.
-            optimization_problem.der_connection_constraints.add(
-                0.0
-                ==
-                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-            )
+            if disconnect_electric_grid:
+                optimization_problem.der_connection_constraints.add(
+                    0.0
+                    ==
+                    optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                )
 
     def define_optimization_objective(
             self,
@@ -745,19 +813,60 @@ class DERModelSet(object):
                 optimization_problem
             )
 
+    @multimethod
     def define_optimization_connection_grid(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
     ):
 
-        # Define constraints for the connection with the DER power vector of the electric grid.
+        # Define constraints for the connection with the DER power vector of the grid.
         for der_name in self.der_names:
             self.der_models[der_name].define_optimization_connection_grid(
                 optimization_problem,
                 power_flow_solution,
-                electric_grid_model
+                electric_grid_model,
+                thermal_power_flow_solution,
+                thermal_grid_model
+            )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            **kwargs
+    ):
+
+        # Define constraints for the connection with the DER power vector of the grid.
+        for der_name in self.der_names:
+            self.der_models[der_name].define_optimization_connection_grid(
+                optimization_problem,
+                power_flow_solution,
+                electric_grid_model,
+                **kwargs
+            )
+
+    @multimethod
+    def define_optimization_connection_grid(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
+            **kwargs
+    ):
+
+        # Define constraints for the connection with the DER power vector of the grid.
+        for der_name in self.der_names:
+            self.der_models[der_name].define_optimization_connection_grid(
+                optimization_problem,
+                thermal_power_flow_solution,
+                thermal_grid_model,
+                **kwargs
             )
 
     def define_optimization_objective(

@@ -136,14 +136,14 @@ class ElectricGridModel(object):
         # - Nodes are sorted to match the order returned from OpenDSS
         #   to enable comparing results.
         node_dimension = (
-            electric_grid_data.electric_grid_nodes.loc[
+            int(electric_grid_data.electric_grid_nodes.loc[
                 :,
                 [
                     'is_phase_1_connected',
                     'is_phase_2_connected',
                     'is_phase_3_connected'
                 ]
-            ].sum().sum()
+            ].sum().sum())
         )
         self.nodes = (
             pd.DataFrame(
@@ -202,24 +202,24 @@ class ElectricGridModel(object):
         #   two windings.
         # - TODO: Add switches.
         line_dimension = (
-            electric_grid_data.electric_grid_lines.loc[
+            int(electric_grid_data.electric_grid_lines.loc[
                 :,
                 [
                     'is_phase_1_connected',
                     'is_phase_2_connected',
                     'is_phase_3_connected'
                 ]
-            ].sum().sum()
+            ].sum().sum())
         )
         transformer_dimension = (
-            electric_grid_transformers_first_winding.loc[
+            int(electric_grid_transformers_first_winding.loc[
                 :,
                 [
                     'is_phase_1_connected',
                     'is_phase_2_connected',
                     'is_phase_3_connected'
                 ]
-            ].sum().sum()
+            ].sum().sum())
         )
         self.branches = (
             pd.DataFrame(

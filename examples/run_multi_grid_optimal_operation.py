@@ -138,8 +138,10 @@ def main():
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
     optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
-    if optimization_result.solver.termination_condition is not pyo.TerminationCondition.optimal:
-        raise Exception(f"Invalid solver termination condition: {optimization_result.solver.termination_condition}")
+    try:
+        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
+    except AssertionError:
+        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
     # optimization_problem.display()
 
     # Obtain results.

@@ -250,7 +250,10 @@ class ThermalGridModel(object):
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            timesteps=pd.Index([0], name='timestep')
+            thermal_power_flow_solution,  # TODO: Split off linear thermal grid model to avoid circular dependency.
+            timesteps=pd.Index([0], name='timestep'),
+            in_per_unit=False,
+            with_mean=False,
     ):
 
         # Instantiate results variables.
@@ -303,6 +306,40 @@ class ThermalGridModel(object):
             source_head.at[timestep, 'total'] = (
                 optimization_problem.source_head[timestep].value
             )
+
+        # Convert in per-unit values.
+        if in_per_unit:
+            der_thermal_power_vector = (
+                der_thermal_power_vector
+                / self.der_thermal_power_vector_nominal.ravel()
+            )
+            branch_flow_vector = (
+                branch_flow_vector
+                / thermal_power_flow_solution.branch_flow_vector.ravel()
+            )
+            source_flow = (
+                source_flow
+                / thermal_power_flow_solution.source_flow
+            )
+            branch_head_vector = (
+                branch_head_vector
+                / thermal_power_flow_solution.branch_head_vector.ravel()
+            )
+            node_head_vector = (
+                node_head_vector
+                / thermal_power_flow_solution.node_head_vector.ravel()
+            )
+            source_head = (
+                source_head
+                / thermal_power_flow_solution.source_head
+            )
+
+        # Add mean column.
+        if with_mean:
+            der_thermal_power_vector['mean'] = der_thermal_power_vector.mean(axis=1)
+            branch_flow_vector['mean'] = branch_flow_vector.mean(axis=1)
+            branch_head_vector['mean'] = branch_head_vector.mean(axis=1)
+            node_head_vector['mean'] = node_head_vector.mean(axis=1)
 
         return (
             der_thermal_power_vector,

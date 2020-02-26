@@ -251,7 +251,10 @@ class LinearElectricGridModel(object):
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            timesteps=pd.Index([0], name='timestep')
+            power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution = None,
+            timesteps=pd.Index([0], name='timestep'),
+            in_per_unit=False,
+            with_mean=False,
     ):
 
         # Instantiate results variables.
@@ -322,6 +325,46 @@ class LinearElectricGridModel(object):
                 optimization_problem.loss_reactive_change[timestep].value
                 + np.imag(self.power_flow_solution.loss)
             )
+
+        # Convert in per-unit values.
+        if in_per_unit:
+            power_flow_solution = self.power_flow_solution if power_flow_solution is None else power_flow_solution
+            der_active_power_vector = (
+                der_active_power_vector
+                / np.real(self.electric_grid_model.der_power_vector_nominal.ravel())
+            )
+            der_reactive_power_vector = (
+                der_reactive_power_vector
+                / np.imag(self.electric_grid_model.der_power_vector_nominal.ravel())
+            )
+            voltage_magnitude_vector = (
+                voltage_magnitude_vector
+                / abs(power_flow_solution.node_voltage_vector.ravel())
+            )
+            branch_power_vector_1_squared = (
+                branch_power_vector_1_squared
+                / abs(power_flow_solution.branch_power_vector_1.ravel() ** 2)
+            )
+            branch_power_vector_2_squared = (
+                branch_power_vector_2_squared
+                / abs(power_flow_solution.branch_power_vector_2.ravel() ** 2)
+            )
+            loss_active = (
+                loss_active
+                / np.real(power_flow_solution.loss)
+            )
+            loss_reactive = (
+                loss_reactive
+                / np.imag(power_flow_solution.loss)
+            )
+
+        # Add mean column.
+        if with_mean:
+            der_active_power_vector['mean'] = der_active_power_vector.mean(axis=1)
+            der_reactive_power_vector['mean'] = der_reactive_power_vector.mean(axis=1)
+            voltage_magnitude_vector['mean'] = voltage_magnitude_vector.mean(axis=1)
+            branch_power_vector_1_squared['mean'] = branch_power_vector_1_squared.mean(axis=1)
+            branch_power_vector_2_squared['mean'] = branch_power_vector_2_squared.mean(axis=1)
 
         return (
             der_active_power_vector,

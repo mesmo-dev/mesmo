@@ -95,11 +95,9 @@ def main():
     # Obtain results.
     (
         der_thermal_power_vector,
-        branch_flow_vector,
-        source_flow,
-        branch_head_vector,
         node_head_vector,
-        source_head
+        branch_flow_vector,
+        pump_power
     ) = thermal_grid_model.get_optimization_results(
         optimization_problem,
         thermal_power_flow_solution,
@@ -110,19 +108,15 @@ def main():
 
     # Print results.
     print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
-    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
-    print(f"branch_head_vector = \n{branch_head_vector.to_string()}")
     print(f"node_head_vector = \n{node_head_vector.to_string()}")
-    print(f"source_flow = \n{source_flow.to_string()}")
-    print(f"source_head = \n{source_head.to_string()}")
+    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
+    print(f"pump_power = \n{pump_power.to_string()}")
 
     # Store results as CSV.
     der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
-    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
-    branch_head_vector.to_csv(os.path.join(results_path, 'branch_head_vector.csv'))
     node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
-    source_flow.to_csv(os.path.join(results_path, 'source_flow.csv'))
-    source_head.to_csv(os.path.join(results_path, 'source_head.csv'))
+    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
+    pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
 
 
 if __name__ == "__main__":

@@ -112,45 +112,79 @@ class ThermalGridModel(object):
             pyo.Var(timesteps.to_list())
         )
 
+    def define_sensitivity_matrices(
+            self,
+            thermal_power_flow_solution,  # TODO: Split off linear thermal grid model to avoid circular dependency.
+    ):
+        """Define constraints to express the thermal grid model equations for given `optimization_problem`."""
+
+        # Obtain inverse / transpose incidence matrices.
+        node_index_no_source = fledge.utils.get_index(self.nodes, node_type='no_source')  # Define shorthand.
+        branch_node_incidence_matrix_tranpose_inverse = (
+            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=np.float)
+        )
+        branch_node_incidence_matrix_tranpose_inverse[np.ix_(
+            node_index_no_source,
+            range(len(self.branches))
+        )] = (
+            scipy.sparse.linalg.inv(
+                self.branch_node_incidence_matrix[node_index_no_source, :].transpose()
+            )
+        )
+        branch_node_incidence_matrix_tranpose_inverse = branch_node_incidence_matrix_tranpose_inverse.tocsr()
+        branch_node_incidence_matrix_inverse = (
+            scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.float)
+        )
+        branch_node_incidence_matrix_inverse[np.ix_(
+            range(len(self.branches)),
+            node_index_no_source
+        )] = (
+            scipy.sparse.linalg.inv(
+                self.branch_node_incidence_matrix[node_index_no_source, :].tocsc()
+            )
+        )
+        branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
+        der_node_incidence_matrix_transpose = np.transpose(self.der_node_incidence_matrix)
+
+        # Obtain sensitivity matrices.
+        self.sensitivity_branch_flow_by_der_power = (
+            branch_node_incidence_matrix_inverse
+            @ self.der_node_incidence_matrix
+            / fledge.config.water_density
+            / self.enthalpy_difference_distribution_water
+        )
+        self.sensitivity_node_head_by_der_power = (
+            branch_node_incidence_matrix_tranpose_inverse
+            @ scipy.sparse.diags(
+                thermal_power_flow_solution.branch_flow_vector
+                * thermal_power_flow_solution.branch_friction_factor_vector
+                * 8.0 * self.line_length_vector
+                / (
+                    fledge.config.gravitational_acceleration
+                    * self.line_diameter_vector ** 5
+                    * np.pi ** 2
+                )
+            )
+            @ self.sensitivity_branch_flow_by_der_power
+        )
+        self.sensitivity_pump_power_by_der_power = (
+            (-1.0 * thermal_power_flow_solution.der_flow_vector)
+            @ (-2.0 * der_node_incidence_matrix_transpose)
+            @ self.sensitivity_node_head_by_der_power
+            * fledge.config.water_density
+            * fledge.config.gravitational_acceleration
+            / self.pump_efficiency_secondary_pump
+        )
+
     def define_optimization_constraints(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             thermal_power_flow_solution,  # TODO: Split off linear thermal grid model to avoid circular dependency.
             timesteps=pd.Index([0], name='timestep')
     ):
-        """Define constraints to express the thermal grid model equations for given `optimization_problem`."""
 
-        # Obtain inverse / transpose incidence matrices.
-
-        branch_node_incidence_matrix_tranpose_inverse = (
-            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=np.float)
-        )
-        node_index_no_source = fledge.utils.get_index(self.nodes, node_type='no_source')
-        branch_node_incidence_matrix_tranpose_inverse[np.ix_(
-            node_index_no_source,
-            range(len(self.branches))
-        )] = (
-            scipy.sparse.linalg.inv(np.transpose(
-                self.branch_node_incidence_matrix[node_index_no_source, :]
-            ))
-        )
-        branch_node_incidence_matrix_tranpose_inverse = branch_node_incidence_matrix_tranpose_inverse.tocsr()
-
-        branch_node_incidence_matrix_inverse = (
-            scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.float)
-        )
-        node_index_no_source = fledge.utils.get_index(self.nodes, node_type='no_source')
-        branch_node_incidence_matrix_inverse[np.ix_(
-            range(len(self.branches)),
-            node_index_no_source
-        )] = (
-            scipy.sparse.linalg.inv(
-                self.branch_node_incidence_matrix[node_index_no_source, :]
-            )
-        )
-        branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
-
-        der_node_incidence_matrix_transpose = np.transpose(self.der_node_incidence_matrix)
+        # Define sensitivity matrices.
+        self.define_sensitivity_matrices(thermal_power_flow_solution)
 
         # Define constraints.
         optimization_problem.thermal_grid_constraints = pyo.ConstraintList()
@@ -158,20 +192,13 @@ class ThermalGridModel(object):
 
             for node_index, node in enumerate(self.nodes):
                 optimization_problem.thermal_grid_constraints.add(
+                    # TODO: First column should not be NaN.
                     optimization_problem.node_head_vector[timestep, node]
                     ==
                     sum(
-                        branch_node_incidence_matrix_tranpose_inverse[node_index, branch_index]
-                        * optimization_problem.branch_flow_vector[timestep, branch]
-                        * thermal_power_flow_solution.branch_flow_vector[branch_index]
-                        * thermal_power_flow_solution.branch_friction_factor_vector[branch_index]
-                        * 8.0 * self.line_length_vector[branch_index]
-                        / (
-                            fledge.config.gravitational_acceleration
-                            * self.line_diameter_vector[branch_index] ** 5
-                            * np.pi ** 2
-                        )
-                        for branch_index, branch in enumerate(self.branches)
+                        self.sensitivity_node_head_by_der_power[node_index, der_index]
+                        * optimization_problem.der_thermal_power_vector[timestep, der]
+                        for der_index, der in enumerate(self.ders)
                     )
                 )
 
@@ -180,15 +207,9 @@ class ThermalGridModel(object):
                     optimization_problem.branch_flow_vector[timestep, branch]
                     ==
                     sum(
-                        branch_node_incidence_matrix_inverse[branch_index, node_index]
-                        * sum(
-                            self.der_node_incidence_matrix[node_index, der_index]
-                            * optimization_problem.der_thermal_power_vector[timestep, der]
-                            / fledge.config.water_density
-                            / self.enthalpy_difference_distribution_water
-                            for der_index, der in enumerate(self.ders)
-                        )
-                        for node_index, node in enumerate(self.nodes)
+                        self.sensitivity_branch_flow_by_der_power[branch_index, der_index]
+                        * optimization_problem.der_thermal_power_vector[timestep, der]
+                        for der_index, der in enumerate(self.ders)
                     )
                 )
 
@@ -196,22 +217,17 @@ class ThermalGridModel(object):
                 optimization_problem.pump_power[timestep]
                 ==
                 sum(
-                    (
-                        2.0
-                        * sum(
-                            -1.0
-                            * der_node_incidence_matrix_transpose[der_index, node_index]
-                            * optimization_problem.node_head_vector[timestep, node]
-                            for node_index, node in enumerate(self.nodes)
-                        )
-                        + self.ets_head_loss
-                    )
-                    * -1.0 * thermal_power_flow_solution.der_flow_vector[der_index]
+                    self.sensitivity_pump_power_by_der_power[der_index]
+                    * optimization_problem.der_thermal_power_vector[timestep, der]
+                    for der_index, der in enumerate(self.ders)
+                )
+                + sum(
+                    -1.0 * thermal_power_flow_solution.der_flow_vector[der_index]
+                    * self.ets_head_loss
                     * fledge.config.water_density
                     * fledge.config.gravitational_acceleration
                     / self.pump_efficiency_secondary_pump
                     for der_index, der in enumerate(self.ders)
-                    for timestep in timesteps
                 )
             )
 

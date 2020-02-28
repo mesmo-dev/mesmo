@@ -185,13 +185,12 @@ def main():
         scenario_data.timesteps.to_list(),
         thermal_grid_model.branches.to_list(),
         rule=lambda optimization_problem, timestep, branch: (  # This will not work if `branches` becomes MultiIndex.
-                optimization_problem.branch_flow_vector[timestep, branch]
-                # + branch_flow_vector(branch)
-                <=
-                1.5 * branch_flow_vector(branch)
+            optimization_problem.branch_flow_vector[timestep, branch]
+            # + branch_flow_vector(branch)
+            <=
+            1.5 * branch_flow_vector(branch)
         )
     )
-
 
     # Define electric grid objective.
     # TODO: Not considering loss costs due to unrealiable loss model.
@@ -354,6 +353,163 @@ def main():
     print(f"branch_power_vector_2_squared_maximum_dual = \n{branch_power_vector_2_squared_maximum_dual.to_string()}")
     print(f"node_head_vector_minimum_dual = \n{node_head_vector_minimum_dual.to_string()}")
     print(f"branch_flow_vector_maximum_dual = \n{branch_flow_vector_maximum_dual.to_string()}")
+
+    # Obtain DLMPs.
+    voltage_magnitude_vector_minimum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    voltage_magnitude_vector_maximum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_power_vector_1_squared_maximum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_power_vector_2_squared_maximum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    loss_active_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    loss_reactive_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    node_head_vector_minimum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_flow_vector_maximum_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    pump_power_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+
+    electric_grid_energy_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    electric_grid_voltage_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    electric_grid_congestion_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    electric_grid_loss_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    thermal_grid_energy_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    thermal_grid_head_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    thermal_grid_congestion_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+    thermal_grid_pump_dlmp = (
+        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
+    )
+
+    for timestep in scenario_data.timesteps:
+        voltage_magnitude_vector_minimum_dlmp.loc[timestep, :] = (
+            (
+                linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+            ).ravel()
+        )
+        voltage_magnitude_vector_maximum_dlmp.loc[timestep, :] = (
+            (
+                linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+            ).ravel()
+        )
+        branch_power_vector_1_squared_maximum_dlmp.loc[timestep, :] = (
+            (
+                linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_active.transpose()
+                @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
+            ).ravel()
+        )
+        branch_power_vector_2_squared_maximum_dlmp.loc[timestep, :] = (
+            (
+                linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_active.transpose()
+                @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
+            ).ravel()
+        )
+        loss_active_dlmp.loc[timestep, :] = (
+            linear_electric_grid_model.sensitivity_loss_active_by_der_power_active.ravel()
+            * price_timeseries.at[timestep, 'price_value']
+        )
+        loss_reactive_dlmp.loc[timestep, :] = (
+            -1.0
+            * linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active.ravel()
+            * price_timeseries.at[timestep, 'price_value']
+        )
+        node_head_vector_minimum_dlmp.loc[timestep, :] = (
+            (
+                thermal_grid_model.sensitivity_node_head_by_der_power.transpose()
+                @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
+            ).ravel()
+            / thermal_grid_model.cooling_plant_efficiency
+        )
+        branch_flow_vector_maximum_dlmp.loc[timestep, :] = (
+            (
+                thermal_grid_model.sensitivity_branch_flow_by_der_power.transpose()
+                @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
+            ).ravel()
+            / thermal_grid_model.cooling_plant_efficiency
+        )
+        pump_power_dlmp.loc[timestep, :] = (
+            -1.0
+            * thermal_grid_model.sensitivity_pump_power_by_der_power.ravel()
+            * price_timeseries.at[timestep, 'price_value']
+        )
+
+        electric_grid_energy_dlmp.loc[timestep, :] = (
+            price_timeseries.at[timestep, 'price_value']
+        )
+        thermal_grid_energy_dlmp.loc[timestep, :] = (
+            price_timeseries.at[timestep, 'price_value']
+            / thermal_grid_model.cooling_plant_efficiency
+        )
+    electric_grid_voltage_dlmp = (
+        voltage_magnitude_vector_minimum_dlmp
+        + voltage_magnitude_vector_maximum_dlmp
+    )
+    electric_grid_congestion_dlmp = (
+        branch_power_vector_1_squared_maximum_dlmp
+        + branch_power_vector_2_squared_maximum_dlmp
+    )
+    electric_grid_loss_dlmp = (
+        loss_active_dlmp
+        + loss_reactive_dlmp
+    )
+    thermal_grid_head_dlmp = (
+        node_head_vector_minimum_dlmp
+    )
+    thermal_grid_congestion_dlmp = (
+        branch_flow_vector_maximum_dlmp
+    )
+    thermal_grid_pump_dlmp = (
+        pump_power_dlmp
+    )
+
+    # Print DLMPs.
+    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp.to_string()}")
+    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp.to_string()}")
+    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp.to_string()}")
+    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp.to_string()}")
+    print(f"loss_active_dlmp = \n{loss_active_dlmp.to_string()}")
+    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp.to_string()}")
+    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp.to_string()}")
+    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp.to_string()}")
+    print(f"pump_power_dlmp = \n{pump_power_dlmp.to_string()}")
+
+    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp.to_string()}")
+    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp.to_string()}")
+    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp.to_string()}")
+    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp.to_string()}")
+    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp.to_string()}")
+    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp.to_string()}")
+    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp.to_string()}")
+    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp.to_string()}")
 
 
 if __name__ == '__main__':

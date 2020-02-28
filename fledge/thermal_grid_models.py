@@ -318,6 +318,7 @@ class ThermalGridModel(object):
                 node_head_vector
                 / thermal_power_flow_solution.node_head_vector.ravel()
             )
+            node_head_vector.iloc[:, fledge.utils.get_index(self.nodes, node_type='source')] = 0.0  # Reset source head.
             pump_power = (
                 pump_power
                 / thermal_power_flow_solution.source_electric_power_secondary_pump

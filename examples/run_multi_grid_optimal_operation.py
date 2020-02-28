@@ -99,22 +99,99 @@ def main():
         thermal_grid_model
     )
 
-    # Define branch limit constraints.
-    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
+    # Define limit constraints.
+
+    # Electric grid.
+
+    # Voltage.
+    voltage_magnitude_vector = (  # Define shorthand.
+        lambda node:
+        np.abs(power_flow_solution.node_voltage_vector.ravel()[electric_grid_model.nodes.get_loc(node)])
+    )
+    optimization_problem.voltage_magnitude_vector_minimum_constraint = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
+        electric_grid_model.nodes.to_list(),
+        rule=lambda optimization_problem, timestep, *node: (
+            optimization_problem.voltage_magnitude_vector_change[timestep, node]
+            + voltage_magnitude_vector(node)
+            >=
+            0.5 * voltage_magnitude_vector(node)
+        )
+    )
+    optimization_problem.voltage_magnitude_vector_maximum_constraint = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
+        electric_grid_model.nodes.to_list(),
+        rule=lambda optimization_problem, timestep, *node: (
+            optimization_problem.voltage_magnitude_vector_change[timestep, node]
+            + voltage_magnitude_vector(node)
+            <=
+            1.5 * voltage_magnitude_vector(node)
+        )
+    )
+
+    # Branch flows.
+    branch_power_vector_1_squared = (  # Define shorthand.
         lambda branch:
         np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
     )
-    optimization_problem.branch_limit_constraints = pyo.Constraint(
+    optimization_problem.branch_power_vector_1_squared_maximum_constraint = pyo.Constraint(
         scenario_data.timesteps.to_list(),
         electric_grid_model.branches.to_list(),
         rule=lambda optimization_problem, timestep, *branch: (
             optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
-            / 1.0
-            + float(branch_power_vector_1_squared(branch))
+            + branch_power_vector_1_squared(branch)
             <=
-            1.5 * float(branch_power_vector_1_squared(branch))
+            1.5 * branch_power_vector_1_squared(branch)
         )
     )
+    branch_power_vector_2_squared = (  # Define shorthand.
+        lambda branch:
+        np.abs(power_flow_solution.branch_power_vector_2.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+    )
+    optimization_problem.branch_power_vector_2_squared_maximum_constraint = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
+        electric_grid_model.branches.to_list(),
+        rule=lambda optimization_problem, timestep, *branch: (
+            optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
+            + branch_power_vector_2_squared(branch)
+            <=
+            1.5 * branch_power_vector_2_squared(branch)
+        )
+    )
+
+    # Thermal grid.
+
+    # Node head.
+    node_head_vector = (  # Define shorthand.
+        lambda node:
+        thermal_power_flow_solution.node_head_vector.ravel()[thermal_grid_model.nodes.get_loc(node)]
+    )
+    optimization_problem.node_head_vector_minimum_constraint = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
+        thermal_grid_model.nodes.to_list(),
+        rule=lambda optimization_problem, timestep, *node: (
+            optimization_problem.node_head_vector[timestep, node]
+            # + node_head_vector(node)
+            >=
+            1.5 * node_head_vector(node)
+        )
+    )
+    # Branch flow.
+    branch_flow_vector = (  # Define shorthand.
+        lambda branch:
+        thermal_power_flow_solution.branch_flow_vector.ravel()[thermal_grid_model.branches.get_loc(branch)]
+    )
+    optimization_problem.branch_flow_vector_maximum_constraint = pyo.Constraint(
+        scenario_data.timesteps.to_list(),
+        thermal_grid_model.branches.to_list(),
+        rule=lambda optimization_problem, timestep, branch: (  # This will not work if `branches` becomes MultiIndex.
+                optimization_problem.branch_flow_vector[timestep, branch]
+                # + branch_flow_vector(branch)
+                <=
+                1.5 * branch_flow_vector(branch)
+        )
+    )
+
 
     # Define electric grid objective.
     # TODO: Not considering loss costs due to unrealiable loss model.
@@ -210,16 +287,73 @@ def main():
     branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
     pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
 
-    # Obtain / print duals.
-    branch_limit_duals = (
+    # Obtain duals.
+    voltage_magnitude_vector_minimum_dual = (
+        pd.DataFrame(columns=electric_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
+    )
+    voltage_magnitude_vector_maximum_dual = (
+        pd.DataFrame(columns=electric_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_power_vector_1_squared_maximum_dual = (
         pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
     )
+    branch_power_vector_2_squared_maximum_dual = (
+        pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
+    )
+    node_head_vector_minimum_dual = (
+        pd.DataFrame(columns=thermal_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
+    )
+    branch_flow_vector_maximum_dual = (
+        pd.DataFrame(columns=thermal_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
+    )
+
     for timestep in scenario_data.timesteps:
-        for branch_phase_index, branch in enumerate(electric_grid_model.branches):
-            branch_limit_duals.at[timestep, branch] = (
-                optimization_problem.dual[optimization_problem.branch_limit_constraints[timestep, branch]]
+
+        for node_index, node in enumerate(electric_grid_model.nodes):
+            voltage_magnitude_vector_minimum_dual.at[timestep, node] = (
+                optimization_problem.dual[
+                    optimization_problem.voltage_magnitude_vector_minimum_constraint[timestep, node]
+                ]
             )
-    print(f"branch_limit_duals = \n{branch_limit_duals.to_string()}")
+            voltage_magnitude_vector_maximum_dual.at[timestep, node] = (
+                optimization_problem.dual[
+                    optimization_problem.voltage_magnitude_vector_maximum_constraint[timestep, node]
+                ]
+            )
+
+        for branch_index, branch in enumerate(electric_grid_model.branches):
+            branch_power_vector_1_squared_maximum_dual.at[timestep, branch] = (
+                optimization_problem.dual[
+                    optimization_problem.branch_power_vector_1_squared_maximum_constraint[timestep, branch]
+                ]
+            )
+            branch_power_vector_2_squared_maximum_dual.at[timestep, branch] = (
+                optimization_problem.dual[
+                    optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
+                ]
+            )
+
+        for node_index, node in enumerate(thermal_grid_model.nodes):
+            node_head_vector_minimum_dual.at[timestep, node] = (
+                optimization_problem.dual[
+                    optimization_problem.node_head_vector_minimum_constraint[timestep, node]
+                ]
+            )
+
+        for branch_index, branch in enumerate(thermal_grid_model.branches):
+            branch_flow_vector_maximum_dual.at[timestep, branch] = (
+                optimization_problem.dual[
+                    optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
+                ]
+            )
+
+    # Print duals.
+    print(f"voltage_magnitude_vector_minimum_dual = \n{voltage_magnitude_vector_minimum_dual.to_string()}")
+    print(f"voltage_magnitude_vector_maximum_dual = \n{voltage_magnitude_vector_maximum_dual.to_string()}")
+    print(f"branch_power_vector_1_squared_maximum_dual = \n{branch_power_vector_1_squared_maximum_dual.to_string()}")
+    print(f"branch_power_vector_2_squared_maximum_dual = \n{branch_power_vector_2_squared_maximum_dual.to_string()}")
+    print(f"node_head_vector_minimum_dual = \n{node_head_vector_minimum_dual.to_string()}")
+    print(f"branch_flow_vector_maximum_dual = \n{branch_flow_vector_maximum_dual.to_string()}")
 
 
 if __name__ == '__main__':

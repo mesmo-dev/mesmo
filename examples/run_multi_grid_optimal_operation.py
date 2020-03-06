@@ -53,6 +53,8 @@ def main():
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_grid_model.ets_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
+    thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
@@ -177,7 +179,10 @@ def main():
             optimization_problem.node_head_vector[timestep, node]
             # + node_head_vector(node)
             >=
-            1.5 * node_head_vector(node)
+            # TODO: Document modifications for Thermal Electric DLMP paper
+            # (0.1 if node == ('no_source', '15') else 1.5)
+            1.5
+            * node_head_vector(node)
         )
     )
     # Branch flow.
@@ -192,7 +197,10 @@ def main():
             optimization_problem.branch_flow_vector[timestep, branch]
             # + branch_flow_vector(branch)
             <=
-            1.5 * branch_flow_vector(branch)
+            # TODO: Document modifications for Thermal Electric DLMP paper
+            # (0.1 if branch == '4' else 1.5)
+            1.5
+            * branch_flow_vector(branch)
         )
     )
 

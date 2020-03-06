@@ -513,6 +513,33 @@ def main():
     print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp.to_string()}")
     print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp.to_string()}")
 
+    # Obtain complete DLMPs.
+    electric_grid_dlmp = (
+        pd.concat(
+            [
+                electric_grid_energy_dlmp,
+                electric_grid_loss_dlmp,
+                electric_grid_voltage_dlmp,
+                electric_grid_congestion_dlmp
+            ],
+            axis='columns',
+            keys=['energy', 'loss', 'voltage', 'congestion'],
+            names=['dlmp_type']
+        )
+    )
+    thermal_grid_dlmp = (
+        pd.concat(
+            [
+                thermal_grid_energy_dlmp,
+                thermal_grid_pump_dlmp,
+                thermal_grid_head_dlmp,
+                thermal_grid_congestion_dlmp
+            ],
+            axis='columns',
+            keys=['energy', 'pump', 'head', 'congestion'],
+            names=['dlmp_type']
+        )
+    )
 
 if __name__ == '__main__':
     main()

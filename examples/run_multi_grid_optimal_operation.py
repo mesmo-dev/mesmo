@@ -1,5 +1,7 @@
 """Example script for setting up and solving a multi-grid optimal operation problem."""
 
+import matplotlib.dates
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -246,7 +248,7 @@ def main():
         optimization_problem,
         power_flow_solution,
         scenario_data.timesteps,
-        in_per_unit=True,
+        in_per_unit=False,
         with_mean=True
     )
     (
@@ -258,7 +260,7 @@ def main():
         optimization_problem,
         thermal_power_flow_solution,
         scenario_data.timesteps,
-        in_per_unit=True,
+        in_per_unit=False,
         with_mean=True
     )
 
@@ -540,6 +542,49 @@ def main():
             names=['dlmp_type']
         )
     )
+
+    # Plot thermal grid DLMPs.
+    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    for der in thermal_grid_model.ders:
+        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
+        ax1.set_title(f'Flexible building "{der[1]}"')
+        ax1.stackplot(
+            scenario_data.timesteps,
+            thermal_grid_dlmp.loc[:, (slice(None), *der)].droplevel(['der_type', 'der_name'], axis='columns').T,
+            labels=['Energy', 'Pumping', 'Head', 'Congest.'],
+            colors=[colors[0], colors[1], colors[2], colors[3]]
+        )
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Price [S$/MWh]')
+        # ax1.set_ylim((0.0, 10.0))
+        ax2 = plt.twinx(ax1)
+        ax2.plot(
+            der_thermal_power_vector.loc[:, der].abs() / 1000000,
+            label='Thrm. pw.',
+            drawstyle='steps-post',
+            color='darkgrey',
+            linewidth=3
+        )
+        ax2.plot(
+            der_active_power_vector.loc[:, der].abs() / 1000000,
+            label='Active pw.',
+            drawstyle='steps-post',
+            color='black',
+            linewidth=1.5
+        )
+        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
+        ax2.set_xlabel('Time')
+        ax2.set_ylabel('Power [MW]')
+        ax2.set_ylim((0.0, 20.0))  # TODO: Document modifications for Thermal Electric DLMP paper
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
+        lax.axis("off")
+        plt.tight_layout()
+        plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
+        plt.close()
+
 
 if __name__ == '__main__':
     main()

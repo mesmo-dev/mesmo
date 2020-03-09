@@ -1,30 +1,32 @@
 ## FLEDGE - Flexible Distribution Grid Demonstrator
 
-The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for the computation of operation problems for electric distribution grids along with distributed energy resources (DERs), such as flexible loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) energy resource models, 3) power flow solver and 4) optimal power flow solver.
+[![DOI](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 
-## Work in Progress
-
-1. This repository is under active development and not all features listed below have yet been implemented.
-2. Please create an issue if you find this project interesting and have ideas / comments / criticism that may help to make FLEDGE more relevant or useful for your type of problems.
+The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
 
 ## Features
 
-- Electric grid models
-    - Construction of nodal / branch admittance matrices.
-    - Consideration of unbalanced / multiphase systems.
-    - Generation of linear power flow approximations / sensitivity matrices.
-- Energy resource models
+- Electric grid models:
+    - Obtain nodal / branch admittance and incidence matrices¹.
+    - Obtain steady state power flow solution for nodal voltage / branch flows / losses via fixed-point algorithm / [OpenDSS](https://github.com/dss-extensions/OpenDSSDirect.py)¹.
+    - Obtain sensitivity matrices of global linear approximate grid model¹.
+    - ¹Fully enabled for unbalanced / multiphase grid configuration.
+- Thermal grid models:
+    - Obtain nodal / branch incidence matrices.
+    - Obtain thermal power flow solution for nodal head / branch flows / pumping losses.
+    - Obtain sensitivity matrices of global linear approximate grid model.
+- Distributed energy resource (DER) models:
     - Time series models for fixed loads.
     - Time series models for EV charging.
-    - Time series models for photovoltaics.
-    - Linear models for flexible loads.
-    - Linear models for energy storage systems.
-- Power flow solver
-    - Iterative fixed-point power solver.
-    - Integrated benchmarking against OpenDSS through [OpenDSSDirect](https://github.com/dss-extensions/OpenDSSDirect.py).
-- Optimal power flow solver
-    - Setup of centralized social welfare maximization problem.
-    - Interfacing convex optimization solvers through [Pyomo](https://github.com/Pyomo/pyomo).
+    - Linear models for flexible building loads.
+- Optimal operation problems:
+    - Obtain numerical optimization problem for combined optimal operation for electric / thermal grids with DERs via [Pyomo](https://github.com/Pyomo/pyomo).
+    - Obtain electric / thermal optimal power flow solution.
+    - Obtain distribution locational marginal prices (DLMPs) for the electric / thermal grids.
+
+## Work in Progress
+
+Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 
 ## Contents
 

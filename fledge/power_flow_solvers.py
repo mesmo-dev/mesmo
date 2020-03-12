@@ -139,6 +139,22 @@ class PowerFlowSolution(object):
     branch_power_vector_2: np.ndarray
     loss: np.complex
 
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            **kwargs
+    ):
+
+        # Obtain `der_power_vector`, assuming nominal power conditions.
+        der_power_vector = electric_grid_model.der_power_vector_nominal
+
+        self.__init__(
+            electric_grid_model,
+            der_power_vector,
+            **kwargs
+        )
+
 
 class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     """Fixed point power flow solution object."""
@@ -149,14 +165,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             scenario_name: str,
             **kwargs
     ):
-        """Instantiate fixed point power flow solution object for given `scenario_name`
-        assuming nominal power conditions.
-        """
 
         # Obtain `electric_grid_model`.
-        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
 
-        self.__init__(
+        super().__init__(
             electric_grid_model,
             **kwargs
         )
@@ -164,31 +177,10 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     @multimethod
     def __init__(
             self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-            **kwargs
-    ):
-        """Instantiate fixed point power flow solution object for given `electric_grid_model`
-        assuming nominal power conditions.
-        """
-
-        # Obtain `der_power_vector` assuming nominal power conditions.
-        der_power_vector = electric_grid_model.der_power_vector_nominal
-
-        self.__init__(
-            electric_grid_model,
-            der_power_vector,
-            **kwargs
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             der_power_vector: np.ndarray,
             **kwargs
     ):
-        """Instantiate fixed point power flow solution object for given `electric_grid_model` and `der_power_vector`.
-        """
 
         # Store DER power vector.
         self.der_power_vector = der_power_vector
@@ -237,7 +229,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def get_voltage(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
         der_power_vector: np.ndarray,
         voltage_iteration_limit=100,
         voltage_tolerance=1e-2
@@ -372,7 +364,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def get_branch_power(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
         node_voltage_vector: np.ndarray
     ):
         """Get branch power vectors by calculating power flow with given nodal voltage.
@@ -424,7 +416,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def get_loss(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
         node_voltage_vector: np.ndarray
     ):
         """Get total electric losses with given nodal voltage."""

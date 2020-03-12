@@ -44,7 +44,7 @@ def main():
     price_timeseries = price_data.price_timeseries_dict[price_name]
 
     # Obtain models.
-    electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
+    electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     power_flow_solution = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model = (
         fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(

@@ -32,7 +32,7 @@ def main():
 
     # Obtain models.
     electric_grid_model = (
-        fledge.electric_grid_models.ElectricGridModel(scenario_name)
+        fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     )
     der_power_vector_reference_candidate = electric_grid_model.der_power_vector_nominal
     power_flow_solution_candidate = (

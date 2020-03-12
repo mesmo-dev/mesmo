@@ -45,7 +45,7 @@ class FixedDERModel(DERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault
     ):
 
         # Obtain DER index.
@@ -267,7 +267,7 @@ class FlexibleDERModel(DERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
     ):
@@ -293,7 +293,7 @@ class FlexibleDERModel(DERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             disconnect_thermal_grid=True
     ):
 
@@ -580,7 +580,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
     ):
@@ -606,7 +606,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             disconnect_thermal_grid=True
     ):
 
@@ -818,7 +818,7 @@ class DERModelSet(object):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
     ):
@@ -838,7 +838,7 @@ class DERModelSet(object):
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             **kwargs
     ):
 

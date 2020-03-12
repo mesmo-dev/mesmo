@@ -15,14 +15,20 @@ logger = fledge.config.get_logger(__name__)
 
 
 class ElectricGridModel(object):
+    """Electric grid model object."""
+
+    der_power_vector_nominal: np.ndarray
+
+
+class ElectricGridModelDefault(ElectricGridModel):
     """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
     node types / branch types, the nodal admittance / transformation matrices, branch admittance /
     incidence matrices, DER incidence matrices and no load voltage vector as well as nominal power vector.
 
     :syntax:
-        - ``ElectricGridModel(electric_grid_data)``: Instantiate electric grid model for given
+        - ``ElectricGridModelDefault(electric_grid_data)``: Instantiate electric grid model for given
           `electric_grid_data`.
-        - ``ElectricGridModel(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
+        - ``ElectricGridModelDefault(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
           The required `electric_grid_data` is obtained from the database.
 
     Arguments:
@@ -84,7 +90,6 @@ class ElectricGridModel(object):
     der_incidence_wye_matrix: scipy.sparse.spmatrix
     der_incidence_delta_matrix: scipy.sparse.spmatrix
     node_voltage_vector_no_load: np.ndarray
-    der_power_vector_nominal: np.ndarray
 
     @multimethod
     def __init__(

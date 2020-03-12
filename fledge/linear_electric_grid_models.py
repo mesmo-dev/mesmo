@@ -26,7 +26,7 @@ class LinearElectricGridModel(object):
         but does not implement any functionality.
 
     Attributes:
-        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModelDefault): Electric grid model object.
         power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -102,7 +102,7 @@ class LinearElectricGridModel(object):
             reactive loss by DER reactive power vector.
     """
 
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+    electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault
     power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     sensitivity_voltage_by_power_wye_active: scipy.sparse.spmatrix
     sensitivity_voltage_by_power_wye_reactive: scipy.sparse.spmatrix
@@ -390,12 +390,12 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
           `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
-        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModelDefault): Electric grid model object.
         power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Power flow solution object.
         scenario_name (str): FLEDGE scenario name.
 
     Attributes:
-        electric_grid_model (fledge.electric_grid_models.ElectricGridModel): Electric grid model object.
+        electric_grid_model (fledge.electric_grid_models.ElectricGridModelDefault): Electric grid model object.
         power_flow_solution (fledge.power_flow_solvers.PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -479,7 +479,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
 
         # Obtain electric grid model.
         electric_grid_model = (
-            fledge.electric_grid_models.ElectricGridModel(scenario_name)
+            fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
         )
 
         # Obtain der power vector.
@@ -503,7 +503,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
     @multimethod
     def __init__(
             self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             power_flow_solution: fledge.power_flow_solvers.PowerFlowSolution
     ):
         # TODO: Validate linear model with delta DERs.

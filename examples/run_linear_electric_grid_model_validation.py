@@ -31,7 +31,7 @@ def main():
     fledge.database_interface.recreate_database()
 
     # Obtain electric grid model.
-    electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
+    electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
 
     # Obtain power flow solution for nominal power conditions.
     power_flow_solution_initial = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)

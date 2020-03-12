@@ -59,7 +59,7 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
     def test_power_flow_solution_fixed_point_2(self):
         # Obtain test data.
-        electric_grid_model = fledge.electric_grid_models.ElectricGridModel(fledge.config.test_scenario_name)
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.test_scenario_name)
         node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
 
         # Define expected result.

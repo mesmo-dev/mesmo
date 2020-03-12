@@ -42,21 +42,26 @@ def main():
     # Obtain models.
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    linear_thermal_grid_model = (
+        fledge.thermal_grid_models.LinearThermalGridModel(
+            thermal_grid_model,
+            thermal_power_flow_solution
+        )
+    )
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()
 
     # Define thermal grid model variables.
-    thermal_grid_model.define_optimization_variables(
+    linear_thermal_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
 
     # Define thermal grid model constraints.
-    thermal_grid_model.define_optimization_constraints(
+    linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
-        thermal_power_flow_solution,
         scenario_data.timesteps
     )
 
@@ -78,9 +83,8 @@ def main():
     )
 
     # Define objective.
-    thermal_grid_model.define_optimization_objective(
+    linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        thermal_power_flow_solution,
         price_timeseries,
         scenario_data.timesteps
     )
@@ -100,9 +104,8 @@ def main():
         node_head_vector,
         branch_flow_vector,
         pump_power
-    ) = thermal_grid_model.get_optimization_results(
+    ) = linear_thermal_grid_model.get_optimization_results(
         optimization_problem,
-        thermal_power_flow_solution,
         scenario_data.timesteps,
         in_per_unit=True,
         with_mean=True

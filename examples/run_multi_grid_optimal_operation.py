@@ -56,6 +56,12 @@ def main():
     thermal_grid_model.ets_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
     thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    linear_thermal_grid_model = (
+        fledge.thermal_grid_models.LinearThermalGridModel(
+            thermal_grid_model,
+            thermal_power_flow_solution
+        )
+    )
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
@@ -74,15 +80,14 @@ def main():
     )
 
     # Define thermal grid model variables.
-    thermal_grid_model.define_optimization_variables(
+    linear_thermal_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
 
     # Define thermal grid model constraints.
-    thermal_grid_model.define_optimization_constraints(
+    linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
-        thermal_power_flow_solution,
         scenario_data.timesteps
     )
 
@@ -220,9 +225,8 @@ def main():
     # )
 
     # Define objective.
-    thermal_grid_model.define_optimization_objective(
+    linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        thermal_power_flow_solution,
         price_timeseries,
         scenario_data.timesteps
     )
@@ -264,9 +268,8 @@ def main():
         node_head_vector,
         branch_flow_vector,
         pump_power
-    ) = thermal_grid_model.get_optimization_results(
+    ) = linear_thermal_grid_model.get_optimization_results(
         optimization_problem,
-        thermal_power_flow_solution,
         scenario_data.timesteps,
         in_per_unit=False,
         with_mean=True
@@ -456,21 +459,21 @@ def main():
         )
         node_head_vector_minimum_dlmp.loc[timestep, :] = (
             (
-                thermal_grid_model.sensitivity_node_head_by_der_power.transpose()
+                linear_thermal_grid_model.sensitivity_node_head_by_der_power.transpose()
                 @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
             ).ravel()
             / thermal_grid_model.cooling_plant_efficiency
         )
         branch_flow_vector_maximum_dlmp.loc[timestep, :] = (
             (
-                thermal_grid_model.sensitivity_branch_flow_by_der_power.transpose()
+                linear_thermal_grid_model.sensitivity_branch_flow_by_der_power.transpose()
                 @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
             ).ravel()
             / thermal_grid_model.cooling_plant_efficiency
         )
         pump_power_dlmp.loc[timestep, :] = (
             -1.0
-            * thermal_grid_model.sensitivity_pump_power_by_der_power.ravel()
+            * linear_thermal_grid_model.sensitivity_pump_power_by_der_power.ravel()
             * price_timeseries.at[timestep, 'price_value']
         )
 

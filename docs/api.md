@@ -24,12 +24,7 @@
 ``` automodule:: fledge.electric_grid_models
 ```
 
-## `fledge.linear_electric_grid_models`
+## `fledge.thermal_grid_models`
 
-``` automodule:: fledge.linear_electric_grid_models
-```
-
-## `fledge.power_flow_solvers`
-
-``` automodule:: fledge.power_flow_solvers
+``` automodule:: fledge.thermal_grid_models
 ```

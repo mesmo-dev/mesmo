@@ -22,7 +22,9 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
     def test_get_voltage_opendss(self):
         # Initialize OpenDSS model.
-        fledge.electric_grid_models.initialize_opendss_model(fledge.config.test_scenario_name)
+        electric_grid_model_opendss = (
+            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
+        )
 
         # Get result.
         time_start = time.time()
@@ -32,7 +34,9 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
     def test_get_branch_power_opendss(self):
         # Initialize OpenDSS model.
-        fledge.electric_grid_models.initialize_opendss_model(fledge.config.test_scenario_name)
+        electric_grid_model_opendss = (
+            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
+        )
 
         # Get result.
         time_start = time.time()
@@ -42,7 +46,9 @@ class TestPowerFlowSolvers(unittest.TestCase):
 
     def test_get_loss_opendss(self):
         # Initialize OpenDSS model.
-        fledge.electric_grid_models.initialize_opendss_model(fledge.config.test_scenario_name)
+        electric_grid_model_opendss = (
+            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
+        )
 
         # Get result.
         time_start = time.time()
@@ -63,7 +69,9 @@ class TestPowerFlowSolvers(unittest.TestCase):
         node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
 
         # Define expected result.
-        fledge.electric_grid_models.initialize_opendss_model(fledge.config.test_scenario_name)
+        electric_grid_model_opendss = (
+            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
+        )
         node_voltage_vector_opendss = abs(fledge.power_flow_solvers.get_voltage_opendss())
 
         # Get result.

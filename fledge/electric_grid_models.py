@@ -862,7 +862,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 ])
             )
 
-        # Construct nominal der power vector.
+        # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
             # TODO: Remove load multiplier.
             electric_grid_data.electric_grid['load_multiplier']
@@ -873,21 +873,19 @@ class ElectricGridModelDefault(ElectricGridModel):
         )
 
 
-@multimethod
-def initialize_opendss_model(
-        scenario_name: str
-) -> None:
-    """Initialize OpenDSS model.
+class ElectricGridModelOpenDSS(ElectricGridModel):
+    """OpenDSS electric grid model object.
 
     - Instantiate OpenDSS circuit by running generating OpenDSS commands corresponding to given `electric_grid_data`,
       utilizing the `OpenDSSDirect.py` package.
-    - No object is returned, but the OpenDSS circuit can be accessed with the API of
+    - The OpenDSS circuit can be accessed with the API of
       `OpenDSSDirect.py`: http://dss-extensions.org/OpenDSSDirect.py/opendssdirect.html
+    - Due to dependency on `OpenDSSDirect.py`, creating multiple objects of this type may result in erroneous behavior.
 
     :syntax:
-        - ``initialize_opendss_model(electric_grid_data)``: Initialize OpenDSS circuit model for given
+        - ``ElectricGridModelOpenDSS(electric_grid_data)``: Initialize OpenDSS circuit model for given
           `electric_grid_data`.
-        - ``initialize_opendss_model(scenario_name)`` for given `scenario_name`.
+        - ``ElectricGridModelOpenDSS(scenario_name)`` Initialize OpenDSS circuit model for given `scenario_name`.
           The required `electric_grid_data` is obtained from the database.
 
     Parameters:
@@ -895,290 +893,306 @@ def initialize_opendss_model(
         electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
     """
 
-    # Obtain electric grid data.
-    electric_grid_data = (
-        fledge.database_interface.ElectricGridData(scenario_name)
-    )
-
-    initialize_opendss_model(electric_grid_data)
-
-
-@multimethod
-def initialize_opendss_model(
-        electric_grid_data: fledge.database_interface.ElectricGridData
-):
-
-    # Clear OpenDSS.
-    opendss_command_string = "clear"
-    logger.debug(f"opendss_command_string = {opendss_command_string}")
-    opendssdirect.run_command(opendss_command_string)
-
-    # Obtain extra definitions string.
-    if pd.isnull(electric_grid_data.electric_grid['extra_definitions_string']):
-        extra_definitions_string = ""
-    else:
-        extra_definitions_string = (
-            electric_grid_data.electric_grid['extra_definitions_string']
-        )
-
-    # Add circuit info to OpenDSS command string.
-    opendss_command_string = (
-        f"new circuit.{electric_grid_data.electric_grid['electric_grid_name']}"
-        + f" phases={electric_grid_data.electric_grid['n_phases']}"
-        + f" bus1={electric_grid_data.electric_grid['source_node_name']}"
-        + f" basekv={electric_grid_data.electric_grid['source_voltage'] / 1e3}"
-        + f" {extra_definitions_string}"
-    )
-
-    # Create circuit in OpenDSS.
-    logger.debug(f"opendss_command_string = {opendss_command_string}")
-    opendssdirect.run_command(opendss_command_string)
-
-    # Define line codes.
-    for line_type_index, line_type in electric_grid_data.electric_grid_line_types.iterrows():
-        # Obtain line resistance and reactance matrix entries for the line.
-        matrices = (
-            electric_grid_data.electric_grid_line_types_matrices.loc[
-                electric_grid_data.electric_grid_line_types_matrices['line_type'] == line_type['line_type'],
-                ['r', 'x', 'c']
-            ]
-        )
-
-        # Add line type name and number of phases to OpenDSS command string.
-        opendss_command_string = (
-            f"new linecode.{line_type['line_type']}"
-            + f" nphases={line_type['n_phases']}"
-        )
-
-        # Add resistance and reactance matrix entries to OpenDSS command string,
-        # with formatting depending on number of phases.
-        if line_type['n_phases'] == 1:
-            opendss_command_string += (
-                " rmatrix = "
-                + "[{:.8f}]".format(*matrices['r'])
-                + " xmatrix = "
-                + "[{:.8f}]".format(*matrices['x'])
-                + " cmatrix = "
-                + "[{:.8f}]".format(*matrices['c'])
-            )
-        elif line_type['n_phases'] == 2:
-            opendss_command_string += (
-                " rmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['r'])
-                + " xmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['x'])
-                + " cmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['c'])
-            )
-        elif line_type['n_phases'] == 3:
-            opendss_command_string += (
-                " rmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['r'])
-                + f" xmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['x'])
-                + f" cmatrix = "
-                + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['c'])
-            )
-
-        # Create line code in OpenDSS.
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
-        opendssdirect.run_command(opendss_command_string)
-
-    # Define lines.
-    for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
-        # Obtain number of phases for the line.
-        n_phases = len(fledge.utils.get_element_phases_array(line))
-
-        # Add line name, phases, node connections, line type and length
-        # to OpenDSS command string.
-        opendss_command_string = (
-            f"new line.{line['line_name']}"
-            + f" phases={line['n_phases']}"
-            + f" bus1={line['node_1_name']}{fledge.utils.get_element_phases_string(line)}"
-            + f" bus2={line['node_2_name']}{fledge.utils.get_element_phases_string(line)}"
-            + f" linecode={line['line_type']}"
-            + f" length={line['length']}"
-        )
-
-        # Create line in OpenDSS.
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
-        opendssdirect.run_command(opendss_command_string)
-
-    # Define transformers.
-    # - Note: This setup only works for transformers with
-    #   identical number of phases at each winding / side.
-    for transformer_index, transformer in (
-            electric_grid_data.electric_grid_transformers.loc[
-                electric_grid_data.electric_grid_transformers['winding'] == 1,
-                :
-            ].iterrows()
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str
     ):
-        # Obtain number of phases for the transformer.
-        # This assumes identical number of phases at all windings.
-        n_phases = len(fledge.utils.get_element_phases_array(transformer))
 
-        # Obtain windings for the transformer.
-        windings = (
-            electric_grid_data.electric_grid_transformers.loc[
-                (
-                    electric_grid_data.electric_grid_transformers['transformer_name']
-                    == transformer['transformer_name']
-                ),
-                :
-            ]
+        # Obtain electric grid data.
+        electric_grid_data = (
+            fledge.database_interface.ElectricGridData(scenario_name)
         )
 
-        # Obtain reactances for the transformer.
-        reactances = (
-            electric_grid_data.electric_grid_transformer_reactances.loc[
-                (
-                    electric_grid_data.electric_grid_transformer_reactances['transformer_name']
-                    == transformer['transformer_name']
-                ),
-                :
-            ]
+        self.__init__(electric_grid_data)
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_data: fledge.database_interface.ElectricGridData
+    ):
+
+        # Construct nominal DER power vector.
+        self.der_power_vector_nominal = (
+            # TODO: Remove load multiplier.
+            electric_grid_data.electric_grid['load_multiplier']
+            * (
+                electric_grid_data.electric_grid_ders.loc[:, 'active_power']
+                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
+            ).values
         )
 
-        # Obtain taps for the transformer.
-        taps = (
-            electric_grid_data.electric_grid_transformer_taps.loc[
-                (
-                    electric_grid_data.electric_grid_transformer_taps['transformer_name']
-                    == transformer['transformer_name']
-                ),
-                :
-            ]
-        )
+        # Clear OpenDSS.
+        opendss_command_string = "clear"
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
 
-        # Add transformer name, number of phases / windings and reactances
-        # to OpenDSS command string.
-        opendss_command_string = (
-            f"new transformer.{transformer['transformer_name']}"
-            + f" phases={n_phases}"
-            + f" windings={len(windings['winding'])}"
-            + f" xscarray={[x for x in reactances['reactance_percentage']]}"
-        )
-        for winding_index, winding in windings.iterrows():
-            # Obtain nominal voltage level for each winding.
-            voltage = electric_grid_data.electric_grid_nodes.at[winding['node_name'], 'voltage']
-
-            # Obtain node phases connection string for each winding.
-            if winding['connection'] == "wye":
-                if winding['is_phase_0_connected'] == 0:
-                    # Enforce wye-open connection according to:
-                    # OpenDSS Manual April 2018, page 136, "rneut".
-                    node_phases_string = (
-                        fledge.utils.get_element_phases_string(winding)
-                        + ".4"
-                    )
-                elif winding['is_phase_0_connected'] == 1:
-                    # Enforce wye-grounded connection.
-                    node_phases_string = (
-                        fledge.utils.get_element_phases_string(winding)
-                        + ".0"
-                    )
-                    # Remove leading ".0".
-                    node_phases_string = node_phases_string[2:]
-            elif winding['connection'] == "delta":
-                if winding['is_phase_0_connected'] == 0:
-                    node_phases_string = (
-                        fledge.utils.get_element_phases_string(winding)
-                    )
-                elif winding['is_phase_0_connected'] == 1:
-                    node_phases_string = (
-                        fledge.utils.get_element_phases_string(winding)
-                    )
-                    # Remove leading ".0"
-                    node_phases_string = node_phases_string[2:]
-                    logger.warn(
-                        "No ground connection possible for delta-connected"
-                        + f" transformer {transformer['transformer_name']}."
-                    )
-            else:
-                logger.error(f"Unknown transformer connection type: {winding['connection']}")
-                raise ValueError
-
-            # Add node connection, nominal voltage / power and resistance
-            # to OpenDSS command string for each winding.
-            opendss_command_string += (
-                f" wdg={winding['winding']}"
-                + f" bus={winding['node_name']}" + node_phases_string
-                + f" conn={winding['connection']}"
-                + f" kv={voltage / 1000}"
-                + f" kva={winding['power'] / 1000}"
-                + f" %r={winding['resistance_percentage']}"
+        # Obtain extra definitions string.
+        if pd.isnull(electric_grid_data.electric_grid['extra_definitions_string']):
+            extra_definitions_string = ""
+        else:
+            extra_definitions_string = (
+                electric_grid_data.electric_grid['extra_definitions_string']
             )
 
-            # Add maximum / minimum level
-            # to OpenDSS command string for each winding.
-            for winding_index in np.flatnonzero(taps['winding'] == winding['winding']):
+        # Add circuit info to OpenDSS command string.
+        opendss_command_string = (
+            f"new circuit.{electric_grid_data.electric_grid['electric_grid_name']}"
+            + f" phases={electric_grid_data.electric_grid['n_phases']}"
+            + f" bus1={electric_grid_data.electric_grid['source_node_name']}"
+            + f" basekv={electric_grid_data.electric_grid['source_voltage'] / 1e3}"
+            + f" {extra_definitions_string}"
+        )
+
+        # Create circuit in OpenDSS.
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)
+
+        # Define line codes.
+        for line_type_index, line_type in electric_grid_data.electric_grid_line_types.iterrows():
+            # Obtain line resistance and reactance matrix entries for the line.
+            matrices = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[
+                    electric_grid_data.electric_grid_line_types_matrices['line_type'] == line_type['line_type'],
+                    ['r', 'x', 'c']
+                ]
+            )
+
+            # Add line type name and number of phases to OpenDSS command string.
+            opendss_command_string = (
+                f"new linecode.{line_type['line_type']}"
+                + f" nphases={line_type['n_phases']}"
+            )
+
+            # Add resistance and reactance matrix entries to OpenDSS command string,
+            # with formatting depending on number of phases.
+            if line_type['n_phases'] == 1:
                 opendss_command_string += (
-                    " maxtap="
-                    + f"{taps.at[winding_index, 'tap_maximum_voltage_per_unit']}"
-                    + f" mintap="
-                    + f"{taps.at[winding_index, 'tap_minimum_voltage_per_unit']}"
+                    " rmatrix = "
+                    + "[{:.8f}]".format(*matrices['r'])
+                    + " xmatrix = "
+                    + "[{:.8f}]".format(*matrices['x'])
+                    + " cmatrix = "
+                    + "[{:.8f}]".format(*matrices['c'])
+                )
+            elif line_type['n_phases'] == 2:
+                opendss_command_string += (
+                    " rmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['r'])
+                    + " xmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['x'])
+                    + " cmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['c'])
+                )
+            elif line_type['n_phases'] == 3:
+                opendss_command_string += (
+                    " rmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['r'])
+                    + f" xmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['x'])
+                    + f" cmatrix = "
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['c'])
                 )
 
-        # Create transformer in OpenDSS.
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
-        opendssdirect.run_command(opendss_command_string)
+            # Create line code in OpenDSS.
+            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            opendssdirect.run_command(opendss_command_string)
 
-    # Define ders.
-    # TODO: At the moment, all ders are modelled as loads in OpenDSS.
-    for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
-        # Obtain number of phases for the der.
-        n_phases = len(fledge.utils.get_element_phases_array(der))
+        # Define lines.
+        for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
+            # Obtain number of phases for the line.
+            n_phases = len(fledge.utils.get_element_phases_array(line))
 
-        # Obtain nominal voltage level for the der.
-        voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
-        # Convert to line-to-neutral voltage for single-phase ders, according to:
-        # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
-        if n_phases == 1:
-            voltage /= np.sqrt(3)
+            # Add line name, phases, node connections, line type and length
+            # to OpenDSS command string.
+            opendss_command_string = (
+                f"new line.{line['line_name']}"
+                + f" phases={line['n_phases']}"
+                + f" bus1={line['node_1_name']}{fledge.utils.get_element_phases_string(line)}"
+                + f" bus2={line['node_2_name']}{fledge.utils.get_element_phases_string(line)}"
+                + f" linecode={line['line_type']}"
+                + f" length={line['length']}"
+            )
 
-        # Add node connection, model type, voltage, nominal power
-        # to OpenDSS command string.
+            # Create line in OpenDSS.
+            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            opendssdirect.run_command(opendss_command_string)
+
+        # Define transformers.
+        # - Note: This setup only works for transformers with
+        #   identical number of phases at each winding / side.
+        for transformer_index, transformer in (
+                electric_grid_data.electric_grid_transformers.loc[
+                    electric_grid_data.electric_grid_transformers['winding'] == 1,
+                    :
+                ].iterrows()
+        ):
+            # Obtain number of phases for the transformer.
+            # This assumes identical number of phases at all windings.
+            n_phases = len(fledge.utils.get_element_phases_array(transformer))
+
+            # Obtain windings for the transformer.
+            windings = (
+                electric_grid_data.electric_grid_transformers.loc[
+                    (
+                        electric_grid_data.electric_grid_transformers['transformer_name']
+                        == transformer['transformer_name']
+                    ),
+                    :
+                ]
+            )
+
+            # Obtain reactances for the transformer.
+            reactances = (
+                electric_grid_data.electric_grid_transformer_reactances.loc[
+                    (
+                        electric_grid_data.electric_grid_transformer_reactances['transformer_name']
+                        == transformer['transformer_name']
+                    ),
+                    :
+                ]
+            )
+
+            # Obtain taps for the transformer.
+            taps = (
+                electric_grid_data.electric_grid_transformer_taps.loc[
+                    (
+                        electric_grid_data.electric_grid_transformer_taps['transformer_name']
+                        == transformer['transformer_name']
+                    ),
+                    :
+                ]
+            )
+
+            # Add transformer name, number of phases / windings and reactances
+            # to OpenDSS command string.
+            opendss_command_string = (
+                f"new transformer.{transformer['transformer_name']}"
+                + f" phases={n_phases}"
+                + f" windings={len(windings['winding'])}"
+                + f" xscarray={[x for x in reactances['reactance_percentage']]}"
+            )
+            for winding_index, winding in windings.iterrows():
+                # Obtain nominal voltage level for each winding.
+                voltage = electric_grid_data.electric_grid_nodes.at[winding['node_name'], 'voltage']
+
+                # Obtain node phases connection string for each winding.
+                if winding['connection'] == "wye":
+                    if winding['is_phase_0_connected'] == 0:
+                        # Enforce wye-open connection according to:
+                        # OpenDSS Manual April 2018, page 136, "rneut".
+                        node_phases_string = (
+                            fledge.utils.get_element_phases_string(winding)
+                            + ".4"
+                        )
+                    elif winding['is_phase_0_connected'] == 1:
+                        # Enforce wye-grounded connection.
+                        node_phases_string = (
+                            fledge.utils.get_element_phases_string(winding)
+                            + ".0"
+                        )
+                        # Remove leading ".0".
+                        node_phases_string = node_phases_string[2:]
+                elif winding['connection'] == "delta":
+                    if winding['is_phase_0_connected'] == 0:
+                        node_phases_string = (
+                            fledge.utils.get_element_phases_string(winding)
+                        )
+                    elif winding['is_phase_0_connected'] == 1:
+                        node_phases_string = (
+                            fledge.utils.get_element_phases_string(winding)
+                        )
+                        # Remove leading ".0"
+                        node_phases_string = node_phases_string[2:]
+                        logger.warn(
+                            "No ground connection possible for delta-connected"
+                            + f" transformer {transformer['transformer_name']}."
+                        )
+                else:
+                    logger.error(f"Unknown transformer connection type: {winding['connection']}")
+                    raise ValueError
+
+                # Add node connection, nominal voltage / power and resistance
+                # to OpenDSS command string for each winding.
+                opendss_command_string += (
+                    f" wdg={winding['winding']}"
+                    + f" bus={winding['node_name']}" + node_phases_string
+                    + f" conn={winding['connection']}"
+                    + f" kv={voltage / 1000}"
+                    + f" kva={winding['power'] / 1000}"
+                    + f" %r={winding['resistance_percentage']}"
+                )
+
+                # Add maximum / minimum level
+                # to OpenDSS command string for each winding.
+                for winding_index in np.flatnonzero(taps['winding'] == winding['winding']):
+                    opendss_command_string += (
+                        " maxtap="
+                        + f"{taps.at[winding_index, 'tap_maximum_voltage_per_unit']}"
+                        + f" mintap="
+                        + f"{taps.at[winding_index, 'tap_minimum_voltage_per_unit']}"
+                    )
+
+            # Create transformer in OpenDSS.
+            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            opendssdirect.run_command(opendss_command_string)
+
+        # Define ders.
+        # TODO: At the moment, all ders are modelled as loads in OpenDSS.
+        for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
+            # Obtain number of phases for the der.
+            n_phases = len(fledge.utils.get_element_phases_array(der))
+
+            # Obtain nominal voltage level for the der.
+            voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
+            # Convert to line-to-neutral voltage for single-phase ders, according to:
+            # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
+            if n_phases == 1:
+                voltage /= np.sqrt(3)
+
+            # Add node connection, model type, voltage, nominal power
+            # to OpenDSS command string.
+            opendss_command_string = (
+                f"new load.{der['der_name']}"
+                # TODO: Check if any difference without ".0" for wye-connected ders.
+                + f" bus1={der['node_name']}{fledge.utils.get_element_phases_string(der)}"
+                + f" phases={n_phases}"
+                + f" conn={der['connection']}"
+                # All loads are modelled as constant P/Q according to:
+                # OpenDSS Manual April 2018, page 150, "Model"
+                + f" model=1"
+                + f" kv={voltage / 1000}"
+                + f" kw={- der['active_power'] / 1000}"
+                + f" kvar={- der['reactive_power'] / 1000}"
+                # Set low V_min to avoid switching to impedance model according to:
+                # OpenDSS Manual April 2018, page 150, "Vminpu"
+                + f" vminpu=0.6"
+                # Set high V_max to avoid switching to impedance model according to:
+                # OpenDSS Manual April 2018, page 150, "Vmaxpu"
+                + f" vmaxpu=1.4"
+            )
+
+            # Create der in OpenDSS.
+            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            opendssdirect.run_command(opendss_command_string)
+
+        # TODO: Add switches.
+
+        # Set control mode and voltage bases.
         opendss_command_string = (
-            f"new load.{der['der_name']}"
-            # TODO: Check if any difference without ".0" for wye-connected ders.
-            + f" bus1={der['node_name']}{fledge.utils.get_element_phases_string(der)}"
-            + f" phases={n_phases}"
-            + f" conn={der['connection']}"
-            # All loads are modelled as constant P/Q according to:
-            # OpenDSS Manual April 2018, page 150, "Model"
-            + f" model=1"
-            + f" kv={voltage / 1000}"
-            + f" kw={- der['active_power'] / 1000}"
-            + f" kvar={- der['reactive_power'] / 1000}"
-            # Set low V_min to avoid switching to impedance model according to:
-            # OpenDSS Manual April 2018, page 150, "Vminpu"
-            + f" vminpu=0.6"
-            # Set high V_max to avoid switching to impedance model according to:
-            # OpenDSS Manual April 2018, page 150, "Vmaxpu"
-            + f" vmaxpu=1.4"
+            "set voltagebases="
+            + f"{electric_grid_data.electric_grid['voltage_bases_string']}"
+            + "\nset controlmode="
+            + f"{electric_grid_data.electric_grid['control_mode_string']}"
+            + "\nset loadmult="
+            + f"{electric_grid_data.electric_grid['load_multiplier']}"
+            + "\ncalcvoltagebases"
         )
-
-        # Create der in OpenDSS.
         logger.debug(f"opendss_command_string = {opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
-    # TODO: Add switches.
-
-    # Set control mode and voltage bases.
-    opendss_command_string = (
-        "set voltagebases="
-        + f"{electric_grid_data.electric_grid['voltage_bases_string']}"
-        + "\nset controlmode="
-        + f"{electric_grid_data.electric_grid['control_mode_string']}"
-        + "\nset loadmult="
-        + f"{electric_grid_data.electric_grid['load_multiplier']}"
-        + "\ncalcvoltagebases"
-    )
-    logger.debug(f"opendss_command_string = {opendss_command_string}")
-    opendssdirect.run_command(opendss_command_string)
-
-    # Set solution mode to "single snapshot power flow" according to:
-    # OpenDSSComDoc, November 2016, page 1
-    opendss_command_string = "set mode=0"
-    logger.debug(f"opendss_command_string = {opendss_command_string}")
-    opendssdirect.run_command(opendss_command_string)
+        # Set solution mode to "single snapshot power flow" according to:
+        # OpenDSSComDoc, November 2016, page 1
+        opendss_command_string = "set mode=0"
+        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        opendssdirect.run_command(opendss_command_string)

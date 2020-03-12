@@ -20,67 +20,38 @@ as_complex = np.vectorize(np.complex)  # Utility function to convert strings in 
 
 class TestPowerFlowSolvers(unittest.TestCase):
 
-    def test_get_voltage_opendss(self):
-        # Initialize OpenDSS model.
-        electric_grid_model_opendss = (
-            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
-        )
-
-        # Get result.
-        time_start = time.time()
-        fledge.power_flow_solvers.get_voltage_opendss()
-        time_duration = time.time() - time_start
-        logger.info(f"Test get_voltage_opendss: Completed in {time_duration:.6f} seconds.")
-
-    def test_get_branch_power_opendss(self):
-        # Initialize OpenDSS model.
-        electric_grid_model_opendss = (
-            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
-        )
-
-        # Get result.
-        time_start = time.time()
-        fledge.power_flow_solvers.get_branch_power_opendss()
-        time_duration = time.time() - time_start
-        logger.info(f"Test get_branch_power_opendss: Completed in {time_duration:.6f} seconds.")
-
-    def test_get_loss_opendss(self):
-        # Initialize OpenDSS model.
-        electric_grid_model_opendss = (
-            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
-        )
-
-        # Get result.
-        time_start = time.time()
-        fledge.power_flow_solvers.get_loss_opendss()
-        time_duration = time.time() - time_start
-        logger.info(f"Test get_loss_opendss: Completed in {time_duration:.6f} seconds.")
-
-    def test_power_flow_solution_fixed_point_1(self):
+    def test_power_flow_solution_fixed_point(self):
         # Get result.
         time_start = time.time()
         fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name)
         time_duration = time.time() - time_start
-        logger.info(f"Test PowerFlowSolutionFixedPoint #1: Completed in {time_duration:.6f} seconds.")
+        logger.info(f"Test PowerFlowSolutionFixedPoint: Completed in {time_duration:.6f} seconds.")
 
-    def test_power_flow_solution_fixed_point_2(self):
-        # Obtain test data.
+    def test_power_flow_solution_opendss(self):
+        # Get result.
+        time_start = time.time()
+        fledge.power_flow_solvers.PowerFlowSolutionOpenDSS(fledge.config.test_scenario_name)
+        time_duration = time.time() - time_start
+        logger.info(f"Test PowerFlowSolutionOpenDSS: Completed in {time_duration:.6f} seconds.")
+
+    def test_power_flow_solution_fixed_point_vs_opendss(self):
+        # Setup.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.test_scenario_name)
         node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
-
-        # Define expected result.
-        electric_grid_model_opendss = (
-            fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
-        )
-        node_voltage_vector_opendss = abs(fledge.power_flow_solvers.get_voltage_opendss())
 
         # Get result.
         time_start = time.time()
         node_voltage_vector_fixed_point = abs(
             fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name).node_voltage_vector
         )
+        node_voltage_vector_opendss = abs(
+            fledge.power_flow_solvers.PowerFlowSolutionOpenDSS(fledge.config.test_scenario_name).node_voltage_vector
+        )
         time_duration = time.time() - time_start
-        logger.info(f"Test PowerFlowSolutionFixedPoint #2: Completed in {time_duration:.6f} seconds.")
+        logger.info(
+            f"Test PowerFlowSolutionFixedPoint vs. PowerFlowSolutionOpenDSS:"
+            f" Completed in {time_duration:.6f} seconds."
+        )
 
         # Display results.
         if fledge.config.test_plots:

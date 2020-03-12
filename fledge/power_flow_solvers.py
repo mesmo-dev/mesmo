@@ -16,124 +16,10 @@ import fledge.utils
 logger = fledge.config.get_logger(__name__)
 
 
-def get_voltage_opendss():
-    """Get nodal voltage vector by solving OpenDSS model.
-
-    - OpenDSS model must be readily set up, with the desired power being set for all ders.
-    """
-
-    # Solve OpenDSS model.
-    opendssdirect.run_command("solve")
-
-    # Extract nodal voltage vector.
-    # - Voltages are sorted by node names in the fashion as nodes are sorted in
-    #   `nodes` in `fledge.electric_grid_models.ElectricGridModelIndex()`.
-    node_voltage_vector_solution = (
-        np.transpose([
-            pd.Series(
-                (
-                    np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
-                    + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
-                ),
-                index=opendssdirect.Circuit.AllNodeNames()
-            ).reindex(
-                natsort.natsorted(opendssdirect.Circuit.AllNodeNames())
-            ).values
-        ])
-    )
-
-    return node_voltage_vector_solution
-
-
-def get_branch_power_opendss():
-    """Get branch power vectors by solving OpenDSS model.
-
-    - OpenDSS model must be readily set up, with the desired power being set for all ders.
-    """
-
-    # Solve OpenDSS model.
-    opendssdirect.run_command("solve")
-
-    # Instantiate branch vectors.
-    branch_power_vector_1 = (
-        np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
-    )
-    branch_power_vector_2 = (
-        np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
-    )
-
-    # Instantiate iteration variables.
-    branch_vector_index = 0
-    line_index = opendssdirect.Lines.First()
-
-    # Obtain line branch power vectors.
-    while line_index > 0:
-        branch_power = np.array(opendssdirect.CktElement.Powers())
-        branch_phase_count = opendssdirect.CktElement.NumPhases()
-        branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
-            branch_power[0:(branch_phase_count * 2):2]
-            + 1.0j * branch_power[1:(branch_phase_count * 2):2]
-        )
-        branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
-            branch_power[0 + (branch_phase_count * 2)::2]
-            + 1.0j * branch_power[1 + (branch_phase_count * 2)::2]
-        )
-
-        branch_vector_index += 1
-        line_index = opendssdirect.Lines.Next()
-
-    # Obtain transformer branch power vectors.
-    transformer_index = opendssdirect.Transformers.First()
-    while transformer_index > 0:
-        branch_power = np.array(opendssdirect.CktElement.Powers())
-        branch_phase_count = opendssdirect.CktElement.NumPhases()
-        skip_phase = 2 if 0 in opendssdirect.CktElement.NodeOrder() else 0  # Ignore ground nodes.
-        branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
-            branch_power[0:(branch_phase_count * 2):2]
-            + 1.0j * branch_power[1:(branch_phase_count * 2):2]
-        )
-        branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
-            branch_power[0 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
-            + 1.0j * branch_power[1 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
-        )
-
-        branch_vector_index += 1
-        transformer_index = opendssdirect.Transformers.Next()
-
-    # Reshape branch power vectors to appropriate size and remove entries for nonexistent phases.
-    # TODO: Sort vector by branch name if not in order.
-    branch_power_vector_1 = branch_power_vector_1.flatten()
-    branch_power_vector_2 = branch_power_vector_2.flatten()
-    branch_power_vector_1 = np.transpose([branch_power_vector_1[~np.isnan(branch_power_vector_1)]])
-    branch_power_vector_2 = np.transpose([branch_power_vector_2[~np.isnan(branch_power_vector_2)]])
-
-    return (
-        branch_power_vector_1,
-        branch_power_vector_2
-    )
-
-
-def get_loss_opendss():
-    """Get total loss by solving OpenDSS model.
-
-    - OpenDSS model must be readily set up, with the desired power being set for all DERs.
-    """
-
-    # Solve OpenDSS model.
-    opendssdirect.run_command("solve")
-
-    # Obtain loss.
-    loss = opendssdirect.Circuit.Losses()[0] + 1.0j * opendssdirect.Circuit.Losses()[1]
-
-    return loss
-
-
 class PowerFlowSolution(object):
     """Power flow solution object."""
 
     der_power_vector: np.ndarray
-    node_power_vector_wye: np.ndarray
-    node_power_vector_delta: np.ndarray
     node_voltage_vector: np.ndarray
     branch_power_vector_1: np.ndarray
     branch_power_vector_2: np.ndarray
@@ -158,6 +44,9 @@ class PowerFlowSolution(object):
 
 class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     """Fixed point power flow solution object."""
+
+    node_power_vector_wye: np.ndarray
+    node_power_vector_delta: np.ndarray
 
     @multimethod
     def __init__(
@@ -432,5 +321,165 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 )
             )
         )
+
+        return loss
+
+
+class PowerFlowSolutionOpenDSS(PowerFlowSolution):
+    """OpenDSS power flow solution object."""
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+            **kwargs
+    ):
+
+        # Obtain `electric_grid_model`.
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModelOpenDSS(scenario_name)
+
+        super().__init__(
+            electric_grid_model,
+            **kwargs
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelOpenDSS,
+            der_power_vector: np.ndarray,
+            **kwargs
+    ):
+
+        # Store DER power vector.
+        self.der_power_vector = der_power_vector
+
+        # Obtain voltage solution.
+        self.node_voltage_vector = (
+            self.get_voltage()
+        )
+
+        # Obtain branch flow solution.
+        (
+            self.branch_power_vector_1,
+            self.branch_power_vector_2
+        ) = (
+            self.get_branch_power()
+        )
+
+        # Obtain loss solution.
+        self.loss = (
+            self.get_loss()
+        )
+
+    @staticmethod
+    def get_voltage():
+        """Get nodal voltage vector by solving OpenDSS model.
+
+        - OpenDSS model must be readily set up, with the desired power being set for all DERs.
+        """
+
+        # Solve OpenDSS model.
+        opendssdirect.run_command("solve")
+
+        # Extract nodal voltage vector.
+        # - Voltages are sorted by node names in the fashion as nodes are sorted in
+        #   `nodes` in `fledge.electric_grid_models.ElectricGridModelIndex()`.
+        node_voltage_vector_solution = (
+            np.transpose([
+                pd.Series(
+                    (
+                        np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
+                        + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
+                    ),
+                    index=opendssdirect.Circuit.AllNodeNames()
+                ).reindex(
+                    natsort.natsorted(opendssdirect.Circuit.AllNodeNames())
+                ).values
+            ])
+        )
+
+        return node_voltage_vector_solution
+
+    @staticmethod
+    def get_branch_power():
+        """Get branch power vectors by solving OpenDSS model.
+
+        - OpenDSS model must be readily set up, with the desired power being set for all DERs.
+        """
+
+        # Solve OpenDSS model.
+        opendssdirect.run_command("solve")
+
+        # Instantiate branch vectors.
+        branch_power_vector_1 = (
+            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
+        )
+        branch_power_vector_2 = (
+            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
+        )
+
+        # Instantiate iteration variables.
+        branch_vector_index = 0
+        line_index = opendssdirect.Lines.First()
+
+        # Obtain line branch power vectors.
+        while line_index > 0:
+            branch_power = np.array(opendssdirect.CktElement.Powers())
+            branch_phase_count = opendssdirect.CktElement.NumPhases()
+            branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
+                branch_power[0:(branch_phase_count * 2):2]
+                + 1.0j * branch_power[1:(branch_phase_count * 2):2]
+            )
+            branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
+                branch_power[0 + (branch_phase_count * 2)::2]
+                + 1.0j * branch_power[1 + (branch_phase_count * 2)::2]
+            )
+
+            branch_vector_index += 1
+            line_index = opendssdirect.Lines.Next()
+
+        # Obtain transformer branch power vectors.
+        transformer_index = opendssdirect.Transformers.First()
+        while transformer_index > 0:
+            branch_power = np.array(opendssdirect.CktElement.Powers())
+            branch_phase_count = opendssdirect.CktElement.NumPhases()
+            skip_phase = 2 if 0 in opendssdirect.CktElement.NodeOrder() else 0  # Ignore ground nodes.
+            branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
+                branch_power[0:(branch_phase_count * 2):2]
+                + 1.0j * branch_power[1:(branch_phase_count * 2):2]
+            )
+            branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
+                branch_power[0 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
+                + 1.0j * branch_power[1 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
+            )
+
+            branch_vector_index += 1
+            transformer_index = opendssdirect.Transformers.Next()
+
+        # Reshape branch power vectors to appropriate size and remove entries for nonexistent phases.
+        # TODO: Sort vector by branch name if not in order.
+        branch_power_vector_1 = branch_power_vector_1.flatten()
+        branch_power_vector_2 = branch_power_vector_2.flatten()
+        branch_power_vector_1 = np.transpose([branch_power_vector_1[~np.isnan(branch_power_vector_1)]])
+        branch_power_vector_2 = np.transpose([branch_power_vector_2[~np.isnan(branch_power_vector_2)]])
+
+        return (
+            branch_power_vector_1,
+            branch_power_vector_2
+        )
+
+    @staticmethod
+    def get_loss():
+        """Get total loss by solving OpenDSS model.
+
+        - OpenDSS model must be readily set up, with the desired power being set for all DERs.
+        """
+
+        # Solve OpenDSS model.
+        opendssdirect.run_command("solve")
+
+        # Obtain loss.
+        loss = opendssdirect.Circuit.Losses()[0] + 1.0j * opendssdirect.Circuit.Losses()[1]
 
         return loss

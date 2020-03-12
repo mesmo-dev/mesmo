@@ -16,206 +16,6 @@ import fledge.utils
 logger = fledge.config.get_logger(__name__)
 
 
-@multimethod
-def get_voltage_fixed_point(
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-    **kwargs
-):
-    """
-    Get nodal voltage vector by solving with the fixed point algorithm.
-
-    - Obtains nodal power vectors assuming nominal power conditions from an
-      `electric_grid_model` object.
-    """
-
-    # Obtain nodal power vectors assuming nominal power conditions.
-    node_power_vector_wye = (
-        np.transpose([
-            electric_grid_model.der_incidence_wye_matrix
-            @ electric_grid_model.der_power_vector_nominal
-        ])
-    )
-    node_power_vector_delta = (
-        np.transpose([
-            electric_grid_model.der_incidence_delta_matrix
-            @ electric_grid_model.der_power_vector_nominal
-        ])
-    )
-
-    # Get fixed point solution.
-    node_voltage_vector_solution = get_voltage_fixed_point(
-        electric_grid_model,
-        node_power_vector_wye,
-        node_power_vector_delta,
-        **kwargs
-    )
-    return node_voltage_vector_solution
-
-
-@multimethod
-def get_voltage_fixed_point(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-        node_power_vector_wye: np.ndarray,
-        node_power_vector_delta: np.ndarray,
-        **kwargs
-):
-    """
-    Get nodal voltage vector by solving with the fixed point algorithm.
-
-    - Takes nodal wye-power, delta-power vectors as inputs.
-    - Obtains the nodal admittance, transformation matrices and
-      initial nodal wye-power, delta-power and voltage vectors as well as
-      nodal no load voltage vector without source nodes from an
-      `electric_grid_model` object.
-    - Assumes no load conditions for initial nodal power and voltage vectors.
-    """
-
-    # Obtain no-source variables for fixed point equation.
-    node_admittance_matrix_no_source = (
-        electric_grid_model.node_admittance_matrix[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-        )]
-    )
-    node_transformation_matrix_no_source = (
-        electric_grid_model.node_transformation_matrix[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-        )]
-    )
-    node_power_vector_wye_no_source = (
-        node_power_vector_wye[
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-        ]
-    )
-    node_power_vector_delta_no_source = (
-        node_power_vector_delta[
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-        ]
-    )
-    node_voltage_vector_no_load_no_source = (
-        electric_grid_model.node_voltage_vector_no_load[
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-        ]
-    )
-
-    # Define initial nodal power and voltage vectors as no load conditions.
-    node_power_vector_wye_initial_no_source = np.zeros(node_power_vector_wye_no_source.shape, dtype=complex)
-    node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
-    node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
-
-    # Get fixed point solution.
-    node_voltage_vector_solution = get_voltage_fixed_point(
-        node_admittance_matrix_no_source,
-        node_transformation_matrix_no_source,
-        node_power_vector_wye_no_source,
-        node_power_vector_delta_no_source,
-        node_power_vector_wye_initial_no_source,
-        node_power_vector_delta_initial_no_source,
-        node_voltage_vector_no_load_no_source,
-        node_voltage_vector_initial_no_source,
-        **kwargs
-    )
-
-    # Get full voltage vector by concatenating source and calculated voltage.
-    node_voltage_vector_solution = (
-        np.vstack([
-            electric_grid_model.node_voltage_vector_no_load[
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-            ],
-            node_voltage_vector_solution
-        ])
-    )
-    return node_voltage_vector_solution
-
-
-@multimethod
-def get_voltage_fixed_point(
-        node_admittance_matrix_no_source: scipy.sparse.spmatrix,
-        node_transformation_matrix_no_source: scipy.sparse.spmatrix,
-        node_power_vector_wye_no_source: np.ndarray,
-        node_power_vector_delta_no_source: np.ndarray,
-        node_power_vector_wye_initial_no_source: np.ndarray,
-        node_power_vector_delta_initial_no_source: np.ndarray,
-        node_voltage_vector_no_load_no_source: np.ndarray,
-        node_voltage_vector_initial_no_source: np.ndarray,
-        voltage_iteration_limit=100,
-        voltage_tolerance=1e-2
-):
-    """Get nodal voltage vector by solving with the fixed point algorithm.
-
-    - Takes the nodal admittance, transformation matrices and
-      nodal wye-power, delta-power, voltage vectors without source nodes, i.e.,
-      source nodes must be removed from the arrays before passing to this function.
-    - Initial nodal wye-power, delta-power, voltage vectors must be a valid
-      solution to te fixed-point equation, e.g., a previous solution from a past
-      operation point.
-    - Fixed point equation according to: <https://arxiv.org/pdf/1702.03310.pdf>
-    """
-
-    # Instantiate fixed point iteration variables.
-    voltage_iteration = 1
-    voltage_change = np.inf
-
-    while (
-            (voltage_iteration < voltage_iteration_limit)
-            & (voltage_change > voltage_tolerance)
-    ):
-        # Calculate fixed point equation.
-        node_voltage_vector_solution_no_source = (
-            node_voltage_vector_no_load_no_source
-            + np.transpose([
-                scipy.sparse.linalg.spsolve(
-                    node_admittance_matrix_no_source,
-                    (
-                        (
-                            (
-                                np.conj(node_voltage_vector_initial_no_source) ** -1
-                            )
-                            * np.conj(node_power_vector_wye_no_source)
-                        )
-                        + (
-                            np.transpose(node_transformation_matrix_no_source)
-                            @ (
-                                (
-                                    (
-                                        node_transformation_matrix_no_source
-                                        @ np.conj(node_voltage_vector_initial_no_source)
-                                    ) ** -1
-                                )
-                                * np.conj(node_power_vector_delta_no_source)
-                            )
-                        )
-                    )
-                )
-            ])
-        )
-
-        # Calculate voltage change from previous iteration.
-        voltage_change = (
-            np.max(abs(
-                node_voltage_vector_solution_no_source
-                - node_voltage_vector_initial_no_source
-            ))
-        )
-
-        # Set voltage solution as initial voltage for next iteration.
-        node_voltage_vector_initial_no_source = (
-            node_voltage_vector_solution_no_source
-        )
-
-        # Increment voltage iteration counter.
-        voltage_iteration += 1
-
-    if voltage_iteration == voltage_iteration_limit:
-        # Reaching the iteration limit is considered undesired and therefore triggers a warning.
-        logger.warning(
-            f"Fixed point voltage solution algorithm reached maximum limit of {voltage_iteration_limit} iterations."
-        )
-
-    return node_voltage_vector_solution_no_source
-
-
 def get_voltage_opendss():
     """Get nodal voltage vector by solving OpenDSS model.
 
@@ -243,86 +43,6 @@ def get_voltage_opendss():
     )
 
     return node_voltage_vector_solution
-
-
-@multimethod
-def get_branch_power_fixed_point(
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-    node_voltage_vector: np.ndarray
-):
-    """Get branch power vectors by calculating power flow with given nodal voltage.
-
-    - Obtains the needed matrices from an `electric_grid_model` object.
-    """
-
-    # Obtain branch admittance and incidence matrices.
-    branch_admittance_1_matrix = (
-        electric_grid_model.branch_admittance_1_matrix
-    )
-    branch_admittance_2_matrix = (
-        electric_grid_model.branch_admittance_2_matrix
-    )
-    branch_incidence_1_matrix = (
-        electric_grid_model.branch_incidence_1_matrix
-    )
-    branch_incidence_2_matrix = (
-        electric_grid_model.branch_incidence_2_matrix
-    )
-
-    # Calculate branch power vectors.
-    return get_branch_power_fixed_point(
-        branch_admittance_1_matrix,
-        branch_admittance_2_matrix,
-        branch_incidence_1_matrix,
-        branch_incidence_2_matrix,
-        node_voltage_vector
-    )
-
-
-@multimethod
-def get_branch_power_fixed_point(
-    branch_admittance_1_matrix: scipy.sparse.spmatrix,
-    branch_admittance_2_matrix: scipy.sparse.spmatrix,
-    branch_incidence_1_matrix: scipy.sparse.spmatrix,
-    branch_incidence_2_matrix: scipy.sparse.spmatrix,
-    node_voltage_vector: np.ndarray
-):
-    """Get branch power vectors by calculating power flow with given nodal voltage.
-
-    - Returns two branch power vectors, where `branch_power_vector_1` represents the
-      "from"-direction and `branch_power_vector_2` represents the "to"-direction.
-    - Nodal voltage vector is assumed to be obtained from fixed-point solution,
-      therefore this function is associated with the fixed-point solver.
-    - This function directly takes branch admittance and incidence matrices as
-      inputs, which can be obtained from an `electric_grid_model` object.
-    """
-
-    # Calculate branch power vectors.
-    branch_power_vector_1 = (
-        (
-            branch_incidence_1_matrix
-            @ node_voltage_vector
-        )
-        * np.conj(
-            branch_admittance_1_matrix
-            @ node_voltage_vector
-        )
-    )
-    branch_power_vector_2 = (
-        (
-            branch_incidence_2_matrix
-            @ node_voltage_vector
-        )
-        * np.conj(
-            branch_admittance_2_matrix
-            @ node_voltage_vector
-        )
-    )
-
-    return (
-        branch_power_vector_1,
-        branch_power_vector_2
-    )
 
 
 def get_branch_power_opendss():
@@ -393,59 +113,10 @@ def get_branch_power_opendss():
     )
 
 
-@multimethod
-def get_loss_fixed_point(
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-    node_voltage_vector: np.ndarray
-):
-    """
-    Get total electric losses with given nodal voltage.
-
-    - Obtains the nodal admittance matrix from an `electric_grid_model` object.
-    """
-
-    # Obtain total losses with admittance matrix from electric grid model.
-    return (
-        get_loss_fixed_point(
-            electric_grid_model.node_admittance_matrix,
-            node_voltage_vector
-        )
-    )
-
-
-@multimethod
-def get_loss_fixed_point(
-    node_admittance_matrix: scipy.sparse.spmatrix,
-    node_voltage_vector: np.ndarray
-):
-    """
-    Get total electric losses with given nodal voltage.
-
-    - Nodal voltage vector is assumed to be obtained from fixed-point solution,
-      therefore this function is associated with the fixed-point solver.
-    - This function directly takes the nodal admittance matrix as
-      input, which can be obtained from an `electric_grid_model` object.
-    """
-
-    # Calculate total losses.
-    # TODO: Validate loss solution.
-    loss = (
-        np.conj(
-            np.transpose(node_voltage_vector)
-            @ (
-                node_admittance_matrix
-                @ node_voltage_vector
-            )
-        )
-    )
-
-    return loss
-
-
 def get_loss_opendss():
     """Get total loss by solving OpenDSS model.
 
-    - OpenDSS model must be readily set up, with the desired power being set for all ders.
+    - OpenDSS model must be readily set up, with the desired power being set for all DERs.
     """
 
     # Solve OpenDSS model.
@@ -475,7 +146,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     @multimethod
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            **kwargs
     ):
         """Instantiate fixed point power flow solution object for given `scenario_name`
         assuming nominal power conditions.
@@ -484,12 +156,16 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Obtain `electric_grid_model`.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModel(scenario_name)
 
-        self.__init__(electric_grid_model)
+        self.__init__(
+            electric_grid_model,
+            **kwargs
+        )
 
     @multimethod
     def __init__(
             self,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModel
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+            **kwargs
     ):
         """Instantiate fixed point power flow solution object for given `electric_grid_model`
         assuming nominal power conditions.
@@ -500,14 +176,16 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         self.__init__(
             electric_grid_model,
-            der_power_vector
+            der_power_vector,
+            **kwargs
         )
 
     @multimethod
     def __init__(
             self,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
-            der_power_vector: np.ndarray
+            der_power_vector: np.ndarray,
+            **kwargs
     ):
         """Instantiate fixed point power flow solution object for given `electric_grid_model` and `der_power_vector`.
         """
@@ -531,10 +209,10 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # Obtain voltage solution.
         self.node_voltage_vector = (
-            fledge.power_flow_solvers.get_voltage_fixed_point(
+            self.get_voltage(
                 electric_grid_model,
-                self.node_power_vector_wye,
-                self.node_power_vector_delta
+                self.der_power_vector,
+                **kwargs
             )
         )
 
@@ -543,7 +221,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             self.branch_power_vector_1,
             self.branch_power_vector_2
         ) = (
-            fledge.power_flow_solvers.get_branch_power_fixed_point(
+            self.get_branch_power(
                 electric_grid_model,
                 self.node_voltage_vector
             )
@@ -551,8 +229,216 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # Obtain loss solution.
         self.loss = (
-            fledge.power_flow_solvers.get_loss_fixed_point(
+            self.get_loss(
                 electric_grid_model,
                 self.node_voltage_vector
             )
         )
+
+    @staticmethod
+    def get_voltage(
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        der_power_vector: np.ndarray,
+        voltage_iteration_limit=100,
+        voltage_tolerance=1e-2
+    ):
+        """Get nodal voltage vector by solving with the fixed point algorithm.
+
+        - Initial DER power vector / node voltage vector must be a valid
+          solution to te fixed-point equation, e.g., a previous solution from a past
+          operation point.
+        - Fixed point equation according to: <https://arxiv.org/pdf/1702.03310.pdf>
+        """
+
+        # Obtain no-source variables for fixed point equation.
+        node_admittance_matrix_no_source = (
+            electric_grid_model.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            )]
+        )
+        node_transformation_matrix_no_source = (
+            electric_grid_model.node_transformation_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            )]
+        )
+        der_incidence_wye_matrix_no_source = (
+            electric_grid_model.der_incidence_wye_matrix[
+                np.ix_(
+                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                    range(len(electric_grid_model.ders))
+                )
+            ]
+        )
+        der_incidence_delta_matrix_no_source = (
+            electric_grid_model.der_incidence_delta_matrix[
+                np.ix_(
+                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                    range(len(electric_grid_model.ders))
+                )
+            ]
+        )
+
+        node_power_vector_wye_no_source = (
+            der_incidence_wye_matrix_no_source
+            @ np.transpose([der_power_vector.ravel()])
+        )
+        node_power_vector_delta_no_source = (
+            der_incidence_delta_matrix_no_source
+            @ np.transpose([der_power_vector.ravel()])
+        )
+        node_voltage_vector_no_load_no_source = (
+            electric_grid_model.node_voltage_vector_no_load[
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            ]
+        )
+
+        # Obtain initial nodal power and voltage vectors, assuming no power conditions.
+        node_power_vector_wye_initial_no_source = np.zeros(node_power_vector_wye_no_source.shape, dtype=complex)
+        node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
+        node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
+
+        # Instantiate fixed point iteration variables.
+        voltage_iteration = 1
+        voltage_change = np.inf
+
+        while (
+                (voltage_iteration < voltage_iteration_limit)
+                & (voltage_change > voltage_tolerance)
+        ):
+            # Calculate fixed point equation.
+            node_voltage_vector_solution_no_source = (
+                node_voltage_vector_no_load_no_source
+                + np.transpose([
+                    scipy.sparse.linalg.spsolve(
+                        node_admittance_matrix_no_source,
+                        (
+                            (
+                                (
+                                    np.conj(node_voltage_vector_initial_no_source) ** -1
+                                )
+                                * np.conj(node_power_vector_wye_no_source)
+                            )
+                            + (
+                                np.transpose(node_transformation_matrix_no_source)
+                                @ (
+                                    (
+                                        (
+                                            node_transformation_matrix_no_source
+                                            @ np.conj(node_voltage_vector_initial_no_source)
+                                        ) ** -1
+                                    )
+                                    * np.conj(node_power_vector_delta_no_source)
+                                )
+                            )
+                        )
+                    )
+                ])
+            )
+
+            # Calculate voltage change from previous iteration.
+            voltage_change = (
+                np.max(abs(
+                    node_voltage_vector_solution_no_source
+                    - node_voltage_vector_initial_no_source
+                ))
+            )
+
+            # Set voltage solution as initial voltage for next iteration.
+            node_voltage_vector_initial_no_source = (
+                node_voltage_vector_solution_no_source
+            )
+
+            # Increment voltage iteration counter.
+            voltage_iteration += 1
+
+        if voltage_iteration >= voltage_iteration_limit:
+            # Reaching the iteration limit is considered undesired and therefore triggers a warning.
+            logger.warning(
+                f"Fixed point voltage solution algorithm reached maximum limit of {voltage_iteration_limit} iterations."
+            )
+
+        # Get full voltage vector by concatenating source and calculated voltage.
+        node_voltage_vector = (
+            np.vstack([
+                electric_grid_model.node_voltage_vector_no_load[
+                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+                ],
+                node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_solution_no_source`.
+            ])
+        )
+        return node_voltage_vector
+
+    @staticmethod
+    def get_branch_power(
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        node_voltage_vector: np.ndarray
+    ):
+        """Get branch power vectors by calculating power flow with given nodal voltage.
+
+        - Returns two branch power vectors, where `branch_power_vector_1` represents the
+          "from"-direction and `branch_power_vector_2` represents the "to"-direction.
+        """
+
+        # Obtain branch admittance and incidence matrices.
+        branch_admittance_1_matrix = (
+            electric_grid_model.branch_admittance_1_matrix
+        )
+        branch_admittance_2_matrix = (
+            electric_grid_model.branch_admittance_2_matrix
+        )
+        branch_incidence_1_matrix = (
+            electric_grid_model.branch_incidence_1_matrix
+        )
+        branch_incidence_2_matrix = (
+            electric_grid_model.branch_incidence_2_matrix
+        )
+
+        # Calculate branch power vectors.
+        branch_power_vector_1 = (
+            (
+                branch_incidence_1_matrix
+                @ node_voltage_vector
+            )
+            * np.conj(
+                branch_admittance_1_matrix
+                @ node_voltage_vector
+            )
+        )
+        branch_power_vector_2 = (
+            (
+                branch_incidence_2_matrix
+                @ node_voltage_vector
+            )
+            * np.conj(
+                branch_admittance_2_matrix
+                @ node_voltage_vector
+            )
+        )
+
+        return (
+            branch_power_vector_1,
+            branch_power_vector_2
+        )
+
+    @staticmethod
+    def get_loss(
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModel,
+        node_voltage_vector: np.ndarray
+    ):
+        """Get total electric losses with given nodal voltage."""
+
+        # Calculate total losses.
+        # TODO: Validate loss solution.
+        loss = (
+            np.conj(
+                np.transpose(node_voltage_vector)
+                @ (
+                    electric_grid_model.node_admittance_matrix
+                    @ node_voltage_vector
+                )
+            )
+        )
+
+        return loss

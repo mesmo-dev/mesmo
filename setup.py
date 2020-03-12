@@ -7,7 +7,7 @@ setuptools.setup(
     version='0.3.0',
     py_modules=setuptools.find_packages(),
     install_requires=[
-        'hvplot',
+        # 'hvplot',  # TODO: Currently causes error on Github Actions.
         'matplotlib',
         'multimethod',
         'natsort',

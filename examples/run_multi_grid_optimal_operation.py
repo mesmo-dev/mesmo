@@ -11,9 +11,7 @@ import cobmo.database_interface
 import fledge.config
 import fledge.database_interface
 import fledge.der_models
-import fledge.linear_electric_grid_models
 import fledge.electric_grid_models
-import fledge.power_flow_solvers
 import fledge.thermal_grid_models
 
 
@@ -45,9 +43,9 @@ def main():
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-    power_flow_solution = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model = (
-        fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
+        fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
             power_flow_solution
         )

@@ -7,9 +7,7 @@ import pyomo.environ as pyo
 
 import fledge.config
 import fledge.database_interface
-import fledge.linear_electric_grid_models
 import fledge.electric_grid_models
-import fledge.power_flow_solvers
 
 
 def main():
@@ -36,7 +34,7 @@ def main():
     )
     der_power_vector_reference_candidate = electric_grid_model.der_power_vector_nominal
     power_flow_solution_candidate = (
-        fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
+        fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
             electric_grid_model,
             der_power_vector_reference_candidate
         )
@@ -78,7 +76,7 @@ def main():
 
             # Obtain new
             linear_electric_grid_model = (
-                fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
+                fledge.electric_grid_models.LinearElectricGridModelGlobal(
                     electric_grid_model,
                     power_flow_solution
                 )
@@ -269,7 +267,7 @@ def main():
                 + 1.0j * der_reactive_power_vector_change.ravel()
             )
             power_flow_solution_candidate = (
-                fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
+                fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
                     electric_grid_model,
                     der_power_vector_reference_candidate
                 )

@@ -7,9 +7,7 @@ import pandas as pd
 
 import fledge.config
 import fledge.database_interface
-import fledge.linear_electric_grid_models
 import fledge.electric_grid_models
-import fledge.power_flow_solvers
 
 
 def main():
@@ -34,11 +32,11 @@ def main():
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
 
     # Obtain power flow solution for nominal power conditions.
-    power_flow_solution_initial = fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(electric_grid_model)
+    power_flow_solution_initial = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
 
     # Obtain linear electric grid model for nominal power conditions.
     linear_electric_grid_model = (
-        fledge.linear_electric_grid_models.LinearElectricGridModelGlobal(
+        fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
             power_flow_solution_initial
         )
@@ -132,7 +130,7 @@ def main():
 
         # Obtain fixed-point power flow solution depending on multiplier.
         power_flow_solution = (
-            fledge.power_flow_solvers.PowerFlowSolutionFixedPoint(
+            fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
                 electric_grid_model,
                 power_multiplier * electric_grid_model.der_power_vector_nominal
             )

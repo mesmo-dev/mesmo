@@ -26,7 +26,7 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for opti
 
 ## Work in Progress
 
-Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/TUMCREATE-ESTL/FLEDGE.jl/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
+Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/TUMCREATE-ESTL/fledge/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 
 ## Documentation
 

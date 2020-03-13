@@ -1573,7 +1573,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         # Obtain `electric_grid_model`.
         electric_grid_model = ElectricGridModelOpenDSS(scenario_name)
 
-        super().__init__(
+        self.__init__(
             electric_grid_model,
             **kwargs
         )
@@ -1605,6 +1605,19 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         # Store DER power vector.
         self.der_power_vector = der_power_vector
 
+        # Set DER power vector in OpenDSS model.
+        for der_index, der_name in enumerate(electric_grid_model.der_names):
+            # TODO: For OpenDSS, all DERs are assumed to be loads.
+            opendss_command_string = (
+                f"load.{der_name}.kw = {- np.real(self.der_power_vector.ravel()[der_index]) / 1000.0}"
+                + f"\nload.{der_name}.kvar = {- np.imag(self.der_power_vector.ravel()[der_index]) / 1000.0}"
+            )
+            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            opendssdirect.run_command(opendss_command_string)
+
+        # Solve OpenDSS model.
+        opendssdirect.run_command("solve")
+
         # Obtain voltage solution.
         self.node_voltage_vector = (
             self.get_voltage()
@@ -1629,9 +1642,6 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         - OpenDSS model must be readily set up, with the desired power being set for all DERs.
         """
-
-        # Solve OpenDSS model.
-        opendssdirect.run_command("solve")
 
         # Extract nodal voltage vector.
         # - Voltages are sorted by node names in the fashion as nodes are sorted in

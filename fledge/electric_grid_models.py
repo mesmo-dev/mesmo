@@ -18,32 +18,11 @@ logger = fledge.config.get_logger(__name__)
 
 
 class ElectricGridModel(object):
-    """Electric grid model object."""
+    """Electric grid model object.
 
-    der_power_vector_nominal: np.ndarray
-
-
-class ElectricGridModelDefault(ElectricGridModel):
-    """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
-    node types / branch types, the nodal admittance / transformation matrices, branch admittance /
-    incidence matrices, DER incidence matrices and no load voltage vector as well as nominal power vector.
-
-    :syntax:
-        - ``ElectricGridModelDefault(electric_grid_data)``: Instantiate electric grid model for given
-          `electric_grid_data`.
-        - ``ElectricGridModelDefault(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
-          The required `electric_grid_data` is obtained from the database.
-
-    Arguments:
-        scenario_name (str): FLEDGE scenario name.
-        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
-
-    Keyword Arguments:
-        voltage_no_load_method (str): Choices: `by_definition`, `by_calculation`. Default: `by_definition`.
-            Defines the construction method for the no load voltage vector.
-            If `by_definition`, the nodal voltage definition in the database is taken.
-            If `by_calculation`, the no load voltage is calculated from the source node voltage
-            and the nodal admittance matrix.
+    Note:
+        This abstract class only defines the expected variables of linear electric grid model objects,
+        but does not implement any functionality.
 
     Attributes:
         phases (pd.Index): Index set of the phases.
@@ -60,16 +39,6 @@ class ElectricGridModelDefault(ElectricGridModel):
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
-        node_admittance_matrix (scipy.sparse.spmatrix): Nodal admittance matrix.
-        node_transformation_matrix (scipy.sparse.spmatrix): Nodal transformation matrix.
-        branch_admittance_1_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'from' direction.
-        branch_admittance_2_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'to' direction.
-        branch_incidence_1_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'from' direction.
-        branch_incidence_2_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'to' direction.
-        der_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' DERs.
-        der_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' DERs.
-        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no load conditions.
-        der_power_vector_nominal (np.ndarray): Load power vector at nominal power conditions.
     """
 
     phases: pd.Index
@@ -84,34 +53,11 @@ class ElectricGridModelDefault(ElectricGridModel):
     nodes: pd.Index
     branches: pd.Index
     ders: pd.Index
-    node_admittance_matrix: scipy.sparse.spmatrix
-    node_transformation_matrix: scipy.sparse.spmatrix
-    branch_admittance_1_matrix: scipy.sparse.spmatrix
-    branch_admittance_2_matrix: scipy.sparse.spmatrix
-    branch_incidence_1_matrix: scipy.sparse.spmatrix
-    branch_incidence_2_matrix: scipy.sparse.spmatrix
-    der_incidence_wye_matrix: scipy.sparse.spmatrix
-    der_incidence_delta_matrix: scipy.sparse.spmatrix
-    node_voltage_vector_no_load: np.ndarray
+    der_power_vector_nominal: np.ndarray
 
-    @multimethod
     def __init__(
             self,
-            scenario_name: str,
-            **kwargs
-    ):
-
-        # Obtain electric grid data.
-        electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
-
-        # Instantiate electric grid model object.
-        self.__init__(electric_grid_data, **kwargs)
-
-    @multimethod
-    def __init__(
-            self,
-            electric_grid_data: fledge.database_interface.ElectricGridData,
-            voltage_no_load_method='by_definition'
+            electric_grid_data: fledge.database_interface.ElectricGridData
     ):
 
         # Obtain transformer data for first winding for generating index sets.
@@ -292,6 +238,89 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Obtain index set for DERs.
         self.ders = pd.MultiIndex.from_frame(electric_grid_data.electric_grid_ders[['der_type', 'der_name']])
+
+
+class ElectricGridModelDefault(ElectricGridModel):
+    """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
+    node types / branch types, the nodal admittance / transformation matrices, branch admittance /
+    incidence matrices, DER incidence matrices and no load voltage vector as well as nominal power vector.
+
+    :syntax:
+        - ``ElectricGridModelDefault(electric_grid_data)``: Instantiate electric grid model for given
+          `electric_grid_data`.
+        - ``ElectricGridModelDefault(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
+          The required `electric_grid_data` is obtained from the database.
+
+    Arguments:
+        scenario_name (str): FLEDGE scenario name.
+        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+
+    Keyword Arguments:
+        voltage_no_load_method (str): Choices: `by_definition`, `by_calculation`. Default: `by_definition`.
+            Defines the construction method for the no load voltage vector.
+            If `by_definition`, the nodal voltage definition in the database is taken.
+            If `by_calculation`, the no load voltage is calculated from the source node voltage
+            and the nodal admittance matrix.
+
+    Attributes:
+        phases (pd.Index): Index set of the phases.
+        node_names (pd.Index): Index set of the node names.
+        node_types (pd.Index): Index set of the node types.
+        line_names (pd.Index): Index set of the line names.
+        transformer_names (pd.Index): Index set of the transformer names.
+        branch_names (pd.Index): Index set of the branch names, i.e., all line names and transformer names.
+        branch_types (pd.Index): Index set of the branch types.
+        der_names (pd.Index): Index set of the DER names.
+        der_types (pd.Index): Index set of the DER types.
+        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to the dimension of the branch admittance matrices.
+        nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
+            corresponding to the dimension of the node admittance matrices.
+        ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
+        node_admittance_matrix (scipy.sparse.spmatrix): Nodal admittance matrix.
+        node_transformation_matrix (scipy.sparse.spmatrix): Nodal transformation matrix.
+        branch_admittance_1_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'from' direction.
+        branch_admittance_2_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'to' direction.
+        branch_incidence_1_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'from' direction.
+        branch_incidence_2_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'to' direction.
+        der_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' DERs.
+        der_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' DERs.
+        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no load conditions.
+        der_power_vector_nominal (np.ndarray): Load power vector at nominal power conditions.
+    """
+
+    node_admittance_matrix: scipy.sparse.spmatrix
+    node_transformation_matrix: scipy.sparse.spmatrix
+    branch_admittance_1_matrix: scipy.sparse.spmatrix
+    branch_admittance_2_matrix: scipy.sparse.spmatrix
+    branch_incidence_1_matrix: scipy.sparse.spmatrix
+    branch_incidence_2_matrix: scipy.sparse.spmatrix
+    der_incidence_wye_matrix: scipy.sparse.spmatrix
+    der_incidence_delta_matrix: scipy.sparse.spmatrix
+    node_voltage_vector_no_load: np.ndarray
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+            **kwargs
+    ):
+
+        # Obtain electric grid data.
+        electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+
+        # Instantiate electric grid model object.
+        self.__init__(electric_grid_data, **kwargs)
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_data: fledge.database_interface.ElectricGridData,
+            voltage_no_load_method='by_definition'
+    ):
+
+        # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
+        super().__init__(electric_grid_data)
 
         # Define sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrix entries.
@@ -894,6 +923,22 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
     Parameters:
         scenario_name (str): FLEDGE scenario name.
         electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+
+    Attributes:
+        phases (pd.Index): Index set of the phases.
+        node_names (pd.Index): Index set of the node names.
+        node_types (pd.Index): Index set of the node types.
+        line_names (pd.Index): Index set of the line names.
+        transformer_names (pd.Index): Index set of the transformer names.
+        branch_names (pd.Index): Index set of the branch names, i.e., all line names and transformer names.
+        branch_types (pd.Index): Index set of the branch types.
+        der_names (pd.Index): Index set of the DER names.
+        der_types (pd.Index): Index set of the DER types.
+        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to the dimension of the branch admittance matrices.
+        nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
+            corresponding to the dimension of the node admittance matrices.
+        ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
     """
 
     @multimethod
@@ -914,6 +959,11 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             self,
             electric_grid_data: fledge.database_interface.ElectricGridData
     ):
+
+        # TODO: Add reset method to ensure correct circuit model is set in OpenDSS when handling multiple models.
+
+        # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
+        super().__init__(electric_grid_data)
 
         # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
@@ -1140,7 +1190,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             logger.debug(f"opendss_command_string = {opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
-        # Define ders.
+        # Define DERs.
         # TODO: At the moment, all ders are modelled as loads in OpenDSS.
         for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
             # Obtain number of phases for the der.
@@ -1175,7 +1225,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                 + f" vmaxpu=1.4"
             )
 
-            # Create der in OpenDSS.
+            # Create DER in OpenDSS.
             logger.debug(f"opendss_command_string = {opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 

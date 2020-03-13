@@ -1686,15 +1686,15 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         # Obtain line branch power vectors.
         while line_index > 0:
-            branch_power = np.array(opendssdirect.CktElement.Powers())
+            branch_power_opendss = np.array(opendssdirect.CktElement.Powers()) * 1000.0
             branch_phase_count = opendssdirect.CktElement.NumPhases()
             branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
-                branch_power[0:(branch_phase_count * 2):2]
-                + 1.0j * branch_power[1:(branch_phase_count * 2):2]
+                branch_power_opendss[0:(branch_phase_count * 2):2]
+                + 1.0j * branch_power_opendss[1:(branch_phase_count * 2):2]
             )
             branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
-                branch_power[0 + (branch_phase_count * 2)::2]
-                + 1.0j * branch_power[1 + (branch_phase_count * 2)::2]
+                branch_power_opendss[0 + (branch_phase_count * 2)::2]
+                + 1.0j * branch_power_opendss[1 + (branch_phase_count * 2)::2]
             )
 
             branch_vector_index += 1
@@ -1703,16 +1703,16 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         # Obtain transformer branch power vectors.
         transformer_index = opendssdirect.Transformers.First()
         while transformer_index > 0:
-            branch_power = np.array(opendssdirect.CktElement.Powers())
+            branch_power_opendss = np.array(opendssdirect.CktElement.Powers()) * 1000.0
             branch_phase_count = opendssdirect.CktElement.NumPhases()
             skip_phase = 2 if 0 in opendssdirect.CktElement.NodeOrder() else 0  # Ignore ground nodes.
             branch_power_vector_1[branch_vector_index, :branch_phase_count] = (
-                branch_power[0:(branch_phase_count * 2):2]
-                + 1.0j * branch_power[1:(branch_phase_count * 2):2]
+                branch_power_opendss[0:(branch_phase_count * 2):2]
+                + 1.0j * branch_power_opendss[1:(branch_phase_count * 2):2]
             )
             branch_power_vector_2[branch_vector_index, :branch_phase_count] = (
-                branch_power[0 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
-                + 1.0j * branch_power[1 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
+                branch_power_opendss[0 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
+                + 1.0j * branch_power_opendss[1 + (branch_phase_count * 2) + skip_phase:-skip_phase:2]
             )
 
             branch_vector_index += 1

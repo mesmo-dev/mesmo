@@ -1,0 +1,3 @@
+[submodule "cobmo"]
+	path = cobmo
+	url = https://github.com/TUMCREATE-ESTL/cobmo

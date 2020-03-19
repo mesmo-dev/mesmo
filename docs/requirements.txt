@@ -1,0 +1,29 @@
+# Docs requirements.
+recommonmark
+sphinx
+sphinx_markdown_tables
+sphinx-rtd-theme
+
+# FLEDGE requirements.
+hvplot
+matplotlib
+multimethod
+natsort
+numpy
+OpenDSSDirect.py
+pandas
+parameterized
+pyomo
+scipy
+
+# CoBMo requirements.
+CoolProp==6.2.1
+hvplot
+multimethod
+numpy
+pandas
+parameterized
+pvlib
+pyomo
+scipy
+seaborn

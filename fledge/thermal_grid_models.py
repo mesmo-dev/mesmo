@@ -546,6 +546,92 @@ class LinearThermalGridModel(object):
             branch_flow_vector_maximum_dual
         )
 
+    def get_optimization_dlmps(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            price_timeseries: pd.DataFrame,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Obtain duals.
+        (
+            node_head_vector_minimum_dual,
+            branch_flow_vector_maximum_dual
+        ) = self.get_optimization_limits_duals(
+            optimization_problem,
+            timesteps
+        )
+
+        # Instantiate DLMP variables.
+        node_head_vector_minimum_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        branch_flow_vector_maximum_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        pump_power_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+
+        thermal_grid_energy_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        thermal_grid_head_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        thermal_grid_congestion_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        thermal_grid_pump_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+
+        # Obtain DLMPs.
+        for timestep in timesteps:
+            node_head_vector_minimum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_node_head_by_der_power.transpose()
+                    @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                / self.thermal_grid_model.cooling_plant_efficiency
+            )
+            branch_flow_vector_maximum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_flow_by_der_power.transpose()
+                    @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                / self.thermal_grid_model.cooling_plant_efficiency
+            )
+            pump_power_dlmp.loc[timestep, :] = (
+                -1.0
+                * self.sensitivity_pump_power_by_der_power.ravel()
+                * price_timeseries.at[timestep, 'price_value']
+            )
+
+            thermal_grid_energy_dlmp.loc[timestep, :] = (
+                price_timeseries.at[timestep, 'price_value']
+                / self.thermal_grid_model.cooling_plant_efficiency
+            )
+        thermal_grid_head_dlmp = (
+            node_head_vector_minimum_dlmp
+        )
+        thermal_grid_congestion_dlmp = (
+            branch_flow_vector_maximum_dlmp
+        )
+        thermal_grid_pump_dlmp = (
+            pump_power_dlmp
+        )
+
+        return (
+            node_head_vector_minimum_dlmp,
+            branch_flow_vector_maximum_dlmp,
+            pump_power_dlmp,
+            thermal_grid_energy_dlmp,
+            thermal_grid_head_dlmp,
+            thermal_grid_congestion_dlmp,
+            thermal_grid_pump_dlmp
+        )
+
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

@@ -266,63 +266,18 @@ def main():
         price_timeseries,
         scenario_data.timesteps
     )
-
-    node_head_vector_minimum_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    branch_flow_vector_maximum_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    pump_power_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-
-    thermal_grid_energy_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    thermal_grid_head_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    thermal_grid_congestion_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-    thermal_grid_pump_dlmp = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-    )
-
-    for timestep in scenario_data.timesteps:
-        node_head_vector_minimum_dlmp.loc[timestep, :] = (
-            (
-                linear_thermal_grid_model.sensitivity_node_head_by_der_power.transpose()
-                @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
-            ).ravel()
-            / thermal_grid_model.cooling_plant_efficiency
-        )
-        branch_flow_vector_maximum_dlmp.loc[timestep, :] = (
-            (
-                linear_thermal_grid_model.sensitivity_branch_flow_by_der_power.transpose()
-                @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
-            ).ravel()
-            / thermal_grid_model.cooling_plant_efficiency
-        )
-        pump_power_dlmp.loc[timestep, :] = (
-            -1.0
-            * linear_thermal_grid_model.sensitivity_pump_power_by_der_power.ravel()
-            * price_timeseries.at[timestep, 'price_value']
-        )
-
-        thermal_grid_energy_dlmp.loc[timestep, :] = (
-            price_timeseries.at[timestep, 'price_value']
-            / thermal_grid_model.cooling_plant_efficiency
-        )
-    thermal_grid_head_dlmp = (
-        node_head_vector_minimum_dlmp
-    )
-    thermal_grid_congestion_dlmp = (
-        branch_flow_vector_maximum_dlmp
-    )
-    thermal_grid_pump_dlmp = (
-        pump_power_dlmp
+    (
+        node_head_vector_minimum_dlmp,
+        branch_flow_vector_maximum_dlmp,
+        pump_power_dlmp,
+        thermal_grid_energy_dlmp,
+        thermal_grid_head_dlmp,
+        thermal_grid_congestion_dlmp,
+        thermal_grid_pump_dlmp
+    ) = linear_thermal_grid_model.get_optimization_dlmps(
+        optimization_problem,
+        price_timeseries,
+        scenario_data.timesteps
     )
 
     # Print DLMPs.

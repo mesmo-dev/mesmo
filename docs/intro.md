@@ -47,10 +47,6 @@ If you are running into errors when installing or running FLEDGE, this may be du
     Please also create an issue on Github if you run into problems with the normal installation procedure.
 ```
 
-### Optional steps
-
-
-
 ## Examples
 
 The `examples` directory contains run scripts which demonstrate possible usages of FLEDGE. You may also check the `test` directory for further examples.

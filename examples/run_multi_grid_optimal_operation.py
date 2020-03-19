@@ -120,42 +120,15 @@ def main():
     )
 
     # Thermal grid.
-
-    # Node head.
-    node_head_vector = (  # Define shorthand.
-        lambda node:
-        thermal_power_flow_solution.node_head_vector.ravel()[thermal_grid_model.nodes.get_loc(node)]
-    )
-    optimization_problem.node_head_vector_minimum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        thermal_grid_model.nodes.to_list(),
-        rule=lambda optimization_problem, timestep, *node: (
-            optimization_problem.node_head_vector[timestep, node]
-            # + node_head_vector(node)
-            >=
-            # TODO: Document modifications for Thermal Electric DLMP paper
-            # (0.1 if node == ('no_source', '15') else 1.5)
-            1.5
-            * node_head_vector(node)
-        )
-    )
-    # Branch flow.
-    branch_flow_vector = (  # Define shorthand.
-        lambda branch:
-        thermal_power_flow_solution.branch_flow_vector.ravel()[thermal_grid_model.branches.get_loc(branch)]
-    )
-    optimization_problem.branch_flow_vector_maximum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        thermal_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, timestep, branch: (  # This will not work if `branches` becomes MultiIndex.
-            optimization_problem.branch_flow_vector[timestep, branch]
-            # + branch_flow_vector(branch)
-            <=
-            # TODO: Document modifications for Thermal Electric DLMP paper
-            # (0.1 if branch == '4' else 1.5)
-            1.5
-            * branch_flow_vector(branch)
-        )
+    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
+    # node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
+    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    # branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
+    linear_thermal_grid_model.define_optimization_limits(
+        optimization_problem,
+        node_head_vector_minimum=node_head_vector_minimum,
+        branch_flow_vector_maximum=branch_flow_vector_maximum,
+        timesteps=scenario_data.timesteps
     )
 
     # Define electric grid objective.

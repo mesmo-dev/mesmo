@@ -435,6 +435,52 @@ class LinearThermalGridModel(object):
                 )
             )
 
+    def define_optimization_limits(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            node_head_vector_minimum: np.ndarray = None,
+            branch_flow_vector_maximum: np.ndarray = None,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Node head.
+        if node_head_vector_minimum is not None:
+            # node_head_vector = (  # Define shorthand.
+            #     lambda node:
+            #     self.thermal_power_flow_solution.node_head_vector.ravel()[
+            #         self.thermal_grid_model.nodes.get_loc(node)
+            #     ]
+            # )
+            optimization_problem.node_head_vector_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.thermal_grid_model.nodes.to_list(),
+                rule=lambda optimization_problem, timestep, *node: (
+                    optimization_problem.node_head_vector[timestep, node]
+                    # + node_head_vector(node)
+                    >=
+                    node_head_vector_minimum.ravel()[self.thermal_grid_model.nodes.get_loc(node)]
+                )
+            )
+
+        # Branch flow.
+        if branch_flow_vector_maximum is not None:
+            # branch_flow_vector = (  # Define shorthand.
+            #     lambda branch:
+            #     self.thermal_power_flow_solution.branch_flow_vector.ravel()[
+            #         self.thermal_grid_model.branches.get_loc(branch)
+            #     ]
+            # )
+            optimization_problem.branch_flow_vector_maximum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.thermal_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, branch: (  # Will not work if `branches` becomes MultiIndex.
+                    optimization_problem.branch_flow_vector[timestep, branch]
+                    # + branch_flow_vector(branch)
+                    <=
+                    branch_flow_vector_maximum.ravel()[self.thermal_grid_model.branches.get_loc(branch)]
+                )
+            )
+
     def define_optimization_objective(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

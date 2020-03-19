@@ -4,7 +4,7 @@ The software requirements and proposed software architecture for FLEDGE are disc
 
 For the original publication on this topic, please refer to:
 
-> Troitzsch, S., Hanif, S., Zhang, K., Trpovski, A., & Hamacher, T. (2019). Flexible Distribution Grid Demonstrator (FLEDGE): Requirements and Software Architecture. In IEEE PES General Meeting. Atlanta, GA, USA. (Preprint.) [[Researchgate]](https://www.researchgate.net/publication/328852562_Flexible_Distribution_Grid_Demonstrator_FLEDGE_Requirements_and_Software_Architecture)
+- Troitzsch, S., Hanif, S., Zhang, K., Trpovski, A., & Hamacher, T., **Flexible Distribution Grid Demonstrator (FLEDGE): Requirements and Software Architecture**, in IEEE PES General Meeting, Atlanta, GA, USA, 2019. [`doi: 10.1109/PESGM40551.2019.8973567`](https://doi.org/10.1109/PESGM40551.2019.8973567).
 
 ## Preliminaries
 
@@ -63,7 +63,7 @@ A RDBMS is chosen as the internal storage solution, because it enables more effi
 
 ![](./assets/architecture_2.png)
 
-The solution engine, i.e. all modules within `src/core/`, is the core subsystem of FLEDGE and is concerned with implementing the mathematical routines for solving planning and operation problems as above. At the top level, the classes for planning and operation problems are distinguished, as both problem types yield a different organization of the optimization problem. These classes construct the respective problem based on subordinate classes for the electric grid model and DER models as well as optimization solvers and simulation solvers. The operation problem class further considers a class for aggregators to adequately model the separated concerns between the DSO and aggregators.
+The solution engine is the core subsystem of FLEDGE and is concerned with implementing the mathematical routines for solving planning and operation problems as above. At the top level, the classes for planning and operation problems are distinguished, as both problem types yield a different organization of the optimization problem. These classes construct the respective problem based on subordinate classes for the electric grid model and DER models as well as optimization solvers and simulation solvers. The operation problem class further considers a class for aggregators to adequately model the separated concerns between the DSO and aggregators.
 
 The electric grid model classes implement the methods for deriving the power flow approximations for the optimization problem. Similarly, DER model classes provide methods for deriving the mathematical models for renewable generation, EV charging, flexible loads, fixed loads and BESSs. DER models take the form of 1) time series models for non-controllable assets and 2) state space models in the case of flexible resources. In the operation problem, DER model instances are not created in the central problem, but rather within the aggregator subproblem.
 

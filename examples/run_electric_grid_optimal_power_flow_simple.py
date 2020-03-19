@@ -145,7 +145,18 @@ def main():
     loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
     # Obtain / print duals.
-    # TODO.
+    (
+        voltage_magnitude_vector_minimum_dual,
+        voltage_magnitude_vector_maximum_dual,
+        branch_power_vector_1_squared_maximum_dual,
+        branch_power_vector_2_squared_maximum_dual
+    ) = linear_electric_grid_model.get_optimization_limits_duals(
+        optimization_problem
+    )
+    print(f"voltage_magnitude_vector_minimum_dual = \n{voltage_magnitude_vector_minimum_dual.to_string()}")
+    print(f"voltage_magnitude_vector_maximum_dual = \n{voltage_magnitude_vector_maximum_dual.to_string()}")
+    print(f"branch_power_vector_1_squared_maximum_dual = \n{branch_power_vector_1_squared_maximum_dual.to_string()}")
+    print(f"branch_power_vector_2_squared_maximum_dual = \n{branch_power_vector_2_squared_maximum_dual.to_string()}")
 
 
 if __name__ == '__main__':

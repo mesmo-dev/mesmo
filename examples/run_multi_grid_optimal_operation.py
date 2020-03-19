@@ -224,18 +224,16 @@ def main():
     pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
 
     # Obtain duals.
-    voltage_magnitude_vector_minimum_dual = (
-        pd.DataFrame(columns=electric_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
+    (
+        voltage_magnitude_vector_minimum_dual,
+        voltage_magnitude_vector_maximum_dual,
+        branch_power_vector_1_squared_maximum_dual,
+        branch_power_vector_2_squared_maximum_dual
+    ) = linear_electric_grid_model.get_optimization_limits_duals(
+        optimization_problem,
+        scenario_data.timesteps
     )
-    voltage_magnitude_vector_maximum_dual = (
-        pd.DataFrame(columns=electric_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
-    )
-    branch_power_vector_1_squared_maximum_dual = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
-    )
-    branch_power_vector_2_squared_maximum_dual = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
-    )
+
     node_head_vector_minimum_dual = (
         pd.DataFrame(columns=thermal_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
     )
@@ -244,30 +242,6 @@ def main():
     )
 
     for timestep in scenario_data.timesteps:
-
-        for node_index, node in enumerate(electric_grid_model.nodes):
-            voltage_magnitude_vector_minimum_dual.at[timestep, node] = (
-                optimization_problem.dual[
-                    optimization_problem.voltage_magnitude_vector_minimum_constraint[timestep, node]
-                ]
-            )
-            voltage_magnitude_vector_maximum_dual.at[timestep, node] = (
-                optimization_problem.dual[
-                    optimization_problem.voltage_magnitude_vector_maximum_constraint[timestep, node]
-                ]
-            )
-
-        for branch_index, branch in enumerate(electric_grid_model.branches):
-            branch_power_vector_1_squared_maximum_dual.at[timestep, branch] = (
-                optimization_problem.dual[
-                    optimization_problem.branch_power_vector_1_squared_maximum_constraint[timestep, branch]
-                ]
-            )
-            branch_power_vector_2_squared_maximum_dual.at[timestep, branch] = (
-                optimization_problem.dual[
-                    optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
-                ]
-            )
 
         for node_index, node in enumerate(thermal_grid_model.nodes):
             node_head_vector_minimum_dual.at[timestep, node] = (

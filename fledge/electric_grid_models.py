@@ -2059,6 +2059,68 @@ class LinearElectricGridModel(object):
                 )
             )
 
+    def get_optimization_limits_duals(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Instantiate dual variables.
+        voltage_magnitude_vector_minimum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        voltage_magnitude_vector_maximum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        branch_power_vector_1_squared_maximum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
+        )
+        branch_power_vector_2_squared_maximum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
+        )
+
+        # Obtain duals.
+        for timestep in timesteps:
+
+            if optimization_problem.find_component('voltage_magnitude_vector_minimum_constraint') is not None:
+                for node_index, node in enumerate(self.electric_grid_model.nodes):
+                    voltage_magnitude_vector_minimum_dual.at[timestep, node] = (
+                        optimization_problem.dual[
+                            optimization_problem.voltage_magnitude_vector_minimum_constraint[timestep, node]
+                        ]
+                    )
+
+            if optimization_problem.find_component('voltage_magnitude_vector_maximum_constraint') is not None:
+                for node_index, node in enumerate(self.electric_grid_model.nodes):
+                    voltage_magnitude_vector_maximum_dual.at[timestep, node] = (
+                        optimization_problem.dual[
+                            optimization_problem.voltage_magnitude_vector_maximum_constraint[timestep, node]
+                        ]
+                    )
+
+            if optimization_problem.find_component('branch_power_vector_1_squared_maximum_constraint') is not None:
+                for branch_index, branch in enumerate(self.electric_grid_model.branches):
+                    branch_power_vector_1_squared_maximum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_power_vector_1_squared_maximum_constraint[timestep, branch]
+                        ]
+                    )
+
+            if optimization_problem.find_component('branch_power_vector_2_squared_maximum_constraint') is not None:
+                for branch_index, branch in enumerate(self.electric_grid_model.branches):
+                    branch_power_vector_2_squared_maximum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
+                        ]
+                    )
+
+        return (
+            voltage_magnitude_vector_minimum_dual,
+            voltage_magnitude_vector_maximum_dual,
+            branch_power_vector_1_squared_maximum_dual,
+            branch_power_vector_2_squared_maximum_dual
+        )
+
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

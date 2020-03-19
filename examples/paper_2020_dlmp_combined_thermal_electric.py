@@ -1,4 +1,6 @@
-"""Example script for setting up and solving a multi-grid optimal operation problem."""
+"""Run script for reproducing results of the Paper: 'Distribution Locational Marginal Pricing for Combined Thermal
+and Electric Grid Operation', available at: <https://doi.org/10.36227/techrxiv.11918712.v1>.
+"""
 
 import matplotlib.dates
 import matplotlib.pyplot as plt
@@ -19,10 +21,11 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
+    scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
     results_path = (
         os.path.join(
             fledge.config.results_path,
-            f'run_multi_grid_optimal_operation_{fledge.config.timestamp}'
+            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.config.timestamp}'
         )
     )
 
@@ -125,27 +128,21 @@ def main():
     # Thermal grid.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    # Modify limits for scenarios.
+    if scenario == 1:
+        pass
+    elif scenario == 2:
+        branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
+    elif scenario == 3:
+        node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
+    else:
+        ValueError(f"Invalid scenario: {scenario}")
     linear_thermal_grid_model.define_optimization_limits(
         optimization_problem,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum,
         timesteps=scenario_data.timesteps
     )
-
-    # Define electric grid objective.
-    # TODO: Not considering loss costs due to unreliable loss model.
-    # if optimization_problem.find_component('objective') is None:
-    #     optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-    # optimization_problem.objective.expr += (
-    #     sum(
-    #         price_timeseries.at[timestep, 'price_value']
-    #         * (
-    #             optimization_problem.loss_active_change[timestep]
-    #             + np.sum(np.real(power_flow_solution.loss))
-    #         )
-    #         for timestep in scenario_data.timesteps
-    #     )
-    # )
 
     # Define objective.
     linear_thermal_grid_model.define_optimization_objective(
@@ -292,6 +289,61 @@ def main():
     thermal_grid_head_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_head_dlmp.csv'))
     thermal_grid_congestion_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_congestion_dlmp.csv'))
     thermal_grid_pump_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_pump_dlmp.csv'))
+
+    # Plot thermal grid DLMPs.
+    thermal_grid_dlmp = (
+        pd.concat(
+            [
+                thermal_grid_energy_dlmp,
+                thermal_grid_pump_dlmp,
+                thermal_grid_head_dlmp,
+                thermal_grid_congestion_dlmp
+            ],
+            axis='columns',
+            keys=['energy', 'pump', 'head', 'congestion'],
+            names=['dlmp_type']
+        )
+    )
+    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    for der in thermal_grid_model.ders:
+        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
+        ax1.set_title(f'Flexible building "{der[1]}"')
+        ax1.stackplot(
+            scenario_data.timesteps,
+            thermal_grid_dlmp.loc[:, (slice(None), *der)].droplevel(['der_type', 'der_name'], axis='columns').T,
+            labels=['Energy', 'Pumping', 'Head', 'Congest.'],
+            colors=[colors[0], colors[1], colors[2], colors[3]]
+        )
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Price [S$/MWh]')
+        # ax1.set_ylim((0.0, 10.0))
+        ax2 = plt.twinx(ax1)
+        ax2.plot(
+            der_thermal_power_vector.loc[:, der].abs() / 1000000,
+            label='Thrm. pw.',
+            drawstyle='steps-post',
+            color='darkgrey',
+            linewidth=3
+        )
+        ax2.plot(
+            der_active_power_vector.loc[:, der].abs() / 1000000,
+            label='Active pw.',
+            drawstyle='steps-post',
+            color='black',
+            linewidth=1.5
+        )
+        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
+        ax2.set_xlabel('Time')
+        ax2.set_ylabel('Power [MW]')
+        ax2.set_ylim((0.0, 20.0))  # TODO: Document modifications for Thermal Electric DLMP paper
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
+        lax.axis("off")
+        plt.tight_layout()
+        plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
+        plt.close()
 
     # Print results path.
     print("Results are stored in: " + results_path)

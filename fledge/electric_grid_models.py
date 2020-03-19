@@ -1978,6 +1978,87 @@ class LinearElectricGridModel(object):
                 )
             )
 
+    def define_optimization_limits(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            voltage_magnitude_vector_minimum: np.ndarray = None,
+            voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_vector_squared_maximum: np.ndarray = None,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Voltage.
+        if (voltage_magnitude_vector_minimum is not None) or (voltage_magnitude_vector_maximum is not None):
+            voltage_magnitude_vector = (  # Define shorthand.
+                lambda node:
+                np.abs(
+                    self.power_flow_solution.node_voltage_vector.ravel()[
+                        self.electric_grid_model.nodes.get_loc(node)
+                    ]
+                )
+            )
+        if voltage_magnitude_vector_minimum is not None:
+            optimization_problem.voltage_magnitude_vector_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.nodes.to_list(),
+                rule=lambda optimization_problem, timestep, *node: (
+                    optimization_problem.voltage_magnitude_vector_change[timestep, node]
+                    + voltage_magnitude_vector(node)
+                    >=
+                    voltage_magnitude_vector_minimum.ravel()[self.electric_grid_model.nodes.get_loc(node)]
+                )
+            )
+        if voltage_magnitude_vector_maximum is not None:
+            optimization_problem.voltage_magnitude_vector_maximum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.nodes.to_list(),
+                rule=lambda optimization_problem, timestep, *node: (
+                    optimization_problem.voltage_magnitude_vector_change[timestep, node]
+                    + voltage_magnitude_vector(node)
+                    <=
+                    voltage_magnitude_vector_maximum.ravel()[self.electric_grid_model.nodes.get_loc(node)]
+                )
+            )
+
+        # Branch flows.
+        if branch_power_vector_squared_maximum is not None:
+            branch_power_vector_1_squared = (  # Define shorthand.
+                lambda branch:
+                np.abs(
+                    self.power_flow_solution.branch_power_vector_1.ravel()[
+                        self.electric_grid_model.branches.get_loc(branch)
+                    ] ** 2
+                )
+            )
+            optimization_problem.branch_power_vector_1_squared_maximum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, *branch: (
+                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
+                    + branch_power_vector_1_squared(branch)
+                    <=
+                    branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
+                )
+            )
+            branch_power_vector_2_squared = (  # Define shorthand.
+                lambda branch:
+                np.abs(
+                    self.power_flow_solution.branch_power_vector_2.ravel()[
+                        self.electric_grid_model.branches.get_loc(branch)
+                    ] ** 2
+                )
+            )
+            optimization_problem.branch_power_vector_2_squared_maximum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, *branch: (
+                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
+                    + branch_power_vector_2_squared(branch)
+                    <=
+                    branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
+                )
+            )
+
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

@@ -71,20 +71,11 @@ def main():
             / np.real(electric_grid_model.der_power_vector_nominal[der_index])
         )
 
-    # Define branch limit constraints.
-    # TODO: This is an arbitrary limit on the minimum branch flow, just to demonstrate the functionality.
-    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
-        lambda branch:
-        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-    )
-    optimization_problem.branch_limit_constraints = pyo.Constraint(
-        electric_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, *branch: (
-            optimization_problem.branch_power_vector_1_squared_change[0, branch]
-            + branch_power_vector_1_squared(branch)
-            >=
-            0.8 * branch_power_vector_1_squared(branch)
-        )
+    # Define voltage limit constraints.
+    linear_electric_grid_model.define_optimization_limits(
+        optimization_problem,
+        voltage_magnitude_vector_minimum=0.5 * np.abs(power_flow_solution.node_voltage_vector),
+        voltage_magnitude_vector_maximum=1.5 * np.abs(power_flow_solution.node_voltage_vector),
     )
 
     # Define objective.
@@ -154,14 +145,7 @@ def main():
     loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
     # Obtain / print duals.
-    branch_limit_duals = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=pd.Index([0], name='timestep'), dtype=np.float)
-    )
-    for branch_index, branch in enumerate(electric_grid_model.branches):
-        branch_limit_duals[branch] = (
-            optimization_problem.dual[optimization_problem.branch_limit_constraints[branch]]
-        )
-    print(f"branch_limit_duals = \n{branch_limit_duals.to_string()}")
+    # TODO.
 
 
 if __name__ == '__main__':

@@ -111,61 +111,12 @@ def main():
     # Define limit constraints.
 
     # Electric grid.
-
-    # Voltage.
-    voltage_magnitude_vector = (  # Define shorthand.
-        lambda node:
-        np.abs(power_flow_solution.node_voltage_vector.ravel()[electric_grid_model.nodes.get_loc(node)])
-    )
-    optimization_problem.voltage_magnitude_vector_minimum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.nodes.to_list(),
-        rule=lambda optimization_problem, timestep, *node: (
-            optimization_problem.voltage_magnitude_vector_change[timestep, node]
-            + voltage_magnitude_vector(node)
-            >=
-            0.5 * voltage_magnitude_vector(node)
-        )
-    )
-    optimization_problem.voltage_magnitude_vector_maximum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.nodes.to_list(),
-        rule=lambda optimization_problem, timestep, *node: (
-            optimization_problem.voltage_magnitude_vector_change[timestep, node]
-            + voltage_magnitude_vector(node)
-            <=
-            1.5 * voltage_magnitude_vector(node)
-        )
-    )
-
-    # Branch flows.
-    branch_power_vector_1_squared = (  # Define shorthand.
-        lambda branch:
-        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-    )
-    optimization_problem.branch_power_vector_1_squared_maximum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, timestep, *branch: (
-            optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
-            + branch_power_vector_1_squared(branch)
-            <=
-            1.5 * branch_power_vector_1_squared(branch)
-        )
-    )
-    branch_power_vector_2_squared = (  # Define shorthand.
-        lambda branch:
-        np.abs(power_flow_solution.branch_power_vector_2.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-    )
-    optimization_problem.branch_power_vector_2_squared_maximum_constraint = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, timestep, *branch: (
-            optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
-            + branch_power_vector_2_squared(branch)
-            <=
-            1.5 * branch_power_vector_2_squared(branch)
-        )
+    linear_electric_grid_model.define_optimization_limits(
+        optimization_problem,
+        voltage_magnitude_vector_minimum=0.5 * np.abs(power_flow_solution.node_voltage_vector),
+        voltage_magnitude_vector_maximum=1.5 * np.abs(power_flow_solution.node_voltage_vector),
+        branch_power_vector_squared_maximum=1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2),
+        timesteps=scenario_data.timesteps
     )
 
     # Thermal grid.
@@ -593,6 +544,9 @@ def main():
         plt.tight_layout()
         plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
         plt.close()
+
+    # Print results path.
+    print("Results are stored in: " + results_path)
 
 
 if __name__ == '__main__':

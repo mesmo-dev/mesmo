@@ -123,7 +123,7 @@ def main():
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     # node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
-    # branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
+    branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
     linear_thermal_grid_model.define_optimization_limits(
         optimization_problem,
         node_head_vector_minimum=node_head_vector_minimum,
@@ -233,29 +233,13 @@ def main():
         optimization_problem,
         scenario_data.timesteps
     )
-
-    node_head_vector_minimum_dual = (
-        pd.DataFrame(columns=thermal_grid_model.nodes, index=scenario_data.timesteps, dtype=np.float)
+    (
+        node_head_vector_minimum_dual,
+        branch_flow_vector_maximum_dual
+    ) = linear_thermal_grid_model.get_optimization_limits_duals(
+        optimization_problem,
+        scenario_data.timesteps
     )
-    branch_flow_vector_maximum_dual = (
-        pd.DataFrame(columns=thermal_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
-    )
-
-    for timestep in scenario_data.timesteps:
-
-        for node_index, node in enumerate(thermal_grid_model.nodes):
-            node_head_vector_minimum_dual.at[timestep, node] = (
-                optimization_problem.dual[
-                    optimization_problem.node_head_vector_minimum_constraint[timestep, node]
-                ]
-            )
-
-        for branch_index, branch in enumerate(thermal_grid_model.branches):
-            branch_flow_vector_maximum_dual.at[timestep, branch] = (
-                optimization_problem.dual[
-                    optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
-                ]
-            )
 
     # Print duals.
     print(f"voltage_magnitude_vector_minimum_dual = \n{voltage_magnitude_vector_minimum_dual.to_string()}")

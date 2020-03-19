@@ -508,6 +508,44 @@ class LinearThermalGridModel(object):
             )
         )
 
+    def get_optimization_limits_duals(
+            self,
+            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Instantiate dual variables.
+        node_head_vector_minimum_dual = (
+            pd.DataFrame(0.0, columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        branch_flow_vector_maximum_dual = (
+            pd.DataFrame(0.0, columns=self.thermal_grid_model.branches, index=timesteps, dtype=np.float)
+        )
+
+        # Obtain duals.
+        for timestep in timesteps:
+
+            if optimization_problem.find_component('node_head_vector_minimum_constraint') is not None:
+                for node_index, node in enumerate(self.thermal_grid_model.nodes):
+                    node_head_vector_minimum_dual.at[timestep, node] = (
+                        optimization_problem.dual[
+                            optimization_problem.node_head_vector_minimum_constraint[timestep, node]
+                        ]
+                    )
+
+            if optimization_problem.find_component('branch_flow_vector_maximum_constraint') is not None:
+                for branch_index, branch in enumerate(self.thermal_grid_model.branches):
+                    branch_flow_vector_maximum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
+                        ]
+                    )
+
+        return (
+            node_head_vector_minimum_dual,
+            branch_flow_vector_maximum_dual
+        )
+
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,

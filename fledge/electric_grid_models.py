@@ -70,7 +70,18 @@ class ElectricGridModel(object):
 
         # Obtain index sets for phases / node names / node types / line names / transformer names /
         # branch types / DER names.
-        self.phases = pd.Index([1, 2, 3])
+        self.phases = (
+            pd.Index(
+                np.unique(
+                    np.concatenate(
+                        electric_grid_data.electric_grid_nodes.apply(
+                            fledge.utils.get_element_phases_array,
+                            axis=1
+                        ).values
+                    )
+                )
+            )
+        )
         self.node_names = pd.Index(electric_grid_data.electric_grid_nodes['node_name'])
         self.node_types = pd.Index(['source', 'no_source'])
         self.line_names = pd.Index(electric_grid_data.electric_grid_lines['line_name'])
@@ -351,6 +362,9 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Add lines to admittance, transformation and incidence matrices.
         for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
+            # Obtain phases vector.
+            phases_vector = fledge.utils.get_element_phases_array(line)
+
             # Obtain line resistance and reactance matrix entries for the line.
             rxc_matrix_entries_index = (
                 electric_grid_data.electric_grid_line_types_matrices.loc[:, 'line_type'] == line['line_type']
@@ -374,9 +388,8 @@ class ElectricGridModelDefault(ElectricGridModel):
                     [4, 5, 6]
                 ]) - 1
             )
-            # TODO: Remove usage of n_phases.
             rxc_matrix_full_index = (
-                rxc_matrix_full_index[:line['n_phases'], :line['n_phases']]
+                rxc_matrix_full_index[:len(phases_vector), :len(phases_vector)]
             )
             r_matrix = r_matrix_entries[rxc_matrix_full_index]
             x_matrix = x_matrix_entries[rxc_matrix_full_index]
@@ -424,14 +437,14 @@ class ElectricGridModelDefault(ElectricGridModel):
                 fledge.utils.get_index(
                     self.nodes,
                     node_name=line['node_1_name'],
-                    phase=fledge.utils.get_element_phases_array(line)
+                    phase=phases_vector
                 )
             )
             node_index_2 = (
                 fledge.utils.get_index(
                     self.nodes,
                     node_name=line['node_2_name'],
-                    phase=fledge.utils.get_element_phases_array(line)
+                    phase=phases_vector
                 )
             )
             branch_index = (
@@ -662,20 +675,37 @@ class ElectricGridModelDefault(ElectricGridModel):
                 logger.error(f"Unknown transformer type: {type}")
                 raise ValueError
 
+            # Obtain phases vector.
+            phases_vector = fledge.utils.get_element_phases_array(transformer)
+
+            # Obtain element admittance matrices for correct phases.
+            admittance_matrix_11 = (
+                admittance_matrix_11[np.ix_(phases_vector - 1, phases_vector - 1)]
+            )
+            admittance_matrix_12 = (
+                admittance_matrix_12[np.ix_(phases_vector - 1, phases_vector - 1)]
+            )
+            admittance_matrix_21 = (
+                admittance_matrix_21[np.ix_(phases_vector - 1, phases_vector - 1)]
+            )
+            admittance_matrix_22 = (
+                admittance_matrix_22[np.ix_(phases_vector - 1, phases_vector - 1)]
+            )
+
             # Obtain indexes for positioning the transformer element
             # matrices in the full matrices.
             node_index_1 = (
                 fledge.utils.get_index(
                     self.nodes,
                     node_name=windings.at[0, 'node_name'],
-                    phase=fledge.utils.get_element_phases_array(transformer)
+                    phase=phases_vector
                 )
             )
             node_index_2 = (
                 fledge.utils.get_index(
                     self.nodes,
                     node_name=windings.at[1, 'node_name'],
-                    phase=fledge.utils.get_element_phases_array(transformer)
+                    phase=phases_vector
                 )
             )
             branch_index = (
@@ -1022,29 +1052,29 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             if line_type['n_phases'] == 1:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f}]".format(*matrices['r'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'r'])
                     + " xmatrix = "
-                    + "[{:.8f}]".format(*matrices['x'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'x'])
                     + " cmatrix = "
-                    + "[{:.8f}]".format(*matrices['c'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'c'])
                 )
             elif line_type['n_phases'] == 2:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['r'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'r'])
                     + " xmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['x'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'x'])
                     + " cmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices['c'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'c'])
                 )
             elif line_type['n_phases'] == 3:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['r'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'r'])
                     + f" xmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['x'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'x'])
                     + f" cmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices['c'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'c'])
                 )
 
             # Create line code in OpenDSS.
@@ -1060,7 +1090,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             # to OpenDSS command string.
             opendss_command_string = (
                 f"new line.{line['line_name']}"
-                + f" phases={line['n_phases']}"
+                + f" phases={n_phases}"
                 + f" bus1={line['node_1_name']}{fledge.utils.get_element_phases_string(line)}"
                 + f" bus2={line['node_2_name']}{fledge.utils.get_element_phases_string(line)}"
                 + f" linecode={line['line_type']}"
@@ -1620,7 +1650,9 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         # Obtain voltage solution.
         self.node_voltage_vector = (
-            self.get_voltage()
+            self.get_voltage(
+                electric_grid_model
+            )
         )
 
         # Obtain branch flow solution.
@@ -1637,7 +1669,9 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         )
 
     @staticmethod
-    def get_voltage():
+    def get_voltage(
+            electric_grid_model: ElectricGridModelOpenDSS
+    ):
         """Get nodal voltage vector by solving OpenDSS model.
 
         - OpenDSS model must be readily set up, with the desired power being set for all DERs.
@@ -1659,6 +1693,11 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
                 ).values
             ])
         )
+
+        # Adjust voltage solution for single-phase grid.
+        # TODO: Validate single phase behavior of OpenDSS.
+        if len(electric_grid_model.phases) == 1:
+            node_voltage_vector_solution /= np.sqrt(3)
 
         return node_voltage_vector_solution
 

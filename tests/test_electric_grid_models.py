@@ -74,7 +74,7 @@ class TestElectricGridModels(unittest.TestCase):
             plt.show(block=False)
 
             absolute_error = pd.DataFrame(
-                (node_voltage_vector_fixed_point - node_voltage_vector_opendss) / node_voltage_vector_no_load,
+                (node_voltage_vector_fixed_point - node_voltage_vector_opendss),
                 index=electric_grid_model.nodes,
                 columns=['Absolute error']
             )

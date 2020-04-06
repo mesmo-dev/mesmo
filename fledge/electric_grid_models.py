@@ -60,32 +60,22 @@ class ElectricGridModel(object):
             electric_grid_data: fledge.database_interface.ElectricGridData
     ):
 
-        # Obtain transformer data for first winding for generating index sets.
-        electric_grid_transformers_first_winding = (
-            electric_grid_data.electric_grid_transformers.loc[
-                electric_grid_data.electric_grid_transformers['winding'] == 1,
-                :
-            ]
-        )
-
         # Obtain index sets for phases / node names / node types / line names / transformer names /
         # branch types / DER names.
         self.phases = (
             pd.Index(
-                np.unique(
-                    np.concatenate(
-                        electric_grid_data.electric_grid_nodes.apply(
-                            fledge.utils.get_element_phases_array,
-                            axis=1
-                        ).values
-                    )
-                )
+                np.unique(np.concatenate(
+                    electric_grid_data.electric_grid_nodes.apply(
+                        fledge.utils.get_element_phases_array,
+                        axis=1
+                    ).values
+                ))
             )
         )
         self.node_names = pd.Index(electric_grid_data.electric_grid_nodes['node_name'])
         self.node_types = pd.Index(['source', 'no_source'])
         self.line_names = pd.Index(electric_grid_data.electric_grid_lines['line_name'])
-        self.transformer_names = pd.Index(electric_grid_transformers_first_winding['transformer_name'])
+        self.transformer_names = pd.Index(electric_grid_data.electric_grid_transformers['transformer_name'])
         self.branch_types = pd.Index(['line', 'transformer'])
         self.der_names = pd.Index(electric_grid_data.electric_grid_ders['der_name'])
         self.der_types = pd.Index(electric_grid_data.electric_grid_ders['der_type'].unique())
@@ -165,7 +155,6 @@ class ElectricGridModel(object):
         #   phases of all nodes.
         # - Transformers must have same number of phases per winding and exactly
         #   two windings.
-        # - TODO: Add switches.
         line_dimension = (
             int(electric_grid_data.electric_grid_lines.loc[
                 :,
@@ -177,7 +166,7 @@ class ElectricGridModel(object):
             ].sum().sum())
         )
         transformer_dimension = (
-            int(electric_grid_transformers_first_winding.loc[
+            int(electric_grid_data.electric_grid_transformers.loc[
                 :,
                 [
                     'is_phase_1_connected',
@@ -212,16 +201,16 @@ class ElectricGridModel(object):
                     electric_grid_data.electric_grid_lines['is_phase_3_connected'] == 1,
                     'line_name'
                 ],
-                electric_grid_transformers_first_winding.loc[
-                    electric_grid_transformers_first_winding['is_phase_1_connected'] == 1,
+                electric_grid_data.electric_grid_transformers.loc[
+                    electric_grid_data.electric_grid_transformers['is_phase_1_connected'] == 1,
                     'transformer_name'
                 ],
-                electric_grid_transformers_first_winding.loc[
-                    electric_grid_transformers_first_winding['is_phase_2_connected'] == 1,
+                electric_grid_data.electric_grid_transformers.loc[
+                    electric_grid_data.electric_grid_transformers['is_phase_2_connected'] == 1,
                     'transformer_name'
                 ],
-                electric_grid_transformers_first_winding.loc[
-                    electric_grid_transformers_first_winding['is_phase_3_connected'] == 1,
+                electric_grid_data.electric_grid_transformers.loc[
+                    electric_grid_data.electric_grid_transformers['is_phase_3_connected'] == 1,
                     'transformer_name'
                 ]
             ], ignore_index=True)
@@ -232,9 +221,9 @@ class ElectricGridModel(object):
                 np.repeat(1, sum(electric_grid_data.electric_grid_lines['is_phase_1_connected'] == 1)),
                 np.repeat(2, sum(electric_grid_data.electric_grid_lines['is_phase_2_connected'] == 1)),
                 np.repeat(3, sum(electric_grid_data.electric_grid_lines['is_phase_3_connected'] == 1)),
-                np.repeat(1, sum(electric_grid_transformers_first_winding['is_phase_1_connected'] == 1)),
-                np.repeat(2, sum(electric_grid_transformers_first_winding['is_phase_2_connected'] == 1)),
-                np.repeat(3, sum(electric_grid_transformers_first_winding['is_phase_3_connected'] == 1))
+                np.repeat(1, sum(electric_grid_data.electric_grid_transformers['is_phase_1_connected'] == 1)),
+                np.repeat(2, sum(electric_grid_data.electric_grid_transformers['is_phase_2_connected'] == 1)),
+                np.repeat(3, sum(electric_grid_data.electric_grid_transformers['is_phase_3_connected'] == 1))
             ])
         )
         # Fill `branch_type`.
@@ -321,7 +310,10 @@ class ElectricGridModelDefault(ElectricGridModel):
         electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
 
         # Instantiate electric grid model object.
-        self.__init__(electric_grid_data, **kwargs)
+        self.__init__(
+            electric_grid_data,
+            **kwargs
+        )
 
     @multimethod
     def __init__(
@@ -365,40 +357,40 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Obtain phases vector.
             phases_vector = fledge.utils.get_element_phases_array(line)
 
-            # Obtain line resistance and reactance matrix entries for the line.
-            rxc_matrix_entries_index = (
+            # Obtain line resistance / reactance / capacitance matrix entries for the line.
+            matrices_index = (
                 electric_grid_data.electric_grid_line_types_matrices.loc[:, 'line_type'] == line['line_type']
             )
-            r_matrix_entries = (
-                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'r'].values
+            resistance_matrix = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[matrices_index, 'resistance'].values
             )
-            x_matrix_entries = (
-                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'x'].values
+            reactance_matrix = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[matrices_index, 'reactance'].values
             )
-            c_matrix_entries = (
-                electric_grid_data.electric_grid_line_types_matrices.loc[rxc_matrix_entries_index, 'c'].values
+            capacitance_matrix = (
+                electric_grid_data.electric_grid_line_types_matrices.loc[matrices_index, 'capacitance'].values
             )
 
             # Obtain the full line resistance and reactance matrices.
             # Data only contains upper half entries.
-            rxc_matrix_full_index = (
+            matrices_full_index = (
                 np.array([
                     [1, 2, 4],
                     [2, 3, 5],
                     [4, 5, 6]
                 ]) - 1
             )
-            rxc_matrix_full_index = (
-                rxc_matrix_full_index[:len(phases_vector), :len(phases_vector)]
+            matrices_full_index = (
+                matrices_full_index[:len(phases_vector), :len(phases_vector)]
             )
-            r_matrix = r_matrix_entries[rxc_matrix_full_index]
-            x_matrix = x_matrix_entries[rxc_matrix_full_index]
-            c_matrix = c_matrix_entries[rxc_matrix_full_index]
+            resistance_matrix = resistance_matrix[matrices_full_index]
+            reactance_matrix = reactance_matrix[matrices_full_index]
+            capacitance_matrix = capacitance_matrix[matrices_full_index]
 
             # Construct line series admittance matrix.
             series_admittance_matrix = (
                 np.linalg.inv(
-                    (r_matrix + 1j * x_matrix)
+                    (resistance_matrix + 1j * reactance_matrix)
                     * line['length']
                 )
             )
@@ -406,10 +398,9 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Construct line shunt admittance.
             # Note: nF to Ω with X = 1 / (2π * f * C)
             # TODO: Check line shunt admittance.
-            base_frequency = 60.0  # TODO: Define base frequency in the database
             shunt_admittance_matrix = (
-                c_matrix
-                * 2 * np.pi * base_frequency * 1e-9
+                capacitance_matrix
+                * 2 * np.pi * electric_grid_data.electric_grid.at['base_frequency'] * 1e-9
                 * 0.5j
                 * line['length']
             )
@@ -506,72 +497,17 @@ class ElectricGridModelDefault(ElectricGridModel):
         )
 
         # Add transformers to admittance matrix.
-        for transformer_index, transformer in (
-            electric_grid_data.electric_grid_transformers.loc[
-                electric_grid_data.electric_grid_transformers['winding'] == 1,
-                :
-            ].iterrows()
-        ):
-            # Obtain transformer windings.
-            windings = (
-                electric_grid_data.electric_grid_transformers.loc[
-                    (
-                        electric_grid_data.electric_grid_transformers['transformer_name']
-                        == transformer['transformer_name']
-                    ),
-                    :
-                ].reset_index()
-            )
-
-            # Obtain primary and secondary voltage.
-            voltage_1 = (
-                electric_grid_data.electric_grid_nodes.loc[
-                    (
-                        electric_grid_data.electric_grid_nodes['node_name']
-                        == windings.at[0, 'node_name']
-                    ),
-                    'voltage'
-                ]
-            ).values[0]
-            voltage_2 = (
-                electric_grid_data.electric_grid_nodes.loc[
-                    (
-                        electric_grid_data.electric_grid_nodes['node_name']
-                        == windings.at[1, 'node_name']
-                    ),
-                    'voltage'
-                ]
-            ).values[0]
-
-            # Obtain transformer type.
-            type = (
-                windings.at[0, 'connection']
-                + "-"
-                + windings.at[1, 'connection']
-            )
-
-            # Obtain transformer resistance and reactance.
-            resistance_percentage = transformer['resistance_percentage']
-            reactance_percentage = (
-                electric_grid_data.electric_grid_transformer_reactances.loc[
-                    (
-                        electric_grid_data.electric_grid_transformer_reactances['transformer_name']
-                        == transformer['transformer_name']
-                    ),
-                    'reactance_percentage'
-                ]
-            ).values[0]
-
+        for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
             # Calculate transformer admittance.
             admittance = (
                 (
                     (
-                        2 * resistance_percentage / 100
-                        + 1j * reactance_percentage / 100
+                        2 * transformer.at['resistance_percentage'] / 100
+                        + 1j * transformer.at['reactance_percentage'] / 100
                     )
                     * (
-                        voltage_2 ** 2
-                        / windings.at[0, 'power']
+                        electric_grid_data.electric_grid_nodes.at[transformer.at['node_2_name'], 'voltage'] ** 2
+                        / transformer.at['apparent_power']
                     )
                 ) ** -1
             )
@@ -580,18 +516,17 @@ class ElectricGridModelDefault(ElectricGridModel):
             turn_ratio = (
                 (
                     1.0  # TODO: Replace `1.0` with actual tap position.
-                    * voltage_1
+                    * electric_grid_data.electric_grid_nodes.at[transformer.at['node_1_name'], 'voltage']
                 )
                 / (
                     1.0  # TODO: Replace `1.0` with actual tap position.
-                    * voltage_2
+                    * electric_grid_data.electric_grid_nodes.at[transformer.at['node_2_name'], 'voltage']
                 )
             )
 
             # Construct transformer element admittance matrices according to:
             # https://doi.org/10.1109/TPWRS.2017.2728618
-            # - TODO: Add warning if wye-transformer is not grounded
-            if type == "wye-wye":
+            if transformer.at['connection'] == "wye-wye":
                 admittance_matrix_11 = (
                     admittance
                     * transformer_factors_1
@@ -611,7 +546,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                     admittance
                     * transformer_factors_1
                 )
-            elif type == "delta-wye":
+            elif transformer.at['connection'] == "delta-wye":
                 admittance_matrix_11 = (
                     admittance
                     * transformer_factors_2
@@ -631,7 +566,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                     admittance
                     * transformer_factors_1
                 )
-            elif type == "wye-delta":
+            elif transformer.at['connection'] == "wye-delta":
                 admittance_matrix_11 = (
                     admittance
                     * transformer_factors_1
@@ -651,7 +586,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                     admittance
                     * transformer_factors_2
                 )
-            elif type == "delta-delta":
+            elif transformer.at['connection'] == "delta-delta":
                 admittance_matrix_11 = (
                     admittance
                     * transformer_factors_2
@@ -672,7 +607,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                     * transformer_factors_2
                 )
             else:
-                logger.error(f"Unknown transformer type: {type}")
+                logger.error(f"Unknown transformer type: {transformer.at['connection']}")
                 raise ValueError
 
             # Obtain phases vector.
@@ -697,14 +632,14 @@ class ElectricGridModelDefault(ElectricGridModel):
             node_index_1 = (
                 fledge.utils.get_index(
                     self.nodes,
-                    node_name=windings.at[0, 'node_name'],
+                    node_name=transformer.at['node_1_name'],
                     phase=phases_vector
                 )
             )
             node_index_2 = (
                 fledge.utils.get_index(
                     self.nodes,
-                    node_name=windings.at[1, 'node_name'],
+                    node_name=transformer.at['node_2_name'],
                     phase=phases_vector
                 )
             )
@@ -752,8 +687,7 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Construct node transformation matrix.
             transformation_matrix = transformation_entries[np.ix_(phases_index, phases_index)]
 
-            # Obtain index for positioning node transformation matrix in full
-            # transformation matrix.
+            # Obtain index for positioning node transformation matrix in full transformation matrix.
             node_index = (
                 fledge.utils.get_index(
                     self.nodes,
@@ -764,7 +698,7 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Add node transformation matrix to full transformation matrix.
             self.node_transformation_matrix[np.ix_(node_index, node_index)] = transformation_matrix
 
-        # Add ders to der incidence matrix.
+        # Add DERs to der incidence matrix.
         for der_name, der in electric_grid_data.electric_grid_ders.iterrows():
             # Obtain der connection type.
             connection = der['connection']
@@ -926,9 +860,7 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
-            # TODO: Remove load multiplier.
-            electric_grid_data.electric_grid['load_multiplier']
-            * (
+            (
                 electric_grid_data.electric_grid_ders.loc[:, 'active_power']
                 + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
             ).values
@@ -982,7 +914,9 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             fledge.database_interface.ElectricGridData(scenario_name)
         )
 
-        self.__init__(electric_grid_data)
+        self.__init__(
+            electric_grid_data
+        )
 
     @multimethod
     def __init__(
@@ -997,9 +931,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
         # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
-            # TODO: Remove load multiplier.
-            electric_grid_data.electric_grid['load_multiplier']
-            * (
+            (
                 electric_grid_data.electric_grid_ders.loc[:, 'active_power']
                 + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
             ).values
@@ -1007,28 +939,29 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
         # Clear OpenDSS.
         opendss_command_string = "clear"
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        logger.debug(f"opendss_command_string = \n{opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
-        # Obtain extra definitions string.
-        if pd.isnull(electric_grid_data.electric_grid['extra_definitions_string']):
-            extra_definitions_string = ""
-        else:
-            extra_definitions_string = (
-                electric_grid_data.electric_grid['extra_definitions_string']
-            )
+        # Obtain source voltage.
+        source_voltage = (
+            electric_grid_data.electric_grid_nodes.at[
+                electric_grid_data.electric_grid.at['source_node_name'],
+                'voltage'
+            ]
+        )
 
         # Add circuit info to OpenDSS command string.
         opendss_command_string = (
-            f"new circuit.{electric_grid_data.electric_grid['electric_grid_name']}"
-            + f" phases={electric_grid_data.electric_grid['n_phases']}"
-            + f" bus1={electric_grid_data.electric_grid['source_node_name']}"
-            + f" basekv={electric_grid_data.electric_grid['source_voltage'] / 1e3}"
-            + f" {extra_definitions_string}"
+            f"set defaultbasefrequency={electric_grid_data.electric_grid.at['base_frequency']}"
+            + f"\nnew circuit.{electric_grid_data.electric_grid.at['electric_grid_name']}"
+            + f" phases={len(self.phases)}"
+            + f" bus1={electric_grid_data.electric_grid.at['source_node_name']}"
+            + f" basekv={source_voltage / 1000}"
+            + f" mvasc3=9999999999 9999999999"  # Set near-infinite power limit for source node.
         )
 
         # Create circuit in OpenDSS.
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        logger.debug(f"opendss_command_string = \n{opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
         # Define line codes.
@@ -1037,7 +970,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             matrices = (
                 electric_grid_data.electric_grid_line_types_matrices.loc[
                     electric_grid_data.electric_grid_line_types_matrices['line_type'] == line_type['line_type'],
-                    ['r', 'x', 'c']
+                    ['resistance', 'reactance', 'capacitance']
                 ]
             )
 
@@ -1052,33 +985,33 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             if line_type['n_phases'] == 1:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f}]".format(*matrices.loc[:, 'r'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'resistance'])
                     + " xmatrix = "
-                    + "[{:.8f}]".format(*matrices.loc[:, 'x'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'reactance'])
                     + " cmatrix = "
-                    + "[{:.8f}]".format(*matrices.loc[:, 'c'])
+                    + "[{:.8f}]".format(*matrices.loc[:, 'capacitance'])
                 )
             elif line_type['n_phases'] == 2:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'r'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'resistance'])
                     + " xmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'x'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'reactance'])
                     + " cmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'c'])
+                    + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'capacitance'])
                 )
             elif line_type['n_phases'] == 3:
                 opendss_command_string += (
                     " rmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'r'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'resistance'])
                     + f" xmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'x'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'reactance'])
                     + f" cmatrix = "
-                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'c'])
+                    + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'capacitance'])
                 )
 
             # Create line code in OpenDSS.
-            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
         # Define lines.
@@ -1098,147 +1031,85 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             )
 
             # Create line in OpenDSS.
-            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
         # Define transformers.
-        # - Note: This setup only works for transformers with
-        #   identical number of phases at each winding / side.
-        for transformer_index, transformer in (
-                electric_grid_data.electric_grid_transformers.loc[
-                    electric_grid_data.electric_grid_transformers['winding'] == 1,
-                    :
-                ].iterrows()
-        ):
-            # Obtain number of phases for the transformer.
-            # This assumes identical number of phases at all windings.
+        for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
+            # Obtain number of phases.
             n_phases = len(fledge.utils.get_element_phases_array(transformer))
 
-            # Obtain windings for the transformer.
-            windings = (
-                electric_grid_data.electric_grid_transformers.loc[
-                    (
-                        electric_grid_data.electric_grid_transformers['transformer_name']
-                        == transformer['transformer_name']
-                    ),
-                    :
-                ]
-            )
-
-            # Obtain reactances for the transformer.
-            reactances = (
-                electric_grid_data.electric_grid_transformer_reactances.loc[
-                    (
-                        electric_grid_data.electric_grid_transformer_reactances['transformer_name']
-                        == transformer['transformer_name']
-                    ),
-                    :
-                ]
-            )
-
-            # Obtain taps for the transformer.
-            taps = (
-                electric_grid_data.electric_grid_transformer_taps.loc[
-                    (
-                        electric_grid_data.electric_grid_transformer_taps['transformer_name']
-                        == transformer['transformer_name']
-                    ),
-                    :
-                ]
-            )
-
-            # Add transformer name, number of phases / windings and reactances
-            # to OpenDSS command string.
+            # Add transformer name, number of phases / windings and reactances to OpenDSS command string.
             opendss_command_string = (
-                f"new transformer.{transformer['transformer_name']}"
+                f"new transformer.{transformer.at['transformer_name']}"
                 + f" phases={n_phases}"
-                + f" windings={len(windings['winding'])}"
-                + f" xscarray={[x for x in reactances['reactance_percentage']]}"
+                + f" windings=2"
+                + f" xscarray=[{transformer.at['reactance_percentage']}]"
             )
-            for winding_index, winding in windings.iterrows():
+
+            # Add windings to OpenDSS command string.
+            windings = [1, 2]
+            for winding in windings:
                 # Obtain nominal voltage level for each winding.
-                voltage = electric_grid_data.electric_grid_nodes.at[winding['node_name'], 'voltage']
+                voltage = electric_grid_data.electric_grid_nodes.at[transformer.at[f'node_{winding}_name'], 'voltage']
 
                 # Obtain node phases connection string for each winding.
-                if winding['connection'] == "wye":
-                    if winding['is_phase_0_connected'] == 0:
-                        # Enforce wye-open connection according to:
-                        # OpenDSS Manual April 2018, page 136, "rneut".
-                        node_phases_string = (
-                            fledge.utils.get_element_phases_string(winding)
-                            + ".4"
-                        )
-                    elif winding['is_phase_0_connected'] == 1:
-                        # Enforce wye-grounded connection.
-                        node_phases_string = (
-                            fledge.utils.get_element_phases_string(winding)
-                            + ".0"
-                        )
-                        # Remove leading ".0".
-                        node_phases_string = node_phases_string[2:]
-                elif winding['connection'] == "delta":
-                    if winding['is_phase_0_connected'] == 0:
-                        node_phases_string = (
-                            fledge.utils.get_element_phases_string(winding)
-                        )
-                    elif winding['is_phase_0_connected'] == 1:
-                        node_phases_string = (
-                            fledge.utils.get_element_phases_string(winding)
-                        )
-                        # Remove leading ".0"
-                        node_phases_string = node_phases_string[2:]
-                        logger.warn(
-                            "No ground connection possible for delta-connected"
-                            + f" transformer {transformer['transformer_name']}."
-                        )
+                connection = transformer.at['connection'].split('-')[winding - 1]
+                if connection == "wye":
+                    node_phases_string = (
+                        fledge.utils.get_element_phases_string(transformer)
+                        + ".0"  # Enforce wye-grounded connection.
+                    )
+                elif connection == "delta":
+                    node_phases_string = (
+                        fledge.utils.get_element_phases_string(transformer)
+                    )
                 else:
-                    logger.error(f"Unknown transformer connection type: {winding['connection']}")
+                    logger.error(f"Unknown transformer connection type: {connection}")
                     raise ValueError
 
-                # Add node connection, nominal voltage / power and resistance
+                # Add node connection, nominal voltage / power, resistance and maximum / minimum tap level
                 # to OpenDSS command string for each winding.
                 opendss_command_string += (
-                    f" wdg={winding['winding']}"
-                    + f" bus={winding['node_name']}" + node_phases_string
-                    + f" conn={winding['connection']}"
+                    f" wdg={winding}"
+                    + f" bus={transformer.at[f'node_{winding}_name']}" + node_phases_string
+                    + f" conn={connection}"
                     + f" kv={voltage / 1000}"
-                    + f" kva={winding['power'] / 1000}"
-                    + f" %r={winding['resistance_percentage']}"
+                    + f" kva={transformer.at['apparent_power'] / 1000}"
+                    + f" %r={transformer.at['resistance_percentage']}"
+                    + f" maxtap="
+                    + f"{transformer.at['tap_maximum_voltage_per_unit']}"
+                    + f" mintap="
+                    + f"{transformer.at['tap_minimum_voltage_per_unit']}"
                 )
 
-                # Add maximum / minimum level
-                # to OpenDSS command string for each winding.
-                for winding_index in np.flatnonzero(taps['winding'] == winding['winding']):
-                    opendss_command_string += (
-                        " maxtap="
-                        + f"{taps.at[winding_index, 'tap_maximum_voltage_per_unit']}"
-                        + f" mintap="
-                        + f"{taps.at[winding_index, 'tap_minimum_voltage_per_unit']}"
-                    )
-
             # Create transformer in OpenDSS.
-            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
         # Define DERs.
-        # TODO: At the moment, all ders are modelled as loads in OpenDSS.
+        # TODO: At the moment, all DERs are modelled as loads in OpenDSS.
         for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
-            # Obtain number of phases for the der.
+            # Obtain number of phases for the DER.
             n_phases = len(fledge.utils.get_element_phases_array(der))
 
-            # Obtain nominal voltage level for the der.
+            # Obtain nominal voltage level for the DER.
             voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
-            # Convert to line-to-neutral voltage for single-phase ders, according to:
+            # Convert to line-to-neutral voltage for single-phase DERs, according to:
             # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
             if n_phases == 1:
                 voltage /= np.sqrt(3)
 
-            # Add node connection, model type, voltage, nominal power
-            # to OpenDSS command string.
+            # Add ground-phase connection for single-phase, wye DERs.
+            if (n_phases == 1) and (der['connection'] == 'wye'):
+                ground_phase_string = ".0"  # TODO: Check if any difference without ".0" for wye-connected DERs.
+            else:
+                ground_phase_string = ""
+
+            # Add node connection, model type, voltage, nominal power to OpenDSS command string.
             opendss_command_string = (
                 f"new load.{der['der_name']}"
-                # TODO: Check if any difference without ".0" for wye-connected ders.
-                + f" bus1={der['node_name']}{fledge.utils.get_element_phases_string(der)}"
+                + f" bus1={der['node_name']}{ground_phase_string}{fledge.utils.get_element_phases_string(der)}"
                 + f" phases={n_phases}"
                 + f" conn={der['connection']}"
                 # All loads are modelled as constant P/Q according to:
@@ -1256,28 +1127,29 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             )
 
             # Create DER in OpenDSS.
-            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
-        # TODO: Add switches.
+        # Obtain voltage bases.
+        voltage_bases = (
+            np.unique(
+                electric_grid_data.electric_grid_nodes.loc[:, 'voltage'].values / 1000
+            ).tolist()
+        )
 
         # Set control mode and voltage bases.
         opendss_command_string = (
-            "set voltagebases="
-            + f"{electric_grid_data.electric_grid['voltage_bases_string']}"
-            + "\nset controlmode="
-            + f"{electric_grid_data.electric_grid['control_mode_string']}"
-            + "\nset loadmult="
-            + f"{electric_grid_data.electric_grid['load_multiplier']}"
-            + "\ncalcvoltagebases"
+            f"set voltagebases={voltage_bases}"
+            + f"\nset controlmode=off"
+            + f"\ncalcvoltagebases"
         )
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        logger.debug(f"opendss_command_string = \n{opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
         # Set solution mode to "single snapshot power flow" according to:
         # OpenDSSComDoc, November 2016, page 1
         opendss_command_string = "set mode=0"
-        logger.debug(f"opendss_command_string = {opendss_command_string}")
+        logger.debug(f"opendss_command_string = \n{opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
 
 
@@ -1642,7 +1514,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
                 f"load.{der_name}.kw = {- np.real(self.der_power_vector.ravel()[der_index]) / 1000.0}"
                 + f"\nload.{der_name}.kvar = {- np.imag(self.der_power_vector.ravel()[der_index]) / 1000.0}"
             )
-            logger.debug(f"opendss_command_string = {opendss_command_string}")
+            logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
 
         # Solve OpenDSS model.

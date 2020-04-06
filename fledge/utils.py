@@ -52,27 +52,25 @@ def get_element_phases_array(element: pd.Series):
     phases_array = (
         np.flatnonzero([
             False,  # Ground / '0' phase connection is not considered.
-            element['is_phase_1_connected'] == 1,
-            element['is_phase_2_connected'] == 1,
-            element['is_phase_3_connected'] == 1
+            element.at['is_phase_1_connected'] == 1,
+            element.at['is_phase_2_connected'] == 1,
+            element.at['is_phase_3_connected'] == 1
         ])
     )
 
     return phases_array
 
 
-def get_element_phases_string(element):
+def get_element_phases_string(element: pd.Series):
     """Utility function for obtaining the OpenDSS phases string for given element data."""
 
     # Obtain string of connected phases.
     phases_string = ""
-    if element['is_phase_0_connected'] == 1:
-        phases_string += ".0"
-    if element['is_phase_1_connected'] == 1:
+    if element.at['is_phase_1_connected'] == 1:
         phases_string += ".1"
-    if element['is_phase_2_connected'] == 1:
+    if element.at['is_phase_2_connected'] == 1:
         phases_string += ".2"
-    if element['is_phase_3_connected'] == 1:
+    if element.at['is_phase_3_connected'] == 1:
         phases_string += ".3"
 
     return phases_string

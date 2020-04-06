@@ -135,8 +135,6 @@ class ElectricGridData(object):
     electric_grid_line_types: pd.DataFrame
     electric_grid_line_types_matrices: pd.DataFrame
     electric_grid_transformers: pd.DataFrame
-    electric_grid_transformer_reactances: pd.DataFrame
-    electric_grid_transformer_taps: pd.DataFrame
 
     def __init__(
             self,
@@ -168,6 +166,7 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
+                ORDER BY node_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
@@ -182,6 +181,7 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
+                ORDER BY der_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
@@ -197,11 +197,13 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
+                ORDER BY line_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             )
         )
+        self.electric_grid_lines.index = self.electric_grid_lines['line_name']
         self.electric_grid_line_types = (
             pd.read_sql(
                 """
@@ -213,11 +215,13 @@ class ElectricGridData(object):
                         WHERE scenario_name = ?
                     )
                 )
+                ORDER BY line_type ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             )
         )
+        self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
         self.electric_grid_line_types_matrices = (
             pd.read_sql(
                 """
@@ -239,44 +243,18 @@ class ElectricGridData(object):
             pd.read_sql(
                 """
                 SELECT * FROM electric_grid_transformers
+                JOIN electric_grid_transformer_types USING (transformer_type)
                 WHERE electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY transformer_name ASC, winding ASC
+                ORDER BY transformer_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             )
         )
-        self.electric_grid_transformer_reactances = (
-            pd.read_sql(
-                """
-                SELECT * FROM electric_grid_transformer_reactances
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                ORDER BY transformer_name ASC, row ASC, col ASC
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            )
-        )
-        self.electric_grid_transformer_taps = (
-            pd.read_sql(
-                """
-                SELECT * FROM electric_grid_transformer_taps
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                ORDER BY transformer_name ASC, winding ASC
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            )
-        )
+        self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
 
 
 class ThermalGridData(object):

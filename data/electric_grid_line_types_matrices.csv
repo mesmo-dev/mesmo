@@ -1,4 +1,4 @@
-line_type,row,col,r,x,c
+line_type,row,col,resistance,reactance,capacitance
 mtx601,1,1,0.4576,1.078,0.0
 mtx601,2,1,0.1559,0.5017,0.0
 mtx601,2,2,0.4666,1.04828,0.0

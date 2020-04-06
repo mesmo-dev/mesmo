@@ -99,18 +99,16 @@ class FixedLoadModel(FixedDERModel):
         self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
+        if fixed_load['definition_type'] == 'timeseries_per_unit':
+            column = 'apparent_power_per_unit'
+        else:
+            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[
-                fixed_load['timeseries_name']
-            ]['apparent_power_per_unit'].rename('active_power')
-            * fixed_load['scaling_factor']
+            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('active_power')
             * fixed_load['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[
-                fixed_load['timeseries_name']
-            ]['apparent_power_per_unit'].rename('reactive_power')
-            * fixed_load['scaling_factor']
+            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('reactive_power')
             * fixed_load['reactive_power']
         )
 
@@ -135,18 +133,16 @@ class EVChargerModel(FixedDERModel):
         self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
+        if ev_charger['definition_type'] == 'timeseries_per_unit':
+            column = 'apparent_power_per_unit'
+        else:
+            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[
-                ev_charger['timeseries_name']
-            ]['apparent_power_per_unit'].rename('active_power')
-            * ev_charger['scaling_factor']
+            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('active_power')
             * ev_charger['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[
-                ev_charger['timeseries_name']
-            ]['apparent_power_per_unit'].rename('reactive_power')
-            * ev_charger['scaling_factor']
+            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('reactive_power')
             * ev_charger['reactive_power']
         )
 
@@ -401,18 +397,16 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
 
         # Construct active and reactive power timeseries.
+        if flexible_load['definition_type'] == 'timeseries_per_unit':
+            column = 'apparent_power_per_unit'
+        else:
+            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[
-                flexible_load['timeseries_name']
-            ]['apparent_power_per_unit'].rename('active_power')
-            * flexible_load['scaling_factor']
+            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('active_power')
             * flexible_load['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[
-                flexible_load['timeseries_name']
-            ]['apparent_power_per_unit'].rename('reactive_power')
-            * flexible_load['scaling_factor']
+            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('reactive_power')
             * flexible_load['reactive_power']
         )
 

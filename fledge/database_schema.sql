@@ -78,6 +78,48 @@ CREATE TABLE IF NOT EXISTS "electric_grids" (
     "base_frequency" REAL,
     PRIMARY KEY("electric_grid_name")
 );
+CREATE TABLE IF NOT EXISTS "ev_charger_timeseries" (
+    "timeseries_name" TEXT,
+    "time" TEXT,
+    "apparent_power_absolute" REAL,
+    "apparent_power_per_unit" REAL,
+    PRIMARY KEY("timeseries_name","time")
+);
+CREATE TABLE IF NOT EXISTS "ev_chargers" (
+    "model_name" TEXT,
+    "timeseries_name" TEXT,
+    "definition_type" TEXT,
+    PRIMARY KEY("model_name")
+);
+CREATE TABLE IF NOT EXISTS "fixed_load_timeseries" (
+    "timeseries_name" TEXT,
+    "time" TEXT,
+    "apparent_power_absolute" REAL,
+    "apparent_power_per_unit" REAL,
+    PRIMARY KEY("timeseries_name","time")
+);
+CREATE TABLE IF NOT EXISTS "fixed_loads" (
+     "model_name" TEXT,
+     "timeseries_name" TEXT,
+     "definition_type" TEXT,
+     PRIMARY KEY("model_name")
+);
+CREATE TABLE IF NOT EXISTS "flexible_load_timeseries" (
+    "timeseries_name" TEXT,
+    "time" TEXT,
+    "apparent_power_absolute" REAL,
+    "apparent_power_per_unit" REAL,
+    PRIMARY KEY("timeseries_name","time")
+);
+CREATE TABLE IF NOT EXISTS "flexible_loads" (
+    "model_name" TEXT,
+    "timeseries_name" TEXT,
+    "definition_type" TEXT,
+    "power_increase_percentage_maximum" REAL,
+    "power_decrease_percentage_maximum" REAL,
+    "time_period_power_shift_maximum" REAL,
+    PRIMARY KEY("model_name")
+);
 
 CREATE TABLE IF NOT EXISTS "scenarios" (
     "scenario_name" TEXT,
@@ -135,50 +177,6 @@ CREATE TABLE IF NOT EXISTS "price_timeseries" (
     "time" TEXT,
     "price_value" REAL,
     PRIMARY KEY("price_name","time","market_name")
-);
-CREATE TABLE IF NOT EXISTS "flexible_loads" (
-    "model_name" TEXT,
-    "case_name" TEXT,
-    "timeseries_name" TEXT,
-    "scaling_factor" REAL,
-    "power_increase_percentage_maximum" REAL,
-    "power_decrease_percentage_maximum" REAL,
-    "time_period_power_shift_maximum" REAL,
-    PRIMARY KEY("model_name","case_name")
-);
-CREATE TABLE IF NOT EXISTS "flexible_load_timeseries" (
-    "timeseries_name" TEXT,
-    "time" TEXT,
-    "apparent_power_per_unit" REAL,
-    PRIMARY KEY("timeseries_name","time")
-);
-CREATE TABLE IF NOT EXISTS "fixed_loads" (
-    "model_name" TEXT,
-    "case_name" TEXT,
-    "timeseries_name" TEXT,
-    "scaling_factor" REAL,
-    PRIMARY KEY("model_name","case_name")
-);
-CREATE TABLE IF NOT EXISTS "fixed_load_timeseries" (
-    "timeseries_name" TEXT,
-    "time" TEXT,
-    "apparent_power_per_unit" REAL,
-    PRIMARY KEY("timeseries_name","time")
-);
-CREATE TABLE IF NOT EXISTS "ev_chargers" (
-    "model_name" TEXT,
-    "case_name" TEXT,
-    "timeseries_name" TEXT,
-    "use_per_unit" REAL,
-    "scaling_factor" REAL,
-    PRIMARY KEY("model_name","case_name")
-);
-CREATE TABLE IF NOT EXISTS "ev_charger_timeseries" (
-    "timeseries_name" TEXT,
-    "time" TEXT,
-    "apparent_power" REAL,
-    "apparent_power_per_unit" REAL,
-    PRIMARY KEY("timeseries_name","time")
 );
 CREATE TABLE IF NOT EXISTS "thermal_grid_cooling_plant_types" (
     "cooling_plant_type" TEXT,

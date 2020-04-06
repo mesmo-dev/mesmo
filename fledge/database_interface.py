@@ -378,14 +378,9 @@ class DERData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                AND case_name = (
-                    SELECT case_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
                 """,
                 con=database_connection,
                 params=[
-                    scenario_name,
                     scenario_name
                 ]
             )
@@ -442,14 +437,9 @@ class DERData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                AND case_name = (
-                    SELECT case_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
                 """,
                 con=database_connection,
                 params=[
-                    scenario_name,
                     scenario_name
                 ]
             )
@@ -506,14 +496,9 @@ class DERData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                AND case_name = (
-                    SELECT case_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
                 """,
                 con=database_connection,
                 params=[
-                    scenario_name,
                     scenario_name
                 ]
             )

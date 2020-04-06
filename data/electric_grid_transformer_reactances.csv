@@ -2,6 +2,3 @@ transformer_name,electric_grid_name,row,col,reactance_percentage
 1,ieee_4_mod,1,2,2.0
 1,singapore_6node,1,2,2.0
 2,singapore_6node,1,2,2.0
-1,hougang_405node,1,2,7.5
-2,hougang_405node,1,2,7.5
-3,hougang_405node,1,2,7.5

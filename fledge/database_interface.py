@@ -42,7 +42,7 @@ def recreate_database(
     # Import CSV files into SQLITE database.
     database_connection.text_factory = str  # Allows utf-8 data to be stored.
     cursor = database_connection.cursor()
-    for file in glob.glob(os.path.join(csv_path, '*.csv')):
+    for file in glob.glob(os.path.join(csv_path, '**', '*.csv'), recursive=True):
         # Obtain table name.
         table_name = os.path.splitext(os.path.basename(file))[0]
 

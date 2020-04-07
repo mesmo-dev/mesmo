@@ -137,25 +137,29 @@ class ScenarioData(object):
 
     def parse_parameters_column(
             self,
-            column: pd.Series
+            column: np.ndarray
     ):
         """Parse parameters into one column of a dataframe.
         - Replace strings that match `parameter_name` with `parameter_value`.
         - Other strings are are directly parsed into numbers.
         - If a string doesn't match any match `parameter_name` and cannot be parsed, it is replaced with NaN.
+        - Expects `column` to be passed as `np.ndarray` rather than directly as `pd.Series` (for performance reasons).
         """
 
         if column.dtype == object:  # `object` represents string type.
-            if any(column.isin(self.parameters.index)):
+            if any(np.isin(column, self.parameters.index)):
                 column_values = (
-                    self.parameters.reindex(column.values).values
+                    self.parameters.reindex(column).values
                 )
                 column_values[pd.isnull(column_values)] = (
-                    pd.to_numeric(column.loc[pd.isnull(column_values)]).values
+                    pd.to_numeric(column[pd.isnull(column_values)])
                 )
-                column.loc[:] = column_values
+                column = column_values
             else:
                 column = pd.to_numeric(column)
+
+        # Explicitly parse to float, for consistent behavior independent of specific values.
+        column = column.astype(np.float)
 
         return column
 
@@ -179,12 +183,13 @@ class ScenarioData(object):
 
         # Select non-excluded, string columns and apply `parse_parameters_column`.
         selected_columns = (
-            ~dataframe.columns.isin(excluded_columns)
-            & (dataframe.dtypes == object)  # `object` represents string type.
+            dataframe.columns[
+                ~dataframe.columns.isin(excluded_columns)
+                & (dataframe.dtypes == object)  # `object` represents string type.
+            ]
         )
-        dataframe.loc[:, selected_columns] = (
-            dataframe.loc[:, selected_columns].apply(self.parse_parameters_column)
-        )
+        for column in selected_columns:
+            dataframe[column] = self.parse_parameters_column(dataframe[column].values)
 
         return dataframe
 

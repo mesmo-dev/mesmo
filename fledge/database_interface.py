@@ -2,6 +2,7 @@
 
 import glob
 from multimethod import multimethod
+import numpy as np
 import os
 import pandas as pd
 import sqlite3
@@ -81,10 +82,11 @@ def connect_database(
 
 
 class ScenarioData(object):
-    """scenario data data object."""
+    """Scenario data object."""
 
     scenario: pd.Series
     timesteps: pd.Index
+    parameters: pd.Series
 
     def __init__(
             self,
@@ -105,7 +107,7 @@ class ScenarioData(object):
                     'timestep_start',
                     'timestep_end'
                 ]
-            ).iloc[0]  # TODO: Check needed for redundant `scenario_name` in database?
+            ).iloc[0]
         )
         self.scenario['timestep_interval'] = (
              pd.Timedelta(self.scenario['timestep_interval'])
@@ -123,10 +125,78 @@ class ScenarioData(object):
             )
         )
 
+        # Obtain parameters.
+        self.parameters = (
+            pd.read_sql(
+                """
+                SELECT * FROM parameters
+                JOIN scenarios USING (parameter_set)
+                WHERE scenario_name = ?
+                """,
+                con=database_connection,
+                params=[scenario_name],
+                index_col='parameter_name'
+            ).loc[:, 'parameter_value']
+        )
+
+    def parse_parameters_column(
+            self,
+            column: pd.Series
+    ):
+        """Parse parameters into one column of a dataframe.
+        - Replace strings that match `parameter_name` with `parameter_value`.
+        - Other strings are are directly parsed into numbers.
+        - If a string doesn't match any match `parameter_name` and cannot be parsed, it is replaced with NaN.
+        """
+
+        if column.dtype == object:  # `object` represents string type.
+            if any(column.isin(self.parameters.index)):
+                column_values = (
+                    self.parameters.reindex(column.values).values
+                )
+                column_values[pd.isnull(column_values)] = (
+                    pd.to_numeric(column.loc[pd.isnull(column_values)]).values
+                )
+                column.loc[:] = column_values
+            else:
+                column = pd.to_numeric(column)
+
+        return column
+
+    def parse_parameters_dataframe(
+            self,
+            dataframe: pd.DataFrame,
+            excluded_columns: list = None
+    ):
+        """Parse parameters into a dataframe.
+        - Applies `parse_parameters_column` for all string columns.
+        - Columns in `excluded_columns` are not parsed. By default this includes `_name`, `_type`, `connection` columns.
+        """
+
+        # Define excluded columns. By default, all columns containing the following strings are excluded:
+        # `_name`, `_type`, `connection`
+        if excluded_columns is None:
+            excluded_columns = []
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
+
+        # Select non-excluded, string columns and apply `parse_parameters_column`.
+        selected_columns = (
+            ~dataframe.columns.isin(excluded_columns)
+            & (dataframe.dtypes == object)  # `object` represents string type.
+        )
+        dataframe.loc[:, selected_columns] = (
+            dataframe.loc[:, selected_columns].apply(self.parse_parameters_column)
+        )
+
+        return dataframe
+
 
 class ElectricGridData(object):
     """Electric grid data object."""
 
+    scenario_data: ScenarioData
     electric_grid: pd.DataFrame
     electric_grid_nodes: pd.DataFrame
     electric_grid_ders: pd.DataFrame
@@ -142,10 +212,12 @@ class ElectricGridData(object):
     ):
         """Load electric grid data from database for given `scenario_name`."""
 
-        # TODO: Define indexes & convert to series where appropriate.
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
 
+        # Obtain electric grid data.
         self.electric_grid = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grids
                 WHERE electric_grid_name = (
@@ -155,10 +227,10 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            ).iloc[0]  # TODO: Check needed for redundant `electric_grid_name` in database?
+            )).iloc[0]
         )
         self.electric_grid_nodes = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_nodes
                 WHERE electric_grid_name = (
@@ -169,11 +241,11 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
         self.electric_grid_ders = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_ders
                 WHERE electric_grid_name = (
@@ -184,11 +256,11 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_ders.index = self.electric_grid_ders['der_name']
         self.electric_grid_lines = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_lines
                 JOIN electric_grid_line_types USING (line_type)
@@ -200,11 +272,11 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_lines.index = self.electric_grid_lines['line_name']
         self.electric_grid_line_types = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types
                 WHERE line_type IN (
@@ -218,11 +290,11 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
         self.electric_grid_line_types_matrices = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types_matrices
                 WHERE line_type IN (
@@ -236,10 +308,10 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_transformers = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_transformers
                 JOIN electric_grid_transformer_types USING (transformer_type)
@@ -251,7 +323,7 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
 
@@ -259,6 +331,7 @@ class ElectricGridData(object):
 class ThermalGridData(object):
     """Thermal grid data object."""
 
+    scenario_data: ScenarioData
     thermal_grid: pd.DataFrame
     thermal_grid_nodes: pd.DataFrame
     thermal_grid_ders: pd.DataFrame
@@ -271,8 +344,11 @@ class ThermalGridData(object):
     ):
         """Load thermal grid data from database for given `scenario_name`."""
 
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
+
         self.thermal_grid = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grids
                 JOIN thermal_grid_cooling_plant_types USING (cooling_plant_type)
@@ -283,10 +359,10 @@ class ThermalGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            ).iloc[0]  # TODO: Check needed for redundant `thermal_grid_name` in database?
+            )).iloc[0]
         )
         self.thermal_grid_nodes = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_nodes
                 WHERE thermal_grid_name = (
@@ -296,11 +372,11 @@ class ThermalGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
         self.thermal_grid_ders = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_ders
                 WHERE thermal_grid_name = (
@@ -310,11 +386,11 @@ class ThermalGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
         self.thermal_grid_lines = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_lines
                 WHERE thermal_grid_name = (
@@ -324,7 +400,7 @@ class ThermalGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
 
@@ -332,6 +408,7 @@ class ThermalGridData(object):
 class DERData(object):
     """DER data object."""
 
+    scenario_data: ScenarioData
     fixed_loads: pd.DataFrame
     fixed_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     ev_chargers: pd.DataFrame
@@ -350,25 +427,11 @@ class DERData(object):
         """Load fixed load data from database for given `scenario_name`."""
 
         # Obtain scenario data.
-        scenario_data = ScenarioData(scenario_name)
-
-        self.__init__(
-            scenario_data,
-            database_connection=database_connection
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_data: ScenarioData,
-            database_connection=connect_database()
-    ):
-        # Obtain shorthand for `scenario_name`.
-        scenario_name = scenario_data.scenario['scenario_name']
+        self.scenario_data = ScenarioData(scenario_name)
 
         # Obtain fixed load data.
         self.fixed_loads = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM fixed_loads
                 JOIN electric_grid_ders USING (model_name)
@@ -382,7 +445,7 @@ class DERData(object):
                 params=[
                     scenario_name
                 ]
-            )
+            ))
         )
         self.fixed_loads.index = self.fixed_loads['der_name']
 
@@ -415,19 +478,19 @@ class DERData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    scenario_data.timesteps
+                    self.scenario_data.timesteps
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 )
             )
 
         # Obtain EV charger data.
         self.ev_chargers = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM ev_chargers
                 JOIN electric_grid_ders USING (model_name)
@@ -441,7 +504,7 @@ class DERData(object):
                 params=[
                     scenario_name
                 ]
-            )
+            ))
         )
         self.ev_chargers.index = self.ev_chargers['der_name']
 
@@ -474,19 +537,19 @@ class DERData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    scenario_data.timesteps
+                    self.scenario_data.timesteps
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 )
             )
 
         # Obtain flexible load data.
         self.flexible_loads = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM flexible_loads
                 JOIN electric_grid_ders USING (model_name)
@@ -500,7 +563,7 @@ class DERData(object):
                 params=[
                     scenario_name
                 ]
-            )
+            ))
         )
         self.flexible_loads.index = self.flexible_loads['der_name']
 
@@ -533,13 +596,13 @@ class DERData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    scenario_data.timesteps
+                    self.scenario_data.timesteps
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 )
             )
 
@@ -547,7 +610,7 @@ class DERData(object):
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
         flexible_buildings_electric_grid = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_ders
                 WHERE der_type = 'flexible_building'
@@ -558,10 +621,10 @@ class DERData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         flexible_buildings_thermal_grid = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_ders
                 WHERE der_type = 'flexible_building'
@@ -572,7 +635,7 @@ class DERData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.flexible_buildings = (
             pd.merge(
@@ -593,9 +656,9 @@ class DERData(object):
             self.flexible_building_model_dict[model_name] = (
                 cobmo.building_model.BuildingModel(
                     model_name,
-                    timestep_start=scenario_data.scenario['timestep_start'],
-                    timestep_end=scenario_data.scenario['timestep_end'],
-                    timestep_delta=scenario_data.scenario['timestep_interval'],
+                    timestep_start=self.scenario_data.scenario['timestep_start'],
+                    timestep_end=self.scenario_data.scenario['timestep_end'],
+                    timestep_delta=self.scenario_data.scenario['timestep_interval'],
                     connect_electric_grid=True,
                     connect_thermal_grid_cooling=True
                 )
@@ -605,6 +668,7 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
+    scenario_data: ScenarioData
     price_timeseries_dict: dict
 
     @multimethod
@@ -613,26 +677,9 @@ class PriceData(object):
             scenario_name: str,
             database_connection=connect_database()
     ):
-        """Load price data object from database for a given `scenario_name`."""
 
         # Obtain scenario data.
-        scenario_data = ScenarioData(scenario_name)
-
-        self.__init__(
-            scenario_data,
-            database_connection=database_connection
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            scenario_data: ScenarioData,
-            database_connection=connect_database()
-    ):
-        """Load price data object from database for a given `scenario_data`."""
-
-        # Obtain shorthand for `scenario_name`.
-        scenario_name = scenario_data.scenario['scenario_name']
+        self.scenario_data = ScenarioData(scenario_name)
 
         # Instantiate dictionary for unique `price_type`.
         price_types = (
@@ -671,12 +718,12 @@ class PriceData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    scenario_data.timesteps
+                    self.scenario_data.timesteps
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 )
             )

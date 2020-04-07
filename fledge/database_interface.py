@@ -47,10 +47,6 @@ def recreate_database(
         # Obtain table name.
         table_name = os.path.splitext(os.path.basename(file))[0]
 
-        # Delete existing table content.
-        cursor.execute("DELETE FROM {}".format(table_name))
-        database_connection.commit()
-
         # Write new table content.
         logger.debug(f"Loading {file} into database.")
         table = pd.read_csv(file)

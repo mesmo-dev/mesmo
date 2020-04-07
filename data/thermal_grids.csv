@@ -1,2 +1,1 @@
 thermal_grid_name,enthalpy_difference_distribution_water,enthalpy_difference_cooling_water,water_density,water_kinematic_viscosity,pump_efficiency_secondary_pump,ets_head_loss,pipe_velocity_maximum,cooling_plant_type
-singapore_tanjongpagar,37355,23236,998.31,1.3504e-6,0.75,6,2,singapore_cooling_plant

@@ -28,8 +28,8 @@ def main():
     price_data = fledge.database_interface.PriceData(scenario_name)
 
     # Obtain price timeseries.
-    price_name = 'energy'
-    price_timeseries = price_data.price_timeseries_dict[price_name]
+    price_type = 'singapore_wholesale'
+    price_timeseries = price_data.price_timeseries_dict[price_type]
 
     # Obtain model.
     der_name = der_data.flexible_buildings['der_name'][0]  # Pick first `der_name`.
@@ -92,7 +92,7 @@ def main():
             plt.close()
 
         plt.plot(price_timeseries['price_value'], drawstyle='steps-post')
-        plt.title(f"Price: {price_name}")
+        plt.title(f"Price: {price_type}")
         plt.show()
         plt.close()
 

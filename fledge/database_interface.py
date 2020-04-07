@@ -107,9 +107,8 @@ class ScenarioData(object):
                 ]
             ).iloc[0]  # TODO: Check needed for redundant `scenario_name` in database?
         )
-        # TODO: Refactor `timestep_interval_seconds` to `timestep_interval`.
         self.scenario['timestep_interval'] = (
-             pd.to_timedelta(int(self.scenario['timestep_interval_seconds']), unit='second')
+             pd.Timedelta(self.scenario['timestep_interval'])
         )
 
         # Instantiate timestep series.
@@ -635,25 +634,25 @@ class PriceData(object):
         # Obtain shorthand for `scenario_name`.
         scenario_name = scenario_data.scenario['scenario_name']
 
-        # Instantiate dictionary for unique `price_name`.
-        price_names = (
+        # Instantiate dictionary for unique `price_type`.
+        price_types = (
             pd.read_sql(
                 """
-                SELECT DISTINCT price_name FROM price_timeseries
+                SELECT DISTINCT price_type FROM price_timeseries
                 """,
                 con=database_connection,
             )
         )
-        self.price_timeseries_dict = dict.fromkeys(price_names.values.flatten())
+        self.price_timeseries_dict = dict.fromkeys(price_types.values.flatten())
 
-        # Load timeseries for each `price_name`.
+        # Load timeseries for each `price_type`.
         # TODO: Resample / interpolate timeseries depending on timestep interval.
-        for price_name in self.price_timeseries_dict:
-            self.price_timeseries_dict[price_name] = (
+        for price_type in self.price_timeseries_dict:
+            self.price_timeseries_dict[price_type] = (
                 pd.read_sql(
                     """
                     SELECT * FROM price_timeseries
-                    WHERE price_name = ?
+                    WHERE price_type = ?
                     AND time >= (
                         SELECT timestep_start FROM scenarios
                         WHERE scenario_name = ?
@@ -665,7 +664,7 @@ class PriceData(object):
                     """,
                     con=database_connection,
                     params=[
-                        price_name,
+                        price_type,
                         scenario_name,
                         scenario_name
                     ],

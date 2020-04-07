@@ -1,2 +1,0 @@
-optimal_scheduling_problem_name,maximum_voltage_per_unit,minimum_voltage_per_unit,price_slack,price_flexible_load,maximum_voltage_imbalance
-optimal_scheduling_problem_default,1.0,1.0,0.1,1.0,1000.0

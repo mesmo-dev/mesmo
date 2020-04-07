@@ -36,8 +36,8 @@ def main():
     price_data = fledge.database_interface.PriceData(scenario_name)
 
     # Obtain price timeseries.
-    price_name = 'energy'
-    price_timeseries = price_data.price_timeseries_dict[price_name]
+    price_type = 'singapore_wholesale'
+    price_timeseries = price_data.price_timeseries_dict[price_type]
 
     # Obtain models.
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)

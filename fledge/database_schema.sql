@@ -120,63 +120,20 @@ CREATE TABLE IF NOT EXISTS "flexible_loads" (
     "time_period_power_shift_maximum" REAL,
     PRIMARY KEY("model_name")
 );
-
-CREATE TABLE IF NOT EXISTS "scenarios" (
-    "scenario_name" TEXT,
-    "display_id" TEXT,
-    "electric_grid_name" TEXT,
-    "thermal_grid_name" TEXT,
-    "case_name" TEXT,
-    "optimal_scheduling_problem_name" TEXT,
-    "timestep_start" TEXT,
-    "timestep_end" TEXT,
-    "timestep_interval_seconds" TEXT,
-    PRIMARY KEY("scenario_name")
-);
-CREATE TABLE IF NOT EXISTS "operation_problems" (
-    "optimal_scheduling_problem_name" TEXT,
-    "maximum_voltage_per_unit" REAL,
-    "minimum_voltage_per_unit" REAL,
-    "price_slack" REAL,
-    "price_flexible_load" REAL,
-    "maximum_voltage_imbalance" REAL,
-    PRIMARY KEY("optimal_scheduling_problem_name")
-);
-CREATE TABLE IF NOT EXISTS "operation_load_timeseries" (
-    "load_name" TEXT,
-    "scenario_name" TEXT,
-    "time" TEXT,
-    "active_power" REAL,
-    "reactive_power" REAL,
-    PRIMARY KEY("load_name","scenario_name","time")
-);
-CREATE TABLE IF NOT EXISTS "operation_line_timeseries" (
-    "line_name" TEXT,
-    "scenario_name" TEXT,
-    "time" TEXT,
-    "phase" REAL,
-    "terminal" REAL,
-    "active_power" REAL,
-    "reactive_power" REAL,
-    PRIMARY KEY("line_name","scenario_name","time","phase","terminal")
-);
-CREATE TABLE IF NOT EXISTS "operation_node_timeseries" (
-    "node_name" TEXT,
-    "scenario_name" TEXT,
-    "time" TEXT,
-    "phase" TEXT,
-    "voltage_magnitude" REAL,
-    "voltage_angle" REAL,
-    "active_power" REAL,
-    "reactive_power" REAL,
-    PRIMARY KEY("node_name","scenario_name","time","phase")
-);
 CREATE TABLE IF NOT EXISTS "price_timeseries" (
-    "price_name" TEXT,
-    "market_name" TEXT,
+    "price_type" TEXT,
     "time" TEXT,
     "price_value" REAL,
-    PRIMARY KEY("price_name","time","market_name")
+    PRIMARY KEY("price_type","time")
+);
+CREATE TABLE IF NOT EXISTS "scenarios" (
+    "scenario_name" TEXT,
+    "electric_grid_name" TEXT,
+    "thermal_grid_name" TEXT,
+    "timestep_start" TEXT,
+    "timestep_end" TEXT,
+    "timestep_interval" TEXT,
+    PRIMARY KEY("scenario_name")
 );
 CREATE TABLE IF NOT EXISTS "thermal_grid_cooling_plant_types" (
     "cooling_plant_type" TEXT,

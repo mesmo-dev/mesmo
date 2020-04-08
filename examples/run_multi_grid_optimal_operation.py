@@ -132,29 +132,12 @@ def main():
         timesteps=scenario_data.timesteps
     )
 
-    # Define electric grid objective.
-    # TODO: Not considering loss costs due to unreliable loss model.
-    # if optimization_problem.find_component('objective') is None:
-    #     optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-    # optimization_problem.objective.expr += (
-    #     sum(
-    #         price_timeseries.at[timestep, 'price_value']
-    #         * (
-    #             optimization_problem.loss_active_change[timestep]
-    #             + np.sum(np.real(power_flow_solution.loss))
-    #         )
-    #         for timestep in scenario_data.timesteps
-    #     )
-    # )
-
     # Define objective.
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
         price_timeseries,
         scenario_data.timesteps
     )
-
-    # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
         price_timeseries

@@ -13,7 +13,7 @@ import fledge.electric_grid_models
 def main():
 
     # Settings.
-    scenario_name = "singapore_tanjongpagar"
+    scenario_name = "singapore_6node"
     results_path = (
         os.path.join(
             fledge.config.results_path,

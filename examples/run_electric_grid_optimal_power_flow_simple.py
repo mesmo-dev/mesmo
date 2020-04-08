@@ -13,7 +13,7 @@ import fledge.electric_grid_models
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'singapore_6node'
     results_path = (
         os.path.join(
             fledge.config.results_path,
@@ -47,7 +47,7 @@ def main():
     linear_electric_grid_model.define_optimization_constraints(optimization_problem)
 
     # Define DER constraints.
-    # TODO: DERs are currently assumed to be only loads, hence negative values.
+    # TODO: DERs are currently assumed to be only loads, hence negative power values.
     optimization_problem.der_constraints = pyo.ConstraintList()
     for der_index, der in enumerate(electric_grid_model.ders):
         optimization_problem.der_constraints.add(
@@ -71,13 +71,6 @@ def main():
             / np.real(electric_grid_model.der_power_vector_nominal[der_index])
         )
 
-    # Define voltage limit constraints.
-    linear_electric_grid_model.define_optimization_limits(
-        optimization_problem,
-        voltage_magnitude_vector_minimum=0.5 * np.abs(power_flow_solution.node_voltage_vector),
-        voltage_magnitude_vector_maximum=1.5 * np.abs(power_flow_solution.node_voltage_vector),
-    )
-
     # Define objective.
     optimization_problem.objective = (
         pyo.Objective(
@@ -87,7 +80,7 @@ def main():
     )
     optimization_problem.objective.expr += (
         # DER active power.
-        # TODO: DERs are currently assumed to be only loads, hence negative values.
+        # TODO: DERs are currently assumed to be only loads, hence negative power values.
         -1.0 * sum(
             optimization_problem.der_active_power_vector_change[0, der]
             + np.real(power_flow_solution.der_power_vector[der_index])
@@ -144,19 +137,8 @@ def main():
     loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
     loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
-    # Obtain / print duals.
-    (
-        voltage_magnitude_vector_minimum_dual,
-        voltage_magnitude_vector_maximum_dual,
-        branch_power_vector_1_squared_maximum_dual,
-        branch_power_vector_2_squared_maximum_dual
-    ) = linear_electric_grid_model.get_optimization_limits_duals(
-        optimization_problem
-    )
-    print(f"voltage_magnitude_vector_minimum_dual = \n{voltage_magnitude_vector_minimum_dual.to_string()}")
-    print(f"voltage_magnitude_vector_maximum_dual = \n{voltage_magnitude_vector_maximum_dual.to_string()}")
-    print(f"branch_power_vector_1_squared_maximum_dual = \n{branch_power_vector_1_squared_maximum_dual.to_string()}")
-    print(f"branch_power_vector_2_squared_maximum_dual = \n{branch_power_vector_2_squared_maximum_dual.to_string()}")
+    # Print results path.
+    print("Results are stored in: " + results_path)
 
 
 if __name__ == '__main__':

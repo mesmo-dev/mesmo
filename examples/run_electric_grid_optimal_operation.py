@@ -81,38 +81,19 @@ def main():
         electric_grid_model
     )
 
-    # Define branch limit constraints.
-    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
-        lambda branch:
-        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
-    )
-    optimization_problem.branch_limit_constraints = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, timestep, *branch: (
-            optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
-            + branch_power_vector_1_squared(branch)
-            <=
-            100.0 * branch_power_vector_1_squared(branch)
-        )
+    # Define limit constraints (voltage / branch limits).
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
+    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
+    linear_electric_grid_model.define_optimization_limits(
+        optimization_problem,
+        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum,
+        timesteps=scenario_data.timesteps
     )
 
-    # Define electric grid objective.
-    # TODO: Not considering loss costs due to unrealiable loss model.
-    # if optimization_problem.find_component('objective') is None:
-    #     optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-    # optimization_problem.objective.expr += (
-    #     sum(
-    #         price_timeseries.at[timestep, 'price_value']
-    #         * (
-    #             optimization_problem.loss_active_change[timestep]
-    #             + np.sum(np.real(power_flow_solution.loss))
-    #         )
-    #         for timestep in scenario_data.timesteps
-    #     )
-    # )
-
-    # Define DER objective.
+    # Define objective (DER operation cost minimization).
     der_model_set.define_optimization_objective(optimization_problem, price_timeseries)
 
     # Solve optimization problem.
@@ -160,16 +141,50 @@ def main():
     loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
     loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
 
-    # Obtain / print duals.
-    branch_limit_duals = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
+    # Obtain DLMPs.
+    (
+        voltage_magnitude_vector_minimum_dlmp,
+        voltage_magnitude_vector_maximum_dlmp,
+        branch_power_vector_1_squared_maximum_dlmp,
+        branch_power_vector_2_squared_maximum_dlmp,
+        loss_active_dlmp,
+        loss_reactive_dlmp,
+        electric_grid_energy_dlmp,
+        electric_grid_voltage_dlmp,
+        electric_grid_congestion_dlmp,
+        electric_grid_loss_dlmp
+    ) = linear_electric_grid_model.get_optimization_dlmps(
+        optimization_problem,
+        price_timeseries,
+        scenario_data.timesteps
     )
-    for timestep in scenario_data.timesteps:
-        for branch_phase_index, branch in enumerate(electric_grid_model.branches):
-            branch_limit_duals.at[timestep, branch] = (
-                optimization_problem.dual[optimization_problem.branch_limit_constraints[timestep, branch]]
-            )
-    print(f"branch_limit_duals = \n{branch_limit_duals.to_string()}")
+
+    # Print DLMPs.
+    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp.to_string()}")
+    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp.to_string()}")
+    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp.to_string()}")
+    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp.to_string()}")
+    print(f"loss_active_dlmp = \n{loss_active_dlmp.to_string()}")
+    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp.to_string()}")
+    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp.to_string()}")
+    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp.to_string()}")
+    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp.to_string()}")
+    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp.to_string()}")
+
+    # Store DLMPs as CSV.
+    voltage_magnitude_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_minimum_dlmp.csv'))
+    voltage_magnitude_vector_maximum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_maximum_dlmp.csv'))
+    branch_power_vector_1_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_maximum_dlmp.csv'))
+    branch_power_vector_2_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_maximum_dlmp.csv'))
+    loss_active_dlmp.to_csv(os.path.join(results_path, 'loss_active_dlmp.csv'))
+    loss_reactive_dlmp.to_csv(os.path.join(results_path, 'loss_reactive_dlmp.csv'))
+    electric_grid_energy_dlmp.to_csv(os.path.join(results_path, 'electric_grid_energy_dlmp.csv'))
+    electric_grid_voltage_dlmp.to_csv(os.path.join(results_path, 'electric_grid_voltage_dlmp.csv'))
+    electric_grid_congestion_dlmp.to_csv(os.path.join(results_path, 'electric_grid_congestion_dlmp.csv'))
+    electric_grid_loss_dlmp.to_csv(os.path.join(results_path, 'electric_grid_loss_dlmp.csv'))
+
+    # Print results path.
+    print("Results are stored in: " + results_path)
 
 
 if __name__ == '__main__':

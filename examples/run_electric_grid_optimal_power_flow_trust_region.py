@@ -100,7 +100,7 @@ def main():
         linear_electric_grid_model.define_optimization_constraints(optimization_problem)
 
         # Define DER constraints.
-        # TODO: DERs are currently assumed to be only loads, hence negative values.
+        # TODO: DERs are currently assumed to be only loads, hence negative power values.
         optimization_problem.der_constraints = pyo.ConstraintList()
         for der_index, der in enumerate(electric_grid_model.ders):
             optimization_problem.der_constraints.add(
@@ -128,7 +128,7 @@ def main():
         optimization_problem.trust_region_constraints = pyo.ConstraintList()
 
         # DER.
-        # TODO: DERs are currently assumed to be only loads, hence negative values.
+        # TODO: DERs are currently assumed to be only loads, hence negative power values.
         for der_index, der in enumerate(electric_grid_model.ders):
             optimization_problem.trust_region_constraints.add(
                 optimization_problem.der_active_power_vector_change[0, der]
@@ -335,6 +335,9 @@ def main():
     branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
     loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
     loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
+
+    # Print results path.
+    print("Results are stored in: " + results_path)
 
 
 if __name__ == '__main__':

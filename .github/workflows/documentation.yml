@@ -1,0 +1,55 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - feature/docs
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    - name: Set up Python
+      uses: s-weigand/setup-conda@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        conda install sphinx
+        pip install -r docs/requirements.txt
+        pip install -e .
+        pip install -e cobmo
+    - name: Build documentation with Sphinx
+      run: |
+        cd docs
+        make html
+    - name: Store documentation HTML files
+      uses: actions/upload-artifact@v1
+      with:
+        name: Documentation HTML
+        path: docs/_build/html/
+    - name: Commit documentation HTML changes to gh-pages
+      run: |
+        git clone https://github.com/ammaraskar/sphinx-action-test.git --branch gh-pages --single-branch gh-pages
+        cp -r docs/_build/html/* gh-pages/
+        cd gh-pages
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Update documentation" -a || true
+    - name: Push HTML changes to gh-pages
+      uses: ad-m/github-push-action@master
+      with:
+        branch: gh-pages
+        directory: gh-pages
+        github_token: ${{ secrets.GITHUB_TOKEN }}

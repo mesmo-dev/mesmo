@@ -1,15 +1,15 @@
 
-\.idea/
+.idea
 
-\.vscode/
+.vscode
 
-*.egg-info/
+*.egg-info
 
-*/__pycache__/
+*__pycache__
 
 *.pyc
 
-\.pytest_cache/
+.pytest_cache
 
 *.sqlite
 

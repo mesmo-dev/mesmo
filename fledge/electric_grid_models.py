@@ -969,20 +969,27 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             # Obtain line resistance and reactance matrix entries for the line.
             matrices = (
                 electric_grid_data.electric_grid_line_types_matrices.loc[
-                    electric_grid_data.electric_grid_line_types_matrices['line_type'] == line_type['line_type'],
+                    (
+                        electric_grid_data.electric_grid_line_types_matrices.loc[:, 'line_type']
+                        == line_type.at['line_type']
+                    ),
                     ['resistance', 'reactance', 'capacitance']
                 ]
             )
 
+            # Obtain number of phases.
+            # - Only define as line types for as many phases as needed for current grid.
+            n_phases = min(line_type.at['n_phases'], len(self.phases))
+
             # Add line type name and number of phases to OpenDSS command string.
             opendss_command_string = (
-                f"new linecode.{line_type['line_type']}"
-                + f" nphases={line_type['n_phases']}"
+                f"new linecode.{line_type.at['line_type']}"
+                + f" nphases={n_phases}"
             )
 
             # Add resistance and reactance matrix entries to OpenDSS command string,
             # with formatting depending on number of phases.
-            if line_type['n_phases'] == 1:
+            if n_phases == 1:
                 opendss_command_string += (
                     " rmatrix = "
                     + "[{:.8f}]".format(*matrices.loc[:, 'resistance'])
@@ -991,7 +998,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                     + " cmatrix = "
                     + "[{:.8f}]".format(*matrices.loc[:, 'capacitance'])
                 )
-            elif line_type['n_phases'] == 2:
+            elif n_phases == 2:
                 opendss_command_string += (
                     " rmatrix = "
                     + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'resistance'])
@@ -1000,7 +1007,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                     + " cmatrix = "
                     + "[{:.8f} | {:.8f} {:.8f}]".format(*matrices.loc[:, 'capacitance'])
                 )
-            elif line_type['n_phases'] == 3:
+            elif n_phases == 3:
                 opendss_command_string += (
                     " rmatrix = "
                     + "[{:.8f} | {:.8f} {:.8f} | {:.8f} {:.8f} {:.8f}]".format(*matrices.loc[:, 'resistance'])

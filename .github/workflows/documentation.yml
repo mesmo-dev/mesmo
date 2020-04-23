@@ -3,7 +3,7 @@ name: Documentation
 on:
   push:
     branches:
-      - feature/docs
+      - develop
 
 jobs:
   build-documentation:

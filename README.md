@@ -30,9 +30,7 @@ Please note that the repository is under active development and the interface ma
 
 ## Documentation
 
-~~The preliminary documentation is located at [fledge.readthedocs.io](https://fledge.readthedocs.io/).~~
-
-While the repository is private, the hosted documentation does not get updated. Look at [docs/](./docs/) instead.
+The preliminary documentation is located at [tumcreate-estl.github.io/fledge](https://tumcreate-estl.github.io/fledge).
 
 ## Installation
 

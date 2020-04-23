@@ -1,0 +1,45 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - feature/docs
+
+jobs:
+  build-documentation:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    - name: Set up Python
+      uses: s-weigand/setup-conda@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        conda install sphinx
+        pip install -r docs/requirements.txt
+        pip install -e .
+        pip install -e cobmo
+    - name: Build documentation HTML with Sphinx
+      run: |
+        cd docs
+        make html
+    - name: Store documentation HTML
+      uses: actions/upload-artifact@v1
+      with:
+        name: Documentation HTML
+        path: docs/_build/html/
+    - name: Deploy documentation HTML to Github Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docs/_build/html/

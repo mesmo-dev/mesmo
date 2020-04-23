@@ -6,7 +6,7 @@ on:
       - feature/docs
 
 jobs:
-  build:
+  build-documentation:
 
     runs-on: ubuntu-latest
 
@@ -29,27 +29,18 @@ jobs:
         pip install -r docs/requirements.txt
         pip install -e .
         pip install -e cobmo
-    - name: Build documentation with Sphinx
+    - name: Build documentation HTML with Sphinx
       run: |
         cd docs
         make html
-    - name: Store documentation HTML files
+        touch _build/html/.nojekyll
+    - name: Store documentation HTML
       uses: actions/upload-artifact@v1
       with:
         name: Documentation HTML
         path: docs/_build/html/
-    - name: Commit documentation HTML changes to gh-pages
-      run: |
-        git clone https://github.com/ammaraskar/sphinx-action-test.git --branch gh-pages --single-branch gh-pages
-        cp -r docs/_build/html/* gh-pages/
-        cd gh-pages
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "Update documentation" -a || true
-    - name: Push HTML changes to gh-pages
-      uses: ad-m/github-push-action@master
+    - name: Deploy documentation HTML to Github Pages
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        branch: gh-pages
-        directory: gh-pages
         github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docs/_build/html/

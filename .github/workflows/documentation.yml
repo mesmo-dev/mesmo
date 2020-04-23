@@ -33,7 +33,6 @@ jobs:
       run: |
         cd docs
         make html
-        touch _build/html/.nojekyll
     - name: Store documentation HTML
       uses: actions/upload-artifact@v1
       with:

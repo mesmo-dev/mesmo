@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.abspath('..'), 'cobmo'))
 
 # Project information.
 project = 'FLEDGE'
-copyright = '2020, TUMCREATE'
+copyright = '2018-2020, TUMCREATE'
 author = 'TUMCREATE'
 
 # Extensions.
@@ -24,6 +24,7 @@ extensions = [
     'sphinx_markdown_tables',  # TODO: `sphinx_markdown_tables` doesn't support Readthedocs PDF properly.
     'sphinx.ext.mathjax',
     'recommonmark',
+    'sphinx_multiversion'
 ]
 
 # Extension settings.
@@ -55,6 +56,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 # - The theme to use for HTML and HTML Help pages.  See the documentation for
 #   a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
+templates_path = ['templates']
+
+# Sphinx multiversion settings.
+smv_remote_whitelist = r'^.*$'  # Include all remote branches in builds.
 
 # Recommonmark settings.
 # - Documentation: <https://recommonmark.readthedocs.io/en/latest/auto_structify.html>

@@ -79,9 +79,24 @@ class OperationProblem(object):
         )
 
         # Define linear electric grid model constraints.
-        voltage_magnitude_vector_minimum = 0.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        voltage_magnitude_vector_maximum = 1.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        branch_power_vector_squared_maximum = 1.5 * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+        voltage_magnitude_vector_minimum = (
+            scenario_data.scenario['voltage_per_unit_minimum']
+            * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
+            else None
+        )
+        voltage_magnitude_vector_maximum = (
+            scenario_data.scenario['voltage_per_unit_maximum']
+            * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
+            else None
+        )
+        branch_power_vector_squared_maximum = (
+            scenario_data.scenario['branch_flow_per_unit_minimum']
+            * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_minimum'])
+            else None
+        )
         self.linear_electric_grid_model.define_optimization_constraints(
             self.optimization_problem,
             self.timesteps,

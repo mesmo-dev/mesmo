@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.abspath('..'), 'cobmo'))
 
 # Project information.
 project = 'FLEDGE'
-copyright = '2020, TUMCREATE'
+copyright = '2018-2020, TUMCREATE'
 author = 'TUMCREATE'
 
 # Extensions.

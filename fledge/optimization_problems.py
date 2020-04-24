@@ -147,6 +147,8 @@ class OperationProblem(object):
                 tee=fledge.config.solver_output
             )
         )
+
+        # Assert that solver exited with any solution. If not, raise an error.
         try:
             assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
         except AssertionError:

@@ -97,9 +97,13 @@ class OperationProblem(object):
         )
 
         # Define thermal grid model constraints.
+        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
+        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
         self.linear_thermal_grid_model.define_optimization_constraints(
             self.optimization_problem,
-            self.timesteps
+            self.timesteps,
+            node_head_vector_minimum=node_head_vector_minimum,
+            branch_flow_vector_maximum=branch_flow_vector_maximum
         )
 
         # Define DER variables.
@@ -119,18 +123,6 @@ class OperationProblem(object):
             self.electric_grid_model,
             self.thermal_power_flow_solution_reference,
             self.thermal_grid_model
-        )
-
-        # Define limit constraints.
-
-        # Thermal grid.
-        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
-        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
-        self.linear_thermal_grid_model.define_optimization_limits(
-            self.optimization_problem,
-            node_head_vector_minimum=node_head_vector_minimum,
-            branch_flow_vector_maximum=branch_flow_vector_maximum,
-            timesteps=self.timesteps
         )
 
         # Define objective.

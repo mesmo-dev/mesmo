@@ -58,6 +58,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 html_theme = 'sphinx_rtd_theme'
 templates_path = ['templates']
 
+# Sphinx multiversion settings.
+smv_remote_whitelist = r'^.*$'  # Include all remote branches in builds.
+
 # Recommonmark settings.
 # - Documentation: <https://recommonmark.readthedocs.io/en/latest/auto_structify.html>
 from recommonmark.transform import AutoStructify

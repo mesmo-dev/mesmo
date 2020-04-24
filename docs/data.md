@@ -68,6 +68,15 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `latitude` | | |
 | `longitude` | | |
 
+## `electric_grid_operation_limit_types`
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `electric_grid_operation_limit_type` | | |
+| `voltage_per_unit_minimum` | | |
+| `voltage_per_unit_maximum` | | |
+| `branch_flow_per_unit_minimum` | | |
+
 ## `electric_grid_transformer_types`
 
 | Column | Unit | Description |
@@ -174,6 +183,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `scenario_name` | | |
 | `electric_grid_name` | | |
 | `thermal_grid_name` | | |
+| `electric_grid_operation_limit_type` | | |
 | `timestep_start` | | |
 | `timestep_end` | | |
 | `timestep_interval` | | |

@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS "electric_grid_nodes" (
      "longitude" TEXT,
      PRIMARY KEY("node_name","electric_grid_name")
 );
+CREATE TABLE IF NOT EXISTS "electric_grid_operation_limit_types" (
+    "electric_grid_operation_limit_type" TEXT,
+    "voltage_per_unit_minimum" TEXT,
+    "voltage_per_unit_maximum" TEXT,
+    "branch_flow_per_unit_minimum" TEXT,
+    PRIMARY KEY("electric_grid_operation_limit_type")
+);
 CREATE TABLE IF NOT EXISTS "electric_grid_transformer_types" (
     "transformer_type" TEXT,
     "resistance_percentage" TEXT,
@@ -137,6 +144,7 @@ CREATE TABLE IF NOT EXISTS "scenarios" (
     "electric_grid_name" TEXT,
     "thermal_grid_name" TEXT,
     "parameter_set" TEXT,
+    "electric_grid_operation_limit_type" TEXT,
     "timestep_start" TEXT,
     "timestep_end" TEXT,
     "timestep_interval" TEXT,

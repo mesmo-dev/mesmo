@@ -89,37 +89,6 @@ class ScenarioData(object):
             scenario_name: str,
             database_connection=connect_database()
     ):
-        """Load scenario data for given `scenario_name`."""
-
-        self.scenario = (
-            pd.read_sql(
-                """
-                SELECT * FROM scenarios
-                WHERE scenario_name = ?
-                """,
-                con=database_connection,
-                params=[scenario_name],
-                parse_dates=[
-                    'timestep_start',
-                    'timestep_end'
-                ]
-            ).iloc[0]
-        )
-        self.scenario['timestep_interval'] = (
-             pd.Timedelta(self.scenario['timestep_interval'])
-        )
-
-        # Instantiate timestep series.
-        self.timesteps = (
-            pd.Index(
-                pd.date_range(
-                    start=self.scenario['timestep_start'],
-                    end=self.scenario['timestep_end'],
-                    freq=self.scenario['timestep_interval']
-                ),
-                name='timestep'
-            )
-        )
 
         # Obtain parameters.
         self.parameters = (
@@ -133,6 +102,38 @@ class ScenarioData(object):
                 params=[scenario_name],
                 index_col='parameter_name'
             ).loc[:, 'parameter_value']
+        )
+
+        # Obtain scenario data.
+        self.scenario = (
+            self.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM scenarios
+                LEFT JOIN electric_grid_operation_limit_types USING (electric_grid_operation_limit_type)
+                WHERE scenario_name = ?
+                """,
+                con=database_connection,
+                params=[scenario_name],
+                parse_dates=[
+                    'timestep_start',
+                    'timestep_end'
+                ]
+            )).iloc[0]
+        )
+        self.scenario['timestep_interval'] = (
+            pd.Timedelta(self.scenario['timestep_interval'])
+        )
+
+        # Instantiate timestep series.
+        self.timesteps = (
+            pd.Index(
+                pd.date_range(
+                    start=self.scenario['timestep_start'],
+                    end=self.scenario['timestep_end'],
+                    freq=self.scenario['timestep_interval']
+                ),
+                name='timestep'
+            )
         )
 
     def parse_parameters_column(
@@ -178,8 +179,10 @@ class ScenarioData(object):
         if excluded_columns is None:
             excluded_columns = []
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_set')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
 
         # Select non-excluded, string columns and apply `parse_parameters_column`.
         selected_columns = (

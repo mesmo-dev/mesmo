@@ -387,7 +387,9 @@ class LinearThermalGridModel(object):
     def define_optimization_constraints(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            timesteps=pd.Index([0], name='timestep')
+            timesteps=pd.Index([0], name='timestep'),
+            node_head_vector_minimum: np.ndarray = None,
+            branch_flow_vector_maximum: np.ndarray = None
     ):
 
         # Define constraints.
@@ -434,14 +436,6 @@ class LinearThermalGridModel(object):
                     for der_index, der in enumerate(self.thermal_grid_model.ders)
                 )
             )
-
-    def define_optimization_limits(
-            self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            node_head_vector_minimum: np.ndarray = None,
-            branch_flow_vector_maximum: np.ndarray = None,
-            timesteps=pd.Index([0], name='timestep')
-    ):
 
         # Node head.
         if node_head_vector_minimum is not None:

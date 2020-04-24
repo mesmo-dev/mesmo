@@ -1824,7 +1824,10 @@ class LinearElectricGridModel(object):
     def define_optimization_constraints(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            timesteps=pd.Index([0], name='timestep')
+            timesteps=pd.Index([0], name='timestep'),
+            voltage_magnitude_vector_minimum: np.ndarray = None,
+            voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_vector_squared_maximum: np.ndarray = None
     ):
         """Define constraints to express the linear electric grid model equations for given `optimization_problem`."""
 
@@ -1895,15 +1898,6 @@ class LinearElectricGridModel(object):
                     for der_index, der in enumerate(self.electric_grid_model.ders)
                 )
             )
-
-    def define_optimization_limits(
-            self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            voltage_magnitude_vector_minimum: np.ndarray = None,
-            voltage_magnitude_vector_maximum: np.ndarray = None,
-            branch_power_vector_squared_maximum: np.ndarray = None,
-            timesteps=pd.Index([0], name='timestep')
-    ):
 
         # Voltage.
         if (voltage_magnitude_vector_minimum is not None) or (voltage_magnitude_vector_maximum is not None):

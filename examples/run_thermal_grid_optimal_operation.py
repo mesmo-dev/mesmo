@@ -60,9 +60,13 @@ def main():
     )
 
     # Define thermal grid model constraints.
+    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
+    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps
+        scenario_data.timesteps,
+        node_head_vector_minimum=node_head_vector_minimum,
+        branch_flow_vector_maximum=branch_flow_vector_maximum
     )
 
     # Define DER variables.
@@ -80,16 +84,6 @@ def main():
         optimization_problem,
         thermal_power_flow_solution,
         thermal_grid_model
-    )
-
-    # Define limit constraints (node head / branch limits).
-    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
-    linear_thermal_grid_model.define_optimization_limits(
-        optimization_problem,
-        node_head_vector_minimum=node_head_vector_minimum,
-        branch_flow_vector_maximum=branch_flow_vector_maximum,
-        timesteps=scenario_data.timesteps
     )
 
     # Define objective (district cooling plant operation cost minimization).

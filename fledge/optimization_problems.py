@@ -79,9 +79,30 @@ class OperationProblem(object):
         )
 
         # Define linear electric grid model constraints.
+        voltage_magnitude_vector_minimum = (
+            scenario_data.scenario['voltage_per_unit_minimum']
+            * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
+            else None
+        )
+        voltage_magnitude_vector_maximum = (
+            scenario_data.scenario['voltage_per_unit_maximum']
+            * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
+            else None
+        )
+        branch_power_vector_squared_maximum = (
+            scenario_data.scenario['branch_flow_per_unit_minimum']
+            * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_minimum'])
+            else None
+        )
         self.linear_electric_grid_model.define_optimization_constraints(
             self.optimization_problem,
-            self.timesteps
+            self.timesteps,
+            voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+            voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+            branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
         )
 
         # Define thermal grid model variables.
@@ -91,9 +112,13 @@ class OperationProblem(object):
         )
 
         # Define thermal grid model constraints.
+        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
+        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
         self.linear_thermal_grid_model.define_optimization_constraints(
             self.optimization_problem,
-            self.timesteps
+            self.timesteps,
+            node_head_vector_minimum=node_head_vector_minimum,
+            branch_flow_vector_maximum=branch_flow_vector_maximum
         )
 
         # Define DER variables.
@@ -113,30 +138,6 @@ class OperationProblem(object):
             self.electric_grid_model,
             self.thermal_power_flow_solution_reference,
             self.thermal_grid_model
-        )
-
-        # Define limit constraints.
-
-        # Electric grid.
-        voltage_magnitude_vector_minimum = 0.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        voltage_magnitude_vector_maximum = 1.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        branch_power_vector_squared_maximum = 1.5 * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
-        self.linear_electric_grid_model.define_optimization_limits(
-            self.optimization_problem,
-            voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-            voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-            branch_power_vector_squared_maximum=branch_power_vector_squared_maximum,
-            timesteps=self.timesteps
-        )
-
-        # Thermal grid.
-        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
-        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
-        self.linear_thermal_grid_model.define_optimization_limits(
-            self.optimization_problem,
-            node_head_vector_minimum=node_head_vector_minimum,
-            branch_flow_vector_maximum=branch_flow_vector_maximum,
-            timesteps=self.timesteps
         )
 
         # Define objective.
@@ -161,6 +162,8 @@ class OperationProblem(object):
                 tee=fledge.config.solver_output
             )
         )
+
+        # Assert that solver exited with any solution. If not, raise an error.
         try:
             assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
         except AssertionError:

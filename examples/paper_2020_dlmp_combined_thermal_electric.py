@@ -75,9 +75,15 @@ def main():
     )
 
     # Define linear electric grid model constraints.
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
+    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps
+        scenario_data.timesteps,
+        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
     )
 
     # Define thermal grid model variables.
@@ -87,9 +93,22 @@ def main():
     )
 
     # Define thermal grid model constraints.
+    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
+    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    # Modify limits for scenarios.
+    if scenario == 1:
+        pass
+    elif scenario == 2:
+        branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
+    elif scenario == 3:
+        node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
+    else:
+        ValueError(f"Invalid scenario: {scenario}")
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps
+        scenario_data.timesteps,
+        node_head_vector_minimum=node_head_vector_minimum,
+        branch_flow_vector_maximum=branch_flow_vector_maximum
     )
 
     # Define DER variables.
@@ -109,39 +128,6 @@ def main():
         electric_grid_model,
         thermal_power_flow_solution,
         thermal_grid_model
-    )
-
-    # Define limit constraints.
-
-    # Electric grid.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
-    linear_electric_grid_model.define_optimization_limits(
-        optimization_problem,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum,
-        timesteps=scenario_data.timesteps
-    )
-
-    # Thermal grid.
-    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
-    # Modify limits for scenarios.
-    if scenario == 1:
-        pass
-    elif scenario == 2:
-        branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
-    elif scenario == 3:
-        node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
-    else:
-        ValueError(f"Invalid scenario: {scenario}")
-    linear_thermal_grid_model.define_optimization_limits(
-        optimization_problem,
-        node_head_vector_minimum=node_head_vector_minimum,
-        branch_flow_vector_maximum=branch_flow_vector_maximum,
-        timesteps=scenario_data.timesteps
     )
 
     # Define objective.

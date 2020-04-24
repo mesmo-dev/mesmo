@@ -1,9 +1,6 @@
 name: Documentation
 
-on:
-  push:
-    branches:
-      - feature/docs
+on: [push]
 
 jobs:
   build-documentation:

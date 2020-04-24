@@ -59,9 +59,15 @@ def main():
     )
 
     # Define linear electric grid model constraints.
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
+    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps
+        scenario_data.timesteps,
+        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
     )
 
     # Define DER variables.
@@ -79,18 +85,6 @@ def main():
         optimization_problem,
         power_flow_solution,
         electric_grid_model
-    )
-
-    # Define limit constraints (voltage / branch limits).
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
-    linear_electric_grid_model.define_optimization_limits(
-        optimization_problem,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum,
-        timesteps=scenario_data.timesteps
     )
 
     # Define objective (DER operation cost minimization).

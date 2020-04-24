@@ -79,9 +79,15 @@ class OperationProblem(object):
         )
 
         # Define linear electric grid model constraints.
+        voltage_magnitude_vector_minimum = 0.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+        voltage_magnitude_vector_maximum = 1.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+        branch_power_vector_squared_maximum = 1.5 * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
         self.linear_electric_grid_model.define_optimization_constraints(
             self.optimization_problem,
-            self.timesteps
+            self.timesteps,
+            voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+            voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+            branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
         )
 
         # Define thermal grid model variables.
@@ -116,18 +122,6 @@ class OperationProblem(object):
         )
 
         # Define limit constraints.
-
-        # Electric grid.
-        voltage_magnitude_vector_minimum = 0.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        voltage_magnitude_vector_maximum = 1.5 * np.abs(self.power_flow_solution_reference.node_voltage_vector)
-        branch_power_vector_squared_maximum = 1.5 * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
-        self.linear_electric_grid_model.define_optimization_limits(
-            self.optimization_problem,
-            voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-            voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-            branch_power_vector_squared_maximum=branch_power_vector_squared_maximum,
-            timesteps=self.timesteps
-        )
 
         # Thermal grid.
         node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector

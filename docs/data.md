@@ -75,7 +75,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `electric_grid_operation_limit_type` | | |
 | `voltage_per_unit_minimum` | | |
 | `voltage_per_unit_maximum` | | |
-| `branch_flow_per_unit_minimum` | | |
+| `branch_flow_per_unit_maximum` | | |
 
 ## `electric_grid_transformer_types`
 

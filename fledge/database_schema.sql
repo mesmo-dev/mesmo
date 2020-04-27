@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS "electric_grid_operation_limit_types" (
     "electric_grid_operation_limit_type" TEXT,
     "voltage_per_unit_minimum" TEXT,
     "voltage_per_unit_maximum" TEXT,
-    "branch_flow_per_unit_minimum" TEXT,
+    "branch_flow_per_unit_maximum" TEXT,
     PRIMARY KEY("electric_grid_operation_limit_type")
 );
 CREATE TABLE IF NOT EXISTS "electric_grid_transformer_types" (

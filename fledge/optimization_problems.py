@@ -92,9 +92,9 @@ class OperationProblem(object):
             else None
         )
         branch_power_vector_squared_maximum = (
-            scenario_data.scenario['branch_flow_per_unit_minimum']
+            scenario_data.scenario['branch_flow_per_unit_maximum']
             * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
-            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_minimum'])
+            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
             else None
         )
         self.linear_electric_grid_model.define_optimization_constraints(

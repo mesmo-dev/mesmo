@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS "scenarios" (
     "electric_grid_name" TEXT,
     "thermal_grid_name" TEXT,
     "parameter_set" TEXT,
+    "price_type" TEXT,
     "electric_grid_operation_limit_type" TEXT,
     "thermal_grid_operation_limit_type" TEXT,
     "timestep_start" TEXT,

@@ -41,8 +41,7 @@ class OperationProblem(object):
         self.timesteps = scenario_data.timesteps
 
         # Store price timeseries.
-        price_type = 'singapore_wholesale'
-        self.price_timeseries = price_data.price_timeseries_dict[price_type]
+        self.price_timeseries = price_data.price_timeseries_dict[scenario_data.scenario.at['price_type']]
 
         # Obtain models.
         self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)

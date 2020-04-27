@@ -172,9 +172,9 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `price_type` | | |
-| `time` | | |
-| `price_value` | | |
+| `price_type` | | Unique type identifier.|
+| `time` | | Timestamp according to ISO 8601. |
+| `price_value` | S$/kWh | Currently, prices are assumed to be in SGD. |
 
 ## `scenarios`
 
@@ -183,6 +183,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `scenario_name` | | |
 | `electric_grid_name` | | |
 | `thermal_grid_name` | | |
+| `price_type` | | Type identifier as defined in `price_timeseries` |
 | `electric_grid_operation_limit_type` | | |
 | `thermal_grid_operation_limit_type` | | Type identifier as defined in `thermal_grid_operation_limit_types` |
 | `timestep_start` | | |

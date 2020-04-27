@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS "electric_grid_operation_limit_types" (
     "electric_grid_operation_limit_type" TEXT,
     "voltage_per_unit_minimum" TEXT,
     "voltage_per_unit_maximum" TEXT,
-    "branch_flow_per_unit_minimum" TEXT,
+    "branch_flow_per_unit_maximum" TEXT,
     PRIMARY KEY("electric_grid_operation_limit_type")
 );
 CREATE TABLE IF NOT EXISTS "electric_grid_transformer_types" (
@@ -144,7 +144,9 @@ CREATE TABLE IF NOT EXISTS "scenarios" (
     "electric_grid_name" TEXT,
     "thermal_grid_name" TEXT,
     "parameter_set" TEXT,
+    "price_type" TEXT,
     "electric_grid_operation_limit_type" TEXT,
+    "thermal_grid_operation_limit_type" TEXT,
     "timestep_start" TEXT,
     "timestep_end" TEXT,
     "timestep_interval" TEXT,
@@ -192,6 +194,12 @@ CREATE TABLE IF NOT EXISTS "thermal_grid_nodes" (
     "latitude" TEXT,
     "longitude" TEXT,
     PRIMARY KEY("thermal_grid_name","node_name")
+);
+CREATE TABLE IF NOT EXISTS "thermal_grid_operation_limit_types" (
+    "thermal_grid_operation_limit_type" TEXT,
+    "node_head_per_unit_maximum" TEXT,
+    "pipe_flow_per_unit_maximum" TEXT,
+    PRIMARY KEY("thermal_grid_operation_limit_type")
 );
 CREATE TABLE IF NOT EXISTS "thermal_grids" (
     "thermal_grid_name" TEXT,

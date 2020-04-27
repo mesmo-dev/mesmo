@@ -75,7 +75,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `electric_grid_operation_limit_type` | | |
 | `voltage_per_unit_minimum` | | |
 | `voltage_per_unit_maximum` | | |
-| `branch_flow_per_unit_minimum` | | |
+| `branch_flow_per_unit_maximum` | | |
 
 ## `electric_grid_transformer_types`
 
@@ -172,9 +172,9 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `price_type` | | |
-| `time` | | |
-| `price_value` | | |
+| `price_type` | | Unique type identifier.|
+| `time` | | Timestamp according to ISO 8601. |
+| `price_value` | S$/kWh | Currently, prices are assumed to be in SGD. |
 
 ## `scenarios`
 
@@ -183,7 +183,9 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `scenario_name` | | |
 | `electric_grid_name` | | |
 | `thermal_grid_name` | | |
+| `price_type` | | Type identifier as defined in `price_timeseries` |
 | `electric_grid_operation_limit_type` | | |
+| `thermal_grid_operation_limit_type` | | Type identifier as defined in `thermal_grid_operation_limit_types` |
 | `timestep_start` | | |
 | `timestep_end` | | |
 | `timestep_interval` | | |
@@ -238,6 +240,16 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `node_type` | | |
 | `latitude` | | |
 | `longitude` | | |
+
+## `thermal_grid_operation_limit_types`
+
+Thermal line limits are currently defined in per unit of the nominal thermal power solution, i.e., the thermal power flow solution for nominal loading conditions as defined in `thermal_grid_ders`.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `thermal_grid_operation_limit_type` | | Unique type identifier. |
+| `node_head_per_unit_maximum` | - | Maximum node head, in per unit of the nominal thermal power solution. |
+| `pipe_flow_per_unit_maximum` | - | Maximum pipe / branch flow, in per unit of the nominal thermal power solution. |
 
 ## `thermal_grids`
 

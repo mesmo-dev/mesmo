@@ -41,8 +41,7 @@ class OperationProblem(object):
         self.timesteps = scenario_data.timesteps
 
         # Store price timeseries.
-        price_type = 'singapore_wholesale'
-        self.price_timeseries = price_data.price_timeseries_dict[price_type]
+        self.price_timeseries = price_data.price_timeseries_dict[scenario_data.scenario.at['price_type']]
 
         # Obtain models.
         self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -92,9 +91,9 @@ class OperationProblem(object):
             else None
         )
         branch_power_vector_squared_maximum = (
-            scenario_data.scenario['branch_flow_per_unit_minimum']
+            scenario_data.scenario['branch_flow_per_unit_maximum']
             * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
-            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_minimum'])
+            if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
             else None
         )
         self.linear_electric_grid_model.define_optimization_constraints(
@@ -112,8 +111,18 @@ class OperationProblem(object):
         )
 
         # Define thermal grid model constraints.
-        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
-        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
+        node_head_vector_minimum = (
+            scenario_data.scenario['node_head_per_unit_maximum']
+            * self.thermal_power_flow_solution_reference.node_head_vector
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
+            else None
+        )
+        branch_flow_vector_maximum = (
+            scenario_data.scenario['pipe_flow_per_unit_maximum']
+            * self.thermal_power_flow_solution_reference.branch_flow_vector
+            if pd.notnull(scenario_data.scenario['pipe_flow_per_unit_maximum'])
+            else None
+        )
         self.linear_thermal_grid_model.define_optimization_constraints(
             self.optimization_problem,
             self.timesteps,

@@ -110,6 +110,7 @@ class ScenarioData(object):
                 """
                 SELECT * FROM scenarios
                 LEFT JOIN electric_grid_operation_limit_types USING (electric_grid_operation_limit_type)
+                LEFT JOIN thermal_grid_operation_limit_types USING (thermal_grid_operation_limit_type)
                 WHERE scenario_name = ?
                 """,
                 con=database_connection,

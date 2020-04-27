@@ -112,8 +112,18 @@ class OperationProblem(object):
         )
 
         # Define thermal grid model constraints.
-        node_head_vector_minimum = 1.5 * self.thermal_power_flow_solution_reference.node_head_vector
-        branch_flow_vector_maximum = 1.5 * self.thermal_power_flow_solution_reference.branch_flow_vector
+        node_head_vector_minimum = (
+            scenario_data.scenario['node_head_per_unit_maximum']
+            * self.thermal_power_flow_solution_reference.node_head_vector
+            if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
+            else None
+        )
+        branch_flow_vector_maximum = (
+            scenario_data.scenario['pipe_flow_per_unit_maximum']
+            * self.thermal_power_flow_solution_reference.branch_flow_vector
+            if pd.notnull(scenario_data.scenario['pipe_flow_per_unit_maximum'])
+            else None
+        )
         self.linear_thermal_grid_model.define_optimization_constraints(
             self.optimization_problem,
             self.timesteps,

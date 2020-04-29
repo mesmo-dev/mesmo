@@ -2149,7 +2149,6 @@ class LinearElectricGridModel(object):
             electric_grid_loss_dlmp
         )
 
-
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
@@ -2157,39 +2156,29 @@ class LinearElectricGridModel(object):
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate results variables.
-
-        # DER.
         der_active_power_vector = (
             pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
         )
         der_reactive_power_vector = (
             pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
         )
-
-        # Voltage.
         voltage_magnitude_vector = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-
-        # Branch flows.
         branch_power_vector_1_squared = (
             pd.DataFrame(columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
         branch_power_vector_2_squared = (
             pd.DataFrame(columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
-
-        # Loss.
         loss_active = pd.DataFrame(columns=['total'], index=timesteps, dtype=np.float)
         loss_reactive = pd.DataFrame(columns=['total'], index=timesteps, dtype=np.float)
 
         # Obtain results.
         for timestep in timesteps:
-
-            # DER.
             for der_index, der in enumerate(self.electric_grid_model.ders):
                 der_active_power_vector.at[timestep, der] = (
                     optimization_problem.der_active_power_vector_change[timestep, der].value
@@ -2199,15 +2188,11 @@ class LinearElectricGridModel(object):
                     optimization_problem.der_reactive_power_vector_change[timestep, der].value
                     + np.imag(self.power_flow_solution.der_power_vector[der_index])
                 )
-
-            # Voltage.
             for node_index, node in enumerate(self.electric_grid_model.nodes):
                 voltage_magnitude_vector.at[timestep, node] = (
                     optimization_problem.voltage_magnitude_vector_change[timestep, node].value
                     + np.abs(self.power_flow_solution.node_voltage_vector[node_index])
                 )
-
-            # Branch flows.
             for branch_index, branch in enumerate(self.electric_grid_model.branches):
                 branch_power_vector_1_squared.at[timestep, branch] = (
                     optimization_problem.branch_power_vector_1_squared_change[timestep, branch].value
@@ -2217,8 +2202,6 @@ class LinearElectricGridModel(object):
                     optimization_problem.branch_power_vector_2_squared_change[timestep, branch].value
                     + np.abs(self.power_flow_solution.branch_power_vector_2[branch_index] ** 2)
                 )
-
-            # Loss.
             loss_active.at[timestep, 'total'] = (
                 optimization_problem.loss_active_change[timestep].value
                 + np.real(self.power_flow_solution.loss)
@@ -2268,14 +2251,14 @@ class LinearElectricGridModel(object):
             branch_power_vector_1_squared['mean'] = branch_power_vector_1_squared.mean(axis=1)
             branch_power_vector_2_squared['mean'] = branch_power_vector_2_squared.mean(axis=1)
 
-        return (
-            der_active_power_vector,
-            der_reactive_power_vector,
-            voltage_magnitude_vector,
-            branch_power_vector_1_squared,
-            branch_power_vector_2_squared,
-            loss_active,
-            loss_reactive
+        return fledge.utils.ResultsDict(
+            der_active_power_vector=der_active_power_vector,
+            der_reactive_power_vector=der_reactive_power_vector,
+            voltage_magnitude_vector=voltage_magnitude_vector,
+            branch_power_vector_1_squared=branch_power_vector_1_squared,
+            branch_power_vector_2_squared=branch_power_vector_2_squared,
+            loss_active=loss_active,
+            loss_reactive=loss_reactive
         )
 
 

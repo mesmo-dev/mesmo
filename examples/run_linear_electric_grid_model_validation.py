@@ -256,7 +256,7 @@ def main():
     linear_electric_grid_model_error = linear_electric_grid_model_error.round(2)
 
     # Print results.
-    print(linear_electric_grid_model_error.to_string())
+    print(linear_electric_grid_model_error)
 
     # Store results as CSV.
     linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))

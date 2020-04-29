@@ -75,8 +75,12 @@ class FixedDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
-    ):
-        return None
+    ) -> fledge.utils.ResultsDict:
+
+        # TODO: Revise optimization method definitions in DER models.
+
+        # Fixed DERs have no optimization variables, therefore return empty results.
+        return fledge.utils.ResultsDict()
 
 
 class FixedLoadModel(FixedDERModel):
@@ -348,7 +352,7 @@ class FlexibleDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate results variables.
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.state_names)
@@ -370,10 +374,10 @@ class FlexibleDERModel(DERModel):
                     optimization_problem.output_vector[timestep, self.der_name, output_name].value
                 )
 
-        return (
-            state_vector,
-            control_vector,
-            output_vector
+        return fledge.utils.ResultsDict(
+            state_vector=state_vector,
+            control_vector=control_vector,
+            output_vector=output_vector
         )
 
 

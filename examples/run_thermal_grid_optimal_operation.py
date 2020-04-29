@@ -102,30 +102,23 @@ def main():
         raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
     # optimization_problem.display()
 
+    # TODO: Problem fails due to missing electric grid connection, because of flexible buildings' appliances demand.
+
     # Obtain results.
-    (
-        der_thermal_power_vector,
-        node_head_vector,
-        branch_flow_vector,
-        pump_power
-    ) = linear_thermal_grid_model.get_optimization_results(
-        optimization_problem,
-        scenario_data.timesteps,
-        in_per_unit=True,
-        with_mean=True
+    results = (
+        linear_thermal_grid_model.get_optimization_results(
+            optimization_problem,
+            scenario_data.timesteps,
+            in_per_unit=True,
+            with_mean=True
+        )
     )
 
     # Print results.
-    print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
-    print(f"node_head_vector = \n{node_head_vector.to_string()}")
-    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
-    print(f"pump_power = \n{pump_power.to_string()}")
+    print(results)
 
     # Store results as CSV.
-    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
-    node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
-    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
-    pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
+    results.to_csv(results_path)
 
     # Obtain DLMPs.
     (
@@ -143,13 +136,13 @@ def main():
     )
 
     # Print DLMPs.
-    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp.to_string()}")
-    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp.to_string()}")
-    print(f"pump_power_dlmp = \n{pump_power_dlmp.to_string()}")
-    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp.to_string()}")
-    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp.to_string()}")
-    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp.to_string()}")
-    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp.to_string()}")
+    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp}")
+    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp}")
+    print(f"pump_power_dlmp = \n{pump_power_dlmp}")
+    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp}")
+    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp}")
+    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp}")
+    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp}")
 
     # Store DLMPs as CSV.
     node_head_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'node_head_vector_minimum_dlmp.csv'))

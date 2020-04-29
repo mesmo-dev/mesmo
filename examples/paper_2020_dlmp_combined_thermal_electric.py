@@ -154,58 +154,29 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
-    (
-        der_active_power_vector,
-        der_reactive_power_vector,
-        voltage_magnitude_vector,
-        branch_power_vector_1_squared,
-        branch_power_vector_2_squared,
-        loss_active,
-        loss_reactive
-    ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem,
-        power_flow_solution,
-        scenario_data.timesteps,
-        in_per_unit=False,
-        with_mean=True
+    results = (
+        linear_electric_grid_model.get_optimization_results(
+            optimization_problem,
+            power_flow_solution,
+            scenario_data.timesteps,
+            in_per_unit=False,
+            with_mean=True
+        )
     )
-    (
-        der_thermal_power_vector,
-        node_head_vector,
-        branch_flow_vector,
-        pump_power
-    ) = linear_thermal_grid_model.get_optimization_results(
-        optimization_problem,
-        scenario_data.timesteps,
-        in_per_unit=False,
-        with_mean=True
+    results.update(
+        linear_thermal_grid_model.get_optimization_results(
+            optimization_problem,
+            scenario_data.timesteps,
+            in_per_unit=False,
+            with_mean=True
+        )
     )
 
     # Print results.
-    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
-    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
-    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
-    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
-    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
-    print(f"loss_active = \n{loss_active.to_string()}")
-    print(f"loss_reactive = \n{loss_reactive.to_string()}")
-    print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
-    print(f"node_head_vector = \n{node_head_vector.to_string()}")
-    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
-    print(f"pump_power = \n{pump_power.to_string()}")
+    print(results)
 
     # Store results as CSV.
-    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
-    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
-    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
-    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
-    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
-    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
-    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
-    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
-    node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
-    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
-    pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
+    results.to_csv(results_path)
 
     # Obtain DLMPs.
     (
@@ -239,23 +210,23 @@ def main():
     )
 
     # Print DLMPs.
-    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp.to_string()}")
-    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp.to_string()}")
-    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp.to_string()}")
-    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp.to_string()}")
-    print(f"loss_active_dlmp = \n{loss_active_dlmp.to_string()}")
-    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp.to_string()}")
-    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp.to_string()}")
-    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp.to_string()}")
-    print(f"pump_power_dlmp = \n{pump_power_dlmp.to_string()}")
-    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp.to_string()}")
-    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp.to_string()}")
-    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp.to_string()}")
-    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp.to_string()}")
-    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp.to_string()}")
-    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp.to_string()}")
-    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp.to_string()}")
-    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp.to_string()}")
+    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp}")
+    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp}")
+    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp}")
+    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp}")
+    print(f"loss_active_dlmp = \n{loss_active_dlmp}")
+    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp}")
+    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp}")
+    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp}")
+    print(f"pump_power_dlmp = \n{pump_power_dlmp}")
+    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp}")
+    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp}")
+    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp}")
+    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp}")
+    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp}")
+    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp}")
+    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp}")
+    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp}")
 
     # Store DLMPs as CSV.
     voltage_magnitude_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_minimum_dlmp.csv'))
@@ -305,14 +276,14 @@ def main():
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         ax2.plot(
-            der_thermal_power_vector.loc[:, der].abs() / 1000000,
+            results['der_thermal_power_vector'].loc[:, der].abs() / 1000000,
             label='Thrm. pw.',
             drawstyle='steps-post',
             color='darkgrey',
             linewidth=3
         )
         ax2.plot(
-            der_active_power_vector.loc[:, der].abs() / 1000000,
+            results['der_active_power_vector'].loc[:, der].abs() / 1000000,
             label='Active pw.',
             drawstyle='steps-post',
             color='black',

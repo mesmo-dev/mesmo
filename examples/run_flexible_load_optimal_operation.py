@@ -55,18 +55,14 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
-    (
-        state_vector,
-        control_vector,
-        output_vector
-    ) = flexible_load_model.get_optimization_results(
-        optimization_problem
+    results = (
+        flexible_load_model.get_optimization_results(
+            optimization_problem
+        )
     )
 
     # Print results.
-    print(f"state_name = \n{state_vector}")
-    print(f"control_name = \n{control_vector}")
-    print(f"output_name = \n{output_vector}")
+    print(results)
 
     # Plot results.
     if plots:
@@ -74,7 +70,7 @@ def main():
         for output_name in flexible_load_model.output_names:
             plt.plot(flexible_load_model.output_maximum_timeseries[output_name], label="Maximum", drawstyle='steps-post')
             plt.plot(flexible_load_model.output_minimum_timeseries[output_name], label="Minimum", drawstyle='steps-post')
-            plt.plot(output_vector[output_name], label="Optimal", drawstyle='steps-post')
+            plt.plot(results['output_vector'][output_name], label="Optimal", drawstyle='steps-post')
             plt.legend()
             plt.title(f"Output: {output_name}")
             plt.show()

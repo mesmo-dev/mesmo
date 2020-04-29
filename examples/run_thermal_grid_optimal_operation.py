@@ -103,29 +103,20 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
-    (
-        der_thermal_power_vector,
-        node_head_vector,
-        branch_flow_vector,
-        pump_power
-    ) = linear_thermal_grid_model.get_optimization_results(
-        optimization_problem,
-        scenario_data.timesteps,
-        in_per_unit=True,
-        with_mean=True
+    results = (
+        linear_thermal_grid_model.get_optimization_results(
+            optimization_problem,
+            scenario_data.timesteps,
+            in_per_unit=True,
+            with_mean=True
+        )
     )
 
     # Print results.
-    print(f"der_thermal_power_vector = \n{der_thermal_power_vector}")
-    print(f"node_head_vector = \n{node_head_vector}")
-    print(f"branch_flow_vector = \n{branch_flow_vector}")
-    print(f"pump_power = \n{pump_power}")
+    print(results)
 
     # Store results as CSV.
-    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
-    node_head_vector.to_csv(os.path.join(results_path, 'node_head_vector.csv'))
-    branch_flow_vector.to_csv(os.path.join(results_path, 'branch_flow_vector.csv'))
-    pump_power.to_csv(os.path.join(results_path, 'pump_power.csv'))
+    results.to_csv(results_path)
 
     # Obtain DLMPs.
     (

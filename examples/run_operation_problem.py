@@ -32,7 +32,14 @@ def main():
     # Solve operation problem.
     operation_problem.solve_optimization()
 
-    # TODO: Obtain & output results.
+    # Obtain results.
+    results = operation_problem.get_optimization_results()
+
+    # Print results.
+    print(results)
+
+    # Store results as CSV.
+    results.to_csv(results_path)
 
 
 if __name__ == '__main__':

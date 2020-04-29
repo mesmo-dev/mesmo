@@ -303,38 +303,20 @@ def main():
         trust_region_iteration_count += 1
 
     # Obtain results.
-    (
-        der_active_power_vector,
-        der_reactive_power_vector,
-        voltage_magnitude_vector,
-        branch_power_vector_1_squared,
-        branch_power_vector_2_squared,
-        loss_active,
-        loss_reactive
-    ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem,
-        power_flow_solutions[0],
-        in_per_unit=True,
-        with_mean=True
+    results = (
+        linear_electric_grid_model.get_optimization_results(
+            optimization_problem,
+            power_flow_solutions[0],
+            in_per_unit=True,
+            with_mean=True
+        )
     )
 
     # Print results.
-    print(f"der_active_power_vector = \n{der_active_power_vector}")
-    print(f"der_reactive_power_vector = \n{der_reactive_power_vector}")
-    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector}")
-    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared}")
-    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared}")
-    print(f"loss_active = \n{loss_active}")
-    print(f"loss_reactive = \n{loss_reactive}")
+    print(results)
 
     # Store results as CSV.
-    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
-    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
-    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
-    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
-    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
-    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
-    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
+    results.to_csv(results_path)
 
     # Print results path.
     print("Results are stored in: " + results_path)

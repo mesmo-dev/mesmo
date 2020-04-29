@@ -10,6 +10,7 @@ import fledge.database_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -213,67 +214,37 @@ class OperationProblem(object):
             self,
             in_per_unit=False,
             with_mean=False
-    ):
+    ) -> fledge.utils.ResultsDict:
+
+        # Instantiate results dictionary.
+        results = fledge.utils.ResultsDict()
 
         # Obtain electric grid results.
-        # TODO: Refactor results to dictionary.
         if self.electric_grid_model is not None:
-            (
-                der_active_power_vector,
-                der_reactive_power_vector,
-                voltage_magnitude_vector,
-                branch_power_vector_1_squared,
-                branch_power_vector_2_squared,
-                loss_active,
-                loss_reactive
-            ) = self.linear_electric_grid_model.get_optimization_results(
-                self.optimization_problem,
-                self.power_flow_solution_reference,
-                self.timesteps,
-                in_per_unit=in_per_unit,
-                with_mean=with_mean
+            results.update(
+                self.linear_electric_grid_model.get_optimization_results(
+                    self.optimization_problem,
+                    self.power_flow_solution_reference,
+                    self.timesteps,
+                    in_per_unit=in_per_unit,
+                    with_mean=with_mean
+                )
             )
-        else:
-            der_active_power_vector = None
-            der_reactive_power_vector = None
-            voltage_magnitude_vector = None
-            branch_power_vector_1_squared = None
-            branch_power_vector_2_squared = None
-            loss_active = None
-            loss_reactive = None
 
         # Obtain thermal grid results.
         if self.thermal_grid_model is not None:
-            (
-                der_thermal_power_vector,
-                node_head_vector,
-                branch_flow_vector,
-                pump_power
-            ) = self.linear_thermal_grid_model.get_optimization_results(
-                self.optimization_problem,
-                self.timesteps,
-                in_per_unit=in_per_unit,
-                with_mean=with_mean
+            results.update(
+                self.linear_thermal_grid_model.get_optimization_results(
+                    self.optimization_problem,
+                    self.timesteps,
+                    in_per_unit=in_per_unit,
+                    with_mean=with_mean
+                )
             )
-        else:
-            der_thermal_power_vector = None
-            node_head_vector = None
-            branch_flow_vector = None
-            pump_power = None
 
-        return (
-            der_active_power_vector,
-            der_reactive_power_vector,
-            voltage_magnitude_vector,
-            branch_power_vector_1_squared,
-            branch_power_vector_2_squared,
-            loss_active,
-            loss_reactive,
-            der_thermal_power_vector,
-            node_head_vector,
-            branch_flow_vector,
-            pump_power
-        )
+        # TODO: Add DER model set results.
+
+        return results
 
     def get_optimization_dlmps(self):
 

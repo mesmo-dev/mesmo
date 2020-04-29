@@ -632,7 +632,7 @@ class LinearThermalGridModel(object):
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate results variables.
         der_thermal_power_vector = (
@@ -699,9 +699,9 @@ class LinearThermalGridModel(object):
             branch_flow_vector['mean'] = branch_flow_vector.mean(axis=1)
             node_head_vector['mean'] = node_head_vector.mean(axis=1)
 
-        return (
-            der_thermal_power_vector,
-            node_head_vector,
-            branch_flow_vector,
-            pump_power
+        return fledge.utils.ResultsDict(
+            der_thermal_power_vector=der_thermal_power_vector,
+            node_head_vector=node_head_vector,
+            branch_flow_vector=branch_flow_vector,
+            pump_power=pump_power
         )

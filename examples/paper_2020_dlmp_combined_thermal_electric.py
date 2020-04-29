@@ -276,14 +276,14 @@ def main():
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         ax2.plot(
-            der_thermal_power_vector.loc[:, der].abs() / 1000000,
+            results['der_thermal_power_vector'].loc[:, der].abs() / 1000000,
             label='Thrm. pw.',
             drawstyle='steps-post',
             color='darkgrey',
             linewidth=3
         )
         ax2.plot(
-            der_active_power_vector.loc[:, der].abs() / 1000000,
+            results['der_active_power_vector'].loc[:, der].abs() / 1000000,
             label='Active pw.',
             drawstyle='steps-post',
             color='black',

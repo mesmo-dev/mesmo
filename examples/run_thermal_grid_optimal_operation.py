@@ -102,6 +102,8 @@ def main():
         raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
     # optimization_problem.display()
 
+    # TODO: Problem fails due to missing electric grid connection, because of flexible buildings' appliances demand.
+
     # Obtain results.
     results = (
         linear_thermal_grid_model.get_optimization_results(

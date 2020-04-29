@@ -34,6 +34,17 @@ water_density = 998.31  # [kg/m^3]
 water_kinematic_viscosity = 1.3504e-6  # [m^2/s]
 gravitational_acceleration = 9.81  # [m^2/s]
 
+# Pandas settings.
+# - These settings ensure that that data frames are always printed in full, rather than cropped.
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+try:
+    pd.set_option('display.max_colwidth', None)
+except ValueError:
+    # This is provided for compatibility with older versions of Pandas.
+    pd.set_option('display.max_colwidth', 0)
+
 # Logger settings.
 logging_level = logging.INFO
 logging_handler = logging.StreamHandler()

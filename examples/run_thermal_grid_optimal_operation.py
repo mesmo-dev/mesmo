@@ -116,10 +116,10 @@ def main():
     )
 
     # Print results.
-    print(f"der_thermal_power_vector = \n{der_thermal_power_vector.to_string()}")
-    print(f"node_head_vector = \n{node_head_vector.to_string()}")
-    print(f"branch_flow_vector = \n{branch_flow_vector.to_string()}")
-    print(f"pump_power = \n{pump_power.to_string()}")
+    print(f"der_thermal_power_vector = \n{der_thermal_power_vector}")
+    print(f"node_head_vector = \n{node_head_vector}")
+    print(f"branch_flow_vector = \n{branch_flow_vector}")
+    print(f"pump_power = \n{pump_power}")
 
     # Store results as CSV.
     der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
@@ -143,13 +143,13 @@ def main():
     )
 
     # Print DLMPs.
-    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp.to_string()}")
-    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp.to_string()}")
-    print(f"pump_power_dlmp = \n{pump_power_dlmp.to_string()}")
-    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp.to_string()}")
-    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp.to_string()}")
-    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp.to_string()}")
-    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp.to_string()}")
+    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp}")
+    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp}")
+    print(f"pump_power_dlmp = \n{pump_power_dlmp}")
+    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp}")
+    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp}")
+    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp}")
+    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp}")
 
     # Store DLMPs as CSV.
     node_head_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'node_head_vector_minimum_dlmp.csv'))

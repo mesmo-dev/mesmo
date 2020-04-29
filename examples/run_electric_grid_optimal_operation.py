@@ -118,13 +118,13 @@ def main():
     )
 
     # Print results.
-    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
-    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
-    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
-    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
-    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
-    print(f"loss_active = \n{loss_active.to_string()}")
-    print(f"loss_reactive = \n{loss_reactive.to_string()}")
+    print(f"der_active_power_vector = \n{der_active_power_vector}")
+    print(f"der_reactive_power_vector = \n{der_reactive_power_vector}")
+    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector}")
+    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared}")
+    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared}")
+    print(f"loss_active = \n{loss_active}")
+    print(f"loss_reactive = \n{loss_reactive}")
 
     # Store results as CSV.
     der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
@@ -154,16 +154,16 @@ def main():
     )
 
     # Print DLMPs.
-    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp.to_string()}")
-    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp.to_string()}")
-    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp.to_string()}")
-    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp.to_string()}")
-    print(f"loss_active_dlmp = \n{loss_active_dlmp.to_string()}")
-    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp.to_string()}")
-    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp.to_string()}")
-    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp.to_string()}")
-    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp.to_string()}")
-    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp.to_string()}")
+    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp}")
+    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp}")
+    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp}")
+    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp}")
+    print(f"loss_active_dlmp = \n{loss_active_dlmp}")
+    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp}")
+    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp}")
+    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp}")
+    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp}")
+    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp}")
 
     # Store DLMPs as CSV.
     voltage_magnitude_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_minimum_dlmp.csv'))

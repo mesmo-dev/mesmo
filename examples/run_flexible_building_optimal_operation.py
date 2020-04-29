@@ -75,9 +75,9 @@ def main():
     )
 
     # Print results.
-    print(f"state_name = \n{state_vector.to_string()}")
-    print(f"control_name = \n{control_vector.to_string()}")
-    print(f"output_name = \n{output_vector.to_string()}")
+    print(f"state_name = \n{state_vector}")
+    print(f"control_name = \n{control_vector}")
+    print(f"output_name = \n{output_vector}")
 
     # Plot results.
     if plots:

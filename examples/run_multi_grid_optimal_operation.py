@@ -84,19 +84,19 @@ def main():
     )
 
     # Define thermal grid model variables.
+    linear_thermal_grid_model.define_optimization_variables(
+        optimization_problem,
+        scenario_data.timesteps
+    )
+
+    # Define thermal grid model constraints.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
-    linear_thermal_grid_model.define_optimization_variables(
+    linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
-    )
-
-    # Define thermal grid model constraints.
-    linear_thermal_grid_model.define_optimization_constraints(
-        optimization_problem,
-        scenario_data.timesteps
     )
 
     # Define DER variables.

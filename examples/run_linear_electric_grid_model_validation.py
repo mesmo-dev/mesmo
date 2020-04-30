@@ -16,8 +16,8 @@ def main():
     scenario_name = "singapore_6node"
     results_path = (
         os.path.join(
-            fledge.config.results_path,
-            f'run_linear_electric_grid_model_validation_{fledge.config.timestamp}'
+            fledge.config.config['paths']['results'],
+            f'run_linear_electric_grid_model_validation_{fledge.config.get_timestamp()}'
         )
     )
 

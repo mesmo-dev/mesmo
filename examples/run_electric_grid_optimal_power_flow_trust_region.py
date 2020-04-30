@@ -17,8 +17,8 @@ def main():
 
     results_path = (
         os.path.join(
-            fledge.config.results_path,
-            f'run_electric_grid_optimal_power_flow_trust_region_{fledge.config.timestamp}'
+            fledge.config.config['paths']['results'],
+            f'run_electric_grid_optimal_power_flow_trust_region_{fledge.config.get_timestamp()}'
         )
     )
 
@@ -222,8 +222,8 @@ def main():
         )
 
         # Solve optimization problem.
-        optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
-        optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
+        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+        optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
         optimization_problems.append(optimization_problem)
         try:
             assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal

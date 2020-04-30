@@ -14,8 +14,8 @@ def main():
     scenario_name = 'singapore_tanjongpagar'
     results_path = (
         os.path.join(
-            fledge.config.results_path,
-            f'run_operation_problem_{scenario_name}_{fledge.config.timestamp}'
+            fledge.config.config['paths']['results'],
+            f'run_operation_problem_{scenario_name}_{fledge.config.get_timestamp()}'
         )
     )
 

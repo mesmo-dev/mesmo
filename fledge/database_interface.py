@@ -15,9 +15,9 @@ logger = fledge.config.get_logger(__name__)
 
 
 def recreate_database(
-        database_path: str = fledge.config.database_path,
-        database_schema_path: str = os.path.join(fledge.config.fledge_path, 'fledge', 'database_schema.sql'),
-        csv_path: str = fledge.config.data_path
+        database_path: str = fledge.config.config['paths']['database'],
+        database_schema_path: str = os.path.join(fledge.config.base_path, 'fledge', 'database_schema.sql'),
+        csv_path: str = fledge.config.config['paths']['data']
 ) -> None:
     """Recreate SQLITE database from SQL schema file and CSV files."""
 
@@ -61,7 +61,7 @@ def recreate_database(
 
 
 def connect_database(
-        database_path: str = fledge.config.database_path
+        database_path: str = fledge.config.config['paths']['database']
 ) -> sqlite3.Connection:
     """Connect to the database at given `data_path` and return connection handle."""
 

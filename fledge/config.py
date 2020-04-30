@@ -17,6 +17,7 @@ config = dict()
 # Path settings.
 config['paths'] = dict()
 config['paths']['data'] = os.path.join(base_path, 'data')
+config['paths']['additional_data'] = []
 config['paths']['database'] = os.path.join(base_path, 'data', 'database.sqlite')
 # config['paths']['database'] = 'file:database?mode=memory&cache=shared'
 config['paths']['results'] = os.path.join(base_path, 'results')

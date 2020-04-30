@@ -4,6 +4,11 @@
     This reference is work in progress.
 ```
 
+## `fledge.api`
+
+``` automodule:: fledge.api
+```
+
 ## `fledge.config`
 
 ``` automodule:: fledge.config
@@ -27,4 +32,9 @@
 ## `fledge.thermal_grid_models`
 
 ``` automodule:: fledge.thermal_grid_models
+```
+
+## `fledge.utils`
+
+``` automodule:: fledge.utils
 ```

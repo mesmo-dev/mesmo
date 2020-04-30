@@ -41,9 +41,9 @@ def recreate_database(
     # Import CSV files into SQLITE database.
     # - Import only from data path, if no additional data paths are specified.
     data_paths = (
-            [fledge.config.config['paths']['data']] + additional_data_paths
-            if additional_data_paths is not None
-            else [fledge.config.config['paths']['data']]
+        [fledge.config.config['paths']['data']] + additional_data_paths
+        if additional_data_paths is not None
+        else [fledge.config.config['paths']['data']]
     )
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):

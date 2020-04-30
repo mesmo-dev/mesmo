@@ -24,8 +24,8 @@ def main():
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
     results_path = (
         os.path.join(
-            fledge.config.results_path,
-            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.config.timestamp}'
+            fledge.config.config['paths']['results'],
+            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.config.get_timestamp()}'
         )
     )
 
@@ -145,8 +145,8 @@ def main():
 
     # Solve optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
+    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
     try:
         assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
     except AssertionError:

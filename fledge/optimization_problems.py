@@ -191,11 +191,11 @@ class OperationProblem(object):
 
         # Solve optimization problem.
         self.optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-        optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
+        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
         optimization_result = (
             optimization_solver.solve(
                 self.optimization_problem,
-                tee=fledge.config.solver_output
+                tee=fledge.config.config['optimization']['show_solver_output']
             )
         )
 

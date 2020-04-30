@@ -17,43 +17,43 @@ class TestElectricGridModels(unittest.TestCase):
     def test_electric_grid_model_default(self):
         # Get result.
         time_start = time.time()
-        fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.test_scenario_name)
+        fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ElectricGridModelDefault: Completed in {time_duration:.6f} seconds.")
 
     def test_electric_grid_model_opendss(self):
         # Get result.
         time_start = time.time()
-        fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.test_scenario_name)
+        fledge.electric_grid_models.ElectricGridModelOpenDSS(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ElectricGridModelOpenDSS: Completed in {time_duration:.6f} seconds.")
 
     def test_power_flow_solution_fixed_point(self):
         # Get result.
         time_start = time.time()
-        fledge.electric_grid_models.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name)
+        fledge.electric_grid_models.PowerFlowSolutionFixedPoint(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test PowerFlowSolutionFixedPoint: Completed in {time_duration:.6f} seconds.")
 
     def test_power_flow_solution_opendss(self):
         # Get result.
         time_start = time.time()
-        fledge.electric_grid_models.PowerFlowSolutionOpenDSS(fledge.config.test_scenario_name)
+        fledge.electric_grid_models.PowerFlowSolutionOpenDSS(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test PowerFlowSolutionOpenDSS: Completed in {time_duration:.6f} seconds.")
 
     def test_power_flow_solution_fixed_point_vs_opendss(self):
         # Setup.
-        electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.test_scenario_name)
+        electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.config['testing']['scenario_name'])
         node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
 
         # Get result.
         time_start = time.time()
         node_voltage_vector_fixed_point = abs(
-            fledge.electric_grid_models.PowerFlowSolutionFixedPoint(fledge.config.test_scenario_name).node_voltage_vector
+            fledge.electric_grid_models.PowerFlowSolutionFixedPoint(fledge.config.config['testing']['scenario_name']).node_voltage_vector
         )
         node_voltage_vector_opendss = abs(
-            fledge.electric_grid_models.PowerFlowSolutionOpenDSS(fledge.config.test_scenario_name).node_voltage_vector
+            fledge.electric_grid_models.PowerFlowSolutionOpenDSS(fledge.config.config['testing']['scenario_name']).node_voltage_vector
         )
         time_duration = time.time() - time_start
         logger.info(
@@ -62,7 +62,7 @@ class TestElectricGridModels(unittest.TestCase):
         )
 
         # Display results.
-        if fledge.config.test_plots:
+        if fledge.config.config['testing']['show_plots']:
             comparison = pd.DataFrame(
                 np.hstack([
                     node_voltage_vector_opendss / node_voltage_vector_no_load,
@@ -88,7 +88,7 @@ class TestElectricGridModels(unittest.TestCase):
     def test_linear_electric_grid_model_global(self):
         # Get result.
         time_start = time.time()
-        fledge.electric_grid_models.LinearElectricGridModelGlobal(fledge.config.test_scenario_name)
+        fledge.electric_grid_models.LinearElectricGridModelGlobal(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test LinearElectricGridModelGlobal: Completed in {time_duration:.6f} seconds.")
 

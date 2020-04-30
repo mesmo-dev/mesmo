@@ -49,6 +49,6 @@ Every time the `master` branch changes, a new version number is defined accordin
     - Use single quotes `'...'` for parameters, indexes, pathes and use double quotes `"..."` for content, messages and docstrings.
 - Results / output files:
     - Store results / output files only in the `results` directory.
-    - The results path should be taken from `fledge.config` as `fledge.config.results_path`.
-    - When saving results with timestamp, use `fledge.config.timestamp`.
+    - The results path should be taken from `fledge.config` as `fledge.config.config['paths']['results']`.
+    - When saving results with timestamp, use `fledge.config.get_timestamp()`.
     - The content of the `results` directory should remain local, i.e., it should be ignored by Git and should not appear in any commits to the repository.

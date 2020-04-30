@@ -16,9 +16,7 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_recreate_database(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.recreate_database(
-            database_path=os.path.join(fledge.config.data_path, 'database.sqlite')
-        )
+        fledge.database_interface.recreate_database()
         time_duration = time.time() - time_start
         logger.info(f"Test recreate_database: Completed in {time_duration:.6f} seconds.")
 
@@ -38,14 +36,14 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_scenario_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.ScenarioData(fledge.config.test_scenario_name)
+        fledge.database_interface.ScenarioData(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ScenarioData: Completed in {time_duration:.6f} seconds.")
 
     def test_electric_grid_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.ElectricGridData(fledge.config.test_scenario_name)
+        fledge.database_interface.ElectricGridData(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ElectricGridData: Completed in {time_duration:.6f} seconds.")
 
@@ -59,14 +57,14 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_electric_grid_der_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.DERData(fledge.config.test_scenario_name)
+        fledge.database_interface.DERData(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test DERData: Completed in {time_duration:.6f} seconds.")
 
     def test_price_data(self):
         # Get result.
         time_start = time.time()
-        fledge.database_interface.PriceData(fledge.config.test_scenario_name)
+        fledge.database_interface.PriceData(fledge.config.config['testing']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test PriceData: Completed in {time_duration:.6f} seconds.")
 

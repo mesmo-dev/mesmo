@@ -12,7 +12,7 @@ logger = fledge.config.get_logger(__name__)
 
 # Check availability of optimization solver.
 try:
-    optimization_solver_available = pyo.SolverFactory(fledge.config.solver_name).available()
+    optimization_solver_available = pyo.SolverFactory(fledge.config.config['optimization']['solver_name']).available()
 except Exception:
     optimization_solver_available = False
 

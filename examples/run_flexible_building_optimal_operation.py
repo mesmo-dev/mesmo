@@ -57,8 +57,8 @@ def main():
     flexible_building_model.define_optimization_objective(optimization_problem, price_timeseries)
 
     # Solve optimization problem.
-    optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
+    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
     try:
         assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
     except AssertionError:

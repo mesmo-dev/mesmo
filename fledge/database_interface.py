@@ -15,14 +15,12 @@ logger = fledge.config.get_logger(__name__)
 
 
 def recreate_database(
-        database_path: str = fledge.config.database_path,
-        database_schema_path: str = os.path.join(fledge.config.fledge_path, 'fledge', 'database_schema.sql'),
-        csv_path: str = fledge.config.data_path
+        additional_data_paths: typing.List[str] = fledge.config.config['paths']['additional_data']
 ) -> None:
-    """Recreate SQLITE database from SQL schema file and CSV files."""
+    """Recreate SQLITE database from SQL schema file and CSV files in the data path / additional data paths."""
 
     # Connect SQLITE database (creates file, if none).
-    database_connection = sqlite3.connect(database_path)
+    database_connection = sqlite3.connect(fledge.config.config['paths']['database'])
     cursor = database_connection.cursor()
 
     # Remove old data, if any.
@@ -35,45 +33,48 @@ def recreate_database(
         """
     )
 
-    # Recreate SQLITE database (schema) from SQL file.
-    with open(database_schema_path, 'r') as database_schema_file:
+    # Recreate SQLITE database schema from SQL schema file.
+    with open(os.path.join(fledge.config.base_path, 'fledge', 'database_schema.sql'), 'r') as database_schema_file:
         cursor.executescript(database_schema_file.read())
     database_connection.commit()
 
     # Import CSV files into SQLITE database.
-    database_connection.text_factory = str  # Allows utf-8 data to be stored.
-    cursor = database_connection.cursor()
-    for file in glob.glob(os.path.join(csv_path, '**', '*.csv'), recursive=True):
-        # Obtain table name.
-        table_name = os.path.splitext(os.path.basename(file))[0]
+    # - Import only from data path, if no additional data paths are specified.
+    data_paths = (
+        [fledge.config.config['paths']['data']] + additional_data_paths
+        if additional_data_paths is not None
+        else [fledge.config.config['paths']['data']]
+    )
+    for data_path in data_paths:
+        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-        # Write new table content.
-        logger.debug(f"Loading {file} into database.")
-        table = pd.read_csv(file)
-        table.to_sql(
-            table_name,
-            con=database_connection,
-            if_exists='append',
-            index=False
-        )
+            # Obtain table name.
+            table_name = os.path.splitext(os.path.basename(csv_file))[0]
+
+            # Write new table content.
+            logger.debug(f"Loading {csv_file} into database.")
+            table = pd.read_csv(csv_file)
+            table.to_sql(
+                table_name,
+                con=database_connection,
+                if_exists='append',
+                index=False
+            )
+
     cursor.close()
     database_connection.close()
 
 
-def connect_database(
-        database_path: str = fledge.config.database_path
-) -> sqlite3.Connection:
-    """Connect to the database at given `data_path` and return connection handle."""
+def connect_database() -> sqlite3.Connection:
+    """Connect to the database and return connection handle."""
 
     # Recreate database, if no database exists.
-    if not os.path.isfile(database_path):
-        logger.debug(f"Database does not exist and is recreated at: {database_path}")
-        recreate_database(
-            database_path=database_path
-        )
+    if not os.path.isfile(fledge.config.config['paths']['database']):
+        logger.debug(f"Database does not exist and is recreated at: {fledge.config.config['paths']['database']}")
+        recreate_database()
 
-    # Obtain connection.
-    database_connection = sqlite3.connect(database_path)
+    # Obtain connection handle.
+    database_connection = sqlite3.connect(fledge.config.config['paths']['database'])
     return database_connection
 
 

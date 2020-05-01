@@ -27,8 +27,6 @@ jobs:
       run: |
         conda install sphinx
         pip install -r docs/requirements.txt
-        pip install -e .
-        pip install -e cobmo
     - name: Build documentation HTML with Sphinx
       run: |
         sphinx-multiversion docs docs/_build/html

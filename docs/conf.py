@@ -8,7 +8,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.join(os.path.abspath('..'), 'cobmo'))
 
 # Project information.
 project = 'FLEDGE'
@@ -36,6 +35,17 @@ autodoc_default_options = {
     'member-order': 'bysource'
 }
 autodoc_typehints = 'description'
+autodoc_mock_imports = [
+    'cobmo',
+    'matplotlib',
+    'multimethod',
+    'natsort',
+    'numpy',
+    'opendssdirect',
+    'pandas',
+    'pyomo',
+    'scipy',
+]
 napoleon_use_ivar = True
 
 # Source settings.

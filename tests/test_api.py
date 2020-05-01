@@ -16,13 +16,14 @@ try:
 except Exception:
     optimization_solver_available = False
 
-if optimization_solver_available:
 
-    class TestAPI(unittest.TestCase):
+class TestAPI(unittest.TestCase):
 
-        def test_run_operation_problem(self):
+    if optimization_solver_available:
+
+        def test_run_optimal_operation_problem(self):
             # Get result.
             time_start = time.time()
-            fledge.api.run_operation_problem('singapore_tanjongpagar')
+            fledge.api.run_optimal_operation_problem('singapore_tanjongpagar')
             time_duration = time.time() - time_start
             logger.info(f"Test run_operation_problem: Completed in {time_duration:.6f} seconds.")

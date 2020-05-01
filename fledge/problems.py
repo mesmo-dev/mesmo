@@ -1,4 +1,4 @@
-"""Optimization problems module."""
+"""Problems module for mathematical optimization and simulation problem type definitions."""
 
 from multimethod import multimethod
 import numpy as np
@@ -15,7 +15,17 @@ import fledge.utils
 logger = fledge.config.get_logger(__name__)
 
 
-class OperationProblem(object):
+class OptimalOperationProblem(object):
+    """Optimal operation problem object, consisting of an optimization problem as well as the corresponding
+    electric / thermal grid models, reference power flow solutions, linear grid models and DER model set
+    for the given scenario.
+
+    - The optimal operation problem (alias: optimal dispatch problem, optimal power flow problem)
+      formulates the optimization problem for minimizing the objective functions of DERs and grid operators
+      subject to the model constraints of all DERs and grids.
+    - The problem formulation is able to consider combined as well as individual operation of
+      thermal and electric grids.
+    """
 
     scenario_name: str
     timesteps: pd.Index

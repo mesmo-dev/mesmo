@@ -1,20 +1,17 @@
-"""Application programming interface module.
-
-- The purpose of this module is to provide high-level functions to run FLEDGE.
-"""
+"""Application programming interface (API) module for high-level interface functions to run FLEDGE."""
 
 import os
 
 import cobmo.database_interface
 import fledge.config
 import fledge.database_interface
-import fledge.optimization_problems
+import fledge.problems
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
 
-def run_operation_problem(
+def run_optimal_operation_problem(
         scenario_name: str,
         recreate_database: bool = True,
         print_results: bool = False,
@@ -40,7 +37,7 @@ def run_operation_problem(
         cobmo.database_interface.recreate_database()
 
     # Obtain operation problem.
-    operation_problem = fledge.optimization_problems.OperationProblem(scenario_name)
+    operation_problem = fledge.problems.OptimalOperationProblem(scenario_name)
 
     # Solve operation problem.
     operation_problem.solve_optimization()

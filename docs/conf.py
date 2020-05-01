@@ -30,13 +30,12 @@ extensions = [
 # Extension settings.
 # - sphinx.ext.autodoc: <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>
 # - sphinx.ext.napoleon: <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>
-autoclass_content = 'both'
 autodoc_default_options = {
     'members': None,
-    'undoc-members': None,
-    'show-inheritance': None
+    'show-inheritance': None,
+    'member-order': 'bysource'
 }
-autodoc_typehints = 'none'
+autodoc_typehints = 'description'
 napoleon_use_ivar = True
 
 # Source settings.

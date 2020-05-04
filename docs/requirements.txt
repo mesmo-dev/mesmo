@@ -1,5 +1,5 @@
 recommonmark
 sphinx
 sphinx_markdown_tables
-sphinx-multiversion
+sphinx-multiversion==0.2.1
 sphinx-rtd-theme

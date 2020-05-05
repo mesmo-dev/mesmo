@@ -302,23 +302,54 @@ class FlexibleDERModel(DERModel):
         # Define connection constraints.
         if optimization_problem.find_component('der_connection_constraints') is None:
             optimization_problem.der_connection_constraints = pyo.ConstraintList()
-        for timestep in self.timesteps:
-            optimization_problem.der_connection_constraints.add(
-                optimization_problem.der_active_power_vector_change[timestep, der]
-                ==
-                optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                - np.real(
-                    power_flow_solution.der_power_vector[der_index]
+
+        if type(self) is FlexibleBuildingModel:
+            for timestep in self.timesteps:
+                optimization_problem.der_connection_constraints.add(
+                    optimization_problem.der_active_power_vector_change[timestep, der]
+                    ==
+                    -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                    - np.real(
+                        power_flow_solution.der_power_vector[der_index]
+                    )
                 )
-            )
-            optimization_problem.der_connection_constraints.add(
-                optimization_problem.der_reactive_power_vector_change[timestep, der]
-                ==
-                optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
-                - np.imag(
-                    power_flow_solution.der_power_vector[der_index]
+                optimization_problem.der_connection_constraints.add(
+                    optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    ==
+                    -1.0 * (
+                        optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                        * np.tan(np.arccos(self.power_factor_nominal))
+                    )
+                    - np.imag(
+                        power_flow_solution.der_power_vector[der_index]
+                    )
                 )
-            )
+
+                # Disable thermal grid connection.
+                if disconnect_thermal_grid:
+                    optimization_problem.der_connection_constraints.add(
+                        0.0
+                        ==
+                        optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+                    )
+        else:
+            for timestep in self.timesteps:
+                optimization_problem.der_connection_constraints.add(
+                    optimization_problem.der_active_power_vector_change[timestep, der]
+                    ==
+                    optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                    - np.real(
+                        power_flow_solution.der_power_vector[der_index]
+                    )
+                )
+                optimization_problem.der_connection_constraints.add(
+                    optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    ==
+                    optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
+                    - np.imag(
+                        power_flow_solution.der_power_vector[der_index]
+                    )
+                )
 
     @multimethod
     def define_optimization_connection_grid(
@@ -328,7 +359,31 @@ class FlexibleDERModel(DERModel):
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
             disconnect_electric_grid=True
     ):
-        pass
+
+        # Obtain DER index.
+        der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
+        der = thermal_grid_model.ders[der_index]
+
+        # Define connection constraints.
+        if optimization_problem.find_component('der_connection_constraints') is None:
+            optimization_problem.der_connection_constraints = pyo.ConstraintList()
+
+        if type(self) is FlexibleBuildingModel:
+            for timestep in self.timesteps:
+                optimization_problem.der_connection_constraints.add(
+                    optimization_problem.der_thermal_power_vector[timestep, der]
+                    ==
+                    -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
+                )
+                # Disable electric grid connection.
+                if disconnect_electric_grid:
+                    optimization_problem.der_connection_constraints.add(
+                        0.0
+                        ==
+                        optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                    )
+        else:
+            pass
 
     def define_optimization_objective(
             self,
@@ -339,14 +394,23 @@ class FlexibleDERModel(DERModel):
         # Define objective.
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-        optimization_problem.objective.expr += (
-            sum(
-                -1.0
-                * price_timeseries.at[timestep, 'price_value']
-                * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                for timestep in self.timesteps
+        if type(self) is FlexibleBuildingModel:
+            optimization_problem.objective.expr += (
+                sum(
+                    price_timeseries.at[timestep, 'price_value']
+                    * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                    for timestep in self.timesteps
+                )
             )
-        )
+        else:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * price_timeseries.at[timestep, 'price_value']
+                    * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                    for timestep in self.timesteps
+                )
+            )
 
     def get_optimization_results(
             self,
@@ -570,125 +634,6 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Obtain output constraint timeseries
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
-
-    @multimethod
-    def define_optimization_connection_grid(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
-    ):
-
-        # Connect electric grid.
-        self.define_optimization_connection_grid(
-            optimization_problem,
-            power_flow_solution,
-            electric_grid_model,
-            disconnect_thermal_grid=False
-        )
-
-        # Connect thermal grid.
-        self.define_optimization_connection_grid(
-            optimization_problem,
-            thermal_power_flow_solution,
-            thermal_grid_model,
-            disconnect_electric_grid=False
-        )
-
-    @multimethod
-    def define_optimization_connection_grid(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-            disconnect_thermal_grid=True
-    ):
-
-        # Obtain DER index.
-        der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
-        der = electric_grid_model.ders[der_index]
-
-        # Define connection constraints.
-        if optimization_problem.find_component('der_connection_constraints') is None:
-            optimization_problem.der_connection_constraints = pyo.ConstraintList()
-        for timestep in self.timesteps:
-            optimization_problem.der_connection_constraints.add(
-                optimization_problem.der_active_power_vector_change[timestep, der]
-                ==
-                -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                - np.real(
-                    power_flow_solution.der_power_vector[der_index]
-                )
-            )
-            optimization_problem.der_connection_constraints.add(
-                optimization_problem.der_reactive_power_vector_change[timestep, der]
-                ==
-                -1.0 * (
-                    optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                    * np.tan(np.arccos(self.power_factor_nominal))
-                )
-                - np.imag(
-                    power_flow_solution.der_power_vector[der_index]
-                )
-            )
-
-            # Disable thermal grid connection.
-            if disconnect_thermal_grid:
-                optimization_problem.der_connection_constraints.add(
-                    0.0
-                    ==
-                    optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
-                )
-
-    @multimethod
-    def define_optimization_connection_grid(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
-            disconnect_electric_grid=True
-    ):
-
-        # Obtain DER index.
-        der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
-        der = thermal_grid_model.ders[der_index]
-
-        # Define connection constraints.
-        if optimization_problem.find_component('der_connection_constraints') is None:
-            optimization_problem.der_connection_constraints = pyo.ConstraintList()
-        for timestep in self.timesteps:
-            optimization_problem.der_connection_constraints.add(
-                optimization_problem.der_thermal_power_vector[timestep, der]
-                ==
-                -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
-            )
-
-            # Disable electric grid connection.
-            if disconnect_electric_grid:
-                optimization_problem.der_connection_constraints.add(
-                    0.0
-                    ==
-                    optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                )
-
-    def define_optimization_objective(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame
-    ):
-
-        # Define objective.
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
-                * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                for timestep in self.timesteps
-            )
-        )
 
 
 class DERModelSet(object):

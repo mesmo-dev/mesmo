@@ -501,11 +501,12 @@ class LinearThermalGridModel(object):
             )
         )
 
-    def get_optimization_limits_duals(
+    def get_optimization_dlmps(
             self,
             optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate dual variables.
         node_head_vector_minimum_dual = (
@@ -533,27 +534,6 @@ class LinearThermalGridModel(object):
                             optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
                         ]
                     )
-
-        return (
-            node_head_vector_minimum_dual,
-            branch_flow_vector_maximum_dual
-        )
-
-    def get_optimization_dlmps(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            timesteps=pd.Index([0], name='timestep')
-    ):
-
-        # Obtain duals.
-        (
-            node_head_vector_minimum_dual,
-            branch_flow_vector_maximum_dual
-        ) = self.get_optimization_limits_duals(
-            optimization_problem,
-            timesteps
-        )
 
         # Instantiate DLMP variables.
         node_head_vector_minimum_dlmp = (
@@ -615,14 +595,14 @@ class LinearThermalGridModel(object):
             pump_power_dlmp
         )
 
-        return (
-            node_head_vector_minimum_dlmp,
-            branch_flow_vector_maximum_dlmp,
-            pump_power_dlmp,
-            thermal_grid_energy_dlmp,
-            thermal_grid_head_dlmp,
-            thermal_grid_congestion_dlmp,
-            thermal_grid_pump_dlmp
+        return fledge.utils.ResultsDict(
+            node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
+            branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
+            pump_power_dlmp=pump_power_dlmp,
+            thermal_grid_energy_dlmp=thermal_grid_energy_dlmp,
+            thermal_grid_head_dlmp=thermal_grid_head_dlmp,
+            thermal_grid_congestion_dlmp=thermal_grid_congestion_dlmp,
+            thermal_grid_pump_dlmp=thermal_grid_pump_dlmp
         )
 
     def get_optimization_results(

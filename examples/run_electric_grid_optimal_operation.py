@@ -113,46 +113,19 @@ def main():
     results.to_csv(results_path)
 
     # Obtain DLMPs.
-    (
-        voltage_magnitude_vector_minimum_dlmp,
-        voltage_magnitude_vector_maximum_dlmp,
-        branch_power_vector_1_squared_maximum_dlmp,
-        branch_power_vector_2_squared_maximum_dlmp,
-        loss_active_dlmp,
-        loss_reactive_dlmp,
-        electric_grid_energy_dlmp,
-        electric_grid_voltage_dlmp,
-        electric_grid_congestion_dlmp,
-        electric_grid_loss_dlmp
-    ) = linear_electric_grid_model.get_optimization_dlmps(
-        optimization_problem,
-        price_timeseries,
-        scenario_data.timesteps
+    dlmps = (
+        linear_electric_grid_model.get_optimization_dlmps(
+            optimization_problem,
+            price_timeseries,
+            scenario_data.timesteps
+        )
     )
 
     # Print DLMPs.
-    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp}")
-    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp}")
-    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp}")
-    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp}")
-    print(f"loss_active_dlmp = \n{loss_active_dlmp}")
-    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp}")
-    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp}")
-    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp}")
-    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp}")
-    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp}")
+    print(dlmps)
 
     # Store DLMPs as CSV.
-    voltage_magnitude_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_minimum_dlmp.csv'))
-    voltage_magnitude_vector_maximum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_maximum_dlmp.csv'))
-    branch_power_vector_1_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_maximum_dlmp.csv'))
-    branch_power_vector_2_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_maximum_dlmp.csv'))
-    loss_active_dlmp.to_csv(os.path.join(results_path, 'loss_active_dlmp.csv'))
-    loss_reactive_dlmp.to_csv(os.path.join(results_path, 'loss_reactive_dlmp.csv'))
-    electric_grid_energy_dlmp.to_csv(os.path.join(results_path, 'electric_grid_energy_dlmp.csv'))
-    electric_grid_voltage_dlmp.to_csv(os.path.join(results_path, 'electric_grid_voltage_dlmp.csv'))
-    electric_grid_congestion_dlmp.to_csv(os.path.join(results_path, 'electric_grid_congestion_dlmp.csv'))
-    electric_grid_loss_dlmp.to_csv(os.path.join(results_path, 'electric_grid_loss_dlmp.csv'))
+    dlmps.to_csv(results_path)
 
     # Print results path.
     print("Results are stored in: " + results_path)

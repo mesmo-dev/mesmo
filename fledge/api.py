@@ -89,6 +89,7 @@ def run_optimal_operation_problem(
 
     # Obtain results.
     results = operation_problem.get_optimization_results()
+    results.update(operation_problem.get_optimization_dlmps())
 
     # Print results.
     if print_results:

@@ -360,78 +360,29 @@ class OptimalOperationProblem(object):
 
         return results
 
-    def get_optimization_dlmps(self):
+    def get_optimization_dlmps(self) -> fledge.utils.ResultsDict:
+
+        # Instantiate DLMP results dictionary.
+        dlmps = fledge.utils.ResultsDict()
 
         # Obtain electric DLMPs.
         if self.electric_grid_model is not None:
-            (
-                voltage_magnitude_vector_minimum_dlmp,
-                voltage_magnitude_vector_maximum_dlmp,
-                branch_power_vector_1_squared_maximum_dlmp,
-                branch_power_vector_2_squared_maximum_dlmp,
-                loss_active_dlmp,
-                loss_reactive_dlmp,
-                electric_grid_energy_dlmp,
-                electric_grid_voltage_dlmp,
-                electric_grid_congestion_dlmp,
-                electric_grid_loss_dlmp
-            ) = self.linear_electric_grid_model.get_optimization_dlmps(
-                self.optimization_problem,
-                self.price_timeseries,
-                self.timesteps
+            dlmps.update(
+                self.linear_electric_grid_model.get_optimization_dlmps(
+                    self.optimization_problem,
+                    self.price_timeseries,
+                    self.timesteps
+                )
             )
-        else:
-            voltage_magnitude_vector_minimum_dlmp = None
-            voltage_magnitude_vector_maximum_dlmp = None
-            branch_power_vector_1_squared_maximum_dlmp = None
-            branch_power_vector_2_squared_maximum_dlmp = None
-            loss_active_dlmp = None
-            loss_reactive_dlmp = None
-            electric_grid_energy_dlmp = None
-            electric_grid_voltage_dlmp = None
-            electric_grid_congestion_dlmp = None
-            electric_grid_loss_dlmp = None
 
         # Obtain thermal DLMPs.
         if self.thermal_grid_model is not None:
-            (
-                node_head_vector_minimum_dlmp,
-                branch_flow_vector_maximum_dlmp,
-                pump_power_dlmp,
-                thermal_grid_energy_dlmp,
-                thermal_grid_head_dlmp,
-                thermal_grid_congestion_dlmp,
-                thermal_grid_pump_dlmp
-            ) = self.linear_thermal_grid_model.get_optimization_dlmps(
-                self.optimization_problem,
-                self.price_timeseries,
-                self.timesteps
+            dlmps.update(
+                self.linear_thermal_grid_model.get_optimization_dlmps(
+                    self.optimization_problem,
+                    self.price_timeseries,
+                    self.timesteps
+                )
             )
-        else:
-            node_head_vector_minimum_dlmp = None
-            branch_flow_vector_maximum_dlmp = None
-            pump_power_dlmp = None
-            thermal_grid_energy_dlmp = None
-            thermal_grid_head_dlmp = None
-            thermal_grid_congestion_dlmp = None
-            thermal_grid_pump_dlmp = None
 
-        return (
-            voltage_magnitude_vector_minimum_dlmp,
-            voltage_magnitude_vector_maximum_dlmp,
-            branch_power_vector_1_squared_maximum_dlmp,
-            branch_power_vector_2_squared_maximum_dlmp,
-            loss_active_dlmp,
-            loss_reactive_dlmp,
-            electric_grid_energy_dlmp,
-            electric_grid_voltage_dlmp,
-            electric_grid_congestion_dlmp,
-            electric_grid_loss_dlmp,
-            node_head_vector_minimum_dlmp,
-            branch_flow_vector_maximum_dlmp,
-            pump_power_dlmp,
-            thermal_grid_energy_dlmp,
-            thermal_grid_head_dlmp,
-            thermal_grid_congestion_dlmp,
-            thermal_grid_pump_dlmp
-        )
+        return dlmps

@@ -1970,11 +1970,12 @@ class LinearElectricGridModel(object):
                 )
             )
 
-    def get_optimization_limits_duals(
+    def get_optimization_dlmps(
             self,
             optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate dual variables.
         voltage_magnitude_vector_minimum_dual = (
@@ -2024,31 +2025,6 @@ class LinearElectricGridModel(object):
                             optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
                         ]
                     )
-
-        return (
-            voltage_magnitude_vector_minimum_dual,
-            voltage_magnitude_vector_maximum_dual,
-            branch_power_vector_1_squared_maximum_dual,
-            branch_power_vector_2_squared_maximum_dual
-        )
-
-    def get_optimization_dlmps(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            timesteps=pd.Index([0], name='timestep')
-    ):
-
-        # Obtain duals.
-        (
-            voltage_magnitude_vector_minimum_dual,
-            voltage_magnitude_vector_maximum_dual,
-            branch_power_vector_1_squared_maximum_dual,
-            branch_power_vector_2_squared_maximum_dual
-        ) = self.get_optimization_limits_duals(
-            optimization_problem,
-            timesteps
-        )
 
         # Instantiate DLMP variables.
         voltage_magnitude_vector_minimum_dlmp = (
@@ -2135,17 +2111,17 @@ class LinearElectricGridModel(object):
             + loss_reactive_dlmp
         )
 
-        return (
-            voltage_magnitude_vector_minimum_dlmp,
-            voltage_magnitude_vector_maximum_dlmp,
-            branch_power_vector_1_squared_maximum_dlmp,
-            branch_power_vector_2_squared_maximum_dlmp,
-            loss_active_dlmp,
-            loss_reactive_dlmp,
-            electric_grid_energy_dlmp,
-            electric_grid_voltage_dlmp,
-            electric_grid_congestion_dlmp,
-            electric_grid_loss_dlmp
+        return fledge.utils.ResultsDict(
+            voltage_magnitude_vector_minimum_dlmp=voltage_magnitude_vector_minimum_dlmp,
+            voltage_magnitude_vector_maximum_dlmp=voltage_magnitude_vector_maximum_dlmp,
+            branch_power_vector_1_squared_maximum_dlmp=branch_power_vector_1_squared_maximum_dlmp,
+            branch_power_vector_2_squared_maximum_dlmp=branch_power_vector_2_squared_maximum_dlmp,
+            loss_active_dlmp=loss_active_dlmp,
+            loss_reactive_dlmp=loss_reactive_dlmp,
+            electric_grid_energy_dlmp=electric_grid_energy_dlmp,
+            electric_grid_voltage_dlmp=electric_grid_voltage_dlmp,
+            electric_grid_congestion_dlmp=electric_grid_congestion_dlmp,
+            electric_grid_loss_dlmp=electric_grid_loss_dlmp
         )
 
     def get_optimization_results(

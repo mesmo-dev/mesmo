@@ -65,22 +65,32 @@ class NominalOperationProblem(object):
 
     def solve(self):
 
-        # TODO: Add thermal grid solution.
-
         # Instantiate results variables.
         der_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
         )
         node_voltage_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
         )
         branch_power_vector_1 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
         )
         branch_power_vector_2 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
         )
-        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.float)
+        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+        der_thermal_power_vector = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+        )
+        der_flow_vector = (
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+        )
+        branch_flow_vector = (
+            pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
+        )
+        node_head_vector = (
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
+        )
 
         # Obtain nominal DER power vector.
         for der in self.electric_grid_model.ders:
@@ -90,6 +100,7 @@ class NominalOperationProblem(object):
                 self.der_model_set.der_models[der_name].active_power_nominal_timeseries
                 + (1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries)
             )
+            der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
 
         # Obtain results.
         for timestep in self.timesteps:
@@ -104,6 +115,15 @@ class NominalOperationProblem(object):
             branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
             branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
             loss.loc[timestep, :] = power_flow_solution.loss.ravel()
+            thermal_power_flow_solution = (
+                fledge.thermal_grid_models.ThermalPowerFlowSolution(
+                    self.thermal_grid_model,
+                    der_thermal_power_vector.loc[timestep, :].values
+                )
+            )
+            der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
+            branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
+            node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
 
         # Store results.
         self.results = (

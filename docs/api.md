@@ -9,19 +9,9 @@
 ``` automodule:: fledge.api
 ```
 
-## `fledge.config`
+## `fledge.problems`
 
-``` automodule:: fledge.config
-```
-
-## `fledge.database_interface`
-
-``` automodule:: fledge.database_interface
-```
-
-## `fledge.der_models`
-
-``` automodule:: fledge.der_models
+``` automodule:: fledge.problems
 ```
 
 ## `fledge.electric_grid_models`
@@ -34,7 +24,22 @@
 ``` automodule:: fledge.thermal_grid_models
 ```
 
+## `fledge.der_models`
+
+``` automodule:: fledge.der_models
+```
+
+## `fledge.database_interface`
+
+``` automodule:: fledge.database_interface
+```
+
 ## `fledge.utils`
 
 ``` automodule:: fledge.utils
+```
+
+## `fledge.config`
+
+``` automodule:: fledge.config
 ```

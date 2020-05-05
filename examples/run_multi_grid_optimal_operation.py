@@ -106,16 +106,11 @@ def main():
 
     # Define DER constraints.
     der_model_set.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define constraints for the connection with the DER power vector of the electric and thermal grids.
-    der_model_set.define_optimization_connection_grid(
         optimization_problem,
-        power_flow_solution,
-        electric_grid_model,
-        thermal_power_flow_solution,
-        thermal_grid_model
+        electric_grid_model=electric_grid_model,
+        power_flow_solution=power_flow_solution,
+        thermal_grid_model=thermal_grid_model,
+        thermal_power_flow_solution=thermal_power_flow_solution
     )
 
     # Define objective.
@@ -165,73 +160,26 @@ def main():
     results.to_csv(results_path)
 
     # Obtain DLMPs.
-    (
-        voltage_magnitude_vector_minimum_dlmp,
-        voltage_magnitude_vector_maximum_dlmp,
-        branch_power_vector_1_squared_maximum_dlmp,
-        branch_power_vector_2_squared_maximum_dlmp,
-        loss_active_dlmp,
-        loss_reactive_dlmp,
-        electric_grid_energy_dlmp,
-        electric_grid_voltage_dlmp,
-        electric_grid_congestion_dlmp,
-        electric_grid_loss_dlmp
-    ) = linear_electric_grid_model.get_optimization_dlmps(
-        optimization_problem,
-        price_timeseries,
-        scenario_data.timesteps
+    dlmps = (
+        linear_electric_grid_model.get_optimization_dlmps(
+            optimization_problem,
+            price_timeseries,
+            scenario_data.timesteps
+        )
     )
-    (
-        node_head_vector_minimum_dlmp,
-        branch_flow_vector_maximum_dlmp,
-        pump_power_dlmp,
-        thermal_grid_energy_dlmp,
-        thermal_grid_head_dlmp,
-        thermal_grid_congestion_dlmp,
-        thermal_grid_pump_dlmp
-    ) = linear_thermal_grid_model.get_optimization_dlmps(
-        optimization_problem,
-        price_timeseries,
-        scenario_data.timesteps
+    dlmps.update(
+        linear_thermal_grid_model.get_optimization_dlmps(
+            optimization_problem,
+            price_timeseries,
+            scenario_data.timesteps
+        )
     )
 
     # Print DLMPs.
-    print(f"voltage_magnitude_vector_minimum_dlmp = \n{voltage_magnitude_vector_minimum_dlmp}")
-    print(f"voltage_magnitude_vector_maximum_dlmp = \n{voltage_magnitude_vector_maximum_dlmp}")
-    print(f"branch_power_vector_1_squared_maximum_dlmp = \n{branch_power_vector_1_squared_maximum_dlmp}")
-    print(f"branch_power_vector_2_squared_maximum_dlmp = \n{branch_power_vector_2_squared_maximum_dlmp}")
-    print(f"loss_active_dlmp = \n{loss_active_dlmp}")
-    print(f"loss_reactive_dlmp = \n{loss_reactive_dlmp}")
-    print(f"node_head_vector_minimum_dlmp = \n{node_head_vector_minimum_dlmp}")
-    print(f"branch_flow_vector_maximum_dlmp = \n{branch_flow_vector_maximum_dlmp}")
-    print(f"pump_power_dlmp = \n{pump_power_dlmp}")
-    print(f"electric_grid_energy_dlmp = \n{electric_grid_energy_dlmp}")
-    print(f"electric_grid_voltage_dlmp = \n{electric_grid_voltage_dlmp}")
-    print(f"electric_grid_congestion_dlmp = \n{electric_grid_congestion_dlmp}")
-    print(f"electric_grid_loss_dlmp = \n{electric_grid_loss_dlmp}")
-    print(f"thermal_grid_energy_dlmp = \n{thermal_grid_energy_dlmp}")
-    print(f"thermal_grid_head_dlmp = \n{thermal_grid_head_dlmp}")
-    print(f"thermal_grid_congestion_dlmp = \n{thermal_grid_congestion_dlmp}")
-    print(f"thermal_grid_pump_dlmp = \n{thermal_grid_pump_dlmp}")
+    print(dlmps)
 
     # Store DLMPs as CSV.
-    voltage_magnitude_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_minimum_dlmp.csv'))
-    voltage_magnitude_vector_maximum_dlmp.to_csv(os.path.join(results_path, 'voltage_magnitude_vector_maximum_dlmp.csv'))
-    branch_power_vector_1_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_maximum_dlmp.csv'))
-    branch_power_vector_2_squared_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_maximum_dlmp.csv'))
-    loss_active_dlmp.to_csv(os.path.join(results_path, 'loss_active_dlmp.csv'))
-    loss_reactive_dlmp.to_csv(os.path.join(results_path, 'loss_reactive_dlmp.csv'))
-    node_head_vector_minimum_dlmp.to_csv(os.path.join(results_path, 'node_head_vector_minimum_dlmp.csv'))
-    branch_flow_vector_maximum_dlmp.to_csv(os.path.join(results_path, 'branch_flow_vector_maximum_dlmp.csv'))
-    pump_power_dlmp.to_csv(os.path.join(results_path, 'pump_power_dlmp.csv'))
-    electric_grid_energy_dlmp.to_csv(os.path.join(results_path, 'electric_grid_energy_dlmp.csv'))
-    electric_grid_voltage_dlmp.to_csv(os.path.join(results_path, 'electric_grid_voltage_dlmp.csv'))
-    electric_grid_congestion_dlmp.to_csv(os.path.join(results_path, 'electric_grid_congestion_dlmp.csv'))
-    electric_grid_loss_dlmp.to_csv(os.path.join(results_path, 'electric_grid_loss_dlmp.csv'))
-    thermal_grid_energy_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_energy_dlmp.csv'))
-    thermal_grid_head_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_head_dlmp.csv'))
-    thermal_grid_congestion_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_congestion_dlmp.csv'))
-    thermal_grid_pump_dlmp.to_csv(os.path.join(results_path, 'thermal_grid_pump_dlmp.csv'))
+    dlmps.to_csv(results_path)
 
     # Print results path.
     print("Results are stored in: " + results_path)

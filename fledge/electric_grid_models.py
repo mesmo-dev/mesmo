@@ -5,14 +5,13 @@ import natsort
 import numpy as np
 import opendssdirect
 import pandas as pd
-import pyomo.core
+import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
 
 import fledge.config
 import fledge.database_interface
 import fledge.utils
-from pyomo import environ as pyo
 
 logger = fledge.config.get_logger(__name__)
 
@@ -1791,7 +1790,7 @@ class LinearElectricGridModel(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
         """Define decision variables for given `optimization_problem`."""
@@ -1823,7 +1822,7 @@ class LinearElectricGridModel(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             voltage_magnitude_vector_minimum: np.ndarray = None,
             voltage_magnitude_vector_maximum: np.ndarray = None,
@@ -1971,11 +1970,12 @@ class LinearElectricGridModel(object):
                 )
             )
 
-    def get_optimization_limits_duals(
+    def get_optimization_dlmps(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate dual variables.
         voltage_magnitude_vector_minimum_dual = (
@@ -2025,31 +2025,6 @@ class LinearElectricGridModel(object):
                             optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
                         ]
                     )
-
-        return (
-            voltage_magnitude_vector_minimum_dual,
-            voltage_magnitude_vector_maximum_dual,
-            branch_power_vector_1_squared_maximum_dual,
-            branch_power_vector_2_squared_maximum_dual
-        )
-
-    def get_optimization_dlmps(
-            self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            timesteps=pd.Index([0], name='timestep')
-    ):
-
-        # Obtain duals.
-        (
-            voltage_magnitude_vector_minimum_dual,
-            voltage_magnitude_vector_maximum_dual,
-            branch_power_vector_1_squared_maximum_dual,
-            branch_power_vector_2_squared_maximum_dual
-        ) = self.get_optimization_limits_duals(
-            optimization_problem,
-            timesteps
-        )
 
         # Instantiate DLMP variables.
         voltage_magnitude_vector_minimum_dlmp = (
@@ -2136,22 +2111,22 @@ class LinearElectricGridModel(object):
             + loss_reactive_dlmp
         )
 
-        return (
-            voltage_magnitude_vector_minimum_dlmp,
-            voltage_magnitude_vector_maximum_dlmp,
-            branch_power_vector_1_squared_maximum_dlmp,
-            branch_power_vector_2_squared_maximum_dlmp,
-            loss_active_dlmp,
-            loss_reactive_dlmp,
-            electric_grid_energy_dlmp,
-            electric_grid_voltage_dlmp,
-            electric_grid_congestion_dlmp,
-            electric_grid_loss_dlmp
+        return fledge.utils.ResultsDict(
+            voltage_magnitude_vector_minimum_dlmp=voltage_magnitude_vector_minimum_dlmp,
+            voltage_magnitude_vector_maximum_dlmp=voltage_magnitude_vector_maximum_dlmp,
+            branch_power_vector_1_squared_maximum_dlmp=branch_power_vector_1_squared_maximum_dlmp,
+            branch_power_vector_2_squared_maximum_dlmp=branch_power_vector_2_squared_maximum_dlmp,
+            loss_active_dlmp=loss_active_dlmp,
+            loss_reactive_dlmp=loss_reactive_dlmp,
+            electric_grid_energy_dlmp=electric_grid_energy_dlmp,
+            electric_grid_voltage_dlmp=electric_grid_voltage_dlmp,
+            electric_grid_congestion_dlmp=electric_grid_congestion_dlmp,
+            electric_grid_loss_dlmp=electric_grid_loss_dlmp
         )
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: PowerFlowSolution = None,
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,

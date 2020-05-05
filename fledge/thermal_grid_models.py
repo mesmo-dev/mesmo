@@ -3,7 +3,6 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.core
 import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
@@ -366,7 +365,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
         """Define decision variables for given `optimization_problem`."""
@@ -386,7 +385,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             node_head_vector_minimum: np.ndarray = None,
             branch_flow_vector_maximum: np.ndarray = None
@@ -477,7 +476,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries=pd.DataFrame(1.0, columns=['price_value'], index=[0]),
             timesteps=pd.Index([0], name='timestep')
     ):
@@ -502,11 +501,12 @@ class LinearThermalGridModel(object):
             )
         )
 
-    def get_optimization_limits_duals(
+    def get_optimization_dlmps(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ):
+    ) -> fledge.utils.ResultsDict:
 
         # Instantiate dual variables.
         node_head_vector_minimum_dual = (
@@ -534,27 +534,6 @@ class LinearThermalGridModel(object):
                             optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
                         ]
                     )
-
-        return (
-            node_head_vector_minimum_dual,
-            branch_flow_vector_maximum_dual
-        )
-
-    def get_optimization_dlmps(
-            self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            timesteps=pd.Index([0], name='timestep')
-    ):
-
-        # Obtain duals.
-        (
-            node_head_vector_minimum_dual,
-            branch_flow_vector_maximum_dual
-        ) = self.get_optimization_limits_duals(
-            optimization_problem,
-            timesteps
-        )
 
         # Instantiate DLMP variables.
         node_head_vector_minimum_dlmp = (
@@ -616,19 +595,19 @@ class LinearThermalGridModel(object):
             pump_power_dlmp
         )
 
-        return (
-            node_head_vector_minimum_dlmp,
-            branch_flow_vector_maximum_dlmp,
-            pump_power_dlmp,
-            thermal_grid_energy_dlmp,
-            thermal_grid_head_dlmp,
-            thermal_grid_congestion_dlmp,
-            thermal_grid_pump_dlmp
+        return fledge.utils.ResultsDict(
+            node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
+            branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
+            pump_power_dlmp=pump_power_dlmp,
+            thermal_grid_energy_dlmp=thermal_grid_energy_dlmp,
+            thermal_grid_head_dlmp=thermal_grid_head_dlmp,
+            thermal_grid_congestion_dlmp=thermal_grid_congestion_dlmp,
+            thermal_grid_pump_dlmp=thermal_grid_pump_dlmp
         )
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,

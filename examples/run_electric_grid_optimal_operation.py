@@ -61,7 +61,7 @@ def main():
     # Define linear electric grid model constraints.
     voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
     voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
+    branch_power_vector_squared_maximum = 2.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,

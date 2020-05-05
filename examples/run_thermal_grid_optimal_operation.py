@@ -76,14 +76,9 @@ def main():
 
     # Define DER constraints.
     der_model_set.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define constraints for the connection with the DER power vector of the electric grid.
-    der_model_set.define_optimization_connection_grid(
         optimization_problem,
-        thermal_power_flow_solution,
-        thermal_grid_model
+        thermal_grid_model=thermal_grid_model,
+        thermal_power_flow_solution=thermal_power_flow_solution
     )
 
     # Define objective (district cooling plant operation cost minimization).
@@ -101,8 +96,6 @@ def main():
     except AssertionError:
         raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
     # optimization_problem.display()
-
-    # TODO: Problem fails due to missing electric grid connection, because of flexible buildings' appliances demand.
 
     # Obtain results.
     results = (

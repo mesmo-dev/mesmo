@@ -282,31 +282,12 @@ class OptimalOperationProblem(object):
             self.optimization_problem
         )
         self.der_model_set.define_optimization_constraints(
-            self.optimization_problem
+            self.optimization_problem,
+            electric_grid_model=self.electric_grid_model,
+            power_flow_solution=self.power_flow_solution_reference,
+            thermal_grid_model=self.thermal_grid_model,
+            thermal_power_flow_solution=self.thermal_power_flow_solution_reference
         )
-
-        # Define constraints for the connection with the DER power vector of the electric and thermal grids.
-        # TODO: Refactor grid connection methods.
-        if (self.electric_grid_model is not None) and (self.thermal_grid_model is not None):
-            self.der_model_set.define_optimization_connection_grid(
-                self.optimization_problem,
-                self.power_flow_solution_reference,
-                self.electric_grid_model,
-                self.thermal_power_flow_solution_reference,
-                self.thermal_grid_model
-            )
-        elif self.electric_grid_model is not None:
-            self.der_model_set.define_optimization_connection_grid(
-                self.optimization_problem,
-                self.power_flow_solution_reference,
-                self.electric_grid_model
-            )
-        elif self.thermal_grid_model is not None:
-            self.der_model_set.define_optimization_connection_grid(
-                self.optimization_problem,
-                self.thermal_power_flow_solution_reference,
-                self.thermal_grid_model
-            )
 
         # Define objective.
         if self.thermal_grid_model is not None:

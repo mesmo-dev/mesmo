@@ -77,14 +77,9 @@ def main():
 
     # Define DER constraints.
     der_model_set.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define constraints for the connection with the DER power vector of the electric grid.
-    der_model_set.define_optimization_connection_grid(
         optimization_problem,
-        power_flow_solution,
-        electric_grid_model
+        electric_grid_model=electric_grid_model,
+        power_flow_solution=power_flow_solution
     )
 
     # Define objective (DER operation cost minimization).

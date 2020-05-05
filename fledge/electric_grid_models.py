@@ -5,14 +5,13 @@ import natsort
 import numpy as np
 import opendssdirect
 import pandas as pd
-import pyomo.core
+import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
 
 import fledge.config
 import fledge.database_interface
 import fledge.utils
-from pyomo import environ as pyo
 
 logger = fledge.config.get_logger(__name__)
 
@@ -1791,7 +1790,7 @@ class LinearElectricGridModel(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
         """Define decision variables for given `optimization_problem`."""
@@ -1823,7 +1822,7 @@ class LinearElectricGridModel(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             voltage_magnitude_vector_minimum: np.ndarray = None,
             voltage_magnitude_vector_maximum: np.ndarray = None,
@@ -1973,7 +1972,7 @@ class LinearElectricGridModel(object):
 
     def get_optimization_limits_duals(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
 
@@ -2035,7 +2034,7 @@ class LinearElectricGridModel(object):
 
     def get_optimization_dlmps(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
     ):
@@ -2151,7 +2150,7 @@ class LinearElectricGridModel(object):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: PowerFlowSolution = None,
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,

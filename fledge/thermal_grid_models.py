@@ -3,7 +3,6 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.core
 import pyomo.environ as pyo
 import scipy.sparse
 import scipy.sparse.linalg
@@ -366,7 +365,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
         """Define decision variables for given `optimization_problem`."""
@@ -386,7 +385,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             node_head_vector_minimum: np.ndarray = None,
             branch_flow_vector_maximum: np.ndarray = None
@@ -477,7 +476,7 @@ class LinearThermalGridModel(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries=pd.DataFrame(1.0, columns=['price_value'], index=[0]),
             timesteps=pd.Index([0], name='timestep')
     ):
@@ -504,7 +503,7 @@ class LinearThermalGridModel(object):
 
     def get_optimization_limits_duals(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep')
     ):
 
@@ -542,7 +541,7 @@ class LinearThermalGridModel(object):
 
     def get_optimization_dlmps(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
     ):
@@ -628,7 +627,7 @@ class LinearThermalGridModel(object):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,

@@ -3,7 +3,6 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.core
 import pyomo.environ as pyo
 import typing
 
@@ -30,19 +29,19 @@ class FixedDERModel(DERModel):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
     ):
         pass
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+            optimization_problem: pyo.ConcreteModel
     ):
         pass
 
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault
     ):
@@ -74,7 +73,7 @@ class FixedDERModel(DERModel):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+            optimization_problem: pyo.ConcreteModel
     ) -> fledge.utils.ResultsDict:
 
         # TODO: Revise optimization method definitions in DER models.
@@ -171,7 +170,7 @@ class FlexibleDERModel(DERModel):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
     ):
 
         # Define variables.
@@ -181,7 +180,7 @@ class FlexibleDERModel(DERModel):
 
     def define_optimization_constraints(
         self,
-        optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+        optimization_problem: pyo.ConcreteModel
     ):
 
         # Define shorthand for indexing 't+1'.
@@ -264,7 +263,7 @@ class FlexibleDERModel(DERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
@@ -290,7 +289,7 @@ class FlexibleDERModel(DERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             disconnect_thermal_grid=True
@@ -324,7 +323,7 @@ class FlexibleDERModel(DERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
             disconnect_electric_grid=True
@@ -333,7 +332,7 @@ class FlexibleDERModel(DERModel):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame
     ):
 
@@ -351,7 +350,7 @@ class FlexibleDERModel(DERModel):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+            optimization_problem: pyo.ConcreteModel
     ) -> fledge.utils.ResultsDict:
 
         # Instantiate results variables.
@@ -575,7 +574,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
@@ -601,7 +600,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             disconnect_thermal_grid=True
@@ -646,7 +645,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
             disconnect_electric_grid=True
@@ -676,7 +675,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame
     ):
 
@@ -776,7 +775,7 @@ class DERModelSet(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+            optimization_problem: pyo.ConcreteModel
     ):
 
         # Define flexible DER variables.
@@ -801,7 +800,7 @@ class DERModelSet(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel
+            optimization_problem: pyo.ConcreteModel
     ):
 
         # Define DER constraints, only for flexible DERs.
@@ -813,7 +812,7 @@ class DERModelSet(object):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
@@ -833,7 +832,7 @@ class DERModelSet(object):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
             **kwargs
@@ -851,7 +850,7 @@ class DERModelSet(object):
     @multimethod
     def define_optimization_connection_grid(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel,
             **kwargs
@@ -868,7 +867,7 @@ class DERModelSet(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyomo.core.base.PyomoModel.ConcreteModel,
+            optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame
     ):
 

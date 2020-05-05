@@ -89,6 +89,7 @@ def main():
     )
 
     # Solve optimization problem.
+    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
     optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
     try:

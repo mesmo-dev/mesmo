@@ -7,7 +7,7 @@ import pyomo.environ as pyo
 import typing
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
 import fledge.utils
@@ -75,12 +75,12 @@ class FixedDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # TODO: Revise optimization method definitions in DER models.
 
         # Fixed DERs have no optimization variables, therefore return empty results.
-        return fledge.utils.ResultsDict()
+        return fledge.data_interface.ResultsDict()
 
 
 class FixedLoadModel(FixedDERModel):
@@ -88,7 +88,7 @@ class FixedLoadModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
@@ -122,7 +122,7 @@ class EVChargerModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
@@ -386,7 +386,7 @@ class FlexibleDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.state_names)
@@ -408,7 +408,7 @@ class FlexibleDERModel(DERModel):
                     optimization_problem.output_vector[timestep, self.der_name, output_name].value
                 )
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             state_vector=state_vector,
             control_vector=control_vector,
             output_vector=output_vector
@@ -420,7 +420,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
@@ -543,7 +543,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
@@ -624,8 +624,8 @@ class DERModelSet(object):
     ):
 
         # Obtain data.
-        scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-        der_data = fledge.database_interface.DERData(scenario_name)
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+        der_data = fledge.data_interface.DERData(scenario_name)
 
         # Obtain timesteps.
         self.timesteps = scenario_data.timesteps

@@ -10,7 +10,7 @@ import scipy.sparse
 import scipy.sparse.linalg
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -56,7 +56,7 @@ class ElectricGridModel(object):
 
     def __init__(
             self,
-            electric_grid_data: fledge.database_interface.ElectricGridData
+            electric_grid_data: fledge.data_interface.ElectricGridData
     ):
 
         # Obtain index sets for phases / node names / node types / line names / transformer names /
@@ -252,7 +252,7 @@ class ElectricGridModelDefault(ElectricGridModel):
 
     Arguments:
         scenario_name (str): FLEDGE scenario name.
-        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+        electric_grid_data (fledge.data_interface.ElectricGridData): Electric grid data object.
 
     Keyword Arguments:
         voltage_no_load_method (str): Choices: `by_definition`, `by_calculation`. Default: `by_definition`.
@@ -306,7 +306,7 @@ class ElectricGridModelDefault(ElectricGridModel):
     ):
 
         # Obtain electric grid data.
-        electric_grid_data = fledge.database_interface.ElectricGridData(scenario_name)
+        electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
 
         # Instantiate electric grid model object.
         self.__init__(
@@ -317,7 +317,7 @@ class ElectricGridModelDefault(ElectricGridModel):
     @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.database_interface.ElectricGridData,
+            electric_grid_data: fledge.data_interface.ElectricGridData,
             voltage_no_load_method='by_definition'
     ):
 
@@ -883,7 +883,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
     Parameters:
         scenario_name (str): FLEDGE scenario name.
-        electric_grid_data (fledge.database_interface.ElectricGridData): Electric grid data object.
+        electric_grid_data (fledge.data_interface.ElectricGridData): Electric grid data object.
 
     Attributes:
         phases (pd.Index): Index set of the phases.
@@ -910,7 +910,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
         # Obtain electric grid data.
         electric_grid_data = (
-            fledge.database_interface.ElectricGridData(scenario_name)
+            fledge.data_interface.ElectricGridData(scenario_name)
         )
 
         self.__init__(
@@ -920,7 +920,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
     @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.database_interface.ElectricGridData
+            electric_grid_data: fledge.data_interface.ElectricGridData
     ):
 
         # TODO: Add reset method to ensure correct circuit model is set in OpenDSS when handling multiple models.
@@ -1975,7 +1975,7 @@ class LinearElectricGridModel(object):
             optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate dual variables.
         voltage_magnitude_vector_minimum_dual = (
@@ -2111,7 +2111,7 @@ class LinearElectricGridModel(object):
             + loss_reactive_dlmp
         )
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             voltage_magnitude_vector_minimum_dlmp=voltage_magnitude_vector_minimum_dlmp,
             voltage_magnitude_vector_maximum_dlmp=voltage_magnitude_vector_maximum_dlmp,
             branch_power_vector_1_squared_maximum_dlmp=branch_power_vector_1_squared_maximum_dlmp,
@@ -2131,7 +2131,7 @@ class LinearElectricGridModel(object):
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
         der_active_power_vector = (
@@ -2226,7 +2226,7 @@ class LinearElectricGridModel(object):
             branch_power_vector_1_squared['mean'] = branch_power_vector_1_squared.mean(axis=1)
             branch_power_vector_2_squared['mean'] = branch_power_vector_2_squared.mean(axis=1)
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             der_active_power_vector=der_active_power_vector,
             der_reactive_power_vector=der_reactive_power_vector,
             voltage_magnitude_vector=voltage_magnitude_vector,

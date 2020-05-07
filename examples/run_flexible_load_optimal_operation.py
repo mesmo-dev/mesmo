@@ -6,7 +6,7 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 
@@ -18,12 +18,12 @@ def main():
     plots = True  # If True, script may produce plots.
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.database_interface.recreate_database()
+    fledge.data_interface.recreate_database()
 
     # Obtain data.
-    scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-    der_data = fledge.database_interface.DERData(scenario_name)
-    price_data = fledge.database_interface.PriceData(scenario_name)
+    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+    der_data = fledge.data_interface.DERData(scenario_name)
+    price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain price timeseries.
     price_type = 'singapore_wholesale'

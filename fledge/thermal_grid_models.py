@@ -8,7 +8,7 @@ import scipy.sparse
 import scipy.sparse.linalg
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -34,7 +34,7 @@ class ThermalGridModel(object):
     ):
 
         # Obtain thermal grid data.
-        thermal_grid_data = fledge.database_interface.ThermalGridData(scenario_name)
+        thermal_grid_data = fledge.data_interface.ThermalGridData(scenario_name)
 
         # Obtain node / line / DER names.
         self.node_names = pd.Index(thermal_grid_data.thermal_grid_nodes['node_name'])
@@ -506,7 +506,7 @@ class LinearThermalGridModel(object):
             optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate dual variables.
         node_head_vector_minimum_dual = (
@@ -595,7 +595,7 @@ class LinearThermalGridModel(object):
             pump_power_dlmp
         )
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
             branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
             pump_power_dlmp=pump_power_dlmp,
@@ -611,7 +611,7 @@ class LinearThermalGridModel(object):
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
         der_thermal_power_vector = (
@@ -678,7 +678,7 @@ class LinearThermalGridModel(object):
             branch_flow_vector['mean'] = branch_flow_vector.mean(axis=1)
             node_head_vector['mean'] = node_head_vector.mean(axis=1)
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             der_thermal_power_vector=der_thermal_power_vector,
             node_head_vector=node_head_vector,
             branch_flow_vector=branch_flow_vector,

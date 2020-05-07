@@ -4,7 +4,7 @@ import time
 import unittest
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.der_models
 
 logger = fledge.config.get_logger(__name__)
@@ -14,7 +14,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_fixed_load_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.DERData(fledge.config.config['testing']['scenario_name'])
+        der_data = fledge.data_interface.DERData(fledge.config.config['testing']['scenario_name'])
 
         # Get result.
         time_start = time.time()
@@ -27,7 +27,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_ev_charger_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.DERData(fledge.config.config['testing']['scenario_name'])
+        der_data = fledge.data_interface.DERData(fledge.config.config['testing']['scenario_name'])
 
         # Get result.
         time_start = time.time()
@@ -40,7 +40,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_flexible_load_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.DERData(fledge.config.config['testing']['scenario_name'])
+        der_data = fledge.data_interface.DERData(fledge.config.config['testing']['scenario_name'])
 
         # Get result.
         time_start = time.time()
@@ -53,7 +53,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_flexible_building_model(self):
         # Obtain test data.
-        der_data = fledge.database_interface.DERData(fledge.config.config['testing']['scenario_name'])
+        der_data = fledge.data_interface.DERData(fledge.config.config['testing']['scenario_name'])
 
         # Get result.
         time_start = time.time()

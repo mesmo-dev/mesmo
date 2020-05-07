@@ -6,11 +6,10 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
-import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -32,7 +31,7 @@ class NominalOperationProblem(object):
     thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
     der_model_set: fledge.der_models.DERModelSet
-    results: fledge.utils.ResultsDict
+    results: fledge.data_interface.ResultsDict
 
     @multimethod
     def __init__(
@@ -41,7 +40,7 @@ class NominalOperationProblem(object):
     ):
 
         # Obtain data.
-        scenario_data = fledge.database_interface.ScenarioData(scenario_name)
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
@@ -127,7 +126,7 @@ class NominalOperationProblem(object):
 
         # Store results.
         self.results = (
-            fledge.utils.ResultsDict(
+            fledge.data_interface.ResultsDict(
                 der_power_vector=der_power_vector,
                 node_voltage_vector=node_voltage_vector,
                 branch_power_vector_1=branch_power_vector_1,
@@ -168,8 +167,8 @@ class OptimalOperationProblem(object):
     ):
 
         # Obtain data.
-        scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-        price_data = fledge.database_interface.PriceData(scenario_name)
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+        price_data = fledge.data_interface.PriceData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
@@ -328,10 +327,10 @@ class OptimalOperationProblem(object):
             self,
             in_per_unit=False,
             with_mean=False
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results dictionary.
-        results = fledge.utils.ResultsDict()
+        results = fledge.data_interface.ResultsDict()
 
         # Obtain electric grid results.
         if self.electric_grid_model is not None:
@@ -360,10 +359,10 @@ class OptimalOperationProblem(object):
 
         return results
 
-    def get_optimization_dlmps(self) -> fledge.utils.ResultsDict:
+    def get_optimization_dlmps(self) -> fledge.data_interface.ResultsDict:
 
         # Instantiate DLMP results dictionary.
-        dlmps = fledge.utils.ResultsDict()
+        dlmps = fledge.data_interface.ResultsDict()
 
         # Obtain electric DLMPs.
         if self.electric_grid_model is not None:

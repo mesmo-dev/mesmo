@@ -6,7 +6,7 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.electric_grid_models
 
 
@@ -26,7 +26,7 @@ def main():
     os.mkdir(results_path)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.database_interface.recreate_database()
+    fledge.data_interface.recreate_database()
 
     # Obtain models.
     electric_grid_model = (

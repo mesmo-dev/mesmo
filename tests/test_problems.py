@@ -5,7 +5,6 @@ import time
 import unittest
 
 import fledge.config
-import fledge.database_interface
 import fledge.problems
 
 logger = fledge.config.get_logger(__name__)

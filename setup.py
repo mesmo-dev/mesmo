@@ -17,6 +17,7 @@ setuptools.setup(
         'pandas',
         'parameterized',  # For tests.
         'pyomo',
+        'pyyaml',
         'scipy',
     ],
 )

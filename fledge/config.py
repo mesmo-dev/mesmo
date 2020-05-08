@@ -28,17 +28,17 @@ config['optimization']['solver_name'] = 'gurobi'  # Must be valid input string f
 config['optimization']['show_solver_output'] = True  # If True, activate verbose solver output.
 
 # Test settings.
-config['testing'] = dict()
-config['testing']['scenario_name'] = 'singapore_6node'  # Defines scenario which is considered in tests.
-config['testing']['show_plots'] = True  # If True, tests may produce plots.
+config['tests'] = dict()
+config['tests']['scenario_name'] = 'singapore_6node'  # Defines scenario which is considered in tests.
+config['tests']['show_plots'] = True  # If True, tests may produce plots.
 
 # Logging settings.
-config['logging'] = dict()
-config['logging']['level'] = 'debug'  # Choices: `debug`, `info`, `warn`, `error`.
+config['logs'] = dict()
+config['logs']['level'] = 'info'  # Choices: `debug`, `info`, `warn`, `error`.
 
 # Plotting settings.
-config['plotting'] = dict()
-config['plotting']['matplotlib_style'] = 'seaborn-colorblind'
+config['plots'] = dict()
+config['plots']['matplotlib_style'] = 'seaborn-colorblind'
 
 # Physical constants.
 # TODO: Move physical constants to model definition.
@@ -48,7 +48,7 @@ gravitational_acceleration = 9.81  # [m^2/s]
 
 
 # Modify matplotlib settings.
-plt.style.use(config['plotting']['matplotlib_style'])
+plt.style.use(config['plots']['matplotlib_style'])
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas settings.
@@ -75,16 +75,16 @@ def get_logger(
     # logging_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s'))
     logger.addHandler(logging_handler)
 
-    if config['logging']['level'] == 'debug':
+    if config['logs']['level'] == 'debug':
         logger.setLevel(logging.DEBUG)
-    elif config['logging']['level'] == 'info':
+    elif config['logs']['level'] == 'info':
         logger.setLevel(logging.INFO)
-    elif config['logging']['level'] == 'warn':
+    elif config['logs']['level'] == 'warn':
         logger.setLevel(logging.WARN)
-    elif config['logging']['level'] == 'error':
+    elif config['logs']['level'] == 'error':
         logger.setLevel(logging.ERROR)
     else:
-        raise ValueError(f"Unknown logging level: {config['logging']['level']}")
+        raise ValueError(f"Unknown logging level: {config['logs']['level']}")
 
     return logger
 

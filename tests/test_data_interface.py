@@ -36,14 +36,14 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_scenario_data(self):
         # Get result.
         time_start = time.time()
-        fledge.data_interface.ScenarioData(fledge.config.config['testing']['scenario_name'])
+        fledge.data_interface.ScenarioData(fledge.config.config['tests']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ScenarioData: Completed in {time_duration:.6f} seconds.")
 
     def test_electric_grid_data(self):
         # Get result.
         time_start = time.time()
-        fledge.data_interface.ElectricGridData(fledge.config.config['testing']['scenario_name'])
+        fledge.data_interface.ElectricGridData(fledge.config.config['tests']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test ElectricGridData: Completed in {time_duration:.6f} seconds.")
 
@@ -57,14 +57,14 @@ class TestDatabaseInterface(unittest.TestCase):
     def test_electric_grid_der_data(self):
         # Get result.
         time_start = time.time()
-        fledge.data_interface.DERData(fledge.config.config['testing']['scenario_name'])
+        fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test DERData: Completed in {time_duration:.6f} seconds.")
 
     def test_price_data(self):
         # Get result.
         time_start = time.time()
-        fledge.data_interface.PriceData(fledge.config.config['testing']['scenario_name'])
+        fledge.data_interface.PriceData(fledge.config.config['tests']['scenario_name'])
         time_duration = time.time() - time_start
         logger.info(f"Test PriceData: Completed in {time_duration:.6f} seconds.")
 

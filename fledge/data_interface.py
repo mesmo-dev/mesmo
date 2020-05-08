@@ -399,6 +399,7 @@ class ThermalGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_lines
+                JOIN thermal_grid_line_types USING (line_type)
                 WHERE thermal_grid_name = (
                     SELECT thermal_grid_name FROM scenarios
                     WHERE scenario_name = ?

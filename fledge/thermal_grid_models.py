@@ -43,7 +43,18 @@ class ThermalGridModel(object):
         self.der_types = pd.Index(thermal_grid_data.thermal_grid_ders['der_type']).unique()
 
         # Obtain node / branch / DER index set.
-        self.nodes = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_nodes[['node_type', 'node_name']])
+        nodes = (
+            pd.concat([
+                thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name'].apply(
+                    # Obtain `node_type` column.
+                    lambda value:
+                    'source' if value == thermal_grid_data.thermal_grid.at['source_node_name']
+                    else 'no_source'
+                ).rename('node_type'),
+                thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name']
+            ], axis='columns')
+        )
+        self.nodes = pd.MultiIndex.from_frame(nodes)
         self.branches = self.line_names
         self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
@@ -80,14 +91,14 @@ class ThermalGridModel(object):
         self.line_roughness_vector = thermal_grid_data.thermal_grid_lines['absolute_roughness'].values
 
         # Obtain other system parameters.
-        self.ets_head_loss = (
-            np.float(thermal_grid_data.thermal_grid['ets_head_loss'])
+        self.energy_transfer_station_head_loss = (
+            np.float(thermal_grid_data.thermal_grid['energy_transfer_station_head_loss'])
         )
         self.enthalpy_difference_distribution_water = (
             np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
-        self.pump_efficiency_secondary_pump = (  # TODO: Rename to `secondary_pump_efficiency`.
-            np.float(thermal_grid_data.thermal_grid['pump_efficiency_secondary_pump'])
+        self.distribution_pump_efficiency = (  # TODO: Rename to `distribution_pump_efficiency`.
+            np.float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
         )
         self.cooling_plant_efficiency = 5.0  # TODO: Define cooling plant model.
 
@@ -261,12 +272,12 @@ class ThermalPowerFlowSolution(object):
         self.source_electric_power_secondary_pump = (
             (
                 2.0 * self.source_head
-                + thermal_grid_model.ets_head_loss
+                + thermal_grid_model.energy_transfer_station_head_loss
             )
             * self.source_flow
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration
-            / thermal_grid_model.pump_efficiency_secondary_pump
+            / thermal_grid_model.distribution_pump_efficiency
         )
         self.source_electric_power_cooling_plant = (
             self.source_flow
@@ -360,7 +371,7 @@ class LinearThermalGridModel(object):
             @ self.sensitivity_node_head_by_der_power
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration
-            / self.thermal_grid_model.pump_efficiency_secondary_pump
+            / self.thermal_grid_model.distribution_pump_efficiency
         )
 
     def define_optimization_variables(
@@ -428,10 +439,10 @@ class LinearThermalGridModel(object):
                 )
                 + sum(
                     -1.0 * self.thermal_power_flow_solution.der_flow_vector[der_index]
-                    * self.thermal_grid_model.ets_head_loss
+                    * self.thermal_grid_model.energy_transfer_station_head_loss
                     * fledge.config.water_density
                     * fledge.config.gravitational_acceleration
-                    / self.thermal_grid_model.pump_efficiency_secondary_pump
+                    / self.thermal_grid_model.distribution_pump_efficiency
                     for der_index, der in enumerate(self.thermal_grid_model.ders)
                 )
             )

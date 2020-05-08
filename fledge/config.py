@@ -34,7 +34,7 @@ config['testing']['show_plots'] = True  # If True, tests may produce plots.
 
 # Logging settings.
 config['logging'] = dict()
-config['logging']['level'] = 'info'  # Choices: `debug`, `info`, `warn`, `error`.
+config['logging']['level'] = 'debug'  # Choices: `debug`, `info`, `warn`, `error`.
 
 # Plotting settings.
 config['plotting'] = dict()

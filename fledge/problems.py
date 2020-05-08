@@ -201,7 +201,7 @@ class OptimalOperationProblem(object):
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
             self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-            self.thermal_grid_model.ets_head_loss = 0.0  # TODO: Remove modifications.
+            self.thermal_grid_model.energy_transfer_station_head_loss = 0.0  # TODO: Remove modifications.
             self.thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Remove modifications.
             self.thermal_power_flow_solution_reference = (
                 fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)

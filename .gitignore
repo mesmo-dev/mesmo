@@ -20,3 +20,5 @@ docs/_build/
 results/*
 
 !results/README\.md
+
+config.yml

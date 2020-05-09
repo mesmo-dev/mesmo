@@ -444,158 +444,148 @@ class DERData(object):
         timestep_start_string = self.scenario_data.scenario.at['timestep_start'].strftime('%Y-%m-%dT%H:%M:%S')
         timestep_end_string = self.scenario_data.scenario.at['timestep_end'].strftime('%Y-%m-%dT%H:%M:%S')
 
-        # Obtain fixed load data.
-        self.fixed_loads = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM fixed_loads
-                JOIN electric_grid_ders USING (model_name)
-                WHERE der_type = 'fixed_load'
-                AND electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[
-                    scenario_name
-                ]
-            ))
-        )
-        self.fixed_loads.index = self.fixed_loads['der_name']
+        # Define utility function for DER data.
+        # TODO: Move to method?
+        def get_der_type_data(der_type: str) -> typing.Tuple[pd.DataFrame, typing.Dict[str, pd.DataFrame]]:
+            """Obtain DER data for given DER type."""
 
-        # Instantiate dictionary for unique `model_name`.
-        self.fixed_load_timeseries_dict = dict.fromkeys(self.fixed_loads['model_name'].unique())
+            # Check validity of DER type.
+            try:
+                assert der_type in ['fixed_load', 'ev_charger', 'flexible_load']
+            except AssertionError:
+                logger.error(f"Invalid DER type: {der_type}")
+                raise
 
-        # Load timeseries for each `model_name`.
-        for model_name in self.fixed_load_timeseries_dict:
-            self.fixed_load_timeseries_dict[model_name] = (
-                pd.read_sql(
-                    """
-                    SELECT * FROM fixed_load_timeseries
-                    WHERE model_name = ?
-                    AND time between ? AND ?
+            # Obtain fixed load data.
+            der_models = (
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    f"""
+                    SELECT * FROM {der_type}s
+                    JOIN electric_grid_ders USING (model_name)
+                    WHERE der_type = ?
+                    AND electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
                     """,
                     con=database_connection,
                     params=[
-                        model_name,
-                        timestep_start_string,
-                        timestep_end_string
-                    ],
-                    parse_dates=['time'],
-                    index_col=['time']
-                ).reindex(
-                    self.scenario_data.timesteps
-                ).interpolate(
-                    'quadratic'
-                ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                )
+                        der_type,
+                        scenario_name
+                    ]
+                ))
+            )
+            der_models.index = der_models['der_name']
+
+            # Instantiate dictionary for unique `model_name`.
+            der_models_unique = der_models.loc[:, ['model_name', 'definition_type']].drop_duplicates()
+            der_models_unique.index = der_models_unique.loc[:, 'model_name']
+            der_model_timeseries_dict = dict.fromkeys(der_models_unique.loc[:, 'model_name'])
+
+            # Load timeseries for each `model_name`.
+            for model_name in der_model_timeseries_dict:
+
+                if 'timeseries' in der_models_unique.at[model_name, 'definition_type']:
+                    der_model_timeseries_dict[model_name] = (
+                        pd.read_sql(
+                            f"""
+                            SELECT * FROM {der_type}_timeseries
+                            WHERE model_name = ?
+                            AND time between ? AND ?
+                            """,
+                            con=database_connection,
+                            params=[
+                                model_name,
+                                timestep_start_string,
+                                timestep_end_string
+                            ],
+                            parse_dates=['time'],
+                            index_col=['time']
+                        ).reindex(
+                            self.scenario_data.timesteps
+                        ).interpolate(
+                            'quadratic'
+                        ).bfill(  # Backward fill to handle edge definition gaps.
+                            limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                        ).ffill(  # Forward fill to handle edge definition gaps.
+                            limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                        )
+                    )
+
+                if 'schedule' in der_models_unique.at[model_name, 'definition_type']:
+                    der_model_schedule = (
+                        pd.read_sql(
+                            f"""
+                            SELECT * FROM {der_type}_schedules
+                            WHERE model_name = ?
+                            """,
+                            con=database_connection,
+                            params=[
+                                model_name
+                            ],
+                            index_col='time_period'
+                        )
+                    )
+
+                    # Parse time period index.
+                    der_model_schedule.index = np.vectorize(pd.Period)(der_model_schedule.index)
+
+                    # Obtain complete schedule for all weekdays.
+                    # TODO: Check if '01T00:00:00' is defined for each schedule.
+                    der_model_schedule_complete = []
+                    for day in range(1, 8):
+                        if day in der_model_schedule.index.day.unique():
+                            der_model_schedule_complete.append(
+                                der_model_schedule.loc[der_model_schedule.index.day == day, :]
+                            )
+                        else:
+                            der_model_schedule_previous = der_model_schedule_complete[-1].copy()
+                            der_model_schedule_previous.index += pd.Timedelta('1 day')
+                            der_model_schedule_complete.append(der_model_schedule_previous)
+                    der_model_schedule_complete = pd.concat(der_model_schedule_complete)
+
+                    # Obtain complete schedule for each minute of the week.
+                    der_model_schedule_complete = (
+                        der_model_schedule_complete.reindex(
+                            pd.period_range(start='01T00:00', end='07T23:59', freq='T')
+                        ).fillna(method='ffill')
+                    )
+
+                    # Reindex / fill internal gain schedule for given timesteps.
+                    der_model_schedule_complete.index = (
+                        pd.MultiIndex.from_arrays([
+                            der_model_schedule_complete.index.day - 1,
+                            der_model_schedule_complete.index.hour,
+                            der_model_schedule_complete.index.minute
+                        ])
+                    )
+                    der_model_schedule = (
+                        pd.DataFrame(
+                            index=pd.MultiIndex.from_arrays([
+                                self.scenario_data.timesteps.weekday,
+                                self.scenario_data.timesteps.hour,
+                                self.scenario_data.timesteps.minute
+                            ]),
+                            columns=der_model_schedule_complete.columns
+                        )
+                    )
+                    for column in der_model_schedule.columns:
+                        der_model_schedule[column] = (
+                            der_model_schedule[column].fillna(der_model_schedule_complete[column])
+                        )
+                    der_model_schedule.index = self.scenario_data.timesteps
+
+                    der_model_timeseries_dict[model_name] = der_model_schedule
+
+            return (
+                der_models,
+                der_model_timeseries_dict
             )
 
-        # Obtain EV charger data.
-        self.ev_chargers = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM ev_chargers
-                JOIN electric_grid_ders USING (model_name)
-                WHERE der_type = 'ev_charger'
-                AND electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[
-                    scenario_name
-                ]
-            ))
-        )
-        self.ev_chargers.index = self.ev_chargers['der_name']
-
-        # Instantiate dictionary for unique `model_name`.
-        self.ev_charger_timeseries_dict = dict.fromkeys(self.ev_chargers['model_name'].unique())
-
-        # Load timeseries for each `model_name`.
-        for model_name in self.ev_charger_timeseries_dict:
-            self.ev_charger_timeseries_dict[model_name] = (
-                pd.read_sql(
-                    """
-                    SELECT * FROM ev_charger_timeseries
-                    WHERE model_name = ?
-                    AND time between ? AND ?
-                    """,
-                    con=database_connection,
-                    params=[
-                        model_name,
-                        timestep_start_string,
-                        timestep_end_string
-                    ],
-                    parse_dates=['time'],
-                    index_col=['time']
-                ).reindex(
-                    self.scenario_data.timesteps
-                ).interpolate(
-                    'quadratic'
-                ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                )
-            )
-
-        # Obtain flexible load data.
-        self.flexible_loads = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM flexible_loads
-                JOIN electric_grid_ders USING (model_name)
-                WHERE der_type = 'flexible_load'
-                AND electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[
-                    scenario_name
-                ]
-            ))
-        )
-        self.flexible_loads.index = self.flexible_loads['der_name']
-
-        # Instantiate dictionary for unique `model_name`.
-        self.flexible_load_timeseries_dict = dict.fromkeys(self.flexible_loads['model_name'].unique())
-
-        # Load timeseries for each `model_name`.
-        for model_name in self.flexible_load_timeseries_dict:
-            self.flexible_load_timeseries_dict[model_name] = (
-                pd.read_sql(
-                    """
-                    SELECT * FROM flexible_load_timeseries
-                    WHERE model_name = ?
-                    AND time between ? AND ?
-                    """,
-                    con=database_connection,
-                    params=[
-                        model_name,
-                        timestep_start_string,
-                        timestep_end_string
-                    ],
-                    parse_dates=['time'],
-                    index_col=['time']
-                ).reindex(
-                    self.scenario_data.timesteps
-                ).interpolate(
-                    'quadratic'
-                ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                )
-            )
+        # Obtain fixed load / EV charger / flexible load data.
+        self.fixed_loads, self.fixed_load_timeseries_dict = get_der_type_data('fixed_load')
+        self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
+        self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
 
         # Obtain flexible building data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,

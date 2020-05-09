@@ -1,2 +1,2 @@
 model_name,definition_type
-ev_charger_generic,timeseries_per_unit
+ev_charger_generic,schedule_per_unit

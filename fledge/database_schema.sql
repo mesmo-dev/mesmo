@@ -40,15 +40,15 @@ CREATE TABLE electric_grid_lines (
     PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
-     electric_grid_name TEXT,
-     node_name TEXT,
-     is_phase_1_connected TEXT,
-     is_phase_2_connected TEXT,
-     is_phase_3_connected TEXT,
-     voltage TEXT,
-     latitude TEXT,
-     longitude TEXT,
-     PRIMARY KEY(electric_grid_name,node_name)
+    electric_grid_name TEXT,
+    node_name TEXT,
+    is_phase_1_connected TEXT,
+    is_phase_2_connected TEXT,
+    is_phase_3_connected TEXT,
+    voltage TEXT,
+    latitude TEXT,
+    longitude TEXT,
+    PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
     electric_grid_operation_limit_type TEXT,
@@ -84,6 +84,13 @@ CREATE TABLE electric_grids (
     base_frequency TEXT,
     PRIMARY KEY(electric_grid_name)
 );
+CREATE TABLE ev_charger_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
 CREATE TABLE ev_charger_timeseries (
     model_name TEXT,
     time TEXT,
@@ -96,6 +103,13 @@ CREATE TABLE ev_chargers (
     definition_type TEXT,
     PRIMARY KEY(model_name)
 );
+CREATE TABLE fixed_load_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
 CREATE TABLE fixed_load_timeseries (
     model_name TEXT,
     time TEXT,
@@ -107,6 +121,13 @@ CREATE TABLE fixed_loads (
      model_name TEXT,
      definition_type TEXT,
      PRIMARY KEY(model_name)
+);
+CREATE TABLE flexible_load_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE flexible_load_timeseries (
     model_name TEXT,

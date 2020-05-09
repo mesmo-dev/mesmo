@@ -1,4 +1,4 @@
-line_name,electric_grid_name,line_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,length
-1,singapore_6node,mtx601,1,2,1,1,1,0.189394
-2,singapore_6node,mtx601,3,4,1,1,1,0.094697
-3,singapore_6node,mtx601,5,6,1,1,1,0.0189394
+electric_grid_name,line_name,line_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,length
+singapore_6node,1,mtx601,1,2,1,1,1,0.189394
+singapore_6node,2,mtx601,3,4,1,1,1,0.094697
+singapore_6node,3,mtx601,5,6,1,1,1,0.0189394

@@ -1,6 +1,6 @@
 CREATE TABLE electric_grid_ders (
-    der_name TEXT,
     electric_grid_name TEXT,
+    der_name TEXT,
     der_type TEXT,
     model_name TEXT,
     node_name TEXT,
@@ -10,7 +10,7 @@ CREATE TABLE electric_grid_ders (
     connection TEXT,
     active_power TEXT,
     reactive_power TEXT,
-    PRIMARY KEY(der_name,electric_grid_name)
+    PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (
     line_type TEXT,
@@ -28,8 +28,8 @@ CREATE TABLE electric_grid_line_types_matrices (
     PRIMARY KEY(line_type,row,col)
 );
 CREATE TABLE electric_grid_lines (
-    line_name TEXT,
     electric_grid_name TEXT,
+    line_name TEXT,
     line_type TEXT,
     node_1_name TEXT,
     node_2_name TEXT,
@@ -37,18 +37,18 @@ CREATE TABLE electric_grid_lines (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     length TEXT,
-    PRIMARY KEY(line_name,electric_grid_name)
+    PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
-     node_name TEXT,
      electric_grid_name TEXT,
+     node_name TEXT,
      is_phase_1_connected TEXT,
      is_phase_2_connected TEXT,
      is_phase_3_connected TEXT,
      voltage TEXT,
      latitude TEXT,
      longitude TEXT,
-     PRIMARY KEY(node_name,electric_grid_name)
+     PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
     electric_grid_operation_limit_type TEXT,
@@ -66,8 +66,8 @@ CREATE TABLE electric_grid_transformer_types (
     PRIMARY KEY(transformer_type)
 );
 CREATE TABLE electric_grid_transformers (
-    transformer_name TEXT,
     electric_grid_name TEXT,
+    transformer_name TEXT,
     transformer_type TEXT,
     node_1_name TEXT,
     node_2_name TEXT,

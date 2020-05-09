@@ -12,8 +12,8 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
+| `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
 | `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`. |
 | `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers` or in CoBMo, for flexible buildings. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
@@ -53,8 +53,8 @@ Electric grid lines.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `line_name` | | Unique line identifier (must only be unique within the associated electric grid). |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids` |
+| `line_name` | | Unique line identifier (must only be unique within the associated electric grid). |
 | `line_type` | | Line type identifier as defined in `electric_grid_line_types`. |
 | `node_1_name` | | Start node identifier as defined in `electric_grid_nodes` |
 | `node_2_name` | | End node identifier as defined in `electric_grid_nodes` |
@@ -69,8 +69,8 @@ Electric grid nodes.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `node_name` | | Unique node identifier (must only be unique within the associated electric grid). |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids` |
+| `node_name` | | Unique node identifier (must only be unique within the associated electric grid). |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
@@ -107,8 +107,8 @@ Electric grid transformers, which are limited to transformers with two windings,
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `transformer_name` | | Unique transformer identifier (must only be unique within the associated electric grid).|
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids` |
+| `transformer_name` | | Unique transformer identifier (must only be unique within the associated electric grid).|
 | `transformer_type` | | Transformer type identifier as defined in `electric_grid_transformer_types` |
 | `node_1_name` | | Primary side node name as defined in `electric_grid_nodes` |
 | `node_2_name` | | Secondary side node name as defined in `electric_grid_nodes` |

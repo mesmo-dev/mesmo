@@ -115,12 +115,16 @@ class ScenarioData(object):
                 WHERE scenario_name = ?
                 """,
                 con=database_connection,
-                params=[scenario_name],
-                parse_dates=[
-                    'timestep_start',
-                    'timestep_end'
-                ]
+                params=[scenario_name]
             )).iloc[0]
+        )
+
+        # Parse time definitions.
+        self.scenario['timestep_start'] = (
+            pd.Timestamp(self.scenario['timestep_start'])
+        )
+        self.scenario['timestep_end'] = (
+            pd.Timestamp(self.scenario['timestep_end'])
         )
         self.scenario['timestep_interval'] = (
             pd.Timedelta(self.scenario['timestep_interval'])

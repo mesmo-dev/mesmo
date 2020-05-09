@@ -440,6 +440,10 @@ class DERData(object):
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
 
+        # Obtain timeseries data. Shorthand for SQL commands.
+        timestep_start_string = self.scenario_data.scenario.at['timestep_start'].strftime('%Y-%m-%dT%H:%M:%S')
+        timestep_end_string = self.scenario_data.scenario.at['timestep_end'].strftime('%Y-%m-%dT%H:%M:%S')
+
         # Obtain fixed load data.
         self.fixed_loads = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
@@ -460,31 +464,23 @@ class DERData(object):
         )
         self.fixed_loads.index = self.fixed_loads['der_name']
 
-        # Instantiate dictionary for unique `timeseries_name`.
-        self.fixed_load_timeseries_dict = dict.fromkeys(self.fixed_loads['timeseries_name'].unique())
+        # Instantiate dictionary for unique `model_name`.
+        self.fixed_load_timeseries_dict = dict.fromkeys(self.fixed_loads['model_name'].unique())
 
-        # Load timeseries for each `timeseries_name`.
-        # TODO: Resample / interpolate timeseries depending on timestep interval.
-        for timeseries_name in self.fixed_load_timeseries_dict:
-            self.fixed_load_timeseries_dict[timeseries_name] = (
+        # Load timeseries for each `model_name`.
+        for model_name in self.fixed_load_timeseries_dict:
+            self.fixed_load_timeseries_dict[model_name] = (
                 pd.read_sql(
                     """
                     SELECT * FROM fixed_load_timeseries
-                    WHERE timeseries_name = ?
-                    AND time >= (
-                        SELECT timestep_start FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    AND time <= (
-                        SELECT timestep_end FROM scenarios
-                        WHERE scenario_name = ?
-                    )
+                    WHERE model_name = ?
+                    AND time between ? AND ?
                     """,
                     con=database_connection,
                     params=[
-                        timeseries_name,
-                        scenario_name,
-                        scenario_name
+                        model_name,
+                        timestep_start_string,
+                        timestep_end_string
                     ],
                     parse_dates=['time'],
                     index_col=['time']
@@ -519,31 +515,23 @@ class DERData(object):
         )
         self.ev_chargers.index = self.ev_chargers['der_name']
 
-        # Instantiate dictionary for unique `timeseries_name`.
-        self.ev_charger_timeseries_dict = dict.fromkeys(self.ev_chargers['timeseries_name'].unique())
+        # Instantiate dictionary for unique `model_name`.
+        self.ev_charger_timeseries_dict = dict.fromkeys(self.ev_chargers['model_name'].unique())
 
-        # Load timeseries for each `timeseries_name`.
-        # TODO: Resample / interpolate timeseries depending on timestep interval.
-        for timeseries_name in self.ev_charger_timeseries_dict:
-            self.ev_charger_timeseries_dict[timeseries_name] = (
+        # Load timeseries for each `model_name`.
+        for model_name in self.ev_charger_timeseries_dict:
+            self.ev_charger_timeseries_dict[model_name] = (
                 pd.read_sql(
                     """
                     SELECT * FROM ev_charger_timeseries
-                    WHERE timeseries_name = ?
-                    AND time >= (
-                        SELECT timestep_start FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    AND time <= (
-                        SELECT timestep_end FROM scenarios
-                        WHERE scenario_name = ?
-                    )
+                    WHERE model_name = ?
+                    AND time between ? AND ?
                     """,
                     con=database_connection,
                     params=[
-                        timeseries_name,
-                        scenario_name,
-                        scenario_name
+                        model_name,
+                        timestep_start_string,
+                        timestep_end_string
                     ],
                     parse_dates=['time'],
                     index_col=['time']
@@ -578,31 +566,23 @@ class DERData(object):
         )
         self.flexible_loads.index = self.flexible_loads['der_name']
 
-        # Instantiate dictionary for unique `timeseries_name`.
-        self.flexible_load_timeseries_dict = dict.fromkeys(self.flexible_loads['timeseries_name'].unique())
+        # Instantiate dictionary for unique `model_name`.
+        self.flexible_load_timeseries_dict = dict.fromkeys(self.flexible_loads['model_name'].unique())
 
-        # Load timeseries for each `timeseries_name`.
-        # TODO: Resample / interpolate timeseries depending on timestep interval.
-        for timeseries_name in self.flexible_load_timeseries_dict:
-            self.flexible_load_timeseries_dict[timeseries_name] = (
+        # Load timeseries for each `model_name`.
+        for model_name in self.flexible_load_timeseries_dict:
+            self.flexible_load_timeseries_dict[model_name] = (
                 pd.read_sql(
                     """
                     SELECT * FROM flexible_load_timeseries
-                    WHERE timeseries_name = ?
-                    AND time >= (
-                        SELECT timestep_start FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    AND time <= (
-                        SELECT timestep_end FROM scenarios
-                        WHERE scenario_name = ?
-                    )
+                    WHERE model_name = ?
+                    AND time between ? AND ?
                     """,
                     con=database_connection,
                     params=[
-                        timeseries_name,
-                        scenario_name,
-                        scenario_name
+                        model_name,
+                        timestep_start_string,
+                        timestep_end_string
                     ],
                     parse_dates=['time'],
                     index_col=['time']
@@ -659,7 +639,7 @@ class DERData(object):
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']
 
-        # Instantiate dictionary for unique `timeseries_name`.
+        # Instantiate dictionary for unique `model_name`.
         self.flexible_building_model_dict = dict.fromkeys(self.flexible_buildings['model_name'].unique())
 
         # Obtain flexible building model.

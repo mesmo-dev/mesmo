@@ -85,41 +85,38 @@ CREATE TABLE electric_grids (
     PRIMARY KEY(electric_grid_name)
 );
 CREATE TABLE ev_charger_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE ev_chargers (
     model_name TEXT,
-    timeseries_name TEXT,
     definition_type TEXT,
     PRIMARY KEY(model_name)
 );
 CREATE TABLE fixed_load_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE fixed_loads (
      model_name TEXT,
-     timeseries_name TEXT,
      definition_type TEXT,
      PRIMARY KEY(model_name)
 );
 CREATE TABLE flexible_load_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE flexible_loads (
     model_name TEXT,
-    timeseries_name TEXT,
     definition_type TEXT,
     power_increase_percentage_maximum TEXT,
     power_decrease_percentage_maximum TEXT,

@@ -1,3 +1,3 @@
-model_name,timeseries_name,definition_type,power_increase_percentage_maximum,power_decrease_percentage_maximum,time_period_power_shift_maximum
-mixed_commercial_residential,mixed_commercial_residential,timeseries_per_unit,0.4,0.4,6.0
-residential_landed,residential_landed,timeseries_per_unit,0.4,0.4,6.0
+model_name,definition_type,power_increase_percentage_maximum,power_decrease_percentage_maximum,time_period_power_shift_maximum
+mixed_commercial_residential,timeseries_per_unit,0.4,0.4,6.0
+residential_landed,timeseries_per_unit,0.4,0.4,6.0

@@ -100,21 +100,19 @@ class FixedLoadModel(FixedDERModel):
         fixed_load = der_data.fixed_loads.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
+        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if fixed_load['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('active_power')
-            * fixed_load['active_power']
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('reactive_power')
-            * fixed_load['reactive_power']
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in fixed_load.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= fixed_load.at['active_power']
+            self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power']
 
 
 class EVChargerModel(FixedDERModel):
@@ -134,21 +132,19 @@ class EVChargerModel(FixedDERModel):
         ev_charger = der_data.ev_chargers.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
+        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if ev_charger['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('active_power')
-            * ev_charger['active_power']
+            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('reactive_power')
-            * ev_charger['reactive_power']
+            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in ev_charger.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= ev_charger.at['active_power']
+            self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power']
 
 
 class FlexibleDERModel(DERModel):
@@ -431,22 +427,23 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Get flexible load data by `der_name`.
         flexible_load = der_data.flexible_loads.loc[der_name, :]
 
+        # Get fixed load data by `der_name`.
+        flexible_load = der_data.flexible_loads.loc[self.der_name, :]
+
         # Store timesteps index.
-        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
+        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if flexible_load['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('active_power')
-            * flexible_load['active_power']
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('reactive_power')
-            * flexible_load['reactive_power']
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in flexible_load.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= flexible_load.at['active_power']
+            self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power']
 
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.

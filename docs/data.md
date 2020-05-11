@@ -73,7 +73,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
 | `active_power` | W | Nominal active power, where loads are negative and generations are positive. |
-| `reactive_power` | W | Nominal reactive power, where loads are negative and generations are positive. |
+| `reactive_power` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
 
 ### `electric_grid_line_types`
 
@@ -269,7 +269,7 @@ Thermal line limits are currently defined in per unit of the nominal thermal pow
 
 For each DER type which requires the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule. When defining by schedule, the timeseries is constructed by obtaining the appropriate values based on the `time_period` in `ddTHH:MM` format. Each value is kept constant at the given value for any daytime greater than or equal to `HH:MM` and any weekday greater than or equal to `dd` until the next defined `ddTHH:MM`. Note that the daily schedule is repeated for any weekday greater than or equal to `dd` until the next defined `dd`. The initial value for each `zone_constraint_profile` must start at `time_period = 01T00:00`.
 
-Furthermore, the active / reactive power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` or `thermal_grid_ders`. 
+Furthermore, the active / reactive power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders`. 
 
 ### `ev_chargers`
 
@@ -289,7 +289,7 @@ EV charger schedules definition.
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |
 
 ### `ev_charger_timeseries`
 
@@ -300,7 +300,7 @@ EV charger timeseries definition.
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |
 
 ### `fixed_loads`
 
@@ -320,7 +320,7 @@ Fixed load schedules definition.
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |
 
 ### `fixed_load_timeseries`
 
@@ -331,7 +331,7 @@ Fixed load timeseries definition.
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |
 
 ### `flexible_loads`
 
@@ -354,7 +354,7 @@ Flexible load schedules definition.
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |
 
 ### `flexible_load_timeseries`
 
@@ -365,4 +365,4 @@ Flexible load timeseries definition.
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `active_power` | W | Active power value. |
-| `reactive_power` | VA | Reactive power value. |
+| `reactive_power` | VAr | Reactive power value. |

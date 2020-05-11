@@ -1,4 +1,4 @@
-# Software Architecture
+# Software architecture
 
 The software requirements and proposed software architecture for FLEDGE are discussed here to provide an overview for interested users and developers.
 
@@ -14,7 +14,7 @@ Expert users and non-expert users are distinguished as stakeholders. Expert user
 
 Optimization problems are distinguished into planning and operation problems. Optimal planning problems aim to determine the design, sizing or expansion plan for the distribution grid, whereas optimal operation problems focus on deriving the operation schedules, control signals or set points for flexible
 
-## Problem Statement
+## Problem statement
 
 In the advent of DERs, the distribution system operator (DSO) seeks to study the deployment of flexible resources in the distribution grid and the the benefit of cost-optimal planning and operation methodologies to manage its assets. Based on this analysis, the DSO may plan its future investments and day-to-day operations.
 
@@ -36,7 +36,7 @@ To make FLEDGE practically and scientifically relevant, the key requirements wer
 - The non-expert user is provided with the ability select and view results for scenarios which have been defined by expert users.
 - The non-expert user is provided with results for each scenario in a graphical user interface through visual representation of the distribution grid and its operational performance, i.e. nodal voltage, line loading, line losses and dispatched load and generation.
 
-### Non-functional Requirements
+### Non-functional requirements
 
 - The solution mechanism is highly scalable, i.e., distributed optimization techniques are utilized to improve the computational performance for large-scale test cases.
 - The solution mechanism accounts for multiphase unbalanced loading conditions in the distribution grid.
@@ -47,7 +47,7 @@ To make FLEDGE practically and scientifically relevant, the key requirements wer
 - The software documentation enables expert users to comprehend the mathematical foundation of models and algorithms.
 - The software documentation enables non-expert users to operate the software independently given a set of predefined scenarios.
 
-## General Architecture
+## General architecture
 
 ![](./assets/architecture_1.png)
 
@@ -59,7 +59,7 @@ The input file is imported to the database through the input file processor whic
 
 A RDBMS is chosen as the internal storage solution, because it enables more efficient reading, writing, updating interactions then a file system. A persistent storage solution is preferred over in-memory storage to enable reviewing the results at a later time without repeatedly invoking the computationally intensive solution engine. Furthermore, the database can easily be centralized to allow concurrent access across multiple machines, e.g. to allow collaborative work on the test cases and scenarios.
 
-## Solution Engine Architecture
+## Solution engine architecture
 
 ![](./assets/architecture_2.png)
 
@@ -71,7 +71,7 @@ Optimization solver classes either 1) directly implement the optimization algori
 
 Power flow solver classes implement solvers for the exact equations of the distribution grid power flow. The exact power flow solution is desired as a benchmark for the optimal power flow solution which was obtained with an approximate model. These classes may interface existing power flow solvers, e.g., OpenDSS.
 
-## Use Case: Operation
+## Use case: Optimal operation problem
 
 ![](./assets/operation.png)
 

@@ -24,7 +24,7 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for opti
     - Obtain electric / thermal optimal power flow solution.
     - Obtain distribution locational marginal prices (DLMPs) for the electric / thermal grids.
 
-## Work in Progress
+## Work in progress
 
 Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/TUMCREATE-ESTL/fledge/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 

@@ -1,4 +1,4 @@
-# Data Reference
+# Data reference
 
 ``` warning::
     This reference is work in progress.
@@ -6,7 +6,58 @@
 
 FLEDGE scenarios are defined through CSV files, where each CSV file represents a table as defined below (the file name is interpreted as the table name). Internally, FLEDGE loads all CSV files into a local SQLITE database for more convenient processing. The default location for FLEDGE scenario definitions is in the `data` directory in the repository and all CSV files in the `data` directory are automatically loaded into the database. The CSV files may be structured into sub-directories, but all files are eventually combined into the same database. Hence, all type / element identifiers must be unique across all scenario definitions.
 
-## `electric_grid_ders`
+## Scenario data
+
+### `scenarios`
+
+Scenario definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `scenario_name` | | Unique scenario identifier.|
+| `electric_grid_name` | | Electric grid identifier as defined `electric grids` |
+| `thermal_grid_name` | | Thermal grid identifier as defined `thermal grids` |
+| `parameter_set` | | Parameter set identifier as defined in `parameters` |
+| `price_type` | | Type identifier as defined in `price_timeseries` |
+| `electric_grid_operation_limit_type` | | Operation limit type as defined in `electric_grid_operation_limit_types` |
+| `thermal_grid_operation_limit_type` | | Type identifier as defined in `thermal_grid_operation_limit_types` |
+| `timestep_start` | | Start timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `timestep_end` | | End timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `timestep_interval` | | Time interval in format `HH:MM:SS` |
+
+### `parameters`
+
+In all tables, a `parameter_name` string can be used to define numerical parameters in place of numerical values (identifiers or string values cannot be replaced with parameters). During model setup, those strings will be parsed from the `parameters` table to obtain the corresponding numerical values.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `parameter_set` | | Parameter set identifier. |
+| `parameter_name` | | Unique parameter identifier (must only be unique within the associated parameter set).|
+| `parameter_value` | - | Parameter value. |
+
+### `price_timeseries`
+
+Price timeseries.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `price_type` | | Unique type identifier.|
+| `time` | | Timestamp according to ISO 8601. |
+| `price_value` | S$/kWh | Price value. Currently, prices are assumed to be in SGD. |
+
+## Electric grid data
+
+### `electric_grids`
+
+Electric grid definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `electric_grid_name` | | Unique electric grid identifier. |
+| `source_node_name` | | Source node name as defined in `electric_grid_nodes` |
+| `base_frequency` | Hz | Nominal grid frequency. |
+
+### `electric_grid_ders`
 
 Distributed energy resources (DERs) in the electric grid. Can define both loads (negative power) and generations (positive power). The selection of DER types will be extended in the future.
 
@@ -24,7 +75,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `active_power` | W | Nominal active power, where loads are negative and generations are positive. |
 | `reactive_power` | W | Nominal reactive power, where loads are negative and generations are positive. |
 
-## `electric_grid_line_types`
+### `electric_grid_line_types`
 
 Electric line type definitions are split into `electric_grid_line_types` for the general type definition and `electric_grid_line_types_matrices` for the definition of electric characteristics.
 
@@ -34,7 +85,7 @@ Electric line type definitions are split into `electric_grid_line_types` for the
 | `n_phases` | - | Number of phases. |
 | `maximum_current` | A | Maximum permissible current (thermal line limit). |
 
-## `electric_grid_line_types_matrices`
+### `electric_grid_line_types_matrices`
 
 Electric line characteristics are defined in terms of element property matrices. Note that the matrices are expected to be symmetric and therefore only the lower triangular matrix should be defined. The matrices are defined element-wise (indexed by row / column pairs), to allow definition of single-phase line types alongside multi-phase line types.
 
@@ -47,7 +98,7 @@ Electric line characteristics are defined in terms of element property matrices.
 | `reactance` | Ω/km | Series reactance matrix entry. |
 | `capacitance` | nF/km | Shunt capacitance matrix entry. |
 
-## `electric_grid_lines`
+### `electric_grid_lines`
 
 Electric grid lines.
 
@@ -63,7 +114,7 @@ Electric grid lines.
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `length` | km | Line length. |
 
-## `electric_grid_nodes`
+### `electric_grid_nodes`
 
 Electric grid nodes.
 
@@ -78,7 +129,7 @@ Electric grid nodes.
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
 
-## `electric_grid_operation_limit_types`
+### `electric_grid_operation_limit_types`
 
 Operation limit type definition for the electric grid. This information is utilized for the definition of the operational constraints in an optimal operation problem. The per unit definition is currently based on the nominal power flow, but may be changed in future.
 
@@ -89,7 +140,7 @@ Operation limit type definition for the electric grid. This information is utili
 | `voltage_per_unit_maximum` | - | Maximum voltage in per unit of the nominal voltage. |
 | `branch_flow_per_unit_maximum` | - | Maximum branch flow in per unit of the branch flow at nominal loading conditions. |
 
-## `electric_grid_transformer_types`
+### `electric_grid_transformer_types`
 
 Transformer type characteristics.
 
@@ -101,7 +152,7 @@ Transformer type characteristics.
 | `tap_maximum_voltage_per_unit` | - | Maximum secondary side tap position. (Currently not used.) |
 | `tap_minimum_voltage_per_unit` | - | Minimum secondary side tap position. (Currently not used.) |
 
-## `electric_grid_transformers`
+### `electric_grid_transformers`
 
 Electric grid transformers, which are limited to transformers with two windings, where the same number of phases is connected at each winding.
 
@@ -118,95 +169,24 @@ Electric grid transformers, which are limited to transformers with two windings,
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. Note that Wye-connected windings are assumed to be grounded. |
 | `apparent_power` | VA | Nominal apparent power loading. |
 
-## `electric_grids`
+## Thermal grid data
+
+### `thermal_grids`
+
+Thermal grid definition.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `electric_grid_name` | | Unique electric grid identifier. |
-| `source_node_name` | | Source node name as defined in `electric_grid_nodes` |
-| `base_frequency` | Hz | Nominal grid frequency. |
+| `thermal_grid_name` | | Unique thermal grid identifier. |
+| `source_node_name` | | Source node name as defined in `thermal_grid_nodes`. |
+| `distribution_pump_efficiency` | - | Pump efficiency (pump power / electric power) of the secondary side pumps, i.e. the pumps in the distribution system / thermal grid. |
+| `energy_transfer_station_head_loss` | m | Pump pressure head loss in the energy transfer station at each DER. |
+| `enthalpy_difference_distribution_water` | J/kg | Enthalpy difference between supply and return side of the distribution water, i.e. the water flowing to the thermal grid. |
+| `water_density` | kg/m³ | Density of the distribution water. |
+| `water_kinematic_viscosity` | m²/s | Kinematic viscosity of the distribution water. |
+| `cooling_plant_type` | | Cooling plant type identifier as defined in `thermal_grid_cooling_plant_types` |
 
-## `ev_charger_timeseries`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `timeseries_name` | | |
-| `time` | | |
-| `apparent_power_absolute` | | |
-| `apparent_power_per_unit` | | |
-
-## `ev_chargers`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `model_name` | | |
-| `timeseries_name` | | |
-| `definition_type` | | |
-
-## `fixed_load_timeseries`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `timeseries_name` | | |
-| `time` | | |
-| `apparent_power_absolute` | | |
-| `apparent_power_per_unit` | | |
-
-## `fixed_loads`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `model_name` | | |
-| `timeseries_name` | | |
-| `definition_type` | | |
-
-## `flexible_load_timeseries`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `timeseries_name` | | |
-| `time` | | |
-| `apparent_power_absolute` | | |
-| `apparent_power_per_unit` | | |
-
-## `flexible_loads`
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `model_name` | | |
-| `timeseries_name` | | |
-| `definition_type` | | |
-| `power_increase_percentage_maximum` | | |
-| `power_decrease_percentage_maximum` | | |
-| `time_period_power_shift_maximum` | | |
-
-## `price_timeseries`
-
-Price timeseries.
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `price_type` | | Unique type identifier.|
-| `time` | | Timestamp according to ISO 8601. |
-| `price_value` | S$/kWh | Price value. Currently, prices are assumed to be in SGD. |
-
-## `scenarios`
-
-Scenario definition.
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `scenario_name` | | Unique scenario identifier.|
-| `electric_grid_name` | | Electric grid identifier as defined `electric grids` |
-| `thermal_grid_name` | | Thermal grid identifier as defined `thermal grids` |
-| `price_type` | | Type identifier as defined in `price_timeseries` |
-| `electric_grid_operation_limit_type` | | Operation limit type as defined in `electric_grid_operation_limit_types` |
-| `thermal_grid_operation_limit_type` | | Type identifier as defined in `thermal_grid_operation_limit_types` |
-| `timestep_start` | | Start timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `timestep_end` | | End timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `timestep_interval` | | Time interval in format `HH:MM:SS` |
-
-## `thermal_grid_cooling_plant_types`
+### `thermal_grid_cooling_plant_types`
 
 Thermal grid cooling plant types defining the technical characteristic of the district cooling plant.
 
@@ -227,7 +207,7 @@ Thermal grid cooling plant types defining the technical characteristic of the di
 | `cooling_tower_set_reference_temperature_slope` | °C | Cooling tower reference temperature slope, used to model the cooling tower efficiency. |
 | `cooling_tower_set_ventilation_factor` | - | Cooling tower set ventilation factor, used to model the ventilation requirements depending on the condenser wster flow. |
 
-## `thermal_grid_ders`
+### `thermal_grid_ders`
 
 Distributed energy resources (DERs) in the thermal grid. Can define both loads (negative power) and generations (positive power). The selection of DER types will be extended in the future.
 
@@ -240,7 +220,7 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `model_name` | | DER model identifier depending on the DER type, defined in CoBMo for flexible buildings. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
 
-## `thermal_grid_line_types`
+### `thermal_grid_line_types`
 
 Thermal line types for defining pipe characteristics.
 
@@ -251,7 +231,7 @@ Thermal line types for defining pipe characteristics.
 | `absolute_roughness` | mm | Absolute roughness of the pipe. |
 | `maximum_velocity` | m/s | Nominal maximum pipe velocity. |
 
-## `thermal_grid_lines`
+### `thermal_grid_lines`
 
 Thermal grid line (pipe) definitions. The definition only includes the supply side piping, as the return side is assumed be symmetric.
 
@@ -264,7 +244,7 @@ Thermal grid line (pipe) definitions. The definition only includes the supply si
 | `node_2_name` | | End node identifier as defined in `thermal_grid_nodes`. |
 | `length` | km | Line length. |
 
-## `thermal_grid_nodes`
+### `thermal_grid_nodes`
 
 Thermal grid nodes.
 
@@ -275,7 +255,7 @@ Thermal grid nodes.
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
 
-## `thermal_grid_operation_limit_types`
+### `thermal_grid_operation_limit_types`
 
 Thermal line limits are currently defined in per unit of the nominal thermal power solution, i.e., the thermal power flow solution for nominal loading conditions as defined in `thermal_grid_ders`.
 
@@ -285,17 +265,104 @@ Thermal line limits are currently defined in per unit of the nominal thermal pow
 | `node_head_per_unit_maximum` | - | Maximum node head, in per unit of the nominal thermal power solution. |
 | `pipe_flow_per_unit_maximum` | - | Maximum pipe / branch flow, in per unit of the nominal thermal power solution. |
 
-## `thermal_grids`
+## Distributed energy resource (DER) data
 
-Thermal grid definition.
+For each DER type which requires the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule. When defining by schedule, the timeseries is constructed by obtaining the appropriate values based on the `time_period` in `ddTHH:MM` format. Each value is kept constant at the given value for any daytime greater than or equal to `HH:MM` and any weekday greater than or equal to `dd` until the next defined `ddTHH:MM`. Note that the daily schedule is repeated for any weekday greater than or equal to `dd` until the next defined `dd`. The initial value for each `zone_constraint_profile` must start at `time_period = 01T00:00`.
+
+Furthermore, the active / reactive power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` or `thermal_grid_ders`. 
+
+### `ev_chargers`
+
+EV charger model definition.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `thermal_grid_name` | | Unique thermal grid identifier. |
-| `source_node_name` | | Source node name as defined in `thermal_grid_nodes`. |
-| `distribution_pump_efficiency` | - | Pump efficiency (pump power / electric power) of the secondary side pumps, i.e. the pumps in the distribution system / thermal grid. |
-| `energy_transfer_station_head_loss` | m | Pump pressure head loss in the energy transfer station at each DER. |
-| `enthalpy_difference_distribution_water` | J/kg | Enthalpy difference between supply and return side of the distribution water, i.e. the water flowing to the thermal grid. |
-| `water_density` | kg/m³ | Density of the distribution water. |
-| `water_kinematic_viscosity` | m²/s | Kinematic viscosity of the distribution water. |
-| `cooling_plant_type` | | Cooling plant type identifier as defined in `thermal_grid_cooling_plant_types` |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+
+### `ev_charger_schedules`
+
+EV charger schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |
+
+### `ev_charger_timeseries`
+
+EV charger timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |
+
+### `fixed_loads`
+
+Fixed load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+
+### `fixed_load_schedules`
+
+Fixed load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |
+
+### `fixed_load_timeseries`
+
+Fixed load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |
+
+### `flexible_loads`
+
+Flexible load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+| `power_increase_percentage_maximum` | - | Maximum permitted per unit power increase in each timestep. *To be revised* |
+| `power_decrease_percentage_maximum` | - | Maximum permitted per unit power decrease in each timestep. *To be revised* |
+| `time_period_power_shift_maximum` | - | Number timesteps for which energy consumption can be deferred or advanced. *To be revised* |
+
+### `flexible_load_schedules`
+
+Flexible load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |
+
+### `flexible_load_timeseries`
+
+Flexible load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VA | Reactive power value. |

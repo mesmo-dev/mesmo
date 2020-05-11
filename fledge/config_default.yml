@@ -1,0 +1,19 @@
+# Configuration default values.
+# - These values can be overwritten with a custom `config.yml` in the repository base directory.
+# - In the path settings, `./` denotes the repository base directory and is replaced upon loading.
+paths:
+  additional_data: []
+  data: ./data
+  database: ./data/database.sqlite
+  results: ./results
+optimization:
+  solver_name: gurobi  # Must be valid input string for Pyomo's `SolverFactory`.
+  show_solver_output: true  # If True, activate verbose solver output.
+tests:
+  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
+  show_plots: true  # If True, tests may produce plots.
+logs:
+  level: info  # Choices: `debug`, `info`, `warn`, `error`.
+  format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+plots:
+  matplotlib_style: seaborn-colorblind

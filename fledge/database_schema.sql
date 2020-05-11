@@ -1,6 +1,6 @@
 CREATE TABLE electric_grid_ders (
-    der_name TEXT,
     electric_grid_name TEXT,
+    der_name TEXT,
     der_type TEXT,
     model_name TEXT,
     node_name TEXT,
@@ -10,7 +10,7 @@ CREATE TABLE electric_grid_ders (
     connection TEXT,
     active_power TEXT,
     reactive_power TEXT,
-    PRIMARY KEY(der_name,electric_grid_name)
+    PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (
     line_type TEXT,
@@ -28,8 +28,8 @@ CREATE TABLE electric_grid_line_types_matrices (
     PRIMARY KEY(line_type,row,col)
 );
 CREATE TABLE electric_grid_lines (
-    line_name TEXT,
     electric_grid_name TEXT,
+    line_name TEXT,
     line_type TEXT,
     node_1_name TEXT,
     node_2_name TEXT,
@@ -37,18 +37,18 @@ CREATE TABLE electric_grid_lines (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     length TEXT,
-    PRIMARY KEY(line_name,electric_grid_name)
+    PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
-     node_name TEXT,
-     electric_grid_name TEXT,
-     is_phase_1_connected TEXT,
-     is_phase_2_connected TEXT,
-     is_phase_3_connected TEXT,
-     voltage TEXT,
-     latitude TEXT,
-     longitude TEXT,
-     PRIMARY KEY(node_name,electric_grid_name)
+    electric_grid_name TEXT,
+    node_name TEXT,
+    is_phase_1_connected TEXT,
+    is_phase_2_connected TEXT,
+    is_phase_3_connected TEXT,
+    voltage TEXT,
+    latitude TEXT,
+    longitude TEXT,
+    PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
     electric_grid_operation_limit_type TEXT,
@@ -66,8 +66,8 @@ CREATE TABLE electric_grid_transformer_types (
     PRIMARY KEY(transformer_type)
 );
 CREATE TABLE electric_grid_transformers (
-    transformer_name TEXT,
     electric_grid_name TEXT,
+    transformer_name TEXT,
     transformer_type TEXT,
     node_1_name TEXT,
     node_2_name TEXT,
@@ -84,42 +84,60 @@ CREATE TABLE electric_grids (
     base_frequency TEXT,
     PRIMARY KEY(electric_grid_name)
 );
+CREATE TABLE ev_charger_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
 CREATE TABLE ev_charger_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE ev_chargers (
     model_name TEXT,
-    timeseries_name TEXT,
     definition_type TEXT,
     PRIMARY KEY(model_name)
 );
+CREATE TABLE fixed_load_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
 CREATE TABLE fixed_load_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE fixed_loads (
      model_name TEXT,
-     timeseries_name TEXT,
      definition_type TEXT,
      PRIMARY KEY(model_name)
 );
+CREATE TABLE flexible_load_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
 CREATE TABLE flexible_load_timeseries (
-    timeseries_name TEXT,
+    model_name TEXT,
     time TEXT,
-    apparent_power_absolute REAL,
-    apparent_power_per_unit REAL,
-    PRIMARY KEY(timeseries_name,time)
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
 );
 CREATE TABLE flexible_loads (
     model_name TEXT,
-    timeseries_name TEXT,
     definition_type TEXT,
     power_increase_percentage_maximum TEXT,
     power_decrease_percentage_maximum TEXT,
@@ -153,15 +171,16 @@ CREATE TABLE scenarios (
 );
 CREATE TABLE thermal_grid_cooling_plant_types (
     cooling_plant_type TEXT,
-    pumping_total_efficiency TEXT,
-    pump_head_cooling_water TEXT,
-    pump_head_evaporators TEXT,
+    plant_pump_efficiency TEXT,
+    condenser_pump_head TEXT,
+    evaporator_pump_head TEXT,
     chiller_set_beta TEXT,
-    chiller_set_delta_temperature_cnd_min TEXT,
+    chiller_set_condenser_minimum_temperature_difference TEXT,
     chiller_set_evaporation_temperature TEXT,
     chiller_set_cooling_capacity TEXT,
-    cooling_water_delta_temperature TEXT,
-    cooling_tower_set_reference_temperature_cooling_water_supply TEXT,
+    condenser_water_temperature_difference TEXT,
+    condenser_water_enthalpy_difference TEXT,
+    cooling_tower_set_reference_temperature_condenser_water TEXT,
     cooling_tower_set_reference_temperature_wet_bulb TEXT,
     cooling_tower_set_reference_temperature_slope TEXT,
     cooling_tower_set_ventilation_factor TEXT,
@@ -176,14 +195,20 @@ CREATE TABLE thermal_grid_ders (
     thermal_power_nominal TEXT,
     PRIMARY KEY(thermal_grid_name,der_name)
 );
+CREATE TABLE thermal_grid_line_types (
+    line_type TEXT,
+    diameter TEXT,
+    absolute_roughness TEXT,
+    maximum_velocity TEXT,
+    PRIMARY KEY(line_type)
+);
 CREATE TABLE thermal_grid_lines (
     thermal_grid_name TEXT,
     line_name TEXT,
+    line_type TEXT,
     node_1_name TEXT,
     node_2_name TEXT,
     length TEXT,
-    diameter TEXT,
-    absolute_roughness TEXT,
     PRIMARY KEY(thermal_grid_name,line_name)
 );
 CREATE TABLE thermal_grid_nodes (
@@ -202,13 +227,12 @@ CREATE TABLE thermal_grid_operation_limit_types (
 );
 CREATE TABLE thermal_grids (
     thermal_grid_name TEXT,
+    source_node_name TEXT,
+    distribution_pump_efficiency TEXT,
+    energy_transfer_station_head_loss TEXT,
     enthalpy_difference_distribution_water TEXT,
-    enthalpy_difference_cooling_water TEXT,
     water_density TEXT,
     water_kinematic_viscosity TEXT,
-    pump_efficiency_secondary_pump TEXT,
-    ets_head_loss TEXT,
-    pipe_velocity_maximum TEXT,
     cooling_plant_type TEXT,
     PRIMARY KEY(thermal_grid_name)
 );

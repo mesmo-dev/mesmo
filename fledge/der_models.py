@@ -7,7 +7,7 @@ import pyomo.environ as pyo
 import typing
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
 import fledge.utils
@@ -75,12 +75,12 @@ class FixedDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # TODO: Revise optimization method definitions in DER models.
 
         # Fixed DERs have no optimization variables, therefore return empty results.
-        return fledge.utils.ResultsDict()
+        return fledge.data_interface.ResultsDict()
 
 
 class FixedLoadModel(FixedDERModel):
@@ -88,7 +88,7 @@ class FixedLoadModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
@@ -100,21 +100,19 @@ class FixedLoadModel(FixedDERModel):
         fixed_load = der_data.fixed_loads.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']].index
+        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if fixed_load['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('active_power')
-            * fixed_load['active_power']
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load['timeseries_name']][column].rename('reactive_power')
-            * fixed_load['reactive_power']
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in fixed_load.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= fixed_load.at['active_power']
+            self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power']
 
 
 class EVChargerModel(FixedDERModel):
@@ -122,7 +120,7 @@ class EVChargerModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
@@ -134,21 +132,19 @@ class EVChargerModel(FixedDERModel):
         ev_charger = der_data.ev_chargers.loc[self.der_name, :]
 
         # Store timesteps index.
-        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']].index
+        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if ev_charger['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('active_power')
-            * ev_charger['active_power']
+            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger['timeseries_name']][column].rename('reactive_power')
-            * ev_charger['reactive_power']
+            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in ev_charger.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= ev_charger.at['active_power']
+            self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power']
 
 
 class FlexibleDERModel(DERModel):
@@ -386,7 +382,7 @@ class FlexibleDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.state_names)
@@ -408,7 +404,7 @@ class FlexibleDERModel(DERModel):
                     optimization_problem.output_vector[timestep, self.der_name, output_name].value
                 )
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             state_vector=state_vector,
             control_vector=control_vector,
             output_vector=output_vector
@@ -420,7 +416,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
@@ -431,22 +427,23 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Get flexible load data by `der_name`.
         flexible_load = der_data.flexible_loads.loc[der_name, :]
 
+        # Get fixed load data by `der_name`.
+        flexible_load = der_data.flexible_loads.loc[self.der_name, :]
+
         # Store timesteps index.
-        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']].index
+        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].index
 
         # Construct active and reactive power timeseries.
-        if flexible_load['definition_type'] == 'timeseries_per_unit':
-            column = 'apparent_power_per_unit'
-        else:
-            column = 'apparent_power_absolute'
         self.active_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('active_power')
-            * flexible_load['active_power']
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load['timeseries_name']][column].rename('reactive_power')
-            * flexible_load['reactive_power']
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'reactive_power']
         )
+        if 'per_unit' in flexible_load.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= flexible_load.at['active_power']
+            self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power']
 
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.
@@ -543,7 +540,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.database_interface.DERData,
+            der_data: fledge.data_interface.DERData,
             der_name: str
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
@@ -624,8 +621,8 @@ class DERModelSet(object):
     ):
 
         # Obtain data.
-        scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-        der_data = fledge.database_interface.DERData(scenario_name)
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+        der_data = fledge.data_interface.DERData(scenario_name)
 
         # Obtain timesteps.
         self.timesteps = scenario_data.timesteps

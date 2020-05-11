@@ -1,3 +1,4 @@
+pyyaml
 recommonmark
 sphinx
 sphinx_markdown_tables

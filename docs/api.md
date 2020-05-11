@@ -1,4 +1,4 @@
-# API Reference
+# API reference
 
 ``` warning::
     This reference is work in progress.
@@ -29,9 +29,9 @@
 ``` automodule:: fledge.der_models
 ```
 
-## `fledge.database_interface`
+## `fledge.data_interface`
 
-``` automodule:: fledge.database_interface
+``` automodule:: fledge.data_interface
 ```
 
 ## `fledge.utils`

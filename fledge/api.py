@@ -4,9 +4,8 @@ import os
 
 import cobmo.database_interface
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.problems
-import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -17,7 +16,7 @@ def run_nominal_operation_problem(
         print_results: bool = False,
         store_results: bool = True,
         results_path: str = None
-) -> fledge.utils.ResultsDict:
+) -> fledge.data_interface.ResultsDict:
     """Set up and solve a nominal operation problem for the given scenario."""
 
     # Instantiate results directory.
@@ -33,7 +32,7 @@ def run_nominal_operation_problem(
 
     # Recreate / overwrite database.
     if recreate_database:
-        fledge.database_interface.recreate_database()
+        fledge.data_interface.recreate_database()
         cobmo.database_interface.recreate_database()
 
     # Obtain operation problem.
@@ -62,7 +61,7 @@ def run_optimal_operation_problem(
         print_results: bool = False,
         store_results: bool = True,
         results_path: str = None
-) -> fledge.utils.ResultsDict:
+) -> fledge.data_interface.ResultsDict:
     """Set up and solve an optimal operation problem for the given scenario."""
 
     # Instantiate results directory.
@@ -78,7 +77,7 @@ def run_optimal_operation_problem(
 
     # Recreate / overwrite database.
     if recreate_database:
-        fledge.database_interface.recreate_database()
+        fledge.data_interface.recreate_database()
         cobmo.database_interface.recreate_database()
 
     # Obtain operation problem.

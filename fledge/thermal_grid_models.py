@@ -8,7 +8,7 @@ import scipy.sparse
 import scipy.sparse.linalg
 
 import fledge.config
-import fledge.database_interface
+import fledge.data_interface
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -34,7 +34,7 @@ class ThermalGridModel(object):
     ):
 
         # Obtain thermal grid data.
-        thermal_grid_data = fledge.database_interface.ThermalGridData(scenario_name)
+        thermal_grid_data = fledge.data_interface.ThermalGridData(scenario_name)
 
         # Obtain node / line / DER names.
         self.node_names = pd.Index(thermal_grid_data.thermal_grid_nodes['node_name'])
@@ -43,7 +43,18 @@ class ThermalGridModel(object):
         self.der_types = pd.Index(thermal_grid_data.thermal_grid_ders['der_type']).unique()
 
         # Obtain node / branch / DER index set.
-        self.nodes = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_nodes[['node_type', 'node_name']])
+        nodes = (
+            pd.concat([
+                thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name'].apply(
+                    # Obtain `node_type` column.
+                    lambda value:
+                    'source' if value == thermal_grid_data.thermal_grid.at['source_node_name']
+                    else 'no_source'
+                ).rename('node_type'),
+                thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name']
+            ], axis='columns')
+        )
+        self.nodes = pd.MultiIndex.from_frame(nodes)
         self.branches = self.line_names
         self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
@@ -80,14 +91,14 @@ class ThermalGridModel(object):
         self.line_roughness_vector = thermal_grid_data.thermal_grid_lines['absolute_roughness'].values
 
         # Obtain other system parameters.
-        self.ets_head_loss = (
-            np.float(thermal_grid_data.thermal_grid['ets_head_loss'])
+        self.energy_transfer_station_head_loss = (
+            np.float(thermal_grid_data.thermal_grid['energy_transfer_station_head_loss'])
         )
         self.enthalpy_difference_distribution_water = (
             np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
-        self.pump_efficiency_secondary_pump = (  # TODO: Rename to `secondary_pump_efficiency`.
-            np.float(thermal_grid_data.thermal_grid['pump_efficiency_secondary_pump'])
+        self.distribution_pump_efficiency = (  # TODO: Rename to `distribution_pump_efficiency`.
+            np.float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
         )
         self.cooling_plant_efficiency = 5.0  # TODO: Define cooling plant model.
 
@@ -261,12 +272,12 @@ class ThermalPowerFlowSolution(object):
         self.source_electric_power_secondary_pump = (
             (
                 2.0 * self.source_head
-                + thermal_grid_model.ets_head_loss
+                + thermal_grid_model.energy_transfer_station_head_loss
             )
             * self.source_flow
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration
-            / thermal_grid_model.pump_efficiency_secondary_pump
+            / thermal_grid_model.distribution_pump_efficiency
         )
         self.source_electric_power_cooling_plant = (
             self.source_flow
@@ -360,7 +371,7 @@ class LinearThermalGridModel(object):
             @ self.sensitivity_node_head_by_der_power
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration
-            / self.thermal_grid_model.pump_efficiency_secondary_pump
+            / self.thermal_grid_model.distribution_pump_efficiency
         )
 
     def define_optimization_variables(
@@ -428,10 +439,10 @@ class LinearThermalGridModel(object):
                 )
                 + sum(
                     -1.0 * self.thermal_power_flow_solution.der_flow_vector[der_index]
-                    * self.thermal_grid_model.ets_head_loss
+                    * self.thermal_grid_model.energy_transfer_station_head_loss
                     * fledge.config.water_density
                     * fledge.config.gravitational_acceleration
-                    / self.thermal_grid_model.pump_efficiency_secondary_pump
+                    / self.thermal_grid_model.distribution_pump_efficiency
                     for der_index, der in enumerate(self.thermal_grid_model.ders)
                 )
             )
@@ -506,7 +517,7 @@ class LinearThermalGridModel(object):
             optimization_problem: pyo.ConcreteModel,
             price_timeseries: pd.DataFrame,
             timesteps=pd.Index([0], name='timestep')
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate dual variables.
         node_head_vector_minimum_dual = (
@@ -595,7 +606,7 @@ class LinearThermalGridModel(object):
             pump_power_dlmp
         )
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
             branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
             pump_power_dlmp=pump_power_dlmp,
@@ -611,7 +622,7 @@ class LinearThermalGridModel(object):
             timesteps=pd.Index([0], name='timestep'),
             in_per_unit=False,
             with_mean=False,
-    ) -> fledge.utils.ResultsDict:
+    ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
         der_thermal_power_vector = (
@@ -678,7 +689,7 @@ class LinearThermalGridModel(object):
             branch_flow_vector['mean'] = branch_flow_vector.mean(axis=1)
             node_head_vector['mean'] = node_head_vector.mean(axis=1)
 
-        return fledge.utils.ResultsDict(
+        return fledge.data_interface.ResultsDict(
             der_thermal_power_vector=der_thermal_power_vector,
             node_head_vector=node_head_vector,
             branch_flow_vector=branch_flow_vector,

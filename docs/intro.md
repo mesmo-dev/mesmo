@@ -26,7 +26,7 @@ The following installation procedure contains additional steps and requirements 
     3. `conda install pandas`
     4. `pip install -e path_to_repository`.
     5. `pip install -e path_to_repository/cobmo`
-4. In `fledge/config.py`, change `solver_name` to `'gurobi'` or `'cplex'`.
+4. Create or modify `config.yml` in the repository base directory and define `optimization: ↵ solver_name:` as `gurobi` or `cplex`, depending on the installed solver.
 
 ### Alternative installation
 

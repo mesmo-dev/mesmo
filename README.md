@@ -52,5 +52,6 @@ If you are keen to contribute to this project, please see [docs/contributing.md]
 
 - Sebastian Troitzsch implemented the initial version of FLEDGE and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling and approximation methodologies.
-- Mischa Grussmann developed the thermal grid modelling and aproximation methodologies.
+- Mischa Grussmann developed the thermal grid modelling and approximation methodologies.
+- Andrej Trpovski contributed the synthetic electric grid test cases for Singapore.
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.

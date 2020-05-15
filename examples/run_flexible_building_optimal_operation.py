@@ -14,7 +14,7 @@ import fledge.electric_grid_models
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'singapore_tanjongpagar_electric_only'
     plots = True  # If True, script may produce plots.
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -41,15 +41,6 @@ def main():
 
     # Define constraints.
     flexible_building_model.define_optimization_constraints(optimization_problem)
-
-    # Disable thermal grid connection.
-    optimization_problem.der_connection_constraints = pyo.ConstraintList()
-    for timestep in scenario_data.timesteps:
-        optimization_problem.der_connection_constraints.add(
-            0.0
-            ==
-            optimization_problem.output_vector[timestep, der_name, 'grid_thermal_power_cooling']
-        )
 
     # Define objective.
     flexible_building_model.define_optimization_objective(optimization_problem, price_timeseries)

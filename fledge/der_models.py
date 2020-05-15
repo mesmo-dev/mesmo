@@ -553,7 +553,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
         flexible_building_model = der_data.flexible_building_model_dict[flexible_building['model_name']]
 
         # Store timesteps.
-        self.timesteps = flexible_building_model.set_timesteps
+        self.timesteps = flexible_building_model.timesteps
 
         # Obtain nominal power factor.
         self.power_factor_nominal = (
@@ -580,13 +580,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
         )
 
         # Obtain indexes.
-        self.state_names = flexible_building_model.set_states
-        self.control_names = flexible_building_model.set_controls
-        self.disturbance_names = flexible_building_model.set_disturbances
-        self.output_names = flexible_building_model.set_outputs
+        self.state_names = flexible_building_model.states
+        self.control_names = flexible_building_model.controls
+        self.disturbance_names = flexible_building_model.disturbances
+        self.output_names = flexible_building_model.outputs
 
         # Obtain initial state.
-        self.state_vector_initial = flexible_building_model.set_state_initial
+        self.state_vector_initial = flexible_building_model.state_vector_initial
 
         # Obtain state space matrices.
         self.state_matrix = flexible_building_model.state_matrix

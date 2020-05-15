@@ -9,6 +9,7 @@ import sqlite3
 import typing
 
 import cobmo.building_model
+import cobmo.database_interface
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
@@ -48,21 +49,30 @@ def recreate_database(
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Obtain table name.
-            table_name = os.path.splitext(os.path.basename(csv_file))[0]
+            # Exclude CSV files from CoBMo data folders.
+            if os.path.join('data', 'cobmo_data') not in csv_file:
 
-            # Write new table content.
-            logger.debug(f"Loading {csv_file} into database.")
-            table = pd.read_csv(csv_file)
-            table.to_sql(
-                table_name,
-                con=database_connection,
-                if_exists='append',
-                index=False
-            )
+                # Obtain table name.
+                table_name = os.path.splitext(os.path.basename(csv_file))[0]
+
+                # Write new table content.
+                logger.debug(f"Loading {csv_file} into database.")
+                table = pd.read_csv(csv_file)
+                table.to_sql(
+                    table_name,
+                    con=database_connection,
+                    if_exists='append',
+                    index=False
+                )
 
     cursor.close()
     database_connection.close()
+
+    # Recreate CoBMo database to include FLEDGE's CoBMo definitions.
+    # TODO: Modify CoBMo config instead.
+    cobmo.database_interface.recreate_database(
+        additional_data_paths=[os.path.join(fledge.config.config['paths']['data'], 'cobmo_data')]
+    )
 
 
 def connect_database() -> sqlite3.Connection:

@@ -8,7 +8,6 @@ import pandas as pd
 import sqlite3
 import typing
 
-import cobmo.building_model
 import cobmo.database_interface
 import fledge.config
 
@@ -437,7 +436,6 @@ class DERData(object):
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_buildings: pd.DataFrame
-    flexible_building_model_dict: typing.Dict[str, cobmo.building_model.BuildingModel]
 
     @multimethod
     def __init__(
@@ -638,22 +636,6 @@ class DERData(object):
             )
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']
-
-        # Instantiate dictionary for unique `model_name`.
-        self.flexible_building_model_dict = dict.fromkeys(self.flexible_buildings['model_name'].unique())
-
-        # Obtain flexible building model.
-        for model_name in self.flexible_building_model_dict:
-            self.flexible_building_model_dict[model_name] = (
-                cobmo.building_model.BuildingModel(
-                    model_name,
-                    timestep_start=self.scenario_data.scenario['timestep_start'],
-                    timestep_end=self.scenario_data.scenario['timestep_end'],
-                    timestep_delta=self.scenario_data.scenario['timestep_interval'],
-                    connect_electric_grid=True,
-                    connect_thermal_grid_cooling=True
-                )
-            )
 
 
 class PriceData(object):

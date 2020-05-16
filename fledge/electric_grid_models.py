@@ -1260,12 +1260,155 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         )
 
     @staticmethod
+    def check_solution_conditions(
+        node_admittance_matrix_no_source: scipy.sparse.spmatrix,
+        node_transformation_matrix_no_source: scipy.sparse.spmatrix,
+        node_power_vector_wye_initial_no_source: np.ndarray,
+        node_power_vector_delta_initial_no_source: np.ndarray,
+        node_power_vector_wye_candidate_no_source: np.ndarray,
+        node_power_vector_delta_candidate_no_source: np.ndarray,
+        node_voltage_vector_no_load_no_source: np.ndarray,
+        node_voltage_vector_initial_no_source: np.ndarray
+    ) -> np.bool:
+        """Check conditions for fixed-point solution existence, uniqueness and non-singularity for
+         given power vector candidate and initial point.
+
+        - Conditions are formulated according to: <https://arxiv.org/pdf/1702.03310.pdf>
+        - Note the performance issues of this condition check algorithm due to the
+          requirement for matrix inversions / solving of linear equations.
+        """
+
+        # Calculate norm of the initial nodal power vector.
+        xi_initial = (
+            np.max(np.sum(
+                np.abs(
+                    (node_voltage_vector_no_load_no_source ** -1)
+                    * scipy.sparse.linalg.spsolve(
+                        node_admittance_matrix_no_source,
+                        (
+                            (node_voltage_vector_no_load_no_source ** -1)
+                            * node_power_vector_wye_initial_no_source
+                        )
+                    )
+                ),
+                axis=1
+            ))
+            + np.max(np.sum(
+                np.abs(
+                    (node_voltage_vector_no_load_no_source ** -1)
+                    * scipy.sparse.linalg.spsolve(
+                        node_admittance_matrix_no_source,
+                        (
+                            (
+                                node_transformation_matrix_no_source
+                                * (
+                                    np.abs(node_transformation_matrix_no_source)
+                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                ) ** -1
+                            )
+                            * node_power_vector_delta_initial_no_source
+                        )
+                    )
+                ),
+                axis=1
+            ))
+        )
+
+        # Calculate norm of the candidate nodal power vector.
+        xi_candidate = (
+            np.max(np.sum(
+                np.abs(
+                    (node_voltage_vector_no_load_no_source ** -1)
+                    * scipy.sparse.linalg.spsolve(
+                        node_admittance_matrix_no_source,
+                        (
+                            (node_voltage_vector_no_load_no_source ** -1)
+                            * (
+                                node_power_vector_wye_candidate_no_source
+                                - node_power_vector_wye_initial_no_source
+                            )
+                        )
+                    )
+                ),
+                axis=1
+            ))
+            + np.max(np.sum(
+                np.abs(
+                    (node_voltage_vector_no_load_no_source ** -1)
+                    * scipy.sparse.linalg.spsolve(
+                        node_admittance_matrix_no_source,
+                        (
+                            (
+                                node_transformation_matrix_no_source
+                                * (
+                                    np.abs(node_transformation_matrix_no_source)
+                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                ) ** -1
+                            ) * (
+                                node_power_vector_delta_candidate_no_source
+                                - node_power_vector_delta_initial_no_source
+                            )
+                        )
+                    )
+                ),
+                axis=1
+            ))
+        )
+
+        # Calculate norm of the initial nodal voltage vector.
+        gamma = (
+            np.min([
+                np.min(
+                    np.abs(node_voltage_vector_initial_no_source)
+                    / np.abs(node_voltage_vector_no_load_no_source)
+                ),
+                np.min(
+                    np.abs(
+                        node_transformation_matrix_no_source
+                        * node_voltage_vector_initial_no_source
+                    )
+                    / (
+                        np.abs(node_transformation_matrix_no_source)
+                        * np.abs(node_voltage_vector_no_load_no_source)
+                    )
+                )
+            ])
+        )
+
+        # Obtain conditions for solution existence, uniqueness and non-singularity.
+        condition_initial = (
+            xi_initial
+            <
+            (gamma ** 2)
+        )
+        condition_candidate = (
+            xi_candidate
+            <
+            (0.25 * (((gamma ** 2) - xi_initial) / gamma) ** 2)
+        )
+        is_valid = (
+            condition_initial
+            & condition_candidate
+        )
+
+        # If `condition_initial` is violated, the given initial nodal voltage vector  and power vectors are not valid.
+        # This suggests an error in the problem setup and hence triggers a warning.
+        if ~condition_initial:
+            logger.warning("Fixed point solution condition is not satisfied for the provided initial point.")
+
+        return is_valid
+
+    @staticmethod
     def get_voltage(
         electric_grid_model: ElectricGridModelDefault,
         der_power_vector: np.ndarray,
+        outer_iteration_limit=100,
+        outer_solution_algorithm='check_solution',  # Choices: `check_conditions`, `check_solution`.
+        power_candidate_iteration_limit=100,
+        power_candidate_reduction_factor=0.5,
         voltage_iteration_limit=100,
         voltage_tolerance=1e-2
-    ):
+    ) -> np.ndarray:
         """Get nodal voltage vector by solving with the fixed point algorithm.
 
         - Initial DER power vector / node voltage vector must be a valid
@@ -1273,6 +1416,13 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
           operation point.
         - Fixed point equation according to: <https://arxiv.org/pdf/1702.03310.pdf>
         """
+
+        # TODO: Add proper documentation.
+        # TODO: Validate fixed-point solution conditions.
+        # TODO: Make algorithm more robust.
+
+        # Debug message.
+        logger.debug("Starting fixed point solution algorithm...")
 
         # Obtain no-source variables for fixed point equation.
         node_admittance_matrix_no_source = (
@@ -1304,6 +1454,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             ]
         )
 
+        # Obtain nodal power and no-load nodal voltage vectors.
         node_power_vector_wye_no_source = (
             der_incidence_wye_matrix_no_source
             @ np.transpose([der_power_vector.ravel()])
@@ -1323,65 +1474,203 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
         node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
 
-        # Instantiate fixed point iteration variables.
-        voltage_iteration = 1
-        voltage_change = np.inf
+        # Define nodal power vector candidate to the desired nodal power vector.
+        node_power_vector_wye_candidate_no_source = node_power_vector_wye_no_source.copy()
+        node_power_vector_delta_candidate_no_source = node_power_vector_delta_no_source.copy()
 
+        # Instantiate outer iteration variables.
+        is_final = False
+        outer_iteration = 0
+
+        # Outer iteration between power vector candidate selection and fixed point voltage solution algorithm
+        # until a final solution is found.
         while (
-                (voltage_iteration < voltage_iteration_limit)
-                & (voltage_change > voltage_tolerance)
+                ~is_final
+                & (outer_iteration < outer_iteration_limit)
         ):
-            # Calculate fixed point equation.
-            node_voltage_vector_solution_no_source = (
-                node_voltage_vector_no_load_no_source
-                + np.transpose([
-                    scipy.sparse.linalg.spsolve(
+
+            # Outer solution algorithm based on fixed-point solution conditions check.
+            # - Checks solution conditions and adjust power vector candidate if necessary, before solving for voltage.
+            if outer_solution_algorithm == 'check_conditions':
+
+                # Reset nodal power vector candidate to the desired nodal power vector.
+                node_power_vector_wye_candidate_no_source = node_power_vector_wye_no_source.copy()
+                node_power_vector_delta_candidate_no_source = node_power_vector_delta_no_source.copy()
+
+                # Check solution conditions for nodal power vector candidate.
+                is_final = (
+                    PowerFlowSolutionFixedPoint.check_solution_conditions(
                         node_admittance_matrix_no_source,
-                        (
+                        node_transformation_matrix_no_source,
+                        node_power_vector_wye_initial_no_source,
+                        node_power_vector_delta_initial_no_source,
+                        node_power_vector_wye_candidate_no_source,
+                        node_power_vector_delta_candidate_no_source,
+                        node_voltage_vector_no_load_no_source,
+                        node_voltage_vector_initial_no_source
+                    )
+                )
+
+                # Instantiate power candidate iteration variable.
+                power_candidate_iteration = 0
+                is_valid = is_final.copy()
+
+                # If solution conditions are violated, iteratively reduce power to find a power vector candidate
+                # which satisfies the solution conditions.
+                while (
+                    ~is_valid
+                    & (power_candidate_iteration < power_candidate_iteration_limit)
+                ):
+
+                    # Reduce nodal power vector candidate.
+                    node_power_vector_wye_candidate_no_source -= (
+                        power_candidate_reduction_factor
+                        * (
+                            node_power_vector_wye_candidate_no_source
+                            - node_power_vector_wye_initial_no_source
+                        )
+                    )
+                    node_power_vector_delta_candidate_no_source -= (
+                        power_candidate_reduction_factor
+                        * (
+                            node_power_vector_delta_candidate_no_source
+                            - node_power_vector_delta_initial_no_source
+                        )
+                    )
+
+                    is_valid = (
+                        PowerFlowSolutionFixedPoint.check_solution_conditions(
+                            node_admittance_matrix_no_source,
+                            node_transformation_matrix_no_source,
+                            node_power_vector_wye_initial_no_source,
+                            node_power_vector_delta_initial_no_source,
+                            node_power_vector_wye_candidate_no_source,
+                            node_power_vector_delta_candidate_no_source,
+                            node_voltage_vector_no_load_no_source,
+                            node_voltage_vector_initial_no_source,
+                        )
+                    )
+                    power_candidate_iteration += 1
+
+                # Reaching the iteration limit is considered undesired and triggers a warning.
+                if power_candidate_iteration >= power_candidate_iteration_limit:
+                    logger.warning(
+                        "Power vector candidate selection algorithm for fixed-point solution reached "
+                        f"maximum limit of {power_candidate_iteration_limit} iterations."
+                    )
+
+                # Store current candidate power vectors as initial power vectors
+                # for next round of computation of solution conditions.
+                node_power_vector_wye_initial_no_source = (
+                    node_power_vector_wye_candidate_no_source.copy()
+                )
+                node_power_vector_delta_initial_no_source = (
+                    node_power_vector_delta_candidate_no_source.copy()
+                )
+
+            # Instantiate fixed point iteration variables.
+            voltage_iteration = 0
+            voltage_change = np.inf
+
+            while (
+                    (voltage_iteration < voltage_iteration_limit)
+                    & (voltage_change > voltage_tolerance)
+            ):
+
+                # Calculate fixed point equation.
+                node_voltage_vector_solution_no_source = (
+                    node_voltage_vector_no_load_no_source
+                    + np.transpose([
+                        scipy.sparse.linalg.spsolve(
+                            node_admittance_matrix_no_source,
                             (
                                 (
-                                    np.conj(node_voltage_vector_initial_no_source) ** -1
-                                )
-                                * np.conj(node_power_vector_wye_no_source)
-                            )
-                            + (
-                                np.transpose(node_transformation_matrix_no_source)
-                                @ (
                                     (
-                                        (
-                                            node_transformation_matrix_no_source
-                                            @ np.conj(node_voltage_vector_initial_no_source)
-                                        ) ** -1
+                                        np.conj(node_voltage_vector_initial_no_source) ** -1
                                     )
-                                    * np.conj(node_power_vector_delta_no_source)
+                                    * np.conj(node_power_vector_wye_candidate_no_source)
+                                )
+                                + (
+                                    np.transpose(node_transformation_matrix_no_source)
+                                    @ (
+                                        (
+                                            (
+                                                node_transformation_matrix_no_source
+                                                @ np.conj(node_voltage_vector_initial_no_source)
+                                            ) ** -1
+                                        )
+                                        * np.conj(node_power_vector_delta_candidate_no_source)
+                                    )
                                 )
                             )
                         )
-                    )
-                ])
-            )
+                    ])
+                )
 
-            # Calculate voltage change from previous iteration.
-            voltage_change = (
-                np.max(abs(
-                    node_voltage_vector_solution_no_source
-                    - node_voltage_vector_initial_no_source
-                ))
-            )
+                # Calculate voltage change from previous iteration.
+                voltage_change = (
+                    np.max(abs(
+                        node_voltage_vector_solution_no_source
+                        - node_voltage_vector_initial_no_source
+                    ))
+                )
 
-            # Set voltage solution as initial voltage for next iteration.
-            node_voltage_vector_initial_no_source = (
-                node_voltage_vector_solution_no_source
-            )
+                # Set voltage solution as initial voltage for next iteration.
+                node_voltage_vector_initial_no_source = node_voltage_vector_solution_no_source.copy()
 
-            # Increment voltage iteration counter.
-            voltage_iteration += 1
+                # Increment voltage iteration counter.
+                voltage_iteration += 1
 
-        if voltage_iteration >= voltage_iteration_limit:
-            # Reaching the iteration limit is considered undesired and therefore triggers a warning.
+            # Outer solution algorithm based on voltage solution check.
+            # - Checks if voltage solution exceeded iteration limit and adjusts power vector candidate if needed.
+            if outer_solution_algorithm == 'check_solution':
+
+                # If voltage solution exceeds iteration limit, reduce power and re-try voltage solution.
+                if voltage_iteration >= voltage_iteration_limit:
+
+                    # Reduce nodal power vector candidate.
+                    node_power_vector_wye_candidate_no_source *= power_candidate_reduction_factor
+                    node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor
+
+                    # Reset initial nodal voltage vector.
+                    node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source.copy()
+
+                # Otherwise, if power has previously been reduced, raise back power and re-try voltage solution.
+                else:
+                    if (
+                            (node_power_vector_wye_candidate_no_source != node_power_vector_wye_no_source).any()
+                            or (node_power_vector_delta_candidate_no_source != node_power_vector_delta_no_source).any()
+                    ):
+
+                        # Increase nodal power vector candidate.
+                        node_power_vector_wye_candidate_no_source *= power_candidate_reduction_factor ** -1
+                        node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor ** -1
+
+                    else:
+                        is_final = True
+
+            # For other solution algorithm, reaching the iteration limit is considered undesired and triggers a warning
+            elif voltage_iteration >= voltage_iteration_limit:
+                logger.warning(
+                    "Fixed point voltage solution algorithm reached "
+                    f"maximum limit of {voltage_iteration_limit} iterations."
+                )
+
+            # Increment outer iteration counter.
+            outer_iteration += 1
+
+        # Reaching the outer iteration limit is considered undesired and triggers a warning.
+        if outer_iteration >= outer_iteration_limit:
             logger.warning(
-                f"Fixed point voltage solution algorithm reached maximum limit of {voltage_iteration_limit} iterations."
+                "Outer wrapper algorithm for fixed-point solution reached "
+                f"maximum limit of {outer_iteration_limit} iterations."
             )
+
+        # Debug message.
+        logger.debug(
+            "Completed fixed point solution algorithm. "
+            f"Outer wrapper iterations: {outer_iteration}"
+        )
 
         # Get full voltage vector by concatenating source and calculated voltage.
         node_voltage_vector = (

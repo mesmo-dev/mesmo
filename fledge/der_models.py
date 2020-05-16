@@ -149,10 +149,10 @@ class EVChargerModel(FixedDERModel):
 class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 
-    state_names: pd.Index
-    control_names: pd.Index
-    disturbance_names: pd.Index
-    output_names: pd.Index
+    states: pd.Index
+    controls: pd.Index
+    disturbances: pd.Index
+    outputs: pd.Index
     state_vector_initial: pd.Series
     state_matrix: pd.DataFrame
     control_matrix: pd.DataFrame
@@ -170,9 +170,9 @@ class FlexibleDERModel(DERModel):
     ):
 
         # Define variables.
-        optimization_problem.state_vector = pyo.Var(self.timesteps, [self.der_name], self.state_names)
-        optimization_problem.control_vector = pyo.Var(self.timesteps, [self.der_name], self.control_names)
-        optimization_problem.output_vector = pyo.Var(self.timesteps, [self.der_name], self.output_names)
+        optimization_problem.state_vector = pyo.Var(self.timesteps, [self.der_name], self.states)
+        optimization_problem.control_vector = pyo.Var(self.timesteps, [self.der_name], self.controls)
+        optimization_problem.output_vector = pyo.Var(self.timesteps, [self.der_name], self.outputs)
 
     def define_optimization_constraints(
         self,
@@ -192,72 +192,72 @@ class FlexibleDERModel(DERModel):
             optimization_problem.der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
-        for state_name in self.state_names:
+        for state in self.states:
             optimization_problem.der_model_constraints.add(
-                optimization_problem.state_vector[self.timesteps[0], self.der_name, state_name]
+                optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
                 ==
-                self.state_vector_initial.at[state_name]
+                self.state_vector_initial.at[state]
             )
 
         for timestep in self.timesteps[:-1]:
 
             # State equation.
-            for state_name in self.state_names:
+            for state in self.states:
                 optimization_problem.der_model_constraints.add(
-                    optimization_problem.state_vector[timestep + timestep_interval, self.der_name, state_name]
+                    optimization_problem.state_vector[timestep + timestep_interval, self.der_name, state]
                     ==
                     sum(
-                        self.state_matrix.at[state_name, state_name_other]
-                        * optimization_problem.state_vector[timestep, self.der_name, state_name_other]
-                        for state_name_other in self.state_names
+                        self.state_matrix.at[state, state_other]
+                        * optimization_problem.state_vector[timestep, self.der_name, state_other]
+                        for state_other in self.states
                     )
                     + sum(
-                        self.control_matrix.at[state_name, control_name]
-                        * optimization_problem.control_vector[timestep, self.der_name, control_name]
-                        for control_name in self.control_names
+                        self.control_matrix.at[state, control]
+                        * optimization_problem.control_vector[timestep, self.der_name, control]
+                        for control in self.controls
                     )
                     + sum(
-                        self.disturbance_matrix.at[state_name, disturbance_name]
-                        * self.disturbance_timeseries.at[timestep, disturbance_name]
-                        for disturbance_name in self.disturbance_names
+                        self.disturbance_matrix.at[state, disturbance]
+                        * self.disturbance_timeseries.at[timestep, disturbance]
+                        for disturbance in self.disturbances
                     )
                 )
 
         for timestep in self.timesteps:
 
             # Output equation.
-            for output_name in self.output_names:
+            for output in self.outputs:
                 optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output]
                     ==
                     sum(
-                        self.state_output_matrix.at[output_name, state_name]
-                        * optimization_problem.state_vector[timestep, self.der_name, state_name]
-                        for state_name in self.state_names
+                        self.state_output_matrix.at[output, state]
+                        * optimization_problem.state_vector[timestep, self.der_name, state]
+                        for state in self.states
                     )
                     + sum(
-                        self.control_output_matrix.at[output_name, control_name]
-                        * optimization_problem.control_vector[timestep, self.der_name, control_name]
-                        for control_name in self.control_names
+                        self.control_output_matrix.at[output, control]
+                        * optimization_problem.control_vector[timestep, self.der_name, control]
+                        for control in self.controls
                     )
                     + sum(
-                        self.disturbance_output_matrix.at[output_name, disturbance_name]
-                        * self.disturbance_timeseries.at[timestep, disturbance_name]
-                        for disturbance_name in self.disturbance_names
+                        self.disturbance_output_matrix.at[output, disturbance]
+                        * self.disturbance_timeseries.at[timestep, disturbance]
+                        for disturbance in self.disturbances
                     )
                 )
 
             # Output limits.
-            for output_name in self.output_names:
+            for output in self.outputs:
                 optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output]
                     >=
-                    self.output_minimum_timeseries.at[timestep, output_name]
+                    self.output_minimum_timeseries.at[timestep, output]
                 )
                 optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output_name]
+                    optimization_problem.output_vector[timestep, self.der_name, output]
                     <=
-                    self.output_maximum_timeseries.at[timestep, output_name]
+                    self.output_maximum_timeseries.at[timestep, output]
                 )
 
         # Define connection constraints.
@@ -354,23 +354,23 @@ class FlexibleDERModel(DERModel):
     ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
-        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.state_names)
-        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.control_names)
-        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.output_names)
+        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
+        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
+        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
 
         # Obtain results.
         for timestep in self.timesteps:
-            for state_name in self.state_names:
-                state_vector.at[timestep, state_name] = (
-                    optimization_problem.state_vector[timestep, self.der_name, state_name].value
+            for state in self.states:
+                state_vector.at[timestep, state] = (
+                    optimization_problem.state_vector[timestep, self.der_name, state].value
                 )
-            for control_name in self.control_names:
-                control_vector.at[timestep, control_name] = (
-                    optimization_problem.control_vector[timestep, self.der_name, control_name].value
+            for control in self.controls:
+                control_vector.at[timestep, control] = (
+                    optimization_problem.control_vector[timestep, self.der_name, control].value
                 )
-            for output_name in self.output_names:
-                output_vector.at[timestep, output_name] = (
-                    optimization_problem.output_vector[timestep, self.der_name, output_name].value
+            for output in self.outputs:
+                output_vector.at[timestep, output] = (
+                    optimization_problem.output_vector[timestep, self.der_name, output].value
                 )
 
         return fledge.data_interface.ResultsDict(
@@ -418,47 +418,47 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
 
         # Instantiate indexes.
-        self.state_names = pd.Index(['accumulated_energy'])
-        self.control_names = pd.Index(['active_power', 'reactive_power'])
-        self.disturbance_names = pd.Index([])
-        self.output_names = pd.Index(['accumulated_energy', 'active_power', 'reactive_power', 'power_factor_constant'])
+        self.states = pd.Index(['accumulated_energy'])
+        self.controls = pd.Index(['active_power', 'reactive_power'])
+        self.disturbances = pd.Index([])
+        self.outputs = pd.Index(['accumulated_energy', 'active_power', 'reactive_power', 'power_factor_constant'])
 
         # Instantiate initial state.
         self.state_vector_initial = (
-            pd.Series(0.0, index=self.state_names)
+            pd.Series(0.0, index=self.states)
         )
 
         # Instantiate state space matrices.
         # TODO: Consolidate indexing approach with electric grid model.
         self.state_matrix = (
-            pd.DataFrame(0.0, index=self.state_names, columns=self.state_names)
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
         )
         self.state_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
         self.control_matrix = (
-            pd.DataFrame(0.0, index=self.state_names, columns=self.control_names)
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['accumulated_energy', 'active_power'] = 1.0
         self.disturbance_matrix = (
-            pd.DataFrame(0.0, index=self.state_names, columns=self.disturbance_names)
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         )
         self.state_output_matrix = (
-            pd.DataFrame(0.0, index=self.output_names, columns=self.state_names)
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
         )
         self.state_output_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
         self.control_output_matrix = (
-            pd.DataFrame(0.0, index=self.output_names, columns=self.control_names)
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
         self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_load['active_power']
         self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_load['reactive_power']
         self.disturbance_output_matrix = (
-            pd.DataFrame(0.0, index=self.output_names, columns=self.disturbance_names)
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )
 
         # Instantiate disturbance timeseries.
         self.disturbance_timeseries = (
-            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbance_names)
+            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbances)
         )
 
         # Construct output constraint timeseries
@@ -563,10 +563,10 @@ class FlexibleBuildingModel(FlexibleDERModel):
         )
 
         # Obtain indexes.
-        self.state_names = flexible_building_model.states
-        self.control_names = flexible_building_model.controls
-        self.disturbance_names = flexible_building_model.disturbances
-        self.output_names = flexible_building_model.outputs
+        self.states = flexible_building_model.states
+        self.controls = flexible_building_model.controls
+        self.disturbances = flexible_building_model.disturbances
+        self.outputs = flexible_building_model.outputs
 
         # Obtain initial state.
         self.state_vector_initial = flexible_building_model.state_vector_initial
@@ -597,6 +597,9 @@ class DERModelSet(object):
     der_models: typing.Dict[str, DERModel]
     fixed_der_models: typing.Dict[str, FixedDERModel]
     flexible_der_models: typing.Dict[str, FlexibleDERModel]
+    states: pd.Index
+    controls: pd.Index
+    outputs: pd.Index
 
     def __init__(
             self,
@@ -669,30 +672,38 @@ class DERModelSet(object):
                 logger.error(f"Cannot determine type of DER: {der_name}")
                 raise ValueError
 
+        # Obtain flexible DER state space indexes.
+        self.states = (
+            pd.MultiIndex.from_tuples([
+                (der_name, state)
+                for der_name in self.flexible_der_names
+                for state in self.flexible_der_models[der_name].states
+            ])
+        )
+        self.controls = (
+            pd.MultiIndex.from_tuples([
+                (der_name, control)
+                for der_name in self.flexible_der_names
+                for control in self.flexible_der_models[der_name].controls
+            ])
+        )
+        self.outputs = (
+            pd.MultiIndex.from_tuples([
+                (der_name, output)
+                for der_name in self.flexible_der_names
+                for output in self.flexible_der_models[der_name].outputs
+            ])
+        )
+
     def define_optimization_variables(
             self,
             optimization_problem: pyo.ConcreteModel
     ):
 
         # Define flexible DER variables.
-        der_state_names = [
-            (der_name, state_name)
-            for der_name in self.flexible_der_names
-            for state_name in self.flexible_der_models[der_name].state_names
-        ]
-        der_control_names = [
-            (der_name, control_name)
-            for der_name in self.flexible_der_names
-            for control_name in self.flexible_der_models[der_name].control_names
-        ]
-        der_output_names = [
-            (der_name, output_name)
-            for der_name in self.flexible_der_names
-            for output_name in self.flexible_der_models[der_name].output_names
-        ]
-        optimization_problem.state_vector = pyo.Var(self.timesteps, der_state_names)
-        optimization_problem.control_vector = pyo.Var(self.timesteps, der_control_names)
-        optimization_problem.output_vector = pyo.Var(self.timesteps, der_output_names)
+        optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
+        optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
+        optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
 
     def define_optimization_constraints(
             self,

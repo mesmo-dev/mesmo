@@ -736,3 +736,34 @@ class DERModelSet(object):
                 optimization_problem,
                 price_timeseries
             )
+
+    def get_optimization_results(
+            self,
+            optimization_problem: pyo.ConcreteModel
+    ) -> fledge.data_interface.ResultsDict:
+
+        # Instantiate results variables.
+        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
+        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
+        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
+
+        # Obtain results.
+        for timestep in self.timesteps:
+            for state in self.states:
+                state_vector.at[timestep, state] = (
+                    optimization_problem.state_vector[timestep, state].value
+                )
+            for control in self.controls:
+                control_vector.at[timestep, control] = (
+                    optimization_problem.control_vector[timestep, control].value
+                )
+            for output in self.outputs:
+                output_vector.at[timestep, output] = (
+                    optimization_problem.output_vector[timestep, output].value
+                )
+
+        return fledge.data_interface.ResultsDict(
+            state_vector=state_vector,
+            control_vector=control_vector,
+            output_vector=output_vector
+        )

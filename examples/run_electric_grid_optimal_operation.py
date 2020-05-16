@@ -103,6 +103,11 @@ def main():
             with_mean=True
         )
     )
+    results.update(
+        der_model_set.get_optimization_results(
+            optimization_problem
+        )
+    )
 
     # Print results.
     print(results)

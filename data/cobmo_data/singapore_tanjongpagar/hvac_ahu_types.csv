@@ -1,0 +1,2 @@
+hvac_ahu_type,ahu_supply_air_temperature_setpoint,ahu_supply_air_relative_humidity_setpoint,ahu_fan_efficiency,ahu_cooling_efficiency,ahu_heating_efficiency,ahu_return_air_heat_recovery_efficiency
+tanjongpagar_ahu,18.0,75.0,1.0,5.5,1.0,1.0

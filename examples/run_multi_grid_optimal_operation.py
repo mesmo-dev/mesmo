@@ -7,7 +7,6 @@ import os
 import pandas as pd
 import pyomo.environ as pyo
 
-import cobmo.database_interface
 import fledge.config
 import fledge.data_interface
 import fledge.der_models
@@ -31,7 +30,6 @@ def main():
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
-    cobmo.database_interface.recreate_database()
 
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
@@ -150,6 +148,11 @@ def main():
             scenario_data.timesteps,
             in_per_unit=False,
             with_mean=True
+        )
+    )
+    results.update(
+        der_model_set.get_optimization_results(
+            optimization_problem
         )
     )
 

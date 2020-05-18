@@ -355,7 +355,12 @@ class OptimalOperationProblem(object):
                 )
             )
 
-        # TODO: Add DER model set results.
+        # Obtain DER results.
+        results.update(
+            self.der_model_set.get_optimization_results(
+                self.optimization_problem
+            )
+        )
 
         return results
 

@@ -67,12 +67,12 @@ def main():
     # Plot results.
     if plots:
 
-        for output_name in flexible_load_model.output_names:
-            plt.plot(flexible_load_model.output_maximum_timeseries[output_name], label="Maximum", drawstyle='steps-post')
-            plt.plot(flexible_load_model.output_minimum_timeseries[output_name], label="Minimum", drawstyle='steps-post')
-            plt.plot(results['output_vector'][output_name], label="Optimal", drawstyle='steps-post')
+        for output in flexible_load_model.outputs:
+            plt.plot(flexible_load_model.output_maximum_timeseries[output], label="Maximum", drawstyle='steps-post')
+            plt.plot(flexible_load_model.output_minimum_timeseries[output], label="Minimum", drawstyle='steps-post')
+            plt.plot(results['output_vector'][output], label="Optimal", drawstyle='steps-post')
             plt.legend()
-            plt.title(f"Output: {output_name}")
+            plt.title(f"Output: {output}")
             plt.show()
             plt.close()
 

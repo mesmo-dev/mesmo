@@ -2,7 +2,6 @@
 
 import os
 
-import cobmo.database_interface
 import fledge.config
 import fledge.data_interface
 import fledge.problems
@@ -33,7 +32,6 @@ def run_nominal_operation_problem(
     # Recreate / overwrite database.
     if recreate_database:
         fledge.data_interface.recreate_database()
-        cobmo.database_interface.recreate_database()
 
     # Obtain operation problem.
     operation_problem = fledge.problems.NominalOperationProblem(scenario_name)
@@ -78,7 +76,6 @@ def run_optimal_operation_problem(
     # Recreate / overwrite database.
     if recreate_database:
         fledge.data_interface.recreate_database()
-        cobmo.database_interface.recreate_database()
 
     # Obtain operation problem.
     operation_problem = fledge.problems.OptimalOperationProblem(scenario_name)

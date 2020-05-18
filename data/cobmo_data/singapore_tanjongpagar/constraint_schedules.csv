@@ -1,0 +1,6 @@
+constraint_type,time_period,minimum_air_temperature,maximum_air_temperature,minimum_fresh_air_flow_per_area,minimum_fresh_air_flow_per_person,maximum_co2_concentration,minimum_fresh_air_flow_per_area_no_dcv,minimum_relative_humidity,maximum_relative_humidity
+tanjongpagar_office_constraints,01T00:00,21.0,37.0,0.0,0.0,3000.0,0.0,0.0,100.0
+tanjongpagar_office_constraints,01T07:00,21.0,25.0,0.0,0.0,3000.0,0.0,0.0,100.0
+tanjongpagar_office_constraints,06T00:00,21.0,37.0,0.0,0.0,3000.0,0.0,0.0,100.0
+tanjongpagar_office_constraints,06T07:00,21.0,25.0,0.0,0.0,3000.0,0.0,0.0,100.0
+tanjongpagar_office_constraints,06T20:00,21.0,37.0,0.0,0.0,3000.0,0.0,0.0,100.0

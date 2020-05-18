@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
 
-import cobmo.database_interface
 import fledge.config
 import fledge.data_interface
 import fledge.der_models
@@ -15,12 +14,11 @@ import fledge.electric_grid_models
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'singapore_tanjongpagar_electric_only'
     plots = True  # If True, script may produce plots.
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
-    cobmo.database_interface.recreate_database()
 
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
@@ -43,15 +41,6 @@ def main():
 
     # Define constraints.
     flexible_building_model.define_optimization_constraints(optimization_problem)
-
-    # Disable thermal grid connection.
-    optimization_problem.der_connection_constraints = pyo.ConstraintList()
-    for timestep in scenario_data.timesteps:
-        optimization_problem.der_connection_constraints.add(
-            0.0
-            ==
-            optimization_problem.output_vector[timestep, der_name, 'grid_thermal_power_cooling']
-        )
 
     # Define objective.
     flexible_building_model.define_optimization_objective(optimization_problem, price_timeseries)
@@ -78,12 +67,12 @@ def main():
     # Plot results.
     if plots:
 
-        for output_name in flexible_building_model.output_names:
-            plt.plot(flexible_building_model.output_maximum_timeseries[output_name], label="Maximum", drawstyle='steps-post')
-            plt.plot(flexible_building_model.output_minimum_timeseries[output_name], label="Minimum", drawstyle='steps-post')
-            plt.plot(results['output_vector'][output_name], label="Optimal", drawstyle='steps-post')
+        for output in flexible_building_model.outputs:
+            plt.plot(flexible_building_model.output_maximum_timeseries[output], label="Maximum", drawstyle='steps-post')
+            plt.plot(flexible_building_model.output_minimum_timeseries[output], label="Minimum", drawstyle='steps-post')
+            plt.plot(results['output_vector'][output], label="Optimal", drawstyle='steps-post')
             plt.legend()
-            plt.title(f"Output: {output_name}")
+            plt.title(f"Output: {output}")
             plt.show()
             plt.close()
 

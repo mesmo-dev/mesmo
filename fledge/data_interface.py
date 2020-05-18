@@ -8,7 +8,7 @@ import pandas as pd
 import sqlite3
 import typing
 
-import cobmo.building_model
+import cobmo.database_interface
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
@@ -48,21 +48,30 @@ def recreate_database(
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Obtain table name.
-            table_name = os.path.splitext(os.path.basename(csv_file))[0]
+            # Exclude CSV files from CoBMo data folders.
+            if os.path.join('data', 'cobmo_data') not in csv_file:
 
-            # Write new table content.
-            logger.debug(f"Loading {csv_file} into database.")
-            table = pd.read_csv(csv_file)
-            table.to_sql(
-                table_name,
-                con=database_connection,
-                if_exists='append',
-                index=False
-            )
+                # Obtain table name.
+                table_name = os.path.splitext(os.path.basename(csv_file))[0]
+
+                # Write new table content.
+                logger.debug(f"Loading {csv_file} into database.")
+                table = pd.read_csv(csv_file)
+                table.to_sql(
+                    table_name,
+                    con=database_connection,
+                    if_exists='append',
+                    index=False
+                )
 
     cursor.close()
     database_connection.close()
+
+    # Recreate CoBMo database to include FLEDGE's CoBMo definitions.
+    # TODO: Modify CoBMo config instead.
+    cobmo.database_interface.recreate_database(
+        additional_data_paths=[os.path.join(fledge.config.config['paths']['data'], 'cobmo_data')]
+    )
 
 
 def connect_database() -> sqlite3.Connection:
@@ -427,7 +436,6 @@ class DERData(object):
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_buildings: pd.DataFrame
-    flexible_building_model_dict: typing.Dict[str, cobmo.building_model.BuildingModel]
 
     @multimethod
     def __init__(
@@ -628,22 +636,6 @@ class DERData(object):
             )
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']
-
-        # Instantiate dictionary for unique `model_name`.
-        self.flexible_building_model_dict = dict.fromkeys(self.flexible_buildings['model_name'].unique())
-
-        # Obtain flexible building model.
-        for model_name in self.flexible_building_model_dict:
-            self.flexible_building_model_dict[model_name] = (
-                cobmo.building_model.BuildingModel(
-                    model_name,
-                    timestep_start=self.scenario_data.scenario['timestep_start'],
-                    timestep_end=self.scenario_data.scenario['timestep_end'],
-                    timestep_delta=self.scenario_data.scenario['timestep_interval'],
-                    connect_electric_grid=True,
-                    connect_thermal_grid_cooling=True
-                )
-            )
 
 
 class PriceData(object):

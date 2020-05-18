@@ -147,12 +147,13 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
+    in_per_unit = False
     results = (
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
             power_flow_solution,
             scenario_data.timesteps,
-            in_per_unit=False,
+            in_per_unit=in_per_unit,
             with_mean=True
         )
     )
@@ -160,7 +161,7 @@ def main():
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem,
             scenario_data.timesteps,
-            in_per_unit=False,
+            in_per_unit=in_per_unit,
             with_mean=True
         )
     )
@@ -227,14 +228,14 @@ def main():
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         ax2.plot(
-            results['der_thermal_power_vector'].loc[:, der].abs() / 1000000,
+            results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
             label='Thrm. pw.',
             drawstyle='steps-post',
             color='darkgrey',
             linewidth=3
         )
         ax2.plot(
-            results['der_active_power_vector'].loc[:, der].abs() / 1000000,
+            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
             label='Active pw.',
             drawstyle='steps-post',
             color='black',
@@ -243,8 +244,8 @@ def main():
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
-        ax2.set_ylabel('Power [MW]')
-        ax2.set_ylim((0.0, 20.0))  # TODO: Document modifications for Thermal Electric DLMP paper
+        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
+        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 20.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)

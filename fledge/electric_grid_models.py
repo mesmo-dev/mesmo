@@ -1160,7 +1160,9 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
 
 class PowerFlowSolution(object):
-    """Power flow solution object."""
+    """Power flow solution object consisting of DER power vector and the corresponding solution for
+    nodal voltage vector / branch power vector and total loss (all complex valued).
+    """
 
     der_power_vector: np.ndarray
     node_voltage_vector: np.ndarray

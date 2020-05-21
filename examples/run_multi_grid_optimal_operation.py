@@ -19,15 +19,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            f'run_multi_grid_optimal_operation_{fledge.utils.get_timestamp()}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path)
+    results_path = fledge.utils.get_results_path('run_multi_grid_optimal_operation', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -186,7 +178,7 @@ def main():
     dlmps.to_csv(results_path)
 
     # Print results path.
-    print("Results are stored in: " + results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

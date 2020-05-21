@@ -1,6 +1,5 @@
 """Configuration module."""
 
-import datetime
 import logging
 import matplotlib.pyplot as plt
 import os
@@ -97,17 +96,6 @@ def get_logger(
         raise ValueError(f"Unknown logging level: {config['logs']['level']}")
 
     return logger
-
-
-def get_timestamp(
-        time: datetime.datetime = None
-) -> str:
-    """Generate formatted timestamp string, e.g., for saving results with timestamp."""
-
-    if time is None:
-        time = datetime.datetime.now()
-
-    return time.strftime('%Y-%m-%d_%H-%M-%S')
 
 
 # Obtain repository base directory path.

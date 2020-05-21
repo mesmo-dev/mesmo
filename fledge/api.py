@@ -5,6 +5,7 @@ import os
 import fledge.config
 import fledge.data_interface
 import fledge.problems
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -24,7 +25,7 @@ def run_nominal_operation_problem(
             results_path = (
                 os.path.join(
                     fledge.config.config['paths']['results'],
-                    f'run_operation_problem_{scenario_name}_{fledge.config.get_timestamp()}'
+                    f'run_operation_problem_{scenario_name}_{fledge.utils.get_timestamp()}'
                 )
             )
         os.mkdir(results_path)
@@ -68,7 +69,7 @@ def run_optimal_operation_problem(
             results_path = (
                 os.path.join(
                     fledge.config.config['paths']['results'],
-                    f'run_optimal_operation_problem_{scenario_name}_{fledge.config.get_timestamp()}'
+                    f'run_optimal_operation_problem_{scenario_name}_{fledge.utils.get_timestamp()}'
                 )
             )
         os.mkdir(results_path)

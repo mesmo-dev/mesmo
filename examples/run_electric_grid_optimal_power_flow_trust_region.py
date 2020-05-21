@@ -8,6 +8,7 @@ import pyomo.environ as pyo
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.utils
 
 
 def main():
@@ -18,7 +19,7 @@ def main():
     results_path = (
         os.path.join(
             fledge.config.config['paths']['results'],
-            f'run_electric_grid_optimal_power_flow_trust_region_{fledge.config.get_timestamp()}'
+            f'run_electric_grid_optimal_power_flow_trust_region_{fledge.utils.get_timestamp()}'
         )
     )
 

@@ -1,5 +1,6 @@
 """Utility functions module."""
 
+import datetime
 import numpy as np
 import pandas as pd
 
@@ -74,3 +75,14 @@ def get_element_phases_string(element: pd.Series):
         phases_string += ".3"
 
     return phases_string
+
+
+def get_timestamp(
+        time: datetime.datetime = None
+) -> str:
+    """Generate formatted timestamp string, e.g., for saving results with timestamp."""
+
+    if time is None:
+        time = datetime.datetime.now()
+
+    return time.strftime('%Y-%m-%d_%H-%M-%S')

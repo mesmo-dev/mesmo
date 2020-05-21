@@ -7,6 +7,7 @@ import pandas as pd
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.utils
 
 
 def main():
@@ -16,7 +17,7 @@ def main():
     results_path = (
         os.path.join(
             fledge.config.config['paths']['results'],
-            f'run_electric_grid_power_flow_single_step_{scenario_name}_{fledge.config.get_timestamp()}'
+            f'run_electric_grid_power_flow_single_step_{scenario_name}_{fledge.utils.get_timestamp()}'
         )
     )
 

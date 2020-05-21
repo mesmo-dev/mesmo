@@ -19,7 +19,7 @@ def main():
     results_path = (
         os.path.join(
             fledge.config.config['paths']['results'],
-            f'run_thermal_grid_optimal_operation_{fledge.config.get_timestamp()}'
+            f'run_thermal_grid_optimal_operation_{fledge.utils.get_timestamp()}'
         )
     )
 

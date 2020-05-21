@@ -14,6 +14,7 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
+import fledge.utils
 
 
 def main():
@@ -24,7 +25,7 @@ def main():
     results_path = (
         os.path.join(
             fledge.config.config['paths']['results'],
-            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.config.get_timestamp()}'
+            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.utils.get_timestamp()}'
         )
     )
 

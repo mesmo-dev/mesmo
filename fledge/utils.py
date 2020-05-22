@@ -1,7 +1,10 @@
 """Utility functions module."""
 
+import datetime
 import numpy as np
+import os
 import pandas as pd
+import re
 
 import fledge.config
 
@@ -74,3 +77,39 @@ def get_element_phases_string(element: pd.Series):
         phases_string += ".3"
 
     return phases_string
+
+
+def get_timestamp(
+        time: datetime.datetime = None
+) -> str:
+    """Generate formatted timestamp string, e.g., for saving results with timestamp."""
+
+    if time is None:
+        time = datetime.datetime.now()
+
+    return time.strftime('%Y-%m-%d_%H-%M-%S')
+
+
+def get_results_path(
+        base_name: str,
+        scenario_name: str
+) -> str:
+    """Generate results path, which is a new subfolder in the results directory. The subfolder name is
+    assembled of the given base name, scenario name and current timestamp. The new subfolder is
+    created on disk along with this.
+    """
+
+    # Obtain results path.
+    results_path = (
+        os.path.join(
+            fledge.config.config['paths']['results'],
+            # Remove non-alphanumeric characters, except `_`, then append timestamp string.
+            re.sub(r'\W+', '', f'{base_name}_{scenario_name}_') + fledge.utils.get_timestamp()
+        )
+    )
+
+    # Instantiate results directory.
+    # TODO: Catch error if dir exists.
+    os.mkdir(results_path)
+
+    return results_path

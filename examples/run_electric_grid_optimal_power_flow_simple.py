@@ -8,21 +8,14 @@ import pyomo.environ as pyo
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.utils
 
 
 def main():
 
     # Settings.
     scenario_name = 'singapore_6node'
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            f'run_electric_grid_optimal_power_flow_simple_{fledge.config.get_timestamp()}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path)
+    results_path = fledge.utils.get_results_path('run_electric_grid_optimal_power_flow_simple', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -120,7 +113,7 @@ def main():
     results.to_csv(results_path)
 
     # Print results path.
-    print("Results are stored in: " + results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

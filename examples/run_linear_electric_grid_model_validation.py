@@ -8,21 +8,14 @@ import pandas as pd
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.utils
 
 
 def main():
 
     # Settings.
     scenario_name = fledge.config.config['tests']['scenario_name']
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            f'run_linear_electric_grid_model_validation_{fledge.config.get_timestamp()}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path)
+    results_path = fledge.utils.get_results_path('run_linear_electric_grid_model_validation', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -314,7 +307,7 @@ def main():
     plt.close()
 
     # Print results path.
-    print("Results are stored in: " + results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

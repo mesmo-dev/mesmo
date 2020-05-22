@@ -5,6 +5,7 @@ import os
 import fledge.config
 import fledge.data_interface
 import fledge.problems
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -19,15 +20,8 @@ def run_nominal_operation_problem(
     """Set up and solve a nominal operation problem for the given scenario."""
 
     # Instantiate results directory.
-    if store_results:
-        if results_path is None:
-            results_path = (
-                os.path.join(
-                    fledge.config.config['paths']['results'],
-                    f'run_operation_problem_{scenario_name}_{fledge.config.get_timestamp()}'
-                )
-            )
-        os.mkdir(results_path)
+    if store_results and (results_path is None):
+        results_path = fledge.utils.get_results_path('run_operation_problem', scenario_name)
 
     # Recreate / overwrite database.
     if recreate_database:
@@ -63,15 +57,8 @@ def run_optimal_operation_problem(
     """Set up and solve an optimal operation problem for the given scenario."""
 
     # Instantiate results directory.
-    if store_results:
-        if results_path is None:
-            results_path = (
-                os.path.join(
-                    fledge.config.config['paths']['results'],
-                    f'run_optimal_operation_problem_{scenario_name}_{fledge.config.get_timestamp()}'
-                )
-            )
-        os.mkdir(results_path)
+    if store_results and (results_path is None):
+        results_path = fledge.utils.get_results_path('run_optimal_operation_problem', scenario_name)
 
     # Recreate / overwrite database.
     if recreate_database:

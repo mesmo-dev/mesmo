@@ -14,6 +14,7 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
+import fledge.utils
 
 
 def main():
@@ -21,15 +22,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            f'paper_2020_dlmp_combined_thermal_electric_scenario_{scenario}_{fledge.config.get_timestamp()}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path)
+    results_path = fledge.utils.get_results_path('paper_2020_dlmp_combined_thermal_electric_scenario', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -255,7 +248,7 @@ def main():
         plt.close()
 
     # Print results path.
-    print("Results are stored in: " + results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

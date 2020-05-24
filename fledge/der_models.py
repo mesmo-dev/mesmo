@@ -679,6 +679,7 @@ class DERModelSet(object):
                 for der_name in self.flexible_der_names
                 for state in self.flexible_der_models[der_name].states
             ])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
         )
         self.controls = (
             pd.MultiIndex.from_tuples([
@@ -686,6 +687,7 @@ class DERModelSet(object):
                 for der_name in self.flexible_der_names
                 for control in self.flexible_der_models[der_name].controls
             ])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
         )
         self.outputs = (
             pd.MultiIndex.from_tuples([
@@ -693,6 +695,7 @@ class DERModelSet(object):
                 for der_name in self.flexible_der_names
                 for output in self.flexible_der_models[der_name].outputs
             ])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
         )
 
     def define_optimization_variables(

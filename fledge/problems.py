@@ -127,7 +127,7 @@ class NominalOperationProblem(object):
             thermal_power_flow_solutions = (
                 fledge.utils.starmap(
                     fledge.thermal_grid_models.ThermalPowerFlowSolution,
-                    [(self.electric_grid_model, row) for row in der_thermal_power_vector.values]
+                    [(self.thermal_grid_model, row) for row in der_thermal_power_vector.values]
                 )
             )
             thermal_power_flow_solutions = dict(zip(self.timesteps, thermal_power_flow_solutions))

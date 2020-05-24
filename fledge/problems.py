@@ -65,75 +65,93 @@ class NominalOperationProblem(object):
     def solve(self):
 
         # Instantiate results variables.
-        der_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
-        )
-        node_voltage_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
-        )
-        branch_power_vector_1 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
-        )
-        branch_power_vector_2 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
-        )
-        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
-        der_thermal_power_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
-        )
-        der_flow_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
-        )
-        branch_flow_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
-        )
-        node_head_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
-        )
+        if self.electric_grid_model is not None:
+            der_power_vector = (
+                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+            )
+            node_voltage_vector = (
+                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+            )
+            branch_power_vector_1 = (
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            )
+            branch_power_vector_2 = (
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            )
+            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+        if self.thermal_grid_model is not None:
+            der_thermal_power_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+            )
+            der_flow_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+            )
+            branch_flow_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
+            )
+            node_head_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
+            )
 
         # Obtain nominal DER power vector.
-        for der in self.electric_grid_model.ders:
-            # TODO: Use ders instead of der_names for der_models index.
-            der_name = der[1]
-            der_power_vector.loc[:, der] = (
-                self.der_model_set.der_models[der_name].active_power_nominal_timeseries
-                + (1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries)
-            )
-            der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
+        if self.electric_grid_model is not None:
+            for der in self.electric_grid_model.ders:
+                # TODO: Use ders instead of der_names for der_models index.
+                der_name = der[1]
+                der_power_vector.loc[:, der] = (
+                    self.der_model_set.der_models[der_name].active_power_nominal_timeseries
+                    + (1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries)
+                )
+        if self.thermal_grid_model is not None:
+            for der in self.electric_grid_model.ders:
+                der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
 
         # Obtain results.
-        for timestep in self.timesteps:
-            power_flow_solution = (
-                fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
-                    self.electric_grid_model,
-                    der_power_vector.loc[timestep, :].values
+        if self.electric_grid_model is not None:
+            for timestep in self.timesteps:
+                power_flow_solution = (
+                    fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
+                        self.electric_grid_model,
+                        der_power_vector.loc[timestep, :].values
+                    )
                 )
-            )
-            # TODO: Flatten power flow solution arrays.
-            node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
-            branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
-            branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
-            loss.loc[timestep, :] = power_flow_solution.loss.ravel()
-            thermal_power_flow_solution = (
-                fledge.thermal_grid_models.ThermalPowerFlowSolution(
-                    self.thermal_grid_model,
-                    der_thermal_power_vector.loc[timestep, :].values
+                # TODO: Flatten power flow solution arrays.
+                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
+                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
+                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
+                loss.loc[timestep, :] = power_flow_solution.loss.ravel()
+        if self.thermal_grid_model is not None:
+            for timestep in self.timesteps:
+                thermal_power_flow_solution = (
+                    fledge.thermal_grid_models.ThermalPowerFlowSolution(
+                        self.thermal_grid_model,
+                        der_thermal_power_vector.loc[timestep, :].values
+                    )
                 )
-            )
-            der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
-            branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
-            node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
+                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
+                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
+                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
 
         # Store results.
-        self.results = (
-            fledge.data_interface.ResultsDict(
-                der_power_vector=der_power_vector,
-                node_voltage_vector=node_voltage_vector,
-                branch_power_vector_1=branch_power_vector_1,
-                branch_power_vector_2=branch_power_vector_2,
-                loss=loss
+        self.results = fledge.data_interface.ResultsDict()
+        if self.electric_grid_model is not None:
+            self.results.update(
+                fledge.data_interface.ResultsDict(
+                    der_power_vector=der_power_vector,
+                    node_voltage_vector=node_voltage_vector,
+                    branch_power_vector_1=branch_power_vector_1,
+                    branch_power_vector_2=branch_power_vector_2,
+                    loss=loss
+                )
             )
-        )
+        if self.thermal_grid_model is not None:
+            self.results.update(
+                fledge.data_interface.ResultsDict(
+                    der_flow_vector=der_flow_vector,
+                    branch_flow_vector=branch_flow_vector,
+                    node_head_vector=node_head_vector,
+                )
+            )
 
 
 class OptimalOperationProblem(object):

@@ -1,14 +1,36 @@
 """Utility functions module."""
 
 import datetime
+import itertools
 import numpy as np
 import os
 import pandas as pd
 import re
+import typing
 
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
+
+
+def starmap(
+        function: typing.Callable,
+        argument_sequence: typing.List[tuple]
+) -> list:
+    """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
+    Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
+
+    - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
+      of `multiprocessing.Pool`, hence running the function calls in parallel.
+    - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
+    """
+
+    if fledge.config.config['multiprocessing']['run_parallel']:
+        results = fledge.config.parallel_pool.starmap(function, argument_sequence)
+    else:
+        results = itertools.starmap(function, argument_sequence)
+
+    return results
 
 
 def get_index(

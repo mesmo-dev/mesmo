@@ -48,20 +48,26 @@ class NominalOperationProblem(object):
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
+            start_time = fledge.utils.log_timing_start("electric grid model instantiation", logger)
             self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
             self.power_flow_solution_reference = (
                 fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
             )
+            fledge.utils.log_timing_end(start_time, "electric grid model instantiation", logger)
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
+            start_time = fledge.utils.log_timing_start("thermal grid model instantiation", logger)
             self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
             self.thermal_power_flow_solution_reference = (
                 fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
             )
+            fledge.utils.log_timing_end(start_time, "thermal grid model instantiation", logger)
 
         # Obtain DER model set.
+        start_time = fledge.utils.log_timing_start("DER model instantiation", logger)
         self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
+        fledge.utils.log_timing_end(start_time, "DER model instantiation", logger)
 
     def solve(self):
 
@@ -108,6 +114,7 @@ class NominalOperationProblem(object):
                 der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
 
         # Solve power flow.
+        start_time = fledge.utils.log_timing_start("power flow solution", logger)
         if self.electric_grid_model is not None:
             power_flow_solutions = (
                 fledge.utils.starmap(
@@ -124,6 +131,7 @@ class NominalOperationProblem(object):
                 )
             )
             thermal_power_flow_solutions = dict(zip(self.timesteps, thermal_power_flow_solutions))
+        fledge.utils.log_timing_end(start_time, "power flow solution", logger)
 
         # Obtain results.
         if self.electric_grid_model is not None:

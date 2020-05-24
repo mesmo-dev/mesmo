@@ -2,10 +2,12 @@
 
 import datetime
 import itertools
+import logging
 import numpy as np
 import os
 import pandas as pd
 import re
+import time
 import typing
 
 import fledge.config
@@ -31,6 +33,29 @@ def starmap(
         results = itertools.starmap(function, argument_sequence)
 
     return results
+
+
+def log_timing_start(
+        message: str,
+        logger_object: logging.Logger = logger
+) -> float:
+    """Log start message and return start time. Should be used together with `log_timing_end`."""
+
+    logger_object.debug(f"Start {message}.")
+
+    return time.time()
+
+
+def log_timing_end(
+        start_time: float,
+        message: str,
+        logger_object: logging.Logger = logger
+) -> float:
+    """Log end message and execution time based on given start time. Should be used together with `log_timing_start`."""
+
+    logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
+
+    return time.time()
 
 
 def get_index(

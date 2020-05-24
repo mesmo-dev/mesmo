@@ -13,6 +13,8 @@
 
 *.sqlite
 
+*.sqlite-journal
+
 *.DS_Store
 
 docs/_build/

@@ -10,6 +10,7 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
+import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
@@ -47,93 +48,127 @@ class NominalOperationProblem(object):
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
+            start_time = fledge.utils.log_timing_start("electric grid model instantiation", logger)
             self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
             self.power_flow_solution_reference = (
                 fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
             )
+            fledge.utils.log_timing_end(start_time, "electric grid model instantiation", logger)
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
+            start_time = fledge.utils.log_timing_start("thermal grid model instantiation", logger)
             self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
             self.thermal_power_flow_solution_reference = (
                 fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
             )
+            fledge.utils.log_timing_end(start_time, "thermal grid model instantiation", logger)
 
         # Obtain DER model set.
+        start_time = fledge.utils.log_timing_start("DER model instantiation", logger)
         self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
+        fledge.utils.log_timing_end(start_time, "DER model instantiation", logger)
 
     def solve(self):
 
         # Instantiate results variables.
-        der_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
-        )
-        node_voltage_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
-        )
-        branch_power_vector_1 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
-        )
-        branch_power_vector_2 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
-        )
-        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
-        der_thermal_power_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
-        )
-        der_flow_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
-        )
-        branch_flow_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
-        )
-        node_head_vector = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
-        )
+        if self.electric_grid_model is not None:
+            der_power_vector = (
+                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+            )
+            node_voltage_vector = (
+                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+            )
+            branch_power_vector_1 = (
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            )
+            branch_power_vector_2 = (
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            )
+            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+        if self.thermal_grid_model is not None:
+            der_thermal_power_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+            )
+            der_flow_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+            )
+            branch_flow_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
+            )
+            node_head_vector = (
+                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
+            )
 
         # Obtain nominal DER power vector.
-        for der in self.electric_grid_model.ders:
-            # TODO: Use ders instead of der_names for der_models index.
-            der_name = der[1]
-            der_power_vector.loc[:, der] = (
-                self.der_model_set.der_models[der_name].active_power_nominal_timeseries
-                + (1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries)
+        if self.electric_grid_model is not None:
+            for der in self.electric_grid_model.ders:
+                # TODO: Use ders instead of der_names for der_models index.
+                der_name = der[1]
+                der_power_vector.loc[:, der] = (
+                    self.der_model_set.der_models[der_name].active_power_nominal_timeseries
+                    + (1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries)
+                )
+        if self.thermal_grid_model is not None:
+            for der in self.electric_grid_model.ders:
+                der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
+
+        # Solve power flow.
+        start_time = fledge.utils.log_timing_start("power flow solution", logger)
+        if self.electric_grid_model is not None:
+            power_flow_solutions = (
+                fledge.utils.starmap(
+                    fledge.electric_grid_models.PowerFlowSolutionFixedPoint,
+                    [(self.electric_grid_model, row) for row in der_power_vector.values]
+                )
             )
-            der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
+            power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
+        if self.thermal_grid_model is not None:
+            thermal_power_flow_solutions = (
+                fledge.utils.starmap(
+                    fledge.thermal_grid_models.ThermalPowerFlowSolution,
+                    [(self.thermal_grid_model, row) for row in der_thermal_power_vector.values]
+                )
+            )
+            thermal_power_flow_solutions = dict(zip(self.timesteps, thermal_power_flow_solutions))
+        fledge.utils.log_timing_end(start_time, "power flow solution", logger)
 
         # Obtain results.
-        for timestep in self.timesteps:
-            power_flow_solution = (
-                fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
-                    self.electric_grid_model,
-                    der_power_vector.loc[timestep, :].values
-                )
-            )
-            # TODO: Flatten power flow solution arrays.
-            node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
-            branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
-            branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
-            loss.loc[timestep, :] = power_flow_solution.loss.ravel()
-            thermal_power_flow_solution = (
-                fledge.thermal_grid_models.ThermalPowerFlowSolution(
-                    self.thermal_grid_model,
-                    der_thermal_power_vector.loc[timestep, :].values
-                )
-            )
-            der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
-            branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
-            node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
+        if self.electric_grid_model is not None:
+            for timestep in self.timesteps:
+                power_flow_solution = power_flow_solutions[timestep]
+                # TODO: Flatten power flow solution arrays.
+                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
+                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
+                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
+                loss.loc[timestep, :] = power_flow_solution.loss.ravel()
+        if self.thermal_grid_model is not None:
+            for timestep in self.timesteps:
+                thermal_power_flow_solution = thermal_power_flow_solutions[timestep]
+                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
+                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
+                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
 
         # Store results.
-        self.results = (
-            fledge.data_interface.ResultsDict(
-                der_power_vector=der_power_vector,
-                node_voltage_vector=node_voltage_vector,
-                branch_power_vector_1=branch_power_vector_1,
-                branch_power_vector_2=branch_power_vector_2,
-                loss=loss
+        self.results = fledge.data_interface.ResultsDict()
+        if self.electric_grid_model is not None:
+            self.results.update(
+                fledge.data_interface.ResultsDict(
+                    der_power_vector=der_power_vector,
+                    node_voltage_vector=node_voltage_vector,
+                    branch_power_vector_1=branch_power_vector_1,
+                    branch_power_vector_2=branch_power_vector_2,
+                    loss=loss
+                )
             )
-        )
+        if self.thermal_grid_model is not None:
+            self.results.update(
+                fledge.data_interface.ResultsDict(
+                    der_flow_vector=der_flow_vector,
+                    branch_flow_vector=branch_flow_vector,
+                    node_head_vector=node_head_vector,
+                )
+            )
 
 
 class OptimalOperationProblem(object):

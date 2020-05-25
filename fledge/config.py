@@ -105,6 +105,15 @@ def get_logger(
     return logger
 
 
+def get_parallel_pool() -> multiprocessing.Pool:
+    """Create multiprocessing / parallel computing pool.
+
+    - Number of parallel processes / workers defaults to number of CPU threads as returned by `os.cpu_count()`.
+    """
+
+    return multiprocessing.Pool()
+
+
 # Obtain repository base directory path.
 base_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
 
@@ -117,10 +126,9 @@ water_density = 998.31  # [kg/m^3]
 water_kinematic_viscosity = 1.3504e-6  # [m^2/s]
 gravitational_acceleration = 9.81  # [m^2/s]
 
-# Setup multiprocessing / parallel computing pool.
-# - Number of parallel processes defaults to number of CPU threads as returned by `os.cpu_count()`.
-if config['multiprocessing']['run_parallel']:
-    parallel_pool = multiprocessing.Pool()
+# Instantiate multiprocessing / parallel computing pool.
+# - Pool is instantiated as None and only created on first use in `fledge.utils.starmap`.
+parallel_pool = None
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

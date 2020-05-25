@@ -28,6 +28,8 @@ def starmap(
     """
 
     if fledge.config.config['multiprocessing']['run_parallel']:
+        if fledge.config.parallel_pool is None:
+            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
         results = fledge.config.parallel_pool.starmap(function, argument_sequence)
     else:
         results = itertools.starmap(function, argument_sequence)

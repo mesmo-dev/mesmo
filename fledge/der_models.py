@@ -23,6 +23,9 @@ class DERModel(object):
     timesteps: pd.Index
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
+    thermal_power_nominal_timeseries: pd.Series
+
+    # TODO: Define method templates.
 
 
 class FixedDERModel(DERModel):
@@ -101,7 +104,7 @@ class FixedLoadModel(FixedDERModel):
         # Store timesteps index.
         self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].index
 
-        # Construct active and reactive power timeseries.
+        # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
             der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power']
         )
@@ -112,6 +115,11 @@ class FixedLoadModel(FixedDERModel):
             # If per unit definition, multiply nominal active / reactive power.
             self.active_power_nominal_timeseries *= fixed_load.at['active_power']
             self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power']
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
 
 
 class EVChargerModel(FixedDERModel):
@@ -133,7 +141,7 @@ class EVChargerModel(FixedDERModel):
         # Store timesteps index.
         self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].index
 
-        # Construct active and reactive power timeseries.
+        # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
             der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power']
         )
@@ -144,6 +152,11 @@ class EVChargerModel(FixedDERModel):
             # If per unit definition, multiply nominal active / reactive power.
             self.active_power_nominal_timeseries *= ev_charger.at['active_power']
             self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power']
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
 
 
 class FlexibleDERModel(DERModel):
@@ -411,6 +424,11 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.active_power_nominal_timeseries *= flexible_load.at['active_power']
             self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power']
 
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.
         accumulated_energy_nominal_timeseries = (
@@ -546,20 +564,34 @@ class FlexibleBuildingModel(FlexibleDERModel):
             ))
         )
 
+        # TODO: Obtain proper nominal timseries for CoBMo models.
+
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(
-                1.0,
-                index=self.timesteps
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                flexible_building.at['active_power']
+                if pd.notnull(flexible_building.at['active_power'])
+                else 0.0
             )
-            * flexible_building['active_power']
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(
-                1.0,
-                index=self.timesteps
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                flexible_building.at['reactive_power']
+                if pd.notnull(flexible_building.at['reactive_power'])
+                else 0.0
             )
-            * flexible_building['reactive_power']
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                flexible_building.at['thermal_power_nominal']
+                if pd.notnull(flexible_building.at['thermal_power_nominal'])
+                else 0.0
+            )
         )
 
         # Obtain indexes.

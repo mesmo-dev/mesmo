@@ -111,7 +111,10 @@ class NominalOperationProblem(object):
                 )
         if self.thermal_grid_model is not None:
             for der in self.electric_grid_model.ders:
-                der_thermal_power_vector.loc[:, der] = 0.0  # TODO: Define nominal thermal power in der models.
+                der_name = der[1]
+                der_thermal_power_vector.loc[:, der] = (
+                    self.der_model_set.der_models[der_name].thermal_power_nominal_timeseries
+                )
 
         # Solve power flow.
         start_time = fledge.utils.log_timing_start("power flow solution", logger)

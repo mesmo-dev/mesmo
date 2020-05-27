@@ -113,8 +113,8 @@ class FixedLoadModel(FixedDERModel):
         )
         if 'per_unit' in fixed_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= fixed_load.at['active_power']
-            self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power']
+            self.active_power_nominal_timeseries *= fixed_load.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power_nominal']
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -150,8 +150,8 @@ class EVChargerModel(FixedDERModel):
         )
         if 'per_unit' in ev_charger.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= ev_charger.at['active_power']
-            self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power']
+            self.active_power_nominal_timeseries *= ev_charger.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power_nominal']
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -421,8 +421,8 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         if 'per_unit' in flexible_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= flexible_load.at['active_power']
-            self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power']
+            self.active_power_nominal_timeseries *= flexible_load.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power_nominal']
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -468,8 +468,8 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_load['active_power']
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_load['reactive_power']
+        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_load['active_power_nominal']
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_load['reactive_power_nominal']
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )
@@ -559,8 +559,8 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Obtain nominal power factor.
         self.power_factor_nominal = (
             np.cos(np.arctan(
-                flexible_building['reactive_power']
-                / flexible_building['active_power']
+                flexible_building['reactive_power_nominal']
+                / flexible_building['active_power_nominal']
             ))
         )
 
@@ -570,16 +570,16 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.active_power_nominal_timeseries = (
             pd.Series(1.0, index=self.timesteps)
             * (
-                flexible_building.at['active_power']
-                if pd.notnull(flexible_building.at['active_power'])
+                flexible_building.at['active_power_nominal']
+                if pd.notnull(flexible_building.at['active_power_nominal'])
                 else 0.0
             )
         )
         self.reactive_power_nominal_timeseries = (
             pd.Series(1.0, index=self.timesteps)
             * (
-                flexible_building.at['reactive_power']
-                if pd.notnull(flexible_building.at['reactive_power'])
+                flexible_building.at['reactive_power_nominal']
+                if pd.notnull(flexible_building.at['reactive_power_nominal'])
                 else 0.0
             )
         )

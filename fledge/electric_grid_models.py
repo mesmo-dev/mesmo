@@ -860,8 +860,8 @@ class ElectricGridModelDefault(ElectricGridModel):
         # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
             (
-                electric_grid_data.electric_grid_ders.loc[:, 'active_power']
-                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
+                electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
+                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
             ).values
         )
 
@@ -931,8 +931,8 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # Construct nominal DER power vector.
         self.der_power_vector_nominal = (
             (
-                electric_grid_data.electric_grid_ders.loc[:, 'active_power']
-                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power']
+                electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
+                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
             ).values
         )
 
@@ -1122,8 +1122,8 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                 # OpenDSS Manual April 2018, page 150, "Model"
                 + f" model=1"
                 + f" kv={voltage / 1000}"
-                + f" kw={- der['active_power'] / 1000}"
-                + f" kvar={- der['reactive_power'] / 1000}"
+                + f" kw={- der['active_power_nominal'] / 1000}"
+                + f" kvar={- der['reactive_power_nominal'] / 1000}"
                 # Set low V_min to avoid switching to impedance model according to:
                 # OpenDSS Manual April 2018, page 150, "Vminpu"
                 + f" vminpu=0.6"

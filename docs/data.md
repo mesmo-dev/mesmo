@@ -72,8 +72,8 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
-| `active_power` | W | Nominal active power, where loads are negative and generations are positive. |
-| `reactive_power` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
+| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
 
 ### `electric_grid_line_types`
 

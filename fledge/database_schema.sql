@@ -8,8 +8,8 @@ CREATE TABLE electric_grid_ders (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     connection TEXT,
-    active_power TEXT,
-    reactive_power TEXT,
+    active_power_nominal TEXT,
+    reactive_power_nominal TEXT,
     PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (

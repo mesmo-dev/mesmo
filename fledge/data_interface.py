@@ -34,7 +34,7 @@ def recreate_database(
     )
 
     # Recreate SQLITE database schema from SQL schema file.
-    with open(os.path.join(fledge.config.base_path, 'fledge', 'database_schema.sql'), 'r') as database_schema_file:
+    with open(os.path.join(fledge.config.base_path, 'fledge', 'data_schema.sql'), 'r') as database_schema_file:
         cursor.executescript(database_schema_file.read())
     database_connection.commit()
 

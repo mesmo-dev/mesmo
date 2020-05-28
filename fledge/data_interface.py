@@ -455,6 +455,7 @@ class DERData(object):
 
         # Define utility function for DER data.
         # TODO: Move to method?
+        # TODO: Add thermal grid DER type support.
         def get_der_type_data(der_type: str) -> typing.Tuple[pd.DataFrame, typing.Dict[str, pd.DataFrame]]:
             """Obtain DER data for given DER type."""
 

@@ -159,6 +159,53 @@ class EVChargerModel(FixedDERModel):
         )
 
 
+class FixedGeneratorModel(FixedDERModel):
+    """Fixed generator model object, representing a generic generator with fixed nominal output."""
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get fixed generator data by `der_name`.
+        fixed_generator = der_data.fixed_generators.loc[self.der_name, :]
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Construct nominal active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                fixed_generator.at['active_power_nominal']
+                if pd.notnull(fixed_generator.at['active_power_nominal'])
+                else 0.0
+            )
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                fixed_generator.at['reactive_power_nominal']
+                if pd.notnull(fixed_generator.at['reactive_power_nominal'])
+                else 0.0
+            )
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(1.0, index=self.timesteps)
+            * (
+                fixed_generator.at['thermal_power_nominal']
+                if pd.notnull(fixed_generator.at['thermal_power_nominal'])
+                else 0.0
+            )
+        )
+
+
 class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 

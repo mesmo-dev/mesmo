@@ -38,6 +38,19 @@ class TestDERModels(unittest.TestCase):
         time_duration = time.time() - time_start
         logger.info(f"Test EVChargerModel: Completed in {time_duration:.6f} seconds.")
 
+    def test_fixed_generator_model(self):
+        # Obtain test data.
+        der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.FixedGeneratorModel(
+            der_data,
+            der_data.fixed_generators.index[0]  # Take `der_name` of first row.
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test FlexibleLoadModel: Completed in {time_duration:.6f} seconds.")
+
     def test_flexible_load_model(self):
         # Obtain test data.
         der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])

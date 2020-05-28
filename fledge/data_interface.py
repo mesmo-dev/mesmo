@@ -435,6 +435,7 @@ class DERData(object):
     ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    fixed_generators: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
     @multimethod
@@ -595,41 +596,71 @@ class DERData(object):
         self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
 
+        # Obtain fixed generator data.
+        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
+        #   due to SQLITE missing full outer join syntax.
+        self.fixed_generators = (
+            pd.merge(
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM electric_grid_ders
+                    WHERE der_type = 'fixed_generator'
+                    AND electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM thermal_grid_ders
+                    WHERE der_type = 'fixed_generator'
+                    AND thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                how='outer',
+                on=['der_name', 'der_type', 'model_name'],
+                suffixes=('_electric_grid', '_thermal_grid')
+            )
+        )
+        self.fixed_generators.index = self.fixed_generators['der_name']
+
         # Obtain flexible building data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
-        flexible_buildings_electric_grid = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_ders
-                WHERE der_type = 'flexible_building'
-                AND electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        flexible_buildings_thermal_grid = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM thermal_grid_ders
-                WHERE der_type = 'flexible_building'
-                AND thermal_grid_name = (
-                    SELECT thermal_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
         self.flexible_buildings = (
             pd.merge(
-                flexible_buildings_electric_grid,
-                flexible_buildings_thermal_grid,
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM electric_grid_ders
+                    WHERE der_type = 'flexible_building'
+                    AND electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM thermal_grid_ders
+                    WHERE der_type = 'flexible_building'
+                    AND thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
                 how='outer',
                 on=['der_name', 'der_type', 'model_name'],
                 suffixes=('_electric_grid', '_thermal_grid')

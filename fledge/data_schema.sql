@@ -1,3 +1,8 @@
+CREATE TABLE cooling_plants (
+    model_name TEXT,
+    cooling_efficiency TEXT,
+    PRIMARY KEY(model_name)
+);
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,

@@ -435,6 +435,7 @@ class DERData(object):
     ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    cooling_plants: pd.DataFrame
     fixed_generators: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
@@ -600,7 +601,7 @@ class DERData(object):
         # Obtain cooling plant data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
-        self.fixed_generators = (
+        self.cooling_plants = (
             pd.merge(
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
@@ -632,7 +633,7 @@ class DERData(object):
                 suffixes=('_electric_grid', '_thermal_grid')
             )
         )
-        self.fixed_generators.index = self.fixed_generators['der_name']
+        self.cooling_plants.index = self.cooling_plants['der_name']
 
         # Obtain fixed generator data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,

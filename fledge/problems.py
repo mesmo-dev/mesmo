@@ -173,6 +173,10 @@ class NominalOperationProblem(object):
                 )
             )
 
+    def get_results(self):
+
+        return self.results
+
 
 class OptimalOperationProblem(object):
     """Optimal operation problem object, consisting of an optimization problem as well as the corresponding
@@ -338,7 +342,7 @@ class OptimalOperationProblem(object):
             self.price_timeseries
         )
 
-    def solve_optimization(self):
+    def solve(self):
 
         # Solve optimization problem.
         self.optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
@@ -357,14 +361,11 @@ class OptimalOperationProblem(object):
             logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
             raise
 
-    def display_optimization_problem(self):
-
-        self.optimization_problem.display()
-
-    def get_optimization_results(
+    def get_results(
             self,
             in_per_unit=False,
-            with_mean=False
+            with_mean=False,
+            get_dlmps=True
     ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results dictionary.
@@ -400,31 +401,26 @@ class OptimalOperationProblem(object):
             )
         )
 
+        if get_dlmps:
+
+            # Obtain electric DLMPs.
+            if self.electric_grid_model is not None:
+                results.update(
+                    self.linear_electric_grid_model.get_optimization_dlmps(
+                        self.optimization_problem,
+                        self.price_timeseries,
+                        self.timesteps
+                    )
+                )
+
+            # Obtain thermal DLMPs.
+            if self.thermal_grid_model is not None:
+                results.update(
+                    self.linear_thermal_grid_model.get_optimization_dlmps(
+                        self.optimization_problem,
+                        self.price_timeseries,
+                        self.timesteps
+                    )
+                )
+
         return results
-
-    def get_optimization_dlmps(self) -> fledge.data_interface.ResultsDict:
-
-        # Instantiate DLMP results dictionary.
-        dlmps = fledge.data_interface.ResultsDict()
-
-        # Obtain electric DLMPs.
-        if self.electric_grid_model is not None:
-            dlmps.update(
-                self.linear_electric_grid_model.get_optimization_dlmps(
-                    self.optimization_problem,
-                    self.price_timeseries,
-                    self.timesteps
-                )
-            )
-
-        # Obtain thermal DLMPs.
-        if self.thermal_grid_model is not None:
-            dlmps.update(
-                self.linear_thermal_grid_model.get_optimization_dlmps(
-                    self.optimization_problem,
-                    self.price_timeseries,
-                    self.timesteps
-                )
-            )
-
-        return dlmps

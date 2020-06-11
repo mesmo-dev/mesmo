@@ -68,11 +68,10 @@ def run_optimal_operation_problem(
     operation_problem = fledge.problems.OptimalOperationProblem(scenario_name)
 
     # Solve operation problem.
-    operation_problem.solve_optimization()
+    operation_problem.solve()
 
     # Obtain results.
-    results = operation_problem.get_optimization_results()
-    results.update(operation_problem.get_optimization_dlmps())
+    results = operation_problem.get_results()
 
     # Print results.
     if print_results:

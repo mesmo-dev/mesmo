@@ -481,11 +481,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.Series(0.0, index=self.timesteps)
         )
 
-        # Construct nominal thermal power timeseries.
-        self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
-        )
-
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.
         accumulated_energy_nominal_timeseries = (
@@ -614,12 +609,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.timesteps = flexible_building_model.timesteps
 
         # Obtain nominal power factor.
-        self.power_factor_nominal = (
-            np.cos(np.arctan(
-                flexible_building['reactive_power_nominal']
-                / flexible_building['active_power_nominal']
-            ))
-        )
+        if self.is_electric_grid_connected:
+            self.power_factor_nominal = (
+                np.cos(np.arctan(
+                    flexible_building.at['reactive_power_nominal']
+                    / flexible_building.at['active_power_nominal']
+                ))
+            )
 
         # TODO: Obtain proper nominal timseries for CoBMo models.
 
@@ -671,7 +667,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Instantiate disturbance timeseries.
         self.disturbance_timeseries = flexible_building_model.disturbance_timeseries
 
-        # Obtain output constraint timeseries
+        # Obtain output constraint timeseries.
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 

@@ -1,5 +1,6 @@
 """Example script for setting up and solving an single step electric grid power flow problem."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -12,7 +13,7 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'test_2node'
+    scenario_name = 'singapore_6node'
     results_path = fledge.utils.get_results_path('run_electric_grid_power_flow_single_step', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -58,6 +59,32 @@ def main():
     np.savetxt(os.path.join(results_path, f'branch_power_vector_1.csv'), branch_power_vector_1, delimiter=',')
     np.savetxt(os.path.join(results_path, f'branch_power_vector_2.csv'), branch_power_vector_2, delimiter=',')
     np.savetxt(os.path.join(results_path, f'loss.csv'), loss, delimiter=',')
+
+    # Plot some results.
+    plt.title('DER active power [kW]')
+    plt.bar(range(len(electric_grid_model.ders)), np.real(der_power_vector) / 1e3)
+    plt.xticks(range(len(electric_grid_model.ders)), electric_grid_model.ders, rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
+    plt.title('DER reactive power [kVAr]')
+    plt.bar(range(len(electric_grid_model.ders)), np.imag(der_power_vector) / 1e3)
+    plt.xticks(range(len(electric_grid_model.ders)), electric_grid_model.ders, rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
+    plt.title('Nodal voltage magnitude [kV]')
+    plt.bar(range(len(electric_grid_model.nodes)), np.abs(node_voltage_vector.ravel()) / 1e3)
+    plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
+    plt.title('Branch apparent power flow (direction 1) [kVA]')
+    plt.bar(range(len(electric_grid_model.branches)), np.abs(branch_power_vector_1.ravel()) / 1e3)
+    plt.xticks(range(len(electric_grid_model.branches)), electric_grid_model.branches, rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
 
     # Print results path.
     print(f"Results are stored in: {results_path}")

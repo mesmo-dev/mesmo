@@ -65,15 +65,15 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`. |
-| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers` or in CoBMo, for flexible buildings. |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`, `fixed_generator`, `cooling_plant`. |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers` or in CoBMo, for flexible buildings. Currently not defined for `fixed_generator` |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
-| `active_power` | W | Nominal active power, where loads are negative and generations are positive. |
-| `reactive_power` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
+| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
 
 ### `electric_grid_line_types`
 
@@ -216,8 +216,8 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `thermal_grid_name` | | Thermal grid identifier as defined in `thermal_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`.  |
-| `model_name` | | DER model identifier depending on the DER type, defined in CoBMo for flexible buildings. |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `cooling_plant`.  |
+| `model_name` | | DER model identifier depending on the DER type, defined in CoBMo for flexible buildings. Currently not defined for `fixed_generator`. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
 
 ### `thermal_grid_line_types`
@@ -270,6 +270,15 @@ Thermal line limits are currently defined in per unit of the nominal thermal pow
 For each DER type which requires the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule. When defining by schedule, the timeseries is constructed by obtaining the appropriate values based on the `time_period` in `ddTHH:MM` format. Each value is kept constant at the given value for any daytime greater than or equal to `HH:MM` and any weekday greater than or equal to `dd` until the next defined `ddTHH:MM`. Note that the daily schedule is repeated for any weekday greater than or equal to `dd` until the next defined `dd`. The initial value for each `zone_constraint_profile` must start at `time_period = 01T00:00`.
 
 Furthermore, the active / reactive power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders`. 
+
+### `cooling_plants`
+
+Cooling plants for modelling distributed generation facilities / heat pumps in the thermal grid. Cooling plants are connected to both electric and thermal grid, therefore must be defined both in `electric_grid_ders` and `thermal_grid_ders`.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders` / `thermal_grid_ders`). |
+| `cooling_efficiency` | | Coefficient of performance (COP). |
 
 ### `ev_chargers`
 

@@ -1,4 +1,4 @@
-electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power,reactive_power
+electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
 singapore_tanjongpagar,1,flexible_building,tanjongpagar_building_1,1,1,1,1,wye,-4556459.59,-2278229.795
 singapore_tanjongpagar,2,flexible_building,tanjongpagar_building_2,2,1,1,1,wye,-4556459.59,-2278229.795
 singapore_tanjongpagar,3,flexible_building,tanjongpagar_building_3,3,1,1,1,wye,-6827742.456,-3413871.228

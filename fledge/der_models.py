@@ -708,18 +708,11 @@ class DERModelSet(object):
         self.timesteps = scenario_data.timesteps
 
         # Obtain DER names.
-        self.der_names = (
-            pd.Index(pd.concat([
-                der_data.fixed_loads['der_name'],
-                der_data.ev_chargers['der_name'],
-                der_data.flexible_loads['der_name'],
-                der_data.flexible_buildings['der_name']
-            ]))
-        )
         self.fixed_der_names = (
             pd.Index(pd.concat([
                 der_data.fixed_loads['der_name'],
                 der_data.ev_chargers['der_name'],
+                der_data.fixed_generators['der_name']
             ]))
         )
         self.flexible_der_names = (
@@ -727,6 +720,9 @@ class DERModelSet(object):
                 der_data.flexible_loads['der_name'],
                 der_data.flexible_buildings['der_name']
             ]))
+        )
+        self.der_names = (
+            self.fixed_der_names.append(self.flexible_der_names)
         )
 
         # Obtain models.
@@ -744,6 +740,13 @@ class DERModelSet(object):
             elif der_name in der_data.ev_chargers['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.EVChargerModel(
+                        der_data,
+                        der_name
+                    )
+                )
+            elif der_name in der_data.fixed_generators['der_name']:
+                self.der_models[der_name] = self.fixed_der_models[der_name] = (
+                    fledge.der_models.FixedGeneratorModel(
                         der_data,
                         der_name
                     )

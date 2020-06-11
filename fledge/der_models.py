@@ -672,6 +672,97 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 
 
+class CoolingPlantModel(FlexibleDERModel):
+    """Cooling plant model object."""
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+        """Construct flexible load model object by `der_data` and `der_name`."""
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get flexible load data by `der_name`.
+        cooling_plant = der_data.cooling_plants.loc[der_name, :]
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Construct active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+
+        # Instantiate indexes.
+        self.states = pd.Index([])
+        self.controls = pd.Index(['active_power'])
+        self.disturbances = pd.Index([])
+        self.outputs = pd.Index(['active_power', 'reactive_power', 'thermal_power'])
+
+        # Instantiate initial state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.states)
+        )
+
+        # Instantiate state space matrices.
+        self.state_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
+        )
+        self.control_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        )
+        self.disturbance_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.state_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        )
+        self.control_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        )
+        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            cooling_plant.at['reactive_power_nominal']
+            / cooling_plant.at['active_power_nominal']
+        )
+        self.control_output_matrix.at['thermal_power', 'active_power'] = cooling_plant.at['cooling_efficiency']
+        self.disturbance_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.DataFrame(0.0, index=self.timesteps, columns=self.disturbances)
+        )
+
+        # Construct output constraint timeseries
+        self.output_maximum_timeseries = (
+            pd.DataFrame(
+                cooling_plant.loc[['active_power_nominal', 'reactive_power_nominal', 'thermal_power_nominal']],
+                index=self.timesteps,
+                columns=self.outputs
+            )
+        )
+        self.output_minimum_timeseries = (
+            pd.DataFrame(
+                [[0.0, 0.0, 0.0]],
+                index=self.timesteps,
+                columns=self.outputs
+            )
+        )
+
+
 class DERModelSet(object):
     """DER model set object."""
 

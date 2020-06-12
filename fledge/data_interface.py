@@ -194,7 +194,7 @@ class ScenarioData(object):
         if excluded_columns is None:
             excluded_columns = []
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
-        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_set')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('parameter_set')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])

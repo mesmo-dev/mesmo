@@ -4,6 +4,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
+import scipy.constants
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -97,10 +98,77 @@ class ThermalGridModel(object):
         self.enthalpy_difference_distribution_water = (
             np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
-        self.distribution_pump_efficiency = (  # TODO: Rename to `distribution_pump_efficiency`.
+        self.distribution_pump_efficiency = (
             np.float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
         )
-        self.cooling_plant_efficiency = 5.0  # TODO: Define cooling plant model.
+
+        # Obtain cooling plant efficiency.
+        # TODO: Enable consideration for dynamic wet bulb temperature.
+        ambient_air_wet_bulb_temperature = (
+            thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_wet_bulb']
+        )
+        condensation_temperature = (
+            thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_condenser_water']
+            + (
+                thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_slope']
+                * (
+                    ambient_air_wet_bulb_temperature
+                    - thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_wet_bulb']
+                )
+            )
+            + thermal_grid_data.thermal_grid.at['condenser_water_temperature_difference']
+            + thermal_grid_data.thermal_grid.at['chiller_set_condenser_minimum_temperature_difference']
+            + 273.15
+        )
+        chiller_inverse_coefficient_of_performance = (
+            (
+                (
+                    condensation_temperature
+                    / thermal_grid_data.thermal_grid.at['chiller_set_evaporation_temperature']
+                )
+                - 1.0
+            )
+            * (
+                thermal_grid_data.thermal_grid.at['chiller_set_beta']
+                + 1.0
+            )
+        )
+        evaporator_pump_specific_electric_power = (
+            (1.0 / thermal_grid_data.thermal_grid.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * thermal_grid_data.thermal_grid.at['water_density']
+            * thermal_grid_data.thermal_grid.at['evaporator_pump_head']
+            / (
+                thermal_grid_data.thermal_grid.at['water_density']
+                * thermal_grid_data.thermal_grid.at['enthalpy_difference_distribution_water']
+            )
+        )
+        condenser_specific_thermal_power = (
+            1.0 + chiller_inverse_coefficient_of_performance
+        )
+        condenser_pump_specific_electric_power = (
+            (1.0 / thermal_grid_data.thermal_grid.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * thermal_grid_data.thermal_grid.at['water_density']
+            * thermal_grid_data.thermal_grid.at['condenser_pump_head']
+            * condenser_specific_thermal_power
+            / (
+                thermal_grid_data.thermal_grid.at['water_density']
+                * thermal_grid_data.thermal_grid.at['condenser_water_enthalpy_difference']
+            )
+        )
+        cooling_tower_ventilation_specific_electric_power = (
+            thermal_grid_data.thermal_grid.at['cooling_tower_set_ventilation_factor']
+            * condenser_specific_thermal_power
+        )
+        self.cooling_plant_efficiency = (
+            1.0 / sum([
+                chiller_inverse_coefficient_of_performance,
+                evaporator_pump_specific_electric_power,
+                condenser_pump_specific_electric_power,
+                cooling_tower_ventilation_specific_electric_power
+            ])
+        )
 
 
 class ThermalPowerFlowSolution(object):

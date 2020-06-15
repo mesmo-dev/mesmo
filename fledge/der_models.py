@@ -4,6 +4,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
+import scipy.constants
 import typing
 
 import cobmo.building_model
@@ -675,6 +676,8 @@ class FlexibleBuildingModel(FlexibleDERModel):
 class CoolingPlantModel(FlexibleDERModel):
     """Cooling plant model object."""
 
+    cooling_plant_efficiency: np.float
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -687,6 +690,74 @@ class CoolingPlantModel(FlexibleDERModel):
 
         # Get flexible load data by `der_name`.
         cooling_plant = der_data.cooling_plants.loc[der_name, :]
+
+        # Obtain cooling plant efficiency.
+        # TODO: Enable consideration for dynamic wet bulb temperature.
+        ambient_air_wet_bulb_temperature = (
+            cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+        )
+        condensation_temperature = (
+            cooling_plant.at['cooling_tower_set_reference_temperature_condenser_water']
+            + (
+                cooling_plant.at['cooling_tower_set_reference_temperature_slope']
+                * (
+                    ambient_air_wet_bulb_temperature
+                    - cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+                )
+            )
+            + cooling_plant.at['condenser_water_temperature_difference']
+            + cooling_plant.at['chiller_set_condenser_minimum_temperature_difference']
+            + 273.15
+        )
+        chiller_inverse_coefficient_of_performance = (
+            (
+                (
+                    condensation_temperature
+                    / cooling_plant.at['chiller_set_evaporation_temperature']
+                )
+                - 1.0
+            )
+            * (
+                cooling_plant.at['chiller_set_beta']
+                + 1.0
+            )
+        )
+        evaporator_pump_specific_electric_power = (
+            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * cooling_plant.at['water_density']
+            * cooling_plant.at['evaporator_pump_head']
+            / (
+                cooling_plant.at['water_density']
+                * cooling_plant.at['enthalpy_difference_distribution_water']
+            )
+        )
+        condenser_specific_thermal_power = (
+            1.0 + chiller_inverse_coefficient_of_performance
+        )
+        condenser_pump_specific_electric_power = (
+            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * cooling_plant.at['water_density']
+            * cooling_plant.at['condenser_pump_head']
+            * condenser_specific_thermal_power
+            / (
+                cooling_plant.at['water_density']
+                * cooling_plant.at['condenser_water_enthalpy_difference']
+            )
+        )
+        cooling_tower_ventilation_specific_electric_power = (
+            cooling_plant.at['cooling_tower_set_ventilation_factor']
+            * condenser_specific_thermal_power
+        )
+        self.cooling_plant_efficiency = (
+            1.0 / sum([
+                chiller_inverse_coefficient_of_performance,
+                evaporator_pump_specific_electric_power,
+                condenser_pump_specific_electric_power,
+                cooling_tower_ventilation_specific_electric_power
+            ])
+        )
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
@@ -736,7 +807,7 @@ class CoolingPlantModel(FlexibleDERModel):
             cooling_plant.at['reactive_power_nominal']
             / cooling_plant.at['active_power_nominal']
         )
-        self.control_output_matrix.at['thermal_power', 'active_power'] = cooling_plant.at['cooling_efficiency']
+        self.control_output_matrix.at['thermal_power', 'active_power'] = self.cooling_plant_efficiency
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )

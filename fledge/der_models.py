@@ -4,6 +4,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
+import scipy.constants
 import typing
 
 import cobmo.building_model
@@ -481,11 +482,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.Series(0.0, index=self.timesteps)
         )
 
-        # Construct nominal thermal power timeseries.
-        self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
-        )
-
         # Calculate nominal accumulated energy timeseries.
         # TODO: Consider reactive power in accumulated energy.
         accumulated_energy_nominal_timeseries = (
@@ -614,12 +610,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.timesteps = flexible_building_model.timesteps
 
         # Obtain nominal power factor.
-        self.power_factor_nominal = (
-            np.cos(np.arctan(
-                flexible_building['reactive_power_nominal']
-                / flexible_building['active_power_nominal']
-            ))
-        )
+        if self.is_electric_grid_connected:
+            self.power_factor_nominal = (
+                np.cos(np.arctan(
+                    flexible_building.at['reactive_power_nominal']
+                    / flexible_building.at['active_power_nominal']
+                ))
+            )
 
         # TODO: Obtain proper nominal timseries for CoBMo models.
 
@@ -671,9 +668,170 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Instantiate disturbance timeseries.
         self.disturbance_timeseries = flexible_building_model.disturbance_timeseries
 
-        # Obtain output constraint timeseries
+        # Obtain output constraint timeseries.
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
+
+
+class CoolingPlantModel(FlexibleDERModel):
+    """Cooling plant model object."""
+
+    cooling_plant_efficiency: np.float
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+        """Construct flexible load model object by `der_data` and `der_name`."""
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get flexible load data by `der_name`.
+        cooling_plant = der_data.cooling_plants.loc[der_name, :]
+
+        # Obtain cooling plant efficiency.
+        # TODO: Enable consideration for dynamic wet bulb temperature.
+        ambient_air_wet_bulb_temperature = (
+            cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+        )
+        condensation_temperature = (
+            cooling_plant.at['cooling_tower_set_reference_temperature_condenser_water']
+            + (
+                cooling_plant.at['cooling_tower_set_reference_temperature_slope']
+                * (
+                    ambient_air_wet_bulb_temperature
+                    - cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+                )
+            )
+            + cooling_plant.at['condenser_water_temperature_difference']
+            + cooling_plant.at['chiller_set_condenser_minimum_temperature_difference']
+            + 273.15
+        )
+        chiller_inverse_coefficient_of_performance = (
+            (
+                (
+                    condensation_temperature
+                    / cooling_plant.at['chiller_set_evaporation_temperature']
+                )
+                - 1.0
+            )
+            * (
+                cooling_plant.at['chiller_set_beta']
+                + 1.0
+            )
+        )
+        evaporator_pump_specific_electric_power = (
+            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * cooling_plant.at['water_density']
+            * cooling_plant.at['evaporator_pump_head']
+            / (
+                cooling_plant.at['water_density']
+                * cooling_plant.at['enthalpy_difference_distribution_water']
+            )
+        )
+        condenser_specific_thermal_power = (
+            1.0 + chiller_inverse_coefficient_of_performance
+        )
+        condenser_pump_specific_electric_power = (
+            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            * scipy.constants.value('standard acceleration of gravity')
+            * cooling_plant.at['water_density']
+            * cooling_plant.at['condenser_pump_head']
+            * condenser_specific_thermal_power
+            / (
+                cooling_plant.at['water_density']
+                * cooling_plant.at['condenser_water_enthalpy_difference']
+            )
+        )
+        cooling_tower_ventilation_specific_electric_power = (
+            cooling_plant.at['cooling_tower_set_ventilation_factor']
+            * condenser_specific_thermal_power
+        )
+        self.cooling_plant_efficiency = (
+            1.0 / sum([
+                chiller_inverse_coefficient_of_performance,
+                evaporator_pump_specific_electric_power,
+                condenser_pump_specific_electric_power,
+                cooling_tower_ventilation_specific_electric_power
+            ])
+        )
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Construct active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps)
+        )
+
+        # Instantiate indexes.
+        self.states = pd.Index([])
+        self.controls = pd.Index(['active_power'])
+        self.disturbances = pd.Index([])
+        self.outputs = pd.Index(['active_power', 'reactive_power', 'thermal_power'])
+
+        # Instantiate initial state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.states)
+        )
+
+        # Instantiate state space matrices.
+        self.state_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
+        )
+        self.control_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        )
+        self.disturbance_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.state_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        )
+        self.control_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        )
+        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            cooling_plant.at['reactive_power_nominal']
+            / cooling_plant.at['active_power_nominal']
+        )
+        self.control_output_matrix.at['thermal_power', 'active_power'] = self.cooling_plant_efficiency
+        self.disturbance_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.DataFrame(0.0, index=self.timesteps, columns=self.disturbances)
+        )
+
+        # Construct output constraint timeseries
+        self.output_maximum_timeseries = (
+            pd.DataFrame(
+                cooling_plant.loc[['active_power_nominal', 'reactive_power_nominal', 'thermal_power_nominal']],
+                index=self.timesteps,
+                columns=self.outputs
+            )
+        )
+        self.output_minimum_timeseries = (
+            pd.DataFrame(
+                [[0.0, 0.0, 0.0]],
+                index=self.timesteps,
+                columns=self.outputs
+            )
+        )
 
 
 class DERModelSet(object):

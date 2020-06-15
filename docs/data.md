@@ -184,28 +184,8 @@ Thermal grid definition.
 | `enthalpy_difference_distribution_water` | J/kg | Enthalpy difference between supply and return side of the distribution water, i.e. the water flowing to the thermal grid. |
 | `water_density` | kg/m³ | Density of the distribution water. |
 | `water_kinematic_viscosity` | m²/s | Kinematic viscosity of the distribution water. |
-| `cooling_plant_type` | | Cooling plant type identifier as defined in `thermal_grid_cooling_plant_types` |
-
-### `thermal_grid_cooling_plant_types`
-
-Thermal grid cooling plant types defining the technical characteristic of the district cooling plant.
-
-| Column | Unit | Description |
-| --- |:---:| --- |
-| `cooling_plant_type` | | Unique type identifier. |
-| `plant_pump_efficiency` | - | Pump efficiency (pump power / electric power) of the primary side pumps, i.e. the pumps within the district cooling plant. |
-| `condenser_pump_head` | m | Pump pressure head across the condenser. |
-| `evaporator_pump_head` | m | Pump pressure head across the evaporator. |
-| `chiller_set_beta` | - | Chiller set model beta factor, used to model the chiller efficiency. |
-| `chiller_set_condenser_minimum_temperature_difference` | K | Chiller set minimum temperature difference at the condenser, i.e. between the condenser water cycle and chiller refrigerant cycle. |
-| `chiller_set_evaporation_temperature` | K | Chiller set evaporation temperature. |
-| `chiller_set_cooling_capacity` | W | Chiller nominal maximum cooling capacity. |
-| `condenser_water_temperature_difference` | K | Condenser water temperature difference. |
-| `condenser_water_enthalpy_difference` | J/kg | Condenser water enthalpy difference. |
-| `cooling_tower_set_reference_temperature_condenser_water` | °C | Cooling tower set reference temperature for the condenser water, i.e. the temperature at which condenser water leaves the cooling tower. |
-| `cooling_tower_set_reference_temperature_wet_bulb` | °C | Cooling tower set reference temperature for the wet bulb ambient air temperature. |
-| `cooling_tower_set_reference_temperature_slope` | °C | Cooling tower reference temperature slope, used to model the cooling tower efficiency. |
-| `cooling_tower_set_ventilation_factor` | - | Cooling tower set ventilation factor, used to model the ventilation requirements depending on the condenser wster flow. |
+| `plant_type` | | Thermal supply plant type. Currently only `cooling_plant` is supported. |
+| `plant_model_name` | | Plant model identifier. If plant type `cooling_plant`, as defined in `cooling_plants`. |
 
 ### `thermal_grid_ders`
 
@@ -279,6 +259,19 @@ Cooling plants for modelling distributed generation facilities / heat pumps in t
 | --- |:---:| --- |
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders` / `thermal_grid_ders`). |
 | `cooling_efficiency` | | Coefficient of performance (COP). |
+| `plant_pump_efficiency` | - | Pump efficiency (pump power / electric power) of the primary side pumps, i.e. the pumps within the district cooling plant. |
+| `condenser_pump_head` | m | Pump pressure head across the condenser. |
+| `evaporator_pump_head` | m | Pump pressure head across the evaporator. |
+| `chiller_set_beta` | - | Chiller set model beta factor, used to model the chiller efficiency. |
+| `chiller_set_condenser_minimum_temperature_difference` | K | Chiller set minimum temperature difference at the condenser, i.e. between the condenser water cycle and chiller refrigerant cycle. |
+| `chiller_set_evaporation_temperature` | K | Chiller set evaporation temperature. |
+| `chiller_set_cooling_capacity` | W | Chiller nominal maximum cooling capacity. |
+| `condenser_water_temperature_difference` | K | Condenser water temperature difference. |
+| `condenser_water_enthalpy_difference` | J/kg | Condenser water enthalpy difference. |
+| `cooling_tower_set_reference_temperature_condenser_water` | °C | Cooling tower set reference temperature for the condenser water, i.e. the temperature at which condenser water leaves the cooling tower. |
+| `cooling_tower_set_reference_temperature_wet_bulb` | °C | Cooling tower set reference temperature for the wet bulb ambient air temperature. |
+| `cooling_tower_set_reference_temperature_slope` | °C | Cooling tower reference temperature slope, used to model the cooling tower efficiency. |
+| `cooling_tower_set_ventilation_factor` | - | Cooling tower set ventilation factor, used to model the ventilation requirements depending on the condenser water flow. |
 
 ### `ev_chargers`
 

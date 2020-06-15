@@ -1,6 +1,18 @@
 CREATE TABLE cooling_plants (
     model_name TEXT,
-    cooling_efficiency TEXT,
+    plant_pump_efficiency TEXT,
+    condenser_pump_head TEXT,
+    evaporator_pump_head TEXT,
+    chiller_set_beta TEXT,
+    chiller_set_condenser_minimum_temperature_difference TEXT,
+    chiller_set_evaporation_temperature TEXT,
+    chiller_set_cooling_capacity TEXT,
+    condenser_water_temperature_difference TEXT,
+    condenser_water_enthalpy_difference TEXT,
+    cooling_tower_set_reference_temperature_condenser_water TEXT,
+    cooling_tower_set_reference_temperature_wet_bulb TEXT,
+    cooling_tower_set_reference_temperature_slope TEXT,
+    cooling_tower_set_ventilation_factor TEXT,
     PRIMARY KEY(model_name)
 );
 CREATE TABLE electric_grid_ders (
@@ -174,23 +186,6 @@ CREATE TABLE scenarios (
     timestep_interval TEXT,
     PRIMARY KEY(scenario_name)
 );
-CREATE TABLE thermal_grid_cooling_plant_types (
-    cooling_plant_type TEXT,
-    plant_pump_efficiency TEXT,
-    condenser_pump_head TEXT,
-    evaporator_pump_head TEXT,
-    chiller_set_beta TEXT,
-    chiller_set_condenser_minimum_temperature_difference TEXT,
-    chiller_set_evaporation_temperature TEXT,
-    chiller_set_cooling_capacity TEXT,
-    condenser_water_temperature_difference TEXT,
-    condenser_water_enthalpy_difference TEXT,
-    cooling_tower_set_reference_temperature_condenser_water TEXT,
-    cooling_tower_set_reference_temperature_wet_bulb TEXT,
-    cooling_tower_set_reference_temperature_slope TEXT,
-    cooling_tower_set_ventilation_factor TEXT,
-    PRIMARY KEY(cooling_plant_type)
-);
 CREATE TABLE thermal_grid_ders (
     thermal_grid_name TEXT,
     der_name TEXT,
@@ -238,6 +233,7 @@ CREATE TABLE thermal_grids (
     enthalpy_difference_distribution_water TEXT,
     water_density TEXT,
     water_kinematic_viscosity TEXT,
-    cooling_plant_type TEXT,
+    plant_type TEXT,
+    plant_model_name TEXT,
     PRIMARY KEY(thermal_grid_name)
 );

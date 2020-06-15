@@ -77,6 +77,19 @@ class TestDERModels(unittest.TestCase):
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleBuildingModel: Completed in {time_duration:.6f} seconds.")
 
+    def test_cooling_plant_model(self):
+        # Obtain test data.
+        der_data = fledge.data_interface.DERData('singapore_tanjongpagar_modified')
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.CoolingPlantModel(
+            der_data,
+            der_data.cooling_plants.index[0]  # Take `der_name` of first row.
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test CoolingPlantModel: Completed in {time_duration:.6f} seconds.")
+
     def test_der_model_set(self):
         # Get result.
         time_start = time.time()

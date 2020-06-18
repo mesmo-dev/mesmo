@@ -22,7 +22,9 @@ def main():
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
-    results_path = fledge.utils.get_results_path('paper_2020_dlmp_combined_thermal_electric_scenario', scenario_name)
+    results_path = (
+        fledge.utils.get_results_path(f'paper_2020_1_dlmp_combined_thermal_electric_scenario_{scenario}', scenario_name)
+    )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

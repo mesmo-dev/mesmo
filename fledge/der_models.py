@@ -384,6 +384,13 @@ class FlexibleDERModel(DERModel):
                             ==
                             -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
                         )
+            elif type(self) is CoolingPlantModel:
+                for timestep in self.timesteps:
+                    optimization_problem.der_model_constraints.add(
+                        optimization_problem.der_thermal_power_vector[timestep, der]
+                        ==
+                        optimization_problem.output_vector[timestep, self.der_name, 'thermal_power']
+                    )
             else:
                 pass
 

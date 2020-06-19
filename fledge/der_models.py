@@ -871,7 +871,8 @@ class DERModelSet(object):
         self.flexible_der_names = (
             pd.Index(pd.concat([
                 der_data.flexible_loads['der_name'],
-                der_data.flexible_buildings['der_name']
+                der_data.flexible_buildings['der_name'],
+                der_data.cooling_plants['der_name']
             ]))
         )
         self.der_names = (
@@ -885,38 +886,27 @@ class DERModelSet(object):
         for der_name in self.der_names:
             if der_name in der_data.fixed_loads['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedLoadModel(
-                        der_data,
-                        der_name
-                    )
+                    fledge.der_models.FixedLoadModel(der_data, der_name)
                 )
             elif der_name in der_data.ev_chargers['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.EVChargerModel(
-                        der_data,
-                        der_name
-                    )
+                    fledge.der_models.EVChargerModel(der_data, der_name)
                 )
             elif der_name in der_data.fixed_generators['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedGeneratorModel(
-                        der_data,
-                        der_name
-                    )
+                    fledge.der_models.FixedGeneratorModel(der_data, der_name)
                 )
             elif der_name in der_data.flexible_loads['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleLoadModel(
-                        der_data,
-                        der_name
-                    )
+                    fledge.der_models.FlexibleLoadModel(der_data, der_name)
                 )
             elif der_name in der_data.flexible_buildings['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleBuildingModel(
-                        der_data,
-                        der_name
-                    )
+                    fledge.der_models.FlexibleBuildingModel(der_data, der_name)
+                )
+            elif der_name in der_data.cooling_plants['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    fledge.der_models.CoolingPlantModel(der_data, der_name)
                 )
             else:
                 logger.error(f"Cannot determine type of DER: {der_name}")

@@ -807,7 +807,7 @@ class CoolingPlantModel(FlexibleDERModel):
             cooling_plant.at['reactive_power_nominal']
             / cooling_plant.at['active_power_nominal']
         )
-        self.control_output_matrix.at['thermal_power', 'active_power'] = self.cooling_plant_efficiency
+        self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.cooling_plant_efficiency
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )
@@ -820,14 +820,14 @@ class CoolingPlantModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.DataFrame(
-                cooling_plant.loc[['active_power_nominal', 'reactive_power_nominal', 'thermal_power_nominal']],
+                [[0.0, 0.0, cooling_plant.at['thermal_power_nominal']]],
                 index=self.timesteps,
                 columns=self.outputs
             )
         )
         self.output_minimum_timeseries = (
             pd.DataFrame(
-                [[0.0, 0.0, 0.0]],
+                [[cooling_plant.at['active_power_nominal'], cooling_plant.at['reactive_power_nominal'], 0.0]],
                 index=self.timesteps,
                 columns=self.outputs
             )

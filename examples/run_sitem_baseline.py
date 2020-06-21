@@ -1,4 +1,8 @@
-"""Project SITEM baseline scenario evaluation script."""
+"""Project SITEM baseline scenario evaluation script.
+
+- This script relies on the 'ema_sample_grid' scenario which is not included in this repository. If you have the
+  scenario definition files, add the path to the definition in `config.yml` at `additional_data_paths=[]`.
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,22 +54,6 @@ def main():
     plt.xticks(
         range(len(problem.electric_grid_model.branches)),
         problem.electric_grid_model.branches,
-        rotation=45,
-        ha='right'
-    )
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-
-    plt.title('Maximum voltage rise [%]')
-    plt.bar(
-        range(len(problem.electric_grid_model.nodes)),
-        100.0 * (node_voltage_vector_magnitude_per_unit.loc['maximum', :] - 1.0)
-    )
-    plt.hlines(5.0, -0.5, len(problem.electric_grid_model.nodes) - 0.5, colors='red')
-    plt.xticks(
-        range(len(problem.electric_grid_model.nodes)),
-        problem.electric_grid_model.nodes,
         rotation=45,
         ha='right'
     )

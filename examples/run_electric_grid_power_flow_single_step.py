@@ -79,6 +79,15 @@ def main():
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     plt.show()
+    plt.title('Nodal voltage magnitude [p.u.]')
+    plt.bar(
+        range(len(electric_grid_model.nodes)),
+        np.abs(node_voltage_vector.ravel()) / np.abs(electric_grid_model.node_voltage_vector_reference)
+    )
+    plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
     plt.title('Branch apparent power flow (direction 1) [kVA]')
     plt.bar(range(len(electric_grid_model.branches)), np.abs(branch_power_vector_1.ravel()) / 1e3)
     plt.xticks(range(len(electric_grid_model.branches)), electric_grid_model.branches, rotation=45, ha='right')

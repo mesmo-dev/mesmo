@@ -38,6 +38,9 @@ class ElectricGridModel(object):
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
+        node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
+        branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
+        der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
     """
 
     phases: pd.Index
@@ -52,7 +55,9 @@ class ElectricGridModel(object):
     nodes: pd.Index
     branches: pd.Index
     ders: pd.Index
-    der_power_vector_nominal: np.ndarray
+    node_voltage_vector_reference: np.ndarray
+    branch_power_vector_magnitude_reference: np.ndarray
+    der_power_vector_reference: np.ndarray
 
     def __init__(
             self,
@@ -238,6 +243,53 @@ class ElectricGridModel(object):
         # Obtain index set for DERs.
         self.ders = pd.MultiIndex.from_frame(electric_grid_data.electric_grid_ders[['der_type', 'der_name']])
 
+        # Obtain reference / no load voltage vector.
+        self.node_voltage_vector_reference = np.zeros(len(self.nodes), dtype=np.complex)
+        voltage_phase_factors = (
+            np.array([
+                np.exp(0 * 1j),  # Phase 1.
+                np.exp(- 2 * np.pi / 3 * 1j),  # Phase 2.
+                np.exp(2 * np.pi / 3 * 1j)  # Phase 3.
+            ])
+        )
+        for node_name, node in electric_grid_data.electric_grid_nodes.iterrows():
+            # Obtain phases index & node index for positioning the node voltage in the voltage vector.
+            phases_index = fledge.utils.get_element_phases_array(node) - 1
+            node_index = fledge.utils.get_index(self.nodes, node_name=node_name)
+
+            # Insert voltage into voltage vector.
+            self.node_voltage_vector_reference[node_index] = (
+                voltage_phase_factors[phases_index]
+                * node.at['voltage'] / np.sqrt(3)
+            )
+
+        # Obtain reference / rated branch power vector.
+        self.branch_power_vector_magnitude_reference = np.zeros(len(self.branches), dtype=np.float)
+        for line_name, line in electric_grid_data.electric_grid_lines.iterrows():
+            # Obtain branch index.
+            branch_index = fledge.utils.get_index(self.branches, branch_type='line', branch_name=line_name)
+
+            # Insert rated power into branch power vector.
+            self.branch_power_vector_magnitude_reference[branch_index] = (
+                line.at['maximum_current']
+                * electric_grid_data.electric_grid_nodes.at[line.at['node_1_name'], 'voltage']
+                / np.sqrt(3)
+            )
+        for transformer_name, transformer in electric_grid_data.electric_grid_transformers.iterrows():
+            # Obtain branch index.
+            branch_index = fledge.utils.get_index(self.branches, branch_type='transformer', branch_name=transformer_name)
+
+            # Insert rated power into branch flow vector.
+            self.branch_power_vector_magnitude_reference[branch_index] = transformer.at['apparent_power']
+
+        # Obtain reference / nominal DER power vector.
+        self.der_power_vector_reference = (
+            (
+                electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
+                + 1.0j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
+            ).values
+        )
+
 
 class ElectricGridModelDefault(ElectricGridModel):
     """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
@@ -276,6 +328,9 @@ class ElectricGridModelDefault(ElectricGridModel):
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
+        node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
+        branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
+        der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
         node_admittance_matrix (scipy.sparse.spmatrix): Nodal admittance matrix.
         node_transformation_matrix (scipy.sparse.spmatrix): Nodal transformation matrix.
         branch_admittance_1_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'from' direction.
@@ -297,6 +352,7 @@ class ElectricGridModelDefault(ElectricGridModel):
     der_incidence_wye_matrix: scipy.sparse.spmatrix
     der_incidence_delta_matrix: scipy.sparse.spmatrix
     node_voltage_vector_no_load: np.ndarray
+    der_power_vector_nominal: np.ndarray
 
     @multimethod
     def __init__(
@@ -770,6 +826,7 @@ class ElectricGridModelDefault(ElectricGridModel):
         #   2) `voltage_no_load_method="by_calculation"`, i.e., the no load voltage is
         #   calculated from the source node voltage and the nodal admittance matrix.
         # - TODO: Check if no load voltage divide by sqrt(3) is correct.
+        # - TODO: Switch to use `node_voltage_vector_reference`.
         self.node_voltage_vector_no_load = (
             np.zeros((len(self.nodes), 1), dtype=np.complex)
         )
@@ -858,6 +915,7 @@ class ElectricGridModelDefault(ElectricGridModel):
             )
 
         # Construct nominal DER power vector.
+        # TODO: Switch to use `der_power_vector_reference`
         self.der_power_vector_nominal = (
             (
                 electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
@@ -900,6 +958,9 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
+        node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
+        branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
+        der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
     """
 
     @multimethod

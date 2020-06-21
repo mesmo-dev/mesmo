@@ -107,19 +107,22 @@ class FixedLoadModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power'].copy()
+            np.abs(der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'reactive_power'].copy()
+            np.abs(der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'reactive_power'].copy())
         )
         if 'per_unit' in fixed_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
             self.active_power_nominal_timeseries *= fixed_load.at['active_power_nominal']
             self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(fixed_load.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(fixed_load.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
 
@@ -144,19 +147,22 @@ class EVChargerModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power'].copy()
+            np.abs(der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'reactive_power'].copy()
+            np.abs(der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'reactive_power'].copy())
         )
         if 'per_unit' in ev_charger.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
             self.active_power_nominal_timeseries *= ev_charger.at['active_power_nominal']
             self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(ev_charger.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(ev_charger.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
 
@@ -180,7 +186,7 @@ class FixedGeneratorModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='active_power')
             * (
                 fixed_generator.at['active_power_nominal']
                 if pd.notnull(fixed_generator.at['active_power_nominal'])
@@ -188,7 +194,7 @@ class FixedGeneratorModel(FixedDERModel):
             )
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='reactive_power')
             * (
                 fixed_generator.at['reactive_power_nominal']
                 if pd.notnull(fixed_generator.at['reactive_power_nominal'])
@@ -198,7 +204,7 @@ class FixedGeneratorModel(FixedDERModel):
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='thermal_power')
             * (
                 fixed_generator.at['thermal_power_nominal']
                 if pd.notnull(fixed_generator.at['thermal_power_nominal'])
@@ -467,19 +473,22 @@ class FlexibleLoadModel(FlexibleDERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'active_power'].copy()
+            np.abs(der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'reactive_power'].copy()
+            np.abs(der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'reactive_power'].copy())
         )
         if 'per_unit' in flexible_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
             self.active_power_nominal_timeseries *= flexible_load.at['active_power_nominal']
             self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(flexible_load.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(flexible_load.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
         # Calculate nominal accumulated energy timeseries.
@@ -622,7 +631,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='active_power')
             * (
                 flexible_building.at['active_power_nominal']
                 if pd.notnull(flexible_building.at['active_power_nominal'])
@@ -630,7 +639,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             )
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='reactive_power')
             * (
                 flexible_building.at['reactive_power_nominal']
                 if pd.notnull(flexible_building.at['reactive_power_nominal'])
@@ -640,7 +649,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps)
+            pd.Series(1.0, index=self.timesteps, name='thermal_power')
             * (
                 flexible_building.at['thermal_power_nominal']
                 if pd.notnull(flexible_building.at['thermal_power_nominal'])
@@ -764,15 +773,15 @@ class CoolingPlantModel(FlexibleDERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='reactive_power')
         )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
         # Instantiate indexes.

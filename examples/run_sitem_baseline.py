@@ -9,6 +9,7 @@ import numpy as np
 import os
 import pandas as pd
 
+import fledge.data_interface
 import fledge.problems
 import fledge.utils
 
@@ -18,6 +19,9 @@ def main():
     # Settings.
     scenario_name = 'ema_sample_grid'
     results_path = fledge.utils.get_results_path('run_sitem_baseline', scenario_name)
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.data_interface.recreate_database()
 
     # Obtain nominal operation problem & solution.
     problem = fledge.problems.NominalOperationProblem(scenario_name)

@@ -616,7 +616,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 flexible_building.at['model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
-                timestep_delta=der_data.scenario_data.scenario.at['timestep_interval'],
+                timestep_interval=der_data.scenario_data.scenario.at['timestep_interval'],
                 connect_electric_grid=self.is_electric_grid_connected,
                 connect_thermal_grid_cooling=self.is_thermal_grid_connected
             )

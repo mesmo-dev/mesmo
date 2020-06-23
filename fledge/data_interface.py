@@ -8,7 +8,7 @@ import pandas as pd
 import sqlite3
 import typing
 
-import cobmo.database_interface
+import cobmo.data_interface
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
@@ -69,7 +69,7 @@ def recreate_database(
 
     # Recreate CoBMo database to include FLEDGE's CoBMo definitions.
     # TODO: Modify CoBMo config instead.
-    cobmo.database_interface.recreate_database(
+    cobmo.data_interface.recreate_database(
         additional_data_paths=[os.path.join(fledge.config.config['paths']['data'], 'cobmo_data')]
     )
 

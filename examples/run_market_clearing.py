@@ -36,6 +36,7 @@ def main():
     # ders = electric_grid_model.ders
     # der_power_vector = electric_grid_model.der_power_vector_reference
     # der_active_power_vector = np.real(der_power_vector)
+    # print(der_active_power_vector)
 
     # Obtain DER model set.
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
@@ -71,13 +72,14 @@ def main():
 
     # Obtain bids from every building in the scenario
     for timestep in timesteps:
+        # Define price range and points for the current timestep
+        lower_price_limit = price_forecast.at[timestep, 'lower_limit']
+        upper_price_limit = price_forecast.at[timestep, 'upper_limit']
+        price_points = np.linspace(lower_price_limit, upper_price_limit, 4)
         for der_name in der_model_set.der_names:
+            print(der_name)
             # Obtain DERModel from the model set
             der_model = der_model_set.flexible_der_models[der_name]
-            # Define price range and points
-            lower_price_limit = price_forecast.at[timestep, 'lower_limit']
-            upper_price_limit = price_forecast.at[timestep, 'upper_limit']
-            price_points = np.linspace(lower_price_limit, upper_price_limit, 4)
             der_bids[der_name][timestep].index = price_points
             for price in price_points:
                 # Create optimization problem and solve
@@ -110,7 +112,7 @@ def main():
 
         # TODO: Determine actual dispatch based on clearing price
         for der_name in der_model_set.der_names:
-            actual_dispatch[der_name][timestep] = der_bids[der_name][timestep].iloc[-1]
+            actual_dispatch[der_name][timestep] = obtain_dispatch(clearing_prices[timestep], der_bids[der_name][timestep])
 
         # TODO: Update forecast model with new market clearing price
         if timestep == timesteps[-1]: # Skip forecast model update if at the last timestep
@@ -156,9 +158,23 @@ def main():
 
 def obtain_dispatch(
         clearing_price: float,
-        der_bids: dict
-) :
-    pass
+        bids_series: pd.Series
+) -> float :
+    lowest_price = bids_series.index[0]
+    highest_price = bids_series.index[-1]
+    if clearing_price < lowest_price:
+        dispatch_quantity = bids_series.iloc[0]
+    elif clearing_price > highest_price:
+        dispatch_quantity = bids_series.iloc[-1]
+    else:
+        price_intervals = (
+            pd.arrays.IntervalArray(
+                [pd.Interval(bids_series.index[j], bids_series.index[j+1]) for j in range(len(bids_series)-1)]
+                )
+        )
+        selected_index = price_intervals[price_intervals.contains(clearing_price)].right
+        dispatch_quantity = bids_series[selected_index]
+    return dispatch_quantity.values
 
 if __name__ == "__main__":
     main()

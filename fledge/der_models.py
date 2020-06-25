@@ -437,6 +437,10 @@ class FlexibleDERModel(DERModel):
         control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
 
+        # Solve optimization problem
+        solver = pyo.SolverFactory('gurobi')
+        solver.solve(optimization_problem)
+
         # Obtain results.
         for timestep in self.timesteps:
             for state in self.states:
@@ -687,6 +691,79 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Obtain output constraint timeseries.
         self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
+
+    def define_optimization_variables_bids(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+    ):
+        optimization_problem.variable_z = pyo.Var(domain=pyo.NonNegativeReals)
+        optimization_problem.variable_gamma = len(self.timesteps)
+        optimization_problem.variable_q = pyo.Var(self.timesteps, [self.der_name], domain=pyo.NonNegativeReals)
+        optimization_problem.variable_y = pyo.Var(self.timesteps, [self.der_name], domain=pyo.NonNegativeReals)
+
+    def define_optimization_constraints_bids(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            current_timestep,
+            price_forecast: pd.DataFrame,
+            actual_dispatch: pd.Series
+    ):
+        if optimization_problem.find_component('der_model_constraints') is None:
+            optimization_problem.der_model_constraints = pyo.ConstraintList()
+
+        for timestep in self.timesteps:
+            if timestep < current_timestep:
+                optimization_problem.der_model_constraints.add(
+                    optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power'] ==
+                    actual_dispatch[timestep]
+                )
+            elif timestep == current_timestep:
+                continue
+            else:
+                optimization_problem.der_model_constraints.add(
+                    optimization_problem.variable_z + optimization_problem.variable_q[timestep, self.der_name]
+                    >=
+                    ((price_forecast.at[timestep, 'upper_limit'] - price_forecast.at[
+                        timestep, 'expected_price'])
+                     * optimization_problem.variable_y[timestep, self.der_name])
+                )
+                optimization_problem.der_model_constraints.add(
+                    (optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                     * 1800 / 3600.0 / 1000.0)
+                    <=
+                    optimization_problem.variable_y[timestep, self.der_name]
+                )
+
+    def define_optimization_objective_bids(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            current_timestep,
+            current_price: float,
+            price_forecast: pd.DataFrame
+    ):
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        # Redundant term
+        # optimization_problem.objective.expr += (
+        #     sum(
+        #         actual_dispatch.at[timestep, 'clearing_price']
+        #         * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+        #         for timestep in self.timesteps if timestep < current_timestep
+        #     )
+        # )
+        optimization_problem.objective.expr += (
+            sum(
+                price_forecast.at[timestep, 'expected_price']
+                * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                for timestep in self.timesteps if timestep > current_timestep
+            )
+        )
+        optimization_problem.objective.expr += (
+                current_price
+                * optimization_problem.output_vector[current_timestep, self.der_name, 'grid_electric_power']
+                + optimization_problem.variable_gamma * optimization_problem.variable_z
+        )
 
 
 class CoolingPlantModel(FlexibleDERModel):

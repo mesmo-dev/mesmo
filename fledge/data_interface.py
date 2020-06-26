@@ -56,13 +56,17 @@ def recreate_database(
 
                 # Write new table content.
                 logger.debug(f"Loading {csv_file} into database.")
-                table = pd.read_csv(csv_file)
-                table.to_sql(
-                    table_name,
-                    con=database_connection,
-                    if_exists='append',
-                    index=False
-                )
+                try:
+                    table = pd.read_csv(csv_file)
+                    table.to_sql(
+                        table_name,
+                        con=database_connection,
+                        if_exists='append',
+                        index=False
+                    )
+                except Exception:
+                    logger.error(f"Error loading {csv_file} into database.")
+                    raise
 
     cursor.close()
     database_connection.close()

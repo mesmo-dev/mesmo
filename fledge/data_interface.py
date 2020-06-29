@@ -49,7 +49,10 @@ def recreate_database(
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
             # Exclude CSV files from CoBMo data folders.
-            if os.path.join('data', 'cobmo_data') not in csv_file:
+            if (
+                    (os.path.join('cobmo', 'data') not in csv_file)
+                    and (os.path.join('data', 'cobmo_data') not in csv_file)
+            ):
 
                 # Obtain table name.
                 table_name = os.path.splitext(os.path.basename(csv_file))[0]

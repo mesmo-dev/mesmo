@@ -39,6 +39,7 @@ autodoc_mock_imports = [
     'cobmo',
     'matplotlib',
     'multimethod',
+    'networkx',
     'natsort',
     'numpy',
     'opendssdirect',

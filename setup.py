@@ -11,6 +11,7 @@ setuptools.setup(
         # 'hvplot',  # TODO: Currently causes error on Github Actions.
         'matplotlib',
         'multimethod',
+        'networkx',
         'natsort',
         'numpy',
         'OpenDSSDirect.py',

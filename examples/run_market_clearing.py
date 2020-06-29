@@ -6,16 +6,13 @@ import os
 import pyomo.environ as pyo
 import datetime as dt
 
-import cobmo.config
-
-import forecast.forecast_model
-
 import fledge.config
 import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.utils
 import fledge.der_models
-import fledge.data_interface
+import fledge.electric_grid_models
+import fledge.market_models
+import fledge.utils
+import forecast.forecast_model  # From cobmo.
 
 
 def main():
@@ -26,8 +23,11 @@ def main():
     results_path = fledge.utils.get_results_path('run_market_clearing', scenario_name)
     # price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
 
-    # Recreate
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
+
+    # Obtain market model.
+    market_model = fledge.market_models.MarketModel(scenario_name)
 
     # Obtain electric grid model.
     # electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -125,8 +125,7 @@ def main():
 
     print(der_bids)
 
-
-    # Define abritrary DER bids.
+    # # Define abritrary DER bids.
     # der_bids = dict.fromkeys(ders)
     # for der_index, der in enumerate(ders):
     #     der_bids[der] = (
@@ -136,24 +135,31 @@ def main():
     #         )
     #     )
 
-    # Define arbitrary clearing price.
-    cleared_price = 0.5
+    # # Define arbitrary clearing price.
+    # cleared_price = 0.5
+    #
+    # # Obtain dispatch power.
+    # der_active_power_vector_dispatch = np.zeros(der_active_power_vector.shape, dtype=np.float)
+    # for der_index, der in enumerate(ders):
+    #     if der_active_power_vector[der_index] < 0.0:
+    #         der_active_power_vector_dispatch[der_index] += (
+    #             der_bids[der].loc[der_bids[der].index > cleared_price].sum()
+    #         )
+    #     elif der_active_power_vector[der_index] > 0.0:
+    #         der_active_power_vector_dispatch[der_index] += (
+    #             der_bids[der].loc[der_bids[der].index < cleared_price].sum()
+    #         )
 
-    # Obtain dispatch power.
-    der_active_power_vector_dispatch = np.zeros(der_active_power_vector.shape, dtype=np.float)
-    for der_index, der in enumerate(ders):
-        if der_active_power_vector[der_index] < 0.0:
-            der_active_power_vector_dispatch[der_index] += (
-                der_bids[der].loc[der_bids[der].index > cleared_price].sum()
-            )
-        elif der_active_power_vector[der_index] > 0.0:
-            der_active_power_vector_dispatch[der_index] += (
-                der_bids[der].loc[der_bids[der].index < cleared_price].sum()
-            )
+    (
+        cleared_prices,
+        der_active_power_vector_dispatch
+    ) = market_model.clear_market(
+        der_bids
+    )
 
     # Print results.
-    print(f"der_bids = {der_bids}")
-    print(f"der_active_power_vector_dispatch = {der_active_power_vector_dispatch}")
+    print(f"der_bids = \n{der_bids}")
+    print(f"der_active_power_vector_dispatch = \n{der_active_power_vector_dispatch}")
 
 
 def obtain_dispatch(

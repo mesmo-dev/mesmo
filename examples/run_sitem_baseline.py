@@ -1,7 +1,7 @@
 """Project SITEM baseline scenario evaluation script.
 
 - This script relies on the 'ema_sample_grid' scenario which is not included in this repository. If you have the
-  scenario definition files, add the path to the definition in `config.yml` at `additional_data_paths=[]`.
+  scenario definition files, add the path to the definition in `config.yml` at `additional_data: [XXX]`.
 """
 
 import matplotlib.pyplot as plt

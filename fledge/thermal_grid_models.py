@@ -462,7 +462,7 @@ class LinearThermalGridModel(object):
             pyo.Var(timesteps.to_list(), self.thermal_grid_model.branches.to_list())
         )
         optimization_problem.pump_power = (
-            pyo.Var(timesteps.to_list())
+            pyo.Var(timesteps.to_list(), domain=pyo.NonNegativeReals)  # TODO: Add supply / demand balance constraint.
         )
 
     def define_optimization_constraints(

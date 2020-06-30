@@ -95,22 +95,38 @@ class MarketModel(object):
             raise
 
         # Obtain cleared price.
-        cleared_price = self.price_timeseries.at[timestep]
+        cleared_price = self.price_timeseries.at[timestep, 'price_value']
 
         # Obtain dispatch power.
-        der_active_power_vector_dispatch = np.zeros(len(der_bids), dtype=np.float)
-        for der_index, der in enumerate(der_bids):
+        # der_active_power_vector_dispatch = np.zeros(len(der_bids), dtype=np.float)
+        # for der_index, der in enumerate(der_bids):
+        #
+        #     # For loads (negative power).
+        #     if der_bids[der].sum() < 0.0:
+        #         der_active_power_vector_dispatch[der_index] += (
+        #             der_bids[der].loc[der_bids[der].index > cleared_price].sum()
+        #         )
+        #
+        #     # For generators (positive power).
+        #     elif der_bids[der].sum() > 0.0:
+        #         der_active_power_vector_dispatch[der_index] += (
+        #             der_bids[der].loc[der_bids[der].index < cleared_price].sum()
+        #         )
+
+        # Obtain dispatch power.
+        der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())
+        for der in der_bids:
 
             # For loads (negative power).
-            if der_bids[der].sum() < 0.0:
-                der_active_power_vector_dispatch[der_index] += (
-                    der_bids[der].loc[der_bids[der].index > cleared_price].sum()
+            if der_bids[der][timestep].sum() < 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index > cleared_price].sum()
                 )
 
             # For generators (positive power).
-            elif der_bids[der].sum() > 0.0:
-                der_active_power_vector_dispatch[der_index] += (
-                    der_bids[der].loc[der_bids[der].index < cleared_price].sum()
+            elif der_bids[der][timestep].sum() > 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index < cleared_price].sum()
                 )
 
         return (

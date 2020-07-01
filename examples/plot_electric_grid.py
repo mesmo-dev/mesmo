@@ -12,6 +12,7 @@ import os
 import pandas as pd
 
 import fledge.data_interface
+import fledge.plots
 import fledge.utils
 
 
@@ -24,30 +25,8 @@ def main():
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
 
-    # Obtain electric grid data.
-    electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
-
-    # Create electric grid graph.
-    electric_grid_graph = nx.DiGraph()
-    electric_grid_graph.add_edges_from(
-        electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
-    )
-    electric_grid_graph.add_edges_from(
-        electric_grid_data.electric_grid_transformers.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
-    )
-
-    # Remove nodes without latitude / longitude & obtain node positions / labels.
-    electric_grid_graph.remove_nodes_from(
-        electric_grid_data.electric_grid_nodes.index[
-            electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']].isnull().any(axis='columns')
-        ]
-    )
-    node_positions = (
-        electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']].T.to_dict('list')
-    )
-    node_labels = (
-        electric_grid_data.electric_grid_nodes.loc[:, 'node_name'].to_dict()
-    )
+    # Obtain electric grid graph.
+    electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
     # Plot electric grid graph.
     plt.figure(
@@ -56,8 +35,8 @@ def main():
     )
     nx.draw(
         electric_grid_graph,
-        pos=node_positions,
-        labels=node_labels,
+        pos=electric_grid_graph.node_positions,
+        labels=electric_grid_graph.node_labels,
         arrows=False,
         node_size=1.0,
         width=0.25,

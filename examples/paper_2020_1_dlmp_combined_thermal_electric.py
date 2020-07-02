@@ -210,11 +210,26 @@ def main():
     )
     colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
     for der in thermal_grid_model.ders:
+
+        # Obtain corresponding node.
+        node = (
+            thermal_grid_model.nodes[
+                thermal_grid_model.der_node_incidence_matrix[
+                :,
+                thermal_grid_model.ders.get_loc(der)
+                ].toarray().ravel() == 1
+                ][0]
+        )
+
+        # Create plot.
         fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
-        ax1.set_title(f'Flexible building "{der[1]}"')
+        ax1.set_title(f'{der}')
         ax1.stackplot(
             scenario_data.timesteps,
-            thermal_grid_dlmp.loc[:, (slice(None), *der)].droplevel(['der_type', 'der_name'], axis='columns').T,
+            (
+                thermal_grid_dlmp.loc[:, (slice(None), *node)].droplevel(['node_type', 'node_name'], axis='columns').T
+                * 1.0e3
+            ),
             labels=['Energy', 'Pumping', 'Head', 'Congest.'],
             colors=[colors[0], colors[1], colors[2], colors[3]]
         )

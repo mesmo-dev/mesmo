@@ -383,21 +383,6 @@ class LinearThermalGridModel(object):
         node_index_no_source = (
             fledge.utils.get_index(self.thermal_grid_model.nodes, node_type='no_source')  # Define shorthand.
         )
-        branch_node_incidence_matrix_tranpose_inverse = (
-            scipy.sparse.dok_matrix(
-                (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)),
-                dtype=np.float
-            )
-        )
-        branch_node_incidence_matrix_tranpose_inverse[np.ix_(
-            node_index_no_source,
-            range(len(self.thermal_grid_model.branches))
-        )] = (
-            scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_node_incidence_matrix[node_index_no_source, :].transpose()
-            )
-        )
-        branch_node_incidence_matrix_tranpose_inverse = branch_node_incidence_matrix_tranpose_inverse.tocsr()
         branch_node_incidence_matrix_inverse = (
             scipy.sparse.dok_matrix(
                 (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)),
@@ -413,17 +398,38 @@ class LinearThermalGridModel(object):
             )
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
+        branch_node_incidence_matrix_transpose_inverse = (
+            scipy.sparse.dok_matrix(
+                (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)),
+                dtype=np.float
+            )
+        )
+        branch_node_incidence_matrix_transpose_inverse[np.ix_(
+            node_index_no_source,
+            range(len(self.thermal_grid_model.branches))
+        )] = (
+            scipy.sparse.linalg.inv(
+                self.thermal_grid_model.branch_node_incidence_matrix[node_index_no_source, :].transpose()
+            )
+        )
+        branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()
         der_node_incidence_matrix_transpose = np.transpose(self.thermal_grid_model.der_node_incidence_matrix)
 
         # Obtain sensitivity matrices.
-        self.sensitivity_branch_flow_by_der_power = (
+        self.sensitivity_node_power_by_der_power = (
+            self.thermal_grid_model.der_node_incidence_matrix
+        )
+        self.sensitivity_branch_flow_by_node_power = (
             branch_node_incidence_matrix_inverse
-            @ self.thermal_grid_model.der_node_incidence_matrix
             / fledge.config.water_density
             / self.thermal_grid_model.enthalpy_difference_distribution_water
         )
-        self.sensitivity_node_head_by_der_power = (
-            branch_node_incidence_matrix_tranpose_inverse
+        self.sensitivity_branch_flow_by_der_power = (
+            self.sensitivity_branch_flow_by_node_power
+            @ self.sensitivity_node_power_by_der_power
+        )
+        self.sensitivity_node_head_by_node_power = (
+            branch_node_incidence_matrix_transpose_inverse
             @ scipy.sparse.diags(
                 thermal_power_flow_solution.branch_flow_vector
                 * thermal_power_flow_solution.branch_friction_factor_vector
@@ -434,15 +440,23 @@ class LinearThermalGridModel(object):
                     * np.pi ** 2
                 )
             )
-            @ self.sensitivity_branch_flow_by_der_power
+            @ self.sensitivity_branch_flow_by_node_power
         )
-        self.sensitivity_pump_power_by_der_power = (
+        self.sensitivity_node_head_by_der_power = (
+            self.sensitivity_node_head_by_node_power
+            @ self.sensitivity_node_power_by_der_power
+        )
+        self.sensitivity_pump_power_by_node_power = (
             (-1.0 * thermal_power_flow_solution.der_flow_vector)
             @ (-2.0 * der_node_incidence_matrix_transpose)
-            @ self.sensitivity_node_head_by_der_power
+            @ self.sensitivity_node_head_by_node_power
             * fledge.config.water_density
             * fledge.config.gravitational_acceleration
             / self.thermal_grid_model.distribution_pump_efficiency
+        )
+        self.sensitivity_pump_power_by_der_power = (
+            self.sensitivity_pump_power_by_node_power
+            @ self.sensitivity_node_power_by_der_power
         )
 
     def define_optimization_variables(
@@ -619,47 +633,47 @@ class LinearThermalGridModel(object):
 
         # Instantiate DLMP variables.
         node_head_vector_minimum_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         branch_flow_vector_maximum_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         pump_power_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
         thermal_grid_energy_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         thermal_grid_head_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         thermal_grid_congestion_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         thermal_grid_pump_dlmp = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
         # Obtain DLMPs.
         for timestep in timesteps:
             node_head_vector_minimum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_node_head_by_der_power.transpose()
+                    self.sensitivity_node_head_by_node_power.transpose()
                     @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
             branch_flow_vector_maximum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_branch_flow_by_der_power.transpose()
+                    self.sensitivity_branch_flow_by_node_power.transpose()
                     @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
                 ).ravel()
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
             pump_power_dlmp.loc[timestep, :] = (
                 -1.0
-                * self.sensitivity_pump_power_by_der_power.ravel()
+                * self.sensitivity_pump_power_by_node_power.ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
 

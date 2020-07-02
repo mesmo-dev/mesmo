@@ -744,14 +744,6 @@ class FlexibleBuildingModel(FlexibleDERModel):
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
 
-        # Redundant term
-        # optimization_problem.objective.expr += (
-        #     sum(
-        #         actual_dispatch.at[timestep, 'clearing_price']
-        #         * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-        #         for timestep in self.timesteps if timestep < current_timestep
-        #     )
-        # )
         optimization_problem.objective.expr += (
             sum(
                 price_forecast.at[timestep, 'expected_price']
@@ -1040,6 +1032,7 @@ class DERModelSet(object):
         optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
         optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
         optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
+        optimization_problem.peak_load = pyo.Var(domain=pyo.NonNegativeReals) # peak load over the entire planning horizon
 
     def define_optimization_constraints(
             self,
@@ -1060,6 +1053,14 @@ class DERModelSet(object):
                 thermal_power_flow_solution
             )
 
+        # Additional constraints for peak load reduction
+        for timestep in self.timesteps:
+            optimization_problem.der_model_constraints.add(
+                sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
+                    for der_name in self.der_names) <= optimization_problem.peak_load
+            )
+
+    @multimethod
     def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
@@ -1073,6 +1074,17 @@ class DERModelSet(object):
                 price_timeseries
             )
 
+    @multimethod
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyo.ConcreteModel
+    ):
+
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        optimization_problem.objective.expr += optimization_problem.peak_load
+
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
@@ -1082,6 +1094,10 @@ class DERModelSet(object):
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
         control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
+
+        # Solve optimization problem
+        solver = pyo.SolverFactory('gurobi')
+        solver.solve(optimization_problem)
 
         # Obtain results.
         for timestep in self.timesteps:

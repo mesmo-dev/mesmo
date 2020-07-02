@@ -775,6 +775,8 @@ class PriceData(object):
                     limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                 )
             )
+            # TODO: Fix price unit conversion.
+            # self.price_timeseries_dict[price_type].loc[:, 'price_value'] *= 1.0e-3  # 1/kWh in 1/Wh.
 
 
 class ResultsDict(typing.Dict[str, pd.DataFrame]):

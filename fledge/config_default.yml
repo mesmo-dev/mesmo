@@ -19,3 +19,4 @@ logs:
   format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
 plots:
   matplotlib_style: seaborn-colorblind
+  colormap: viridis_r

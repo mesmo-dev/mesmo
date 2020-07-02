@@ -1,6 +1,7 @@
 """Configuration module."""
 
 import logging
+import matplotlib
 import matplotlib.pyplot as plt
 import multiprocessing
 import os
@@ -132,6 +133,7 @@ parallel_pool = None
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
+matplotlib.rcParams['image.cmap'] = config['plots']['colormap']
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.

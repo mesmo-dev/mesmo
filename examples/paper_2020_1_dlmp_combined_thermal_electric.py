@@ -231,7 +231,8 @@ def main():
                 * 1.0e3
             ),
             labels=['Energy', 'Pumping', 'Head', 'Congest.'],
-            colors=[colors[0], colors[1], colors[2], colors[3]]
+            colors=[colors[0], colors[1], colors[2], colors[3]],
+            step='post'
         )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
@@ -255,7 +256,7 @@ def main():
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
-        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 20.0))
+        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)

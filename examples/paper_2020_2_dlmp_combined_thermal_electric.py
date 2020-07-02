@@ -229,7 +229,8 @@ def main():
                 * 1.0e3
             ),
             labels=['Energy', 'Pumping', 'Head', 'Congest.'],
-            colors=[colors[0], colors[1], colors[2], colors[3]]
+            colors=[colors[0], colors[1], colors[2], colors[3]],
+            step='post'
         )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')

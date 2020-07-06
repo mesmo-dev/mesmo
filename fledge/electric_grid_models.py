@@ -2379,71 +2379,72 @@ class LinearElectricGridModel(object):
                     )
 
         # Instantiate DLMP variables.
+        # TODO: Split into DLMPs for wye / delta power.
         voltage_magnitude_vector_minimum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         voltage_magnitude_vector_maximum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         branch_power_vector_1_squared_maximum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         branch_power_vector_2_squared_maximum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         loss_active_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         loss_reactive_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
         electric_grid_energy_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         electric_grid_voltage_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         electric_grid_congestion_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         electric_grid_loss_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
         # Obtain DLMPs.
         for timestep in timesteps:
             voltage_magnitude_vector_minimum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    self.sensitivity_voltage_magnitude_by_power_wye_active.transpose()
                     @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
             )
             voltage_magnitude_vector_maximum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    self.sensitivity_voltage_magnitude_by_power_wye_active.transpose()
                     @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
                 ).ravel()
             )
             branch_power_vector_1_squared_maximum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_branch_power_1_by_der_power_active.transpose()
+                    self.sensitivity_branch_power_1_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
                 ).ravel()
             )
             branch_power_vector_2_squared_maximum_dlmp.loc[timestep, :] = (
                 (
-                    self.sensitivity_branch_power_2_by_der_power_active.transpose()
+                    self.sensitivity_branch_power_2_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
                 ).ravel()
             )
             loss_active_dlmp.loc[timestep, :] = (
-                self.sensitivity_loss_active_by_der_power_active.ravel()
+                self.sensitivity_loss_active_by_power_wye_active.ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
             loss_reactive_dlmp.loc[timestep, :] = (
                 -1.0
-                * self.sensitivity_loss_reactive_by_der_power_active.ravel()
+                * self.sensitivity_loss_reactive_by_power_wye_active.ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
 

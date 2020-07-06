@@ -21,7 +21,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar_modified'
-    scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
+    scenario = 3  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
     results_path = (
         fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario}', scenario_name)
     )
@@ -48,7 +48,7 @@ def main():
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.energy_transfer_station_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
-    thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
+    # thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
@@ -223,7 +223,7 @@ def main():
 
         # Create plot.
         fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
-        ax1.set_title(f'{der}')
+        ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
         ax1.stackplot(
             scenario_data.timesteps,
             (
@@ -262,7 +262,7 @@ def main():
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
         lax.axis("off")
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
+        plt.savefig(os.path.join(results_path, f'thermal_grid_der_dlmp_{der}.png'))
         plt.close()
 
     # Plot thermal grid DLMPs in grid.

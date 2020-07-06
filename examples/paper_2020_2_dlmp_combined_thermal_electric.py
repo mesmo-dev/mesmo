@@ -316,6 +316,60 @@ def main():
         plt.show()
         plt.close()
 
+    # Plot electric grid DLMPs in grid.
+    dlmp_types = [
+        'electric_grid_energy_dlmp',
+        'electric_grid_voltage_dlmp',
+        'electric_grid_congestion_dlmp',
+        'electric_grid_loss_dlmp'
+    ]
+    timestep = scenario_data.timesteps[scenario_data.timesteps.hour == 15][0]  # First timestep in hour 3pm.
+    for dlmp_type in dlmp_types:
+        electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
+        node_color = (
+            dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(electric_grid_graph.nodes).values
+            * 1.0e3
+        )
+        plt.title(
+            f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
+            f" at {timestep.strftime('%H:%M:%S')}"
+        )
+        nx.draw_networkx_nodes(
+            electric_grid_graph,
+            pos=electric_grid_graph.node_positions,
+            nodelist=(
+                electric_grid_model.nodes[
+                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+                ].get_level_values('node_name')[:1].to_list()
+            ),
+            node_size=150.0,
+            node_color='red',
+            with_labels=False
+        )
+        nx.draw_networkx(
+            electric_grid_graph,
+            pos=electric_grid_graph.node_positions,
+            arrows=False,
+            node_size=100.0,
+            node_color=node_color,
+            edgecolors='black',  # Make node border visible.
+            with_labels=False
+        )
+        sm = (
+            plt.cm.ScalarMappable(
+                norm=plt.Normalize(
+                    vmin=np.min(node_color),
+                    vmax=np.max(node_color)
+                )
+            )
+        )
+        cb = plt.colorbar(sm, shrink=0.9)
+        cb.set_label('Price [S$/MWh]')
+        plt.tight_layout()
+        plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+        plt.show()
+        plt.close()
+
     # Print results path.
     print(f"Results are stored in: {results_path}")
 

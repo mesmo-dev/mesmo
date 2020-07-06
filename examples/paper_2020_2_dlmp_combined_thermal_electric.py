@@ -265,6 +265,77 @@ def main():
         plt.savefig(os.path.join(results_path, f'thermal_grid_der_dlmp_{der}.png'))
         plt.close()
 
+    # Plot electric grid DLMPs.
+    electric_grid_dlmp = (
+        pd.concat(
+            [
+                dlmps['electric_grid_energy_dlmp'],
+                dlmps['electric_grid_loss_dlmp'],
+                dlmps['electric_grid_voltage_dlmp'],
+                dlmps['electric_grid_congestion_dlmp']
+            ],
+            axis='columns',
+            keys=['energy', 'loss', 'voltage', 'congestion'],
+            names=['dlmp_type']
+        )
+    )
+    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    for der in electric_grid_model.ders:
+
+        # Obtain corresponding node.
+        # TODO: Consider delta connected DERs.
+        node = (
+            electric_grid_model.nodes[
+                electric_grid_model.der_incidence_wye_matrix[
+                    :, electric_grid_model.ders.get_loc(der)
+                ].toarray().ravel() > 0
+            ]
+        )
+
+        # Create plot.
+        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
+        ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
+        ax1.stackplot(
+            scenario_data.timesteps,
+            (
+                electric_grid_dlmp.loc[:, (slice(None), *zip(*node))].groupby('dlmp_type', axis='columns').mean().T
+                * 1.0e3
+            ),
+            labels=['Energy', 'Loss', 'Voltage', 'Congest.'],
+            colors=[colors[0], colors[1], colors[2], colors[3]],
+            step='post'
+        )
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Price [S$/MWh]')
+        # ax1.set_ylim((0.0, 10.0))
+        ax2 = plt.twinx(ax1)
+        ax2.plot(
+            results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+            label='Thrm. pw.',
+            drawstyle='steps-post',
+            color='darkgrey',
+            linewidth=3
+        )
+        ax2.plot(
+            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+            label='Active pw.',
+            drawstyle='steps-post',
+            color='black',
+            linewidth=1.5
+        )
+        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
+        ax2.set_xlabel('Time')
+        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
+        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
+        lax.axis("off")
+        plt.tight_layout()
+        plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
+        plt.close()
+
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
         'thermal_grid_energy_dlmp',

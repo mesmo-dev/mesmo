@@ -2,6 +2,7 @@
 
 import matplotlib.dates
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import os
 import pandas as pd
@@ -11,6 +12,7 @@ import fledge.config
 import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
+import fledge.plots
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -261,6 +263,57 @@ def main():
         lax.axis("off")
         plt.tight_layout()
         plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
+        plt.close()
+
+    # Plot thermal grid DLMPs in grid.
+    dlmp_types = [
+        'thermal_grid_energy_dlmp',
+        'thermal_grid_pump_dlmp',
+        'thermal_grid_head_dlmp',
+        'thermal_grid_congestion_dlmp'
+    ]
+    timestep = scenario_data.timesteps[scenario_data.timesteps.hour == 15][0]  # First timestep in hour 3pm.
+    for dlmp_type in dlmp_types:
+        thermal_grid_graph = fledge.plots.ThermalGridGraph(scenario_name)
+        node_color = (
+            dlmps[dlmp_type].loc[timestep, :].droplevel('node_type').reindex(thermal_grid_graph.nodes).values
+            * 1.0e3
+        )
+        plt.title(f"{dlmp_type.replace('_', ' ').capitalize()} at {timestep.strftime('%H:%M:%S')}")
+        nx.draw_networkx_nodes(
+            thermal_grid_graph,
+            pos=thermal_grid_graph.node_positions,
+            nodelist=(
+                thermal_grid_model.nodes[
+                    fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')
+                ].droplevel('node_type').to_list()
+            ),
+            node_size=150.0,
+            node_color='red',
+            with_labels=False
+        )
+        nx.draw_networkx(
+            thermal_grid_graph,
+            pos=thermal_grid_graph.node_positions,
+            arrows=False,
+            node_size=100.0,
+            node_color=node_color,
+            edgecolors='black',  # Make node border visible.
+            with_labels=False
+        )
+        sm = (
+            plt.cm.ScalarMappable(
+                norm=plt.Normalize(
+                    vmin=np.min(node_color),
+                    vmax=np.max(node_color)
+                )
+            )
+        )
+        cb = plt.colorbar(sm, shrink=0.9)
+        cb.set_label('Price [S$/MWh]')
+        plt.tight_layout()
+        plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+        plt.show()
         plt.close()
 
     # Print results path.

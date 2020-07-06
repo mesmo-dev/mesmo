@@ -276,17 +276,20 @@ def main():
     for dlmp_type in dlmp_types:
         thermal_grid_graph = fledge.plots.ThermalGridGraph(scenario_name)
         node_color = (
-            dlmps[dlmp_type].loc[timestep, :].droplevel('node_type').reindex(thermal_grid_graph.nodes).values
+            dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(thermal_grid_graph.nodes).values
             * 1.0e3
         )
-        plt.title(f"{dlmp_type.replace('_', ' ').capitalize()} at {timestep.strftime('%H:%M:%S')}")
+        plt.title(
+            f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
+            f" at {timestep.strftime('%H:%M:%S')}"
+        )
         nx.draw_networkx_nodes(
             thermal_grid_graph,
             pos=thermal_grid_graph.node_positions,
             nodelist=(
                 thermal_grid_model.nodes[
                     fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')
-                ].droplevel('node_type').to_list()
+                ].get_level_values('node_name')[:1].to_list()
             ),
             node_size=150.0,
             node_color='red',

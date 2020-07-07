@@ -77,6 +77,34 @@ class FixedDERModel(DERModel):
             # TODO: Implement fixed load model for thermal grid.
             pass
 
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ):
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+        if type(self) is FixedGeneratorModel:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * self.levelized_cost_of_energy
+                    * self.active_power_nominal_timeseries.at[timestep]
+                    for timestep in self.timesteps
+                )
+            )
+        else:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * price_timeseries.at[timestep, 'price_value']
+                    * self.active_power_nominal_timeseries.at[timestep]
+                    for timestep in self.timesteps
+                )
+            )
+
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
@@ -967,7 +995,7 @@ class DERModelSet(object):
 
         # Define DER constraints for each DER.
         for der_name in self.der_names:
-            self.flexible_der_models[der_name].define_optimization_constraints(
+            self.der_models[der_name].define_optimization_constraints(
                 optimization_problem,
                 electric_grid_model,
                 power_flow_solution,
@@ -981,9 +1009,9 @@ class DERModelSet(object):
             price_timeseries: pd.DataFrame
     ):
 
-        # Define objective, only for flexible DERs.
-        for der_name in self.flexible_der_names:
-            self.flexible_der_models[der_name].define_optimization_objective(
+        # Define objective for each DER.
+        for der_name in self.der_names:
+            self.der_models[der_name].define_optimization_objective(
                 optimization_problem,
                 price_timeseries
             )

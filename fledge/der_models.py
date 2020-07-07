@@ -1084,6 +1084,10 @@ class DERModelSet(object):
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
 
         optimization_problem.objective.expr += optimization_problem.peak_load
+        optimization_problem.objective.expr += (
+                1e-2 * sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
+                           for der_name in self.der_names for timestep in self.timesteps)
+        )
 
     def get_optimization_results(
             self,

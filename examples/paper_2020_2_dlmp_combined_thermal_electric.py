@@ -238,20 +238,22 @@ def main():
         ax1.set_ylabel('Price [S$/MWh]')
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
-        ax2.plot(
-            results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-            label='Thrm. pw.',
-            drawstyle='steps-post',
-            color='darkgrey',
-            linewidth=3
-        )
-        ax2.plot(
-            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-            label='Active pw.',
-            drawstyle='steps-post',
-            color='black',
-            linewidth=1.5
-        )
+        if der in thermal_grid_model.ders:
+            ax2.plot(
+                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                label='Thrm. pw.',
+                drawstyle='steps-post',
+                color='darkgrey',
+                linewidth=3
+            )
+        if der in electric_grid_model.ders:
+            ax2.plot(
+                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                label='Active pw.',
+                drawstyle='steps-post',
+                color='black',
+                linewidth=1.5
+            )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
@@ -309,20 +311,22 @@ def main():
         ax1.set_ylabel('Price [S$/MWh]')
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
-        ax2.plot(
-            results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-            label='Thrm. pw.',
-            drawstyle='steps-post',
-            color='darkgrey',
-            linewidth=3
-        )
-        ax2.plot(
-            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-            label='Active pw.',
-            drawstyle='steps-post',
-            color='black',
-            linewidth=1.5
-        )
+        if der in thermal_grid_model.ders:
+            ax2.plot(
+                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                label='Thrm. pw.',
+                drawstyle='steps-post',
+                color='darkgrey',
+                linewidth=3
+            )
+        if der in electric_grid_model.ders:
+            ax2.plot(
+                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                label='Active pw.',
+                drawstyle='steps-post',
+                color='black',
+                linewidth=1.5
+            )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
@@ -445,6 +449,7 @@ def main():
         plt.close()
 
     # Print results path.
+    os.startfile(results_path)
     print(f"Results are stored in: {results_path}")
 
 

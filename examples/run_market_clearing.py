@@ -13,6 +13,7 @@ import fledge.electric_grid_models
 import fledge.market_models
 import fledge.utils
 import forecast.forecast_model  # From cobmo.
+import cobmo.config
 
 
 def main():
@@ -21,13 +22,19 @@ def main():
     # scenario_name = 'singapore_6node'
     scenario_name = 'singapore_downtowncore'
     results_path = fledge.utils.get_results_path('run_market_clearing', scenario_name)
-    # price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
+    price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
 
     # Obtain market model.
     market_model = fledge.market_models.MarketModel(scenario_name)
+
+    # TODO: Remove surrogate prices
+    # Replace prices in the time series with surrogate prices
+    clearing_prices = pd.read_csv(os.path.join(price_data_path, 'Jan_2020.csv'), index_col=0)
+    market_model.price_timeseries.loc[:, 'price_value'] = clearing_prices['clearing_price'].values / 1000
+    flat_prices = pd.DataFrame(10.0, market_model.timesteps, ['price_value']) # For benchmarking
 
     # Obtain electric grid model.
     # electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -46,14 +53,14 @@ def main():
     forecast_model = forecast.forecast_model.forecastModel()
     price_forecast = forecast_model.forecast_prices(steps=len(timesteps))
     price_forecast.index = timesteps
-    # forecast_timestep = forecast_model.df['timestep'].iloc[-1]
+    forecast_timestep = forecast_model.df['timestep'].iloc[-1]
 
-    # Create dict to store actual dispatch quantities
-    # actual_dispatch = pd.DataFrame(0.0, timesteps, ['clearing_price', 'actual_dispatch'])
-    # actual_dispatch['actual_dispatch'] = actual_dispatch.apply(lambda x: dict.fromkeys(der_model_set.der_names), axis=1)
+    # Create dicts to store actual and baseline dispatch quantities
     actual_dispatch = dict.fromkeys(der_model_set.der_names)
+    baseline_dispatch = dict.fromkeys(der_model_set.der_names)
     for der_name in der_model_set.der_names:
         actual_dispatch[der_name] = pd.Series(0.0, index=timesteps)
+        baseline_dispatch[der_name] = pd.Series(0.0, index=timesteps)
 
     # Create dict to store bids
     der_bids = dict.fromkeys(der_model_set.der_names)
@@ -61,6 +68,22 @@ def main():
         der_bids[der_name] = dict.fromkeys(timesteps)
         for timestep in timesteps:
             der_bids[der_name][timestep] = pd.Series(0.0, index=range(0,5))
+
+    # Obtain benchmark costs (flat price)
+    for der_name in der_model_set.der_names:
+        # Obtain DERModel from the model set
+        der_model = der_model_set.flexible_der_models[der_name]
+        optimization_problem = pyo.ConcreteModel()
+        der_model.define_optimization_variables(optimization_problem)
+        der_model.define_optimization_constraints(optimization_problem)
+        der_model.define_optimization_objective(optimization_problem, flat_prices)
+        results = der_model.get_optimization_results(optimization_problem)
+        (
+            state_vector,
+            control_vector,
+            output_vector
+        ) = results['state_vector'], results['control_vector'], results['output_vector']
+        baseline_dispatch[der_name] = output_vector['grid_electric_power']
 
     # Obtain bids from every building in the scenario
     for timestep in timesteps:
@@ -96,8 +119,9 @@ def main():
                     output_vector
                 ) = results['state_vector'], results['control_vector'], results['output_vector']
 
-                output_vector.to_csv(
-                    os.path.join(results_path, f'output_vector_{timestep}_{der_name}_{price}.csv'.replace(':','_')))
+                # Write output vector for debugging
+                # output_vector.to_csv(
+                #     os.path.join(results_path, f'output_vector_{timestep}_{der_name}_{price}.csv'.replace(':','_')))
 
                 der_bids[der_name][timestep][price] = output_vector.at[timestep, 'grid_electric_power']
 
@@ -117,13 +141,34 @@ def main():
             actual_dispatch[der_name][timestep] = -active_power_dispatch[der_name] # Convert back to positive to follow CoBMo convention
 
         # TODO: Update forecast model with new market clearing price
-        # if timestep == timesteps[-1]: # Skip forecast model update if at the last timestep
-        #     continue
-        # new_timesteps = timesteps[timesteps > timestep]
-        # forecast_timestep += dt.timedelta(minutes=30)
-        # forecast_model.update_model(clearing_prices[timestep], forecast_timestep)
-        # price_forecast = forecast_model.forecast_prices(steps=len(new_timesteps))
-        # price_forecast.index = new_timesteps
+        if timestep == timesteps[-1]: # Skip forecast model update if at the last timestep
+            continue
+        new_timesteps = timesteps[timesteps > timestep]
+        forecast_timestep += dt.timedelta(minutes=30)
+        forecast_model.update_model(cleared_price, forecast_timestep)
+        price_forecast = forecast_model.forecast_prices(steps=len(new_timesteps))
+        price_forecast.index = new_timesteps
+
+    # Create dict to store electricity costs
+    electricity_cost = dict.fromkeys(['baseline', 'bids'])
+    for key in electricity_cost:
+        electricity_cost[key] = dict.fromkeys(der_model_set.der_names)
+        for der_name in der_model_set.der_names:
+            electricity_cost[key][der_name] = 0.0
+
+    print(actual_dispatch)
+    # TODO: Calculate electricity costs for the buildings
+    for der_name in der_model_set.der_names:
+        electricity_cost['baseline'][der_name] = np.sum(
+                baseline_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
+                * 0.5 / 1e3
+        )
+        electricity_cost['bids'][der_name] = np.sum(
+                actual_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
+                * 0.5 / 1e3
+        )
+
+    print(electricity_cost)
 
     # # Define abritrary DER bids.
     # der_bids = dict.fromkeys(ders)
@@ -166,27 +211,9 @@ def main():
         actual_dispatch[der_name].to_csv(
             os.path.join(results_path, f'actual_dispatch_{der_name}.csv')
         )
-
-#
-# def obtain_dispatch(
-#         clearing_price: float,
-#         bids_series: pd.Series
-# ) -> float :
-#     lowest_price = bids_series.index[0]
-#     highest_price = bids_series.index[-1]
-#     if clearing_price < lowest_price:
-#         dispatch_quantity = bids_series.iloc[0]
-#     elif clearing_price > highest_price:
-#         dispatch_quantity = bids_series.iloc[-1]
-#     else:
-#         price_intervals = (
-#             pd.arrays.IntervalArray(
-#                 [pd.Interval(bids_series.index[j], bids_series.index[j+1]) for j in range(len(bids_series)-1)]
-#                 )
-#         )
-#         selected_index = price_intervals[price_intervals.contains(clearing_price)].right
-#         dispatch_quantity = bids_series[selected_index]
-#     return dispatch_quantity.values
+        baseline_dispatch[der_name].to_csv(
+            os.path.join(results_path, f'baseline_dispatch_{der_name}.csv')
+        )
 
 
 if __name__ == "__main__":

@@ -234,6 +234,16 @@ def main():
             colors=[colors[0], colors[1], colors[2], colors[3]],
             step='post'
         )
+        ax1.plot(
+            (
+                thermal_grid_dlmp.loc[:, (slice(None), *zip(*node))].sum(axis='columns')
+                * 1.0e3
+            ),
+            label='Total DLMP',
+            drawstyle='steps-post',
+            color='red',
+            linewidth=1.0
+        )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
         # ax1.set_ylim((0.0, 10.0))
@@ -306,6 +316,18 @@ def main():
             labels=['Energy', 'Loss', 'Voltage', 'Congest.'],
             colors=[colors[0], colors[1], colors[2], colors[3]],
             step='post'
+        )
+        ax1.plot(
+            (
+                electric_grid_dlmp.loc[
+                    :, (slice(None), *zip(*node))
+                ].groupby('dlmp_type', axis='columns').mean().sum(axis='columns')
+                * 1.0e3
+            ),
+            label='Total DLMP',
+            drawstyle='steps-post',
+            color='red',
+            linewidth=1.0
         )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')

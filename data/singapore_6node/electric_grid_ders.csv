@@ -12,4 +12,4 @@ singapore_6node,6_6,flexible_load,mixed_commercial_residential,6,0,0,1,wye,-5000
 singapore_6node,6_7,ev_charger,ev_charger_generic,6,1,0,0,wye,-150000.0,-75000.0
 singapore_6node,6_8,ev_charger,ev_charger_generic,6,0,1,0,wye,-100000.0,-50000.0
 singapore_6node,6_9,ev_charger,ev_charger_generic,6,0,0,1,wye,-50000.0,-25000.0
-singapore_6node,6_10,fixed_generator,,6,1,1,1,wye,20000.0,0.0
+singapore_6node,6_10,fixed_generator,photovoltaic,6,1,1,1,wye,20000.0,0.0

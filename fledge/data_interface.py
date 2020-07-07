@@ -439,8 +439,9 @@ class DERData(object):
     ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    cooling_plants: pd.DataFrame
     fixed_generators: pd.DataFrame
+    fixed_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    cooling_plants: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
     @multimethod
@@ -466,7 +467,7 @@ class DERData(object):
 
             # Check validity of DER type.
             try:
-                assert der_type in ['fixed_load', 'ev_charger', 'flexible_load']
+                assert der_type in ['fixed_load', 'ev_charger', 'flexible_load', 'fixed_generator']
             except AssertionError:
                 logger.error(f"Invalid DER type: {der_type}")
                 raise
@@ -598,9 +599,11 @@ class DERData(object):
             )
 
         # Obtain fixed load / EV charger / flexible load data.
+        # TODO: Enable thermal grid connection for appropriate types.
         self.fixed_loads, self.fixed_load_timeseries_dict = get_der_type_data('fixed_load')
         self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
+        self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
 
         # Obtain cooling plant data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
@@ -639,42 +642,6 @@ class DERData(object):
             )
         )
         self.cooling_plants.index = self.cooling_plants['der_name']
-
-        # Obtain fixed generator data.
-        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
-        #   due to SQLITE missing full outer join syntax.
-        self.fixed_generators = (
-            pd.merge(
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM electric_grid_ders
-                    WHERE der_type = 'fixed_generator'
-                    AND electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM thermal_grid_ders
-                    WHERE der_type = 'fixed_generator'
-                    AND thermal_grid_name = (
-                        SELECT thermal_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                how='outer',
-                on=['der_name', 'der_type', 'model_name'],
-                suffixes=('_electric_grid', '_thermal_grid')
-            )
-        )
-        self.fixed_generators.index = self.fixed_generators['der_name']
 
         # Obtain flexible building data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,

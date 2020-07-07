@@ -169,6 +169,8 @@ class EVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    levelized_cost_of_energy: np.float
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -184,37 +186,27 @@ class FixedGeneratorModel(FixedDERModel):
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
+        # Obtain levelized cost of energy.
+        self.levelized_cost_of_energy = fixed_generator.at['levelized_cost_of_energy']
+
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='active_power')
-            * (
-                fixed_generator.at['active_power_nominal']
-                if pd.notnull(fixed_generator.at['active_power_nominal'])
-                else 0.0
-            )
+            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='reactive_power')
-            * (
-                fixed_generator.at['reactive_power_nominal']
-                if pd.notnull(fixed_generator.at['reactive_power_nominal'])
-                else 0.0
-            )
+            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'reactive_power'].copy())
         )
+        if 'per_unit' in fixed_generator.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= fixed_generator.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= fixed_generator.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(fixed_generator.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(fixed_generator.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='thermal_power')
-            * (
-                fixed_generator.at['thermal_power_nominal']
-                if pd.notnull(fixed_generator.at['thermal_power_nominal'])
-                else 0.0
-            )
-        )
-
-        # Construct nominal thermal power timeseries.
-        self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
 

@@ -2540,27 +2540,28 @@ class LinearElectricGridModel(object):
             )
 
         # Convert in per-unit values.
+        # TODO: Revise per unit reference.
         if in_per_unit:
             power_flow_solution = self.power_flow_solution if power_flow_solution is None else power_flow_solution
             der_active_power_vector = (
                 der_active_power_vector
-                / np.real(self.electric_grid_model.der_power_vector_nominal.ravel())
+                / np.real(self.electric_grid_model.der_power_vector_reference)
             )
             der_reactive_power_vector = (
                 der_reactive_power_vector
-                / np.imag(self.electric_grid_model.der_power_vector_nominal.ravel())
+                / np.imag(self.electric_grid_model.der_power_vector_reference)
             )
             voltage_magnitude_vector = (
                 voltage_magnitude_vector
-                / abs(power_flow_solution.node_voltage_vector.ravel())
+                / np.abs(self.electric_grid_model.node_voltage_vector_reference)
             )
             branch_power_vector_1_squared = (
                 branch_power_vector_1_squared
-                / abs(power_flow_solution.branch_power_vector_1.ravel() ** 2)
+                / (self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
             )
             branch_power_vector_2_squared = (
                 branch_power_vector_2_squared
-                / abs(power_flow_solution.branch_power_vector_2.ravel() ** 2)
+                / (self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
             )
             loss_active = (
                 loss_active

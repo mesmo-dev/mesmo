@@ -21,7 +21,10 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar_modified'
-    scenario = 3  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
+    scenario = 1
+    # Choices: 1 (unconstrained operation), 2 (constrained thermal grid branch flow),
+    # 3 (constrained thermal grid pressure head), 4 (constrained electric grid branch power),
+    # 5 (constrained electric grid voltage)
     results_path = (
         fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario}', scenario_name)
     )
@@ -68,9 +71,20 @@ def main():
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    # Modify limits for scenarios.
+    if scenario in [4]:
+        branch_power_vector_squared_maximum[
+            fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
+        ] *= 2.0 / 100.0
+    elif scenario in [5]:
+        voltage_magnitude_vector_minimum[
+            fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
+        ] *= 0.99 / 0.5  # TODO: Check if sensitivity matrix wrong.
+    else:
+        pass
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
@@ -89,14 +103,16 @@ def main():
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
     # Modify limits for scenarios.
-    if scenario == 1:
-        pass
-    elif scenario == 2:
-        branch_flow_vector_maximum[thermal_grid_model.branches.get_loc('4')] *= 0.1 / 1.5
-    elif scenario == 3:
-        node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
+    if scenario in [2]:
+        branch_flow_vector_maximum[
+            fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
+        ] *= 0.05 / 1.5
+    elif scenario in [3]:
+        node_head_vector_minimum[
+            fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
+        ] *= 0.05 / 1.5
     else:
-        ValueError(f"Invalid scenario: {scenario}")
+        pass
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
@@ -142,7 +158,7 @@ def main():
     # optimization_problem.display()
 
     # Obtain results.
-    in_per_unit = False
+    in_per_unit = True
     results = (
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,

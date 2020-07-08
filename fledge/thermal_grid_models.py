@@ -56,7 +56,7 @@ class ThermalGridModel(object):
             ], axis='columns')
         )
         self.nodes = pd.MultiIndex.from_frame(nodes)
-        self.branches = self.line_names
+        self.branches = self.line_names.rename('branch_name')
         self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
         # Define branch to node incidence matrix.
@@ -746,6 +746,7 @@ class LinearThermalGridModel(object):
             )
 
         # Convert in per-unit values.
+        # TODO: Revise per unit references.
         if in_per_unit:
             der_thermal_power_vector = (
                 der_thermal_power_vector

@@ -152,26 +152,21 @@ def main():
         # price_forecast = forecast_model.forecast_prices(steps=len(new_timesteps))
         # price_forecast.index = new_timesteps
 
-    # Create dict to store electricity costs
-    electricity_cost = dict.fromkeys(['baseline', 'bids'])
-    for key in electricity_cost:
-        electricity_cost[key] = dict.fromkeys(der_model_set.der_names)
-        for der_name in der_model_set.der_names:
-            electricity_cost[key][der_name] = 0.0
-
+    # Create DataFrame to store electricity costs
+    electricity_cost = pd.DataFrame(0.0, der_model_set.der_names, ['baseline', 'bids'])
 
     # TODO: Calculate electricity costs for the buildings
     for der_name in der_model_set.der_names:
-        electricity_cost['baseline'][der_name] = np.sum(
+        electricity_cost.loc[der_name, 'baseline'] = np.sum(
                 baseline_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
                 * 0.5 / 1e3
         )
-        electricity_cost['bids'][der_name] = np.sum(
+        electricity_cost.loc[der_name, 'bids'] = np.sum(
                 actual_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
                 * 0.5 / 1e3
         )
 
-    print(electricity_cost)
+    electricity_cost.to_csv(os.path.join(results_path, 'electricity_cost.csv'))
 
     # # Define abritrary DER bids.
     # der_bids = dict.fromkeys(ders)

@@ -85,7 +85,8 @@ class MarketModel(object):
             der_bids: dict,
             timestep: pd.Timestamp
     ):
-        """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch."""
+        """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch,
+        assuming bids are provided as PRICE-QUANTITY PAIRS."""
 
         # Assert validity of given timestep.
         try:
@@ -98,20 +99,44 @@ class MarketModel(object):
         cleared_price = self.price_timeseries.at[timestep, 'price_value']
 
         # Obtain dispatch power.
-        # der_active_power_vector_dispatch = np.zeros(len(der_bids), dtype=np.float)
-        # for der_index, der in enumerate(der_bids):
-        #
-        #     # For loads (negative power).
-        #     if der_bids[der].sum() < 0.0:
-        #         der_active_power_vector_dispatch[der_index] += (
-        #             der_bids[der].loc[der_bids[der].index > cleared_price].sum()
-        #         )
-        #
-        #     # For generators (positive power).
-        #     elif der_bids[der].sum() > 0.0:
-        #         der_active_power_vector_dispatch[der_index] += (
-        #             der_bids[der].loc[der_bids[der].index < cleared_price].sum()
-        #         )
+        der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())
+        for der in der_bids:
+
+            # For loads (negative power).
+            if der_bids[der][timestep].sum() < 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index > cleared_price].sum()
+                )
+
+            # For generators (positive power).
+            elif der_bids[der][timestep].sum() > 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index < cleared_price].sum()
+                )
+
+        return (
+            cleared_price,
+            der_active_power_vector_dispatch
+        )
+
+    @multimethod
+    def clear_market_alt(
+            self,
+            der_bids: dict,
+            timestep: pd.Timestamp
+    ):
+        """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch,
+        assuming bids are provided as LINEAR CURVES."""
+
+        # Assert validity of given timestep.
+        try:
+            assert timestep in self.timesteps
+        except AssertionError:
+            logger.error(f"Market clearing not possible for invalid timestep: {timestep}")
+            raise
+
+        # Obtain cleared price.
+        cleared_price = self.price_timeseries.at[timestep, 'price_value']
 
         # Obtain dispatch power.
         der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())

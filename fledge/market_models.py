@@ -144,9 +144,28 @@ class MarketModel(object):
 
             # For loads (negative power).
             if der_bids[der][timestep].sum() < 0.0:
-                der_active_power_vector_dispatch[der] += (
-                    der_bids[der][timestep].loc[der_bids[der][timestep].index > cleared_price].sum()
-                )
+                if cleared_price < der_bids[der][timestep].index[0]:
+                    der_active_power_vector_dispatch[der] += (
+                        der_bids[der][timestep].iloc[0]
+                    )
+                elif cleared_price > der_bids[der][timestep].index[-1]:
+                    der_active_power_vector_dispatch[der] += (
+                        der_bids[der][timestep].iloc[-1]
+                    )
+                else:
+                    prices = der_bids[der][timestep].index
+                    price_intervals = pd.arrays.IntervalArray(
+                        [pd.Interval(prices[i], prices[i+1]) for i in range(len(prices)-1)], closed='both'
+                    )
+
+                    interval_with_cleared_price = price_intervals[price_intervals.contains(cleared_price)]
+                    lower_price_boundary = interval_with_cleared_price.left[0]
+                    upper_price_boundary = interval_with_cleared_price.right[0]
+                    der_active_power_vector_dispatch[der] += (
+                        (cleared_price-lower_price_boundary)/(upper_price_boundary-lower_price_boundary)
+                        * (der_bids[der][timestep].loc[upper_price_boundary]-der_bids[der][timestep].loc[lower_price_boundary])
+                        + der_bids[der][timestep].loc[lower_price_boundary]
+                    )
 
             # For generators (positive power).
             elif der_bids[der][timestep].sum() > 0.0:

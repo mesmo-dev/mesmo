@@ -25,13 +25,35 @@ def main():
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
 
-    # Obtain electric grid graph.
+    # Obtain electric grid data / graph.
+    electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
+    # Obtain substation nodes.
+    # - This identification is based on the assumption that all nodes with no DER connected are substation nodes,
+    #   which is true for the Singapore synthetic grid test case.
+    nodes_substation = (
+        electric_grid_data.electric_grid_nodes.loc[
+            ~electric_grid_data.electric_grid_nodes.loc[:, 'node_name'].isin(
+                electric_grid_data.electric_grid_ders.loc[:, 'node_name']
+            ),
+            'node_name'
+        ].tolist()
+    )
+
     # Plot electric grid graph.
+    print()
     plt.figure(
         figsize=[33.1, 23.4],  # A1 paper size.
         dpi=300
+    )
+    nx.draw(
+        electric_grid_graph,
+        pos=electric_grid_graph.node_positions,
+        nodelist=nodes_substation,
+        edgelist=[],
+        node_color='red',
+        node_size=10.0
     )
     nx.draw(
         electric_grid_graph,
@@ -46,14 +68,15 @@ def main():
         plt.gca(),
         crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
         source=ctx.providers.CartoDB.Positron,
-        zoom=14
+        zoom=14,
+        attribution=False
     )
     plt.savefig(os.path.join(results_path, 'electric_grid.pdf'), bbox_inches='tight')
     plt.show()
     plt.close()
-    os.startfile(os.path.join(results_path, 'electric_grid.pdf'))
 
     # Print results path.
+    os.startfile(os.path.join(results_path))
     print(f"Results are stored in: {results_path}")
 
 

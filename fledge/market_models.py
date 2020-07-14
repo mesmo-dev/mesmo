@@ -3,6 +3,7 @@
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import math
 
 import fledge.config
 import fledge.data_interface
@@ -166,6 +167,59 @@ class MarketModel(object):
                         * (der_bids[der][timestep].loc[upper_price_boundary]-der_bids[der][timestep].loc[lower_price_boundary])
                         + der_bids[der][timestep].loc[lower_price_boundary]
                     )
+
+            # For generators (positive power).
+            elif der_bids[der][timestep].sum() > 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index < cleared_price].sum()
+                )
+
+        return (
+            cleared_price,
+            der_active_power_vector_dispatch
+        )
+
+    @multimethod
+    def clear_market_supply_curves(
+            self,
+            der_bids: dict,
+            timestep: pd.Timestamp
+    ):
+        """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch,
+        assuming bids are provided as PRICE-QUANTITY PAIRS."""
+
+        # Assert validity of given timestep.
+        try:
+            assert timestep in self.timesteps
+        except AssertionError:
+            logger.error(f"Market clearing not possible for invalid timestep: {timestep}")
+            raise
+
+        # Obtain cleared price.
+        aggregate_demand = dict()
+        for der in der_bids:
+            for price in der_bids[der][timestep].index:
+                if price not in aggregate_demand:
+                    aggregate_demand[price] = der_bids[der][timestep].loc[price]
+                else:
+                    aggregate_demand[price] += der_bids[der][timestep].loc[price]
+            # cleared_price = math.exp(3.258+0.000211*demand)
+        print(aggregate_demand)
+
+        cleared_price = dict()
+        for price in aggregate_demand:
+            cleared_price[aggregate_demand[price]] = math.exp(3.258+0.000211*-aggregate_demand[price]/1e6)
+        print(cleared_price)
+
+        # Obtain dispatch power.
+        der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())
+        for der in der_bids:
+
+            # For loads (negative power).
+            if der_bids[der][timestep].sum() < 0.0:
+                der_active_power_vector_dispatch[der] += (
+                    der_bids[der][timestep].loc[der_bids[der][timestep].index > cleared_price].sum()
+                )
 
             # For generators (positive power).
             elif der_bids[der][timestep].sum() > 0.0:

@@ -65,6 +65,27 @@ def main():
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     plt.show()
 
+    plt.title('Transformer utilization [%]')
+    transformers = (
+        problem.electric_grid_model.branches[
+            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
+        ]
+    )
+    plt.bar(
+        range(len(transformers)),
+        100.0 * branch_power_vector_magnitude_relative.loc['maximum', transformers]
+    )
+    plt.hlines(100.0, -0.5, len(transformers) - 0.5, colors='red')
+    plt.xticks(
+        range(len(transformers)),
+        transformers,
+        rotation=45,
+        ha='right'
+    )
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
+    plt.show()
+
     plt.title('Maximum voltage drop [%]')
     plt.bar(
         range(len(problem.electric_grid_model.nodes)),
@@ -85,6 +106,7 @@ def main():
     results.to_csv(results_path)
 
     # Print results path.
+    os.startfile(results_path)
     print(f"Results are stored in: {results_path}")
 
 

@@ -195,21 +195,27 @@ class MarketModel(object):
             logger.error(f"Market clearing not possible for invalid timestep: {timestep}")
             raise
 
-        # Obtain cleared price.
-        aggregate_demand = dict()
+        # Obtain aggregate demand.
+        price_indexes = der_bids[list(der_bids.keys())[0]][timestep].index
+        aggregate_demand = pd.Series(0.0, price_indexes)
         for der in der_bids:
-            for price in der_bids[der][timestep].index:
-                if price not in aggregate_demand:
-                    aggregate_demand[price] = der_bids[der][timestep].loc[price]
-                else:
-                    aggregate_demand[price] += der_bids[der][timestep].loc[price]
-            # cleared_price = math.exp(3.258+0.000211*demand)
-        print(aggregate_demand)
+            aggregate_demand += der_bids[der][timestep]
+        for price in price_indexes:
+            aggregate_demand.loc[price] = aggregate_demand.loc[aggregate_demand.index >= price].sum()
 
-        cleared_price = dict()
-        for price in aggregate_demand:
-            cleared_price[aggregate_demand[price]] = math.exp(3.258+0.000211*-aggregate_demand[price]/1e6)
-        print(cleared_price)
+        cleared_prices = np.exp(3.258+0.000211*-aggregate_demand*7500/10/1e6)/1000
+        print(cleared_prices)
+
+        # Set cleared price to be the maximum price which is still lower than the bid price
+        cleared_price = cleared_prices.loc[cleared_prices.index > cleared_prices].max()
+
+        # total_demand = pd.Series(0.0, price_indexes)
+        # for price in price_indexes:
+        #     total_demand = aggregate_demand.loc[aggregate_demand.index >= price].sum()
+        #     cleared_price.loc[price] = math.exp(3.258+0.000211*-total_demand/1e6)/1000
+        # print(cleared_price)
+        # print(list(cleared_price.values())[-1])
+        # cleared_price = list(cleared_price.values())[-1] # Set cleared price to be the highest price
 
         # Obtain dispatch power.
         der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())

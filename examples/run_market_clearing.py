@@ -58,6 +58,7 @@ def main():
     # Create dicts to store actual and baseline dispatch quantities
     actual_dispatch = dict.fromkeys(der_model_set.der_names)
     baseline_dispatch = dict.fromkeys(der_model_set.der_names)
+    system_load = pd.Series(0.0, index=timesteps)
     for der_name in der_model_set.der_names:
         actual_dispatch[der_name] = pd.Series(0.0, index=timesteps)
         baseline_dispatch[der_name] = pd.Series(0.0, index=timesteps)
@@ -84,6 +85,8 @@ def main():
             output_vector
         ) = results['state_vector'], results['control_vector'], results['output_vector']
         baseline_dispatch[der_name] = output_vector['grid_electric_power']
+        system_load += output_vector['grid_electric_power']
+    peak_scenario_load = system_load.max() / 1e6 # in MW.
 
     # Obtain bids from every building in the scenario
     # TODO: formulate linear bid curves instead of price-pair quantities
@@ -92,7 +95,6 @@ def main():
         lower_price_limit = price_forecast.at[timestep, 'lower_limit']
         upper_price_limit = price_forecast.at[timestep, 'upper_limit']
         price_points = np.linspace(lower_price_limit, upper_price_limit, 4)
-        # price_points = np.append(price_points, [4.5])
         for der_name in der_model_set.der_names:
             # Obtain DERModel from the model set
             der_model = der_model_set.flexible_der_models[der_name]
@@ -135,7 +137,11 @@ def main():
         (
             cleared_price,
             active_power_dispatch
-        ) = market_model.clear_market(der_bids, timestep)
+        ) = market_model.clear_market_supply_curves(
+            der_bids,
+            timestep,
+            peak_scenario_load,
+            scenario='low_price_noon')
 
         print(f'Clearing price for timestep {timestep}: {cleared_price}')
 
@@ -212,6 +218,7 @@ def main():
         baseline_dispatch[der_name].to_csv(
             os.path.join(results_path, f'baseline_dispatch_{der_name}.csv')
         )
+    system_load.to_csv(os.path.join(results_path, 'system_load.csv'))
 
 
 if __name__ == "__main__":

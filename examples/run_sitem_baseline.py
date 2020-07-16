@@ -85,6 +85,11 @@ def main():
             pd.Series(lines.tolist(), index=lines.get_level_values('branch_name')).reindex(lines_by_edges).tolist()
         )
     )
+    nodes = (
+        problem.electric_grid_model.nodes[
+            problem.electric_grid_model.nodes.get_level_values('node_name').isin(electric_grid_graph.nodes)
+        ]
+    )
 
     # Obtain substation nodes / utilization.
     nodes_substation = (
@@ -242,6 +247,87 @@ def main():
         video_writer = (
             cv2.VideoWriter(
                 os.path.join(results_path, 'line_utilization.avi'),  # Filename.
+                cv2.VideoWriter_fourcc(*'XVID'),  # Format.
+                2.0,  # FPS.
+                images[0].shape[1::-1]  # Size.
+            )
+        )
+        for image in images:
+            video_writer.write(image)
+        video_writer.release()
+        cv2.destroyAllWindows()
+
+    # Plot electric line loading.
+    if plot_detailed_grid:
+        for timestep in problem.timesteps:
+            vmin = 0.0
+            vmax = 10.0
+            plt.figure(
+                figsize=[12.0, 6.0],  # Arbitrary convenient figure size.
+                dpi=300
+            )
+            plt.title(
+                f"Node voltage drop: {timestep.strftime('%H:%M:%S') if type(timestep) is pd.Timestamp else timestep}"
+            )
+            nx.draw(
+                electric_grid_graph,
+                nodelist=nodes_substation,
+                edgelist=[],
+                pos=electric_grid_graph.node_positions,
+                node_size=100.0,
+                node_color='red'
+            )
+            nx.draw(
+                electric_grid_graph,
+                nodelist=nodes.get_level_values('node_name').tolist(),
+                # edgelist=[],
+                pos=electric_grid_graph.node_positions,
+                node_size=50.0,
+                arrows=False,
+                # width=5.0,
+                vmin=vmin,
+                vmax=vmax,
+                node_color=(-100.0 * (node_voltage_vector_magnitude_per_unit.loc[timestep, nodes] - 1.0)).tolist(),
+                edgecolors='black',
+            )
+            # Adjust axis limits, to get a better view of surrounding map.
+            xlim = plt.xlim()
+            xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
+            plt.xlim(xlim)
+            ylim = plt.ylim()
+            ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
+            plt.ylim(ylim)
+            # Add colorbar.
+            sm = (
+                plt.cm.ScalarMappable(
+                    norm=plt.Normalize(
+                        vmin=vmin,
+                        vmax=vmax
+                    )
+                )
+            )
+            cb = plt.colorbar(sm, shrink=0.9)
+            cb.set_label('Voltage drop [%]')
+            # Add basemap / open street map for better orientation.
+            ctx.add_basemap(
+                plt.gca(),
+                crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+                source=ctx.providers.CartoDB.Positron,
+                attribution=False  # Do not show copyright notice.
+            )
+            name_string = re.sub(r'\W+', '-', f'{timestep}')
+            plt.savefig(os.path.join(results_path, f'node_voltage_{name_string}.png'), bbox_inches='tight')
+            # plt.show()
+            plt.close()
+
+        # Stitch images to video.
+        images = []
+        for timestep in problem.timesteps:
+            name_string = re.sub(r'\W+', '-', f'{timestep}')
+            images.append(cv2.imread(os.path.join(results_path, f'node_voltage_{name_string}.png')))
+        video_writer = (
+            cv2.VideoWriter(
+                os.path.join(results_path, 'node_voltage.avi'),  # Filename.
                 cv2.VideoWriter_fourcc(*'XVID'),  # Format.
                 2.0,  # FPS.
                 images[0].shape[1::-1]  # Size.

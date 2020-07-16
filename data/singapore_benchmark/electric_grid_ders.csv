@@ -1,0 +1,11 @@
+electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+singapore_benchmark,benchmark_single_res,flexible_building,benchmark_single_res,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_multi_res,flexible_building,benchmark_multi_res,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_university,flexible_building,benchmark_university,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_school,flexible_building,benchmark_school,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_retail,flexible_building,benchmark_retail,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_office,flexible_building,benchmark_office,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_hotel,flexible_building,benchmark_hotel,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_hospital,flexible_building,benchmark_hospital,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_industrial,flexible_building,benchmark_industrial,1,1,1,1,wye,-2414989.499,-793768.6625
+singapore_benchmark,benchmark_other,flexible_building,benchmark_other,1,1,1,1,wye,-2414989.499,-793768.6625

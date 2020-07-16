@@ -748,12 +748,15 @@ class FlexibleBuildingModel(FlexibleDERModel):
             sum(
                 price_forecast.at[timestep, 'expected_price']
                 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                * 1800 / 3600.0 / 1000.0
+                + optimization_problem.variable_q[timestep, self.der_name]
                 for timestep in self.timesteps if timestep > current_timestep
             )
         )
         optimization_problem.objective.expr += (
                 current_price
                 * optimization_problem.output_vector[current_timestep, self.der_name, 'grid_electric_power']
+                * 1800 / 3600.0 / 1000.0
                 + optimization_problem.variable_gamma * optimization_problem.variable_z
         )
 

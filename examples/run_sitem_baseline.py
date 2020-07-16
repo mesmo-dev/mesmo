@@ -26,6 +26,7 @@ def main():
     # Settings.
     scenario_name = 'ema_sample_grid'
     results_path = fledge.utils.get_results_path('run_sitem_baseline', scenario_name)
+    plot_detailed_grid = True
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -61,13 +62,31 @@ def main():
     # Obtain electric grid data / graph.
     electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
-
-    # Obtain substation nodes / utilization.
     transformers = (
         problem.electric_grid_model.branches[
             fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
         ]
     )
+    lines_by_edges = electric_grid_data.electric_grid_lines.loc[:, 'line_name']
+    lines_by_edges.index = (
+        electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
+    )
+    lines_by_edges = lines_by_edges.reindex(electric_grid_graph.edges)
+    lines = (
+        problem.electric_grid_model.branches[
+            fledge.utils.get_index(
+                problem.electric_grid_model.branches,
+                branch_type='line'
+            )
+        ]
+    )
+    lines = (
+        pd.MultiIndex.from_tuples(
+            pd.Series(lines.tolist(), index=lines.get_level_values('branch_name')).reindex(lines_by_edges).tolist()
+        )
+    )
+
+    # Obtain substation nodes / utilization.
     nodes_substation = (
         electric_grid_data.electric_grid_transformers.loc[
             transformers.get_level_values('branch_name'),
@@ -151,6 +170,87 @@ def main():
         video_writer.write(image)
     video_writer.release()
     cv2.destroyAllWindows()
+
+    # Plot electric line loading.
+    if plot_detailed_grid:
+        for timestep in problem.timesteps:
+            vmin = 20.0
+            vmax = 120.0
+            plt.figure(
+                figsize=[12.0, 6.0],  # Arbitrary convenient figure size.
+                dpi=300
+            )
+            plt.title(
+                f"Line utilization: {timestep.strftime('%H:%M:%S') if type(timestep) is pd.Timestamp else timestep}"
+            )
+            nx.draw(
+                electric_grid_graph,
+                nodelist=nodes_substation,
+                edgelist=[],
+                pos=electric_grid_graph.node_positions,
+                node_size=100.0,
+                node_color='red'
+            )
+            nx.draw(
+                electric_grid_graph,
+                # nodelist=[],
+                # edgelist=[],
+                pos=electric_grid_graph.node_positions,
+                node_size=10.0,
+                node_color='black',
+                arrows=False,
+                width=5.0,
+                edge_vmin=vmin,
+                edge_vmax=vmax,
+                edge_color=(100.0 * branch_power_vector_magnitude_relative.loc[timestep, lines]).tolist(),
+            )
+            # Adjust axis limits, to get a better view of surrounding map.
+            xlim = plt.xlim()
+            xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
+            plt.xlim(xlim)
+            ylim = plt.ylim()
+            ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
+            plt.ylim(ylim)
+            # Add colorbar.
+            sm = (
+                plt.cm.ScalarMappable(
+                    norm=plt.Normalize(
+                        vmin=vmin,
+                        vmax=vmax
+                    )
+                )
+            )
+            cb = plt.colorbar(sm, shrink=0.9)
+            cb.set_label('Utilization [%]')
+            # Add basemap / open street map for better orientation.
+            ctx.add_basemap(
+                plt.gca(),
+                crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+                source=ctx.providers.CartoDB.Positron,
+                attribution=False  # Do not show copyright notice.
+            )
+            name_string = re.sub(r'\W+', '-', f'{timestep}')
+            plt.savefig(os.path.join(results_path, f'line_utilization_{name_string}.png'), bbox_inches='tight')
+            # plt.show()
+            plt.close()
+
+        # Stitch images to video.
+        images = []
+        for timestep in problem.timesteps:
+            name_string = re.sub(r'\W+', '-', f'{timestep}')
+            images.append(cv2.imread(os.path.join(results_path, f'line_utilization_{name_string}.png')))
+        video_writer = (
+            cv2.VideoWriter(
+                os.path.join(results_path, 'line_utilization.avi'),  # Filename.
+                cv2.VideoWriter_fourcc(*'XVID'),  # Format.
+                2.0,  # FPS.
+                images[0].shape[1::-1]  # Size.
+            )
+        )
+        for image in images:
+            video_writer.write(image)
+        video_writer.release()
+        cv2.destroyAllWindows()
 
     # Plot some results.
     plt.title('Branch utilization [%]')

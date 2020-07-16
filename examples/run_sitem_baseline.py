@@ -147,12 +147,12 @@ def main():
         cb = plt.colorbar(sm, shrink=0.9)
         cb.set_label('Utilization [%]')
         # Add basemap / open street map for better orientation.
-        # ctx.add_basemap(
-        #     plt.gca(),
-        #     crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-        #     source=ctx.providers.CartoDB.Positron,
-        #     attribution=False  # Do not show copyright notice.
-        # )
+        ctx.add_basemap(
+            plt.gca(),
+            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+            source=ctx.providers.CartoDB.Positron,
+            attribution=False  # Do not show copyright notice.
+        )
         name_string = re.sub(r'\W+', '-', f'{timestep}')
         plt.savefig(os.path.join(results_path, f'substation_utilization_{name_string}.png'), bbox_inches='tight')
         # plt.show()
@@ -354,6 +354,7 @@ def main():
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     # plt.show()
+    plt.close()
 
     plt.title('Transformer utilization [%]')
     transformers = (
@@ -375,6 +376,7 @@ def main():
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     # plt.show()
+    plt.close()
 
     plt.title('Maximum voltage drop [%]')
     plt.bar(
@@ -391,6 +393,7 @@ def main():
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     # plt.show()
+    plt.close()
 
     # Print results path.
     os.startfile(results_path)

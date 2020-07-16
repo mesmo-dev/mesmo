@@ -55,6 +55,9 @@ def main():
     # Print results.
     print(results)
 
+    # Store results to CSV.
+    results.to_csv(results_path)
+
     # Obtain electric grid data / graph.
     electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
@@ -164,7 +167,7 @@ def main():
     )
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
+    # plt.show()
 
     plt.title('Transformer utilization [%]')
     transformers = (
@@ -185,7 +188,7 @@ def main():
     )
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
+    # plt.show()
 
     plt.title('Maximum voltage drop [%]')
     plt.bar(
@@ -201,10 +204,7 @@ def main():
     )
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-
-    # Store results to CSV.
-    results.to_csv(results_path)
+    # plt.show()
 
     # Print results path.
     os.startfile(results_path)

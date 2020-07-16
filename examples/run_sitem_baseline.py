@@ -7,11 +7,13 @@
 """
 
 import contextily as ctx  # TODO: Document contextily dependency.
+import cv2  # TODO: Document opencv dependency.
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import re
 
 import fledge.data_interface
 import fledge.plots
@@ -69,58 +71,83 @@ def main():
             'node_2_name'
         ].to_list()
     )
-    node_utilization = branch_power_vector_magnitude_relative.loc['maximum', transformers]
-    node_utilization.index = nodes_substation
+    node_utilization = 100.0 * branch_power_vector_magnitude_relative.loc[:, transformers]
+    node_utilization.columns = nodes_substation
 
     # Plot electric grid substation utilization as nodes.
-    plt.figure(
-        figsize=[12.0, 6.0],  # Arbitrary convenient figure size.
-        dpi=300
-    )
-    nx.draw(
-        electric_grid_graph,
-        nodelist=nodes_substation,
-        edgelist=[],
-        pos=electric_grid_graph.node_positions,
-        node_size=200.0,
-        node_color=node_utilization.tolist(),
-        vmin=20.0,
-        vmax=120.0,
-        edgecolors='black',
-        # Uncomment below to print utilization as node labels.
-        # labels=node_utilization.round().astype(np.int).to_dict(),
-        # font_size=7.0,
-        # font_color='white',
-        # font_family='Arial'
-    )
-    # Adjust axis limits, to get a better view of surrounding map.
-    xlim = plt.xlim()
-    xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
-    plt.xlim(xlim)
-    ylim = plt.ylim()
-    ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
-    plt.ylim(ylim)
-    # Add colorbar.
-    sm = (
-        plt.cm.ScalarMappable(
-            norm=plt.Normalize(
-                vmin=20.0,
-                vmax=120.0
+    for timestep in node_utilization.index:
+        vmin = 20.0
+        vmax = 120.0
+        plt.figure(
+            figsize=[12.0, 6.0],  # Arbitrary convenient figure size.
+            dpi=300
+        )
+        plt.title(
+            f"Substation utilization: {timestep.strftime('%H:%M:%S') if type(timestep) is pd.Timestamp else timestep}"
+        )
+        nx.draw(
+            electric_grid_graph,
+            nodelist=nodes_substation,
+            edgelist=[],
+            pos=electric_grid_graph.node_positions,
+            node_size=200.0,
+            node_color=node_utilization.loc[timestep, :].tolist(),
+            vmin=vmin,
+            vmax=vmax,
+            edgecolors='black',
+            # Uncomment below to print utilization as node labels.
+            labels=node_utilization.loc[timestep, :].round().astype(np.int).to_dict(),
+            font_size=7.0,
+            font_color='white',
+            font_family='Arial'
+        )
+        # Adjust axis limits, to get a better view of surrounding map.
+        xlim = plt.xlim()
+        xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
+        plt.xlim(xlim)
+        ylim = plt.ylim()
+        ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
+        plt.ylim(ylim)
+        # Add colorbar.
+        sm = (
+            plt.cm.ScalarMappable(
+                norm=plt.Normalize(
+                    vmin=vmin,
+                    vmax=vmax
+                )
             )
         )
+        cb = plt.colorbar(sm, shrink=0.9)
+        cb.set_label('Utilization [%]')
+        # Add basemap / open street map for better orientation.
+        # ctx.add_basemap(
+        #     plt.gca(),
+        #     crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+        #     source=ctx.providers.CartoDB.Positron,
+        #     attribution=False  # Do not show copyright notice.
+        # )
+        name_string = re.sub(r'\W+', '-', f'{timestep}')
+        plt.savefig(os.path.join(results_path, f'substation_utilization_{name_string}.png'), bbox_inches='tight')
+        # plt.show()
+        plt.close()
+
+    # Stitch images to video.
+    images = []
+    for timestep in problem.timesteps:
+        name_string = re.sub(r'\W+', '-', f'{timestep}')
+        images.append(cv2.imread(os.path.join(results_path, f'substation_utilization_{name_string}.png')))
+    video_writer = (
+        cv2.VideoWriter(
+            os.path.join(results_path, 'substation_utilization.avi'),  # Filename.
+            cv2.VideoWriter_fourcc(*'XVID'),  # Format.
+            2.0,  # FPS.
+            images[0].shape[1::-1]  # Size.
+        )
     )
-    cb = plt.colorbar(sm, shrink=0.9)
-    cb.set_label('Utilization [%]')
-    # Add basemap / open street map for better orientation.
-    ctx.add_basemap(
-        plt.gca(),
-        crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-        source=ctx.providers.CartoDB.Positron,
-        attribution=False  # Do not show copyright notice.
-    )
-    plt.savefig(os.path.join(results_path, 'nodes_utilization.png'), bbox_inches='tight')
-    plt.show()
-    plt.close()
+    for image in images:
+        video_writer.write(image)
+    video_writer.release()
+    cv2.destroyAllWindows()
 
     # Plot some results.
     plt.title('Branch utilization [%]')

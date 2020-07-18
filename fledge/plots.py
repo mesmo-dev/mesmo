@@ -16,6 +16,7 @@ logger = fledge.config.get_logger(__name__)
 class ElectricGridGraph(nx.DiGraph):
     """Electric grid graph object."""
 
+    edge_by_line_name: pd.Series
     node_positions: dict
     node_labels: dict
 
@@ -42,6 +43,14 @@ class ElectricGridGraph(nx.DiGraph):
         super().__init__()
         self.add_edges_from(
             electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
+        )
+
+        # Obtain edges labelled by line name.
+        self.edge_by_line_name = (
+            pd.Series(
+                electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False),
+                index=electric_grid_data.electric_grid_lines.loc[:, 'line_name']
+            )
         )
 
         # Remove nodes without latitude / longitude.

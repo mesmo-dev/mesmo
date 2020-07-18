@@ -24,7 +24,7 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'ema_sample_grid'
+    scenario_name = 'singapore_district25'
     results_path = fledge.utils.get_results_path('run_sitem_baseline', scenario_name)
     plot_detailed_grid = True
 
@@ -123,10 +123,10 @@ def main():
             vmax=vmax,
             edgecolors='black',
             # Uncomment below to print utilization as node labels.
-            labels=node_utilization.loc[timestep, :].round().astype(np.int).to_dict(),
-            font_size=7.0,
-            font_color='white',
-            font_family='Arial'
+            # labels=node_utilization.loc[timestep, :].round().astype(np.int).to_dict(),
+            # font_size=7.0,
+            # font_color='white',
+            # font_family='Arial'
         )
         # Adjust axis limits, to get a better view of surrounding map.
         xlim = plt.xlim()

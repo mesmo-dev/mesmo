@@ -7,7 +7,7 @@
 """
 
 import contextily as ctx  # TODO: Document contextily dependency.
-import cv2  # TODO: Document opencv dependency.
+import cv2
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np

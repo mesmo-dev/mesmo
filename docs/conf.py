@@ -37,6 +37,7 @@ autodoc_default_options = {
 autodoc_typehints = 'description'
 autodoc_mock_imports = [
     'cobmo',
+    'cv2',
     'matplotlib',
     'multimethod',
     'networkx',

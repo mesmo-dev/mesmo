@@ -1,7 +1,5 @@
-"""Project SITEM baseline scenario evaluation script.
+"""Project SITEM scenario evaluation script.
 
-- This script relies on the 'ema_sample_grid' scenario which is not included in this repository. If you have the
-  scenario definition files, add the path to the definition in `config.yml` at `additional_data_paths=[]`.
 - This script depends on `contextily`, which is not included in the package dependencies, but can be installed
   under Anaconda via `conda install -c conda-forge contextily`.
 """
@@ -59,50 +57,39 @@ def main():
     # Store results to CSV.
     results.to_csv(results_path)
 
-    # Obtain electric grid data / graph.
-    electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+    # Obtain electric grid graph.
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
-    transformers = (
-        problem.electric_grid_model.branches[
-            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
-        ]
-    )
-    lines_by_edges = electric_grid_data.electric_grid_lines.loc[:, 'line_name']
-    lines_by_edges.index = (
-        electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
-    )
-    lines_by_edges = lines_by_edges.reindex(electric_grid_graph.edges)
-    lines = (
-        problem.electric_grid_model.branches[
-            fledge.utils.get_index(
-                problem.electric_grid_model.branches,
-                branch_type='line'
-            )
-        ]
-    )
-    lines = (
-        pd.MultiIndex.from_tuples(
-            pd.Series(lines.tolist(), index=lines.get_level_values('branch_name')).reindex(lines_by_edges).tolist()
-        )
-    )
+
+    # Obtain element indexes for graph plots.
+    # TODO: Consider including these within the graph object.
     nodes = (
         problem.electric_grid_model.nodes[
             problem.electric_grid_model.nodes.get_level_values('node_name').isin(electric_grid_graph.nodes)
         ]
     )
-
-    # Obtain substation nodes / utilization.
-    nodes_substation = (
-        electric_grid_data.electric_grid_transformers.loc[
-            transformers.get_level_values('branch_name'),
-            'node_2_name'
-        ].to_list()
+    transformers = (
+        problem.electric_grid_model.branches[
+            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
+        ]
     )
-    node_utilization = 100.0 * branch_power_vector_magnitude_relative.loc[:, transformers]
-    node_utilization.columns = nodes_substation
+    lines = (
+        problem.electric_grid_model.branches[
+            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='line')
+        ]
+    )
+    transformer_nodes = (
+        problem.electric_grid_model.nodes[
+            np.array(np.nonzero(
+                problem.electric_grid_model.branch_incidence_2_matrix[
+                    fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer'),
+                    :
+                ] > 0
+            ))[:, 1]
+        ]
+    )
 
-    # Plot electric grid substation utilization as nodes.
-    for timestep in node_utilization.index:
+    # Plot electric grid transformer utilization.
+    for timestep in branch_power_vector_magnitude_relative.index:
         vmin = 20.0
         vmax = 120.0
         plt.figure(
@@ -112,13 +99,20 @@ def main():
         plt.title(
             f"Substation utilization: {timestep.strftime('%H:%M:%S') if type(timestep) is pd.Timestamp else timestep}"
         )
+        # Plot nodes all nodes, but with node size 0.0, just to get appropriate map extent.
         nx.draw(
             electric_grid_graph,
-            nodelist=nodes_substation,
+            edgelist=[],
+            pos=electric_grid_graph.node_positions,
+            node_size=0.0
+        )
+        nx.draw(
+            electric_grid_graph,
+            nodelist=transformer_nodes.get_level_values('node_name').tolist(),
             edgelist=[],
             pos=electric_grid_graph.node_positions,
             node_size=200.0,
-            node_color=node_utilization.loc[timestep, :].tolist(),
+            node_color=(100.0 * branch_power_vector_magnitude_relative.loc[timestep, transformers]).tolist(),
             vmin=vmin,
             vmax=vmax,
             edgecolors='black',
@@ -154,7 +148,7 @@ def main():
             attribution=False  # Do not show copyright notice.
         )
         name_string = re.sub(r'\W+', '-', f'{timestep}')
-        plt.savefig(os.path.join(results_path, f'substation_utilization_{name_string}.png'), bbox_inches='tight')
+        plt.savefig(os.path.join(results_path, f'transformer_utilization_{name_string}.png'), bbox_inches='tight')
         # plt.show()
         plt.close()
 
@@ -162,10 +156,10 @@ def main():
     images = []
     for timestep in problem.timesteps:
         name_string = re.sub(r'\W+', '-', f'{timestep}')
-        images.append(cv2.imread(os.path.join(results_path, f'substation_utilization_{name_string}.png')))
+        images.append(cv2.imread(os.path.join(results_path, f'transformer_utilization_{name_string}.png')))
     video_writer = (
         cv2.VideoWriter(
-            os.path.join(results_path, 'substation_utilization.avi'),  # Filename.
+            os.path.join(results_path, 'transformer_utilization.avi'),  # Filename.
             cv2.VideoWriter_fourcc(*'XVID'),  # Format.
             2.0,  # FPS.
             images[0].shape[1::-1]  # Size.
@@ -176,9 +170,9 @@ def main():
     video_writer.release()
     cv2.destroyAllWindows()
 
-    # Plot electric line loading.
+    # Plot electric grid line utilization.
     if plot_detailed_grid:
-        for timestep in problem.timesteps:
+        for timestep in branch_power_vector_magnitude_relative.index:
             vmin = 20.0
             vmax = 120.0
             plt.figure(
@@ -190,7 +184,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                nodelist=nodes_substation,
+                nodelist=transformer_nodes.get_level_values('node_name').tolist(),
                 edgelist=[],
                 pos=electric_grid_graph.node_positions,
                 node_size=100.0,
@@ -198,8 +192,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                # nodelist=[],
-                # edgelist=[],
+                edgelist=electric_grid_graph.edge_by_line_name.loc[lines.get_level_values('branch_name')].tolist(),
                 pos=electric_grid_graph.node_positions,
                 node_size=10.0,
                 node_color='black',
@@ -257,9 +250,9 @@ def main():
         video_writer.release()
         cv2.destroyAllWindows()
 
-    # Plot electric line loading.
+    # Plot electric grid nodes voltage drop.
     if plot_detailed_grid:
-        for timestep in problem.timesteps:
+        for timestep in node_voltage_vector_magnitude_per_unit.index:
             vmin = 0.0
             vmax = 10.0
             plt.figure(
@@ -271,7 +264,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                nodelist=nodes_substation,
+                nodelist=transformer_nodes.get_level_values('node_name').tolist(),
                 edgelist=[],
                 pos=electric_grid_graph.node_positions,
                 node_size=100.0,
@@ -280,11 +273,9 @@ def main():
             nx.draw(
                 electric_grid_graph,
                 nodelist=nodes.get_level_values('node_name').tolist(),
-                # edgelist=[],
                 pos=electric_grid_graph.node_positions,
                 node_size=50.0,
                 arrows=False,
-                # width=5.0,
                 vmin=vmin,
                 vmax=vmax,
                 node_color=(-100.0 * (node_voltage_vector_magnitude_per_unit.loc[timestep, nodes] - 1.0)).tolist(),
@@ -316,7 +307,7 @@ def main():
                 attribution=False  # Do not show copyright notice.
             )
             name_string = re.sub(r'\W+', '-', f'{timestep}')
-            plt.savefig(os.path.join(results_path, f'node_voltage_{name_string}.png'), bbox_inches='tight')
+            plt.savefig(os.path.join(results_path, f'node_voltage_drop_{name_string}.png'), bbox_inches='tight')
             # plt.show()
             plt.close()
 
@@ -324,10 +315,10 @@ def main():
         images = []
         for timestep in problem.timesteps:
             name_string = re.sub(r'\W+', '-', f'{timestep}')
-            images.append(cv2.imread(os.path.join(results_path, f'node_voltage_{name_string}.png')))
+            images.append(cv2.imread(os.path.join(results_path, f'node_voltage_drop_{name_string}.png')))
         video_writer = (
             cv2.VideoWriter(
-                os.path.join(results_path, 'node_voltage.avi'),  # Filename.
+                os.path.join(results_path, 'node_voltage_drop.avi'),  # Filename.
                 cv2.VideoWriter_fourcc(*'XVID'),  # Format.
                 2.0,  # FPS.
                 images[0].shape[1::-1]  # Size.

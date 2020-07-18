@@ -3,6 +3,8 @@
 
 .vscode
 
+.spyproject
+
 *.egg-info
 
 *__pycache__

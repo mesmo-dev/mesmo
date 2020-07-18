@@ -77,6 +77,34 @@ class FixedDERModel(DERModel):
             # TODO: Implement fixed load model for thermal grid.
             pass
 
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ):
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+        if type(self) is FixedGeneratorModel:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * self.levelized_cost_of_energy
+                    * self.active_power_nominal_timeseries.at[timestep]
+                    for timestep in self.timesteps
+                )
+            )
+        else:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * price_timeseries.at[timestep, 'price_value']
+                    * self.active_power_nominal_timeseries.at[timestep]
+                    for timestep in self.timesteps
+                )
+            )
+
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel
@@ -169,6 +197,8 @@ class EVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    levelized_cost_of_energy: np.float
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -184,37 +214,27 @@ class FixedGeneratorModel(FixedDERModel):
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
+        # Obtain levelized cost of energy.
+        self.levelized_cost_of_energy = fixed_generator.at['levelized_cost_of_energy']
+
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='active_power')
-            * (
-                fixed_generator.at['active_power_nominal']
-                if pd.notnull(fixed_generator.at['active_power_nominal'])
-                else 0.0
-            )
+            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='reactive_power')
-            * (
-                fixed_generator.at['reactive_power_nominal']
-                if pd.notnull(fixed_generator.at['reactive_power_nominal'])
-                else 0.0
-            )
+            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'reactive_power'].copy())
         )
+        if 'per_unit' in fixed_generator.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= fixed_generator.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= fixed_generator.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(fixed_generator.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(fixed_generator.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
-            pd.Series(1.0, index=self.timesteps, name='thermal_power')
-            * (
-                fixed_generator.at['thermal_power_nominal']
-                if pd.notnull(fixed_generator.at['thermal_power_nominal'])
-                else 0.0
-            )
-        )
-
-        # Construct nominal thermal power timeseries.
-        self.thermal_power_nominal_timeseries = (
-            pd.Series(0.0, index=self.timesteps)
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
 
@@ -975,7 +995,7 @@ class DERModelSet(object):
 
         # Define DER constraints for each DER.
         for der_name in self.der_names:
-            self.flexible_der_models[der_name].define_optimization_constraints(
+            self.der_models[der_name].define_optimization_constraints(
                 optimization_problem,
                 electric_grid_model,
                 power_flow_solution,
@@ -989,9 +1009,9 @@ class DERModelSet(object):
             price_timeseries: pd.DataFrame
     ):
 
-        # Define objective, only for flexible DERs.
-        for der_name in self.flexible_der_names:
-            self.flexible_der_models[der_name].define_optimization_objective(
+        # Define objective for each DER.
+        for der_name in self.der_names:
+            self.der_models[der_name].define_optimization_objective(
                 optimization_problem,
                 price_timeseries
             )

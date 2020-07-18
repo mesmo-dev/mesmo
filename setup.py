@@ -11,8 +11,10 @@ setuptools.setup(
         # 'hvplot',  # TODO: Currently causes error on Github Actions.
         'matplotlib',
         'multimethod',
+        'networkx',
         'natsort',
         'numpy',
+        'opencv-python',
         'OpenDSSDirect.py',
         'pandas',
         'parameterized',  # For tests.

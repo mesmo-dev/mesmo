@@ -43,9 +43,6 @@ class ElectricGridGraph(nx.DiGraph):
         self.add_edges_from(
             electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
         )
-        self.add_edges_from(
-            electric_grid_data.electric_grid_transformers.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
-        )
 
         # Remove nodes without latitude / longitude.
         self.remove_nodes_from(

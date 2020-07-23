@@ -48,7 +48,7 @@ def main():
 
     # Print results.
     print(f"der_power_vector = \n{der_power_vector}")
-    print(f"node_voltage_vector = \n{node_voltage_vector}")
+    print(f"node_voltage_vector = \n{abs(node_voltage_vector)}")
     print(f"branch_power_vector_1 = \n{branch_power_vector_1}")
     print(f"branch_power_vector_2 = \n{branch_power_vector_2}")
     print(f"loss = {loss}")

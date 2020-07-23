@@ -1631,14 +1631,72 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source.copy()
                 )
 
+           
+            
+            #####################################################################################################################################################################
+            #####################################################################################################################################################################
+            # “Can, Can, Lah!” (literal meaning, can accomplish) | Source: https://www.financialexpress.com/opinion/singapore-turns-50-the-remarkable-nation-that-can-lah/115775/
+            # Implicit Z-Bus powerflow solution (Arif Ahmed)
+
+            # Considering full source
+            node_apparent_power_delta = electric_grid_model.der_incidence_delta_matrix.toarray() @ np.transpose([der_power_vector.ravel()])
+            node_apparent_power_wye = electric_grid_model.der_incidence_wye_matrix.toarray() @ np.transpose([der_power_vector.ravel()])
+            node_total_apparent_power = node_apparent_power_delta + node_apparent_power_wye
+            node_current_injection = np.conj(node_total_apparent_power)/np.conj(electric_grid_model.node_voltage_vector_no_load)
+            # Considering no source
+            node_power_vector_delta_candidate_no_source
+            node_power_vector_wye_candidate_no_source
+            node_apparent_power_no_source = node_power_vector_delta_candidate_no_source + node_power_vector_wye_candidate_no_source
+            node_current_injection_no_source = np.conj(node_apparent_power_no_source)/np.conj(node_voltage_vector_initial_no_source)
+            
+            admittance_matrix_full = electric_grid_model.node_admittance_matrix.toarray()
+            admittance_matrix_source_row_removed = np.delete(admittance_matrix_full, slice(0,3),0)
+            node_current_injection_row_removed = node_current_injection_no_source
+            
+            admittance_matrix_source_row_removed_split_A = np.delete(admittance_matrix_source_row_removed, slice(3, None), 1)
+            admittance_matrix_source_row_removed_split_B = np.delete(admittance_matrix_source_row_removed, slice(0, 3), 1)
+            admittance_matrix_split_B_inverted = np.linalg.inv(admittance_matrix_source_row_removed_split_B)
+            
+            
+
+            # Instantiate Implicit Z-Bus powerflow iteration variables.
+            voltage_iteration = 0
+            voltage_change = np.inf
+            node_voltage_estimate_no_source = node_voltage_vector_initial_no_source
+            
+            while ( (voltage_iteration < voltage_iteration_limit) & (voltage_change > voltage_tolerance) ):
+                
+                # Set voltage solution as initial voltage.
+                node_voltage_estimate_initial_no_source = node_voltage_estimate_no_source
+                
+                # Perform a single-step iterative solution
+                node_voltage_estimate_no_source = admittance_matrix_split_B_inverted @ (-admittance_matrix_source_row_removed_split_A @ node_voltage_vector_initial_no_source + node_current_injection_no_source )
+                node_voltage_estimate = np.vstack((node_voltage_vector_initial_no_source,node_voltage_estimate_no_source))
+                node_current_injection = np.conj(node_total_apparent_power)/np.conj(node_voltage_estimate)
+                node_current_injection_no_source = np.delete(node_current_injection, slice(0,3),0)
+                
+                # Calculate voltage change from previous iteration.
+                voltage_change = np.max(abs(node_voltage_estimate_no_source - node_voltage_estimate_initial_no_source))
+
+                # Increment voltage iteration counter.
+                voltage_iteration += 1
+                
+
+            #Just checking result | Not an important step
+            print(f"Iterations Implicit Z-Bus =",voltage_iteration)
+            print(f"Voltage estimate =",abs(node_voltage_estimate))
+            
+            breakpoint()
+            
             # Instantiate fixed point iteration variables.
             voltage_iteration = 0
             voltage_change = np.inf
-
             while (
                     (voltage_iteration < voltage_iteration_limit)
                     & (voltage_change > voltage_tolerance)
             ):
+
+
 
                 # Calculate fixed point equation.
                 node_voltage_vector_solution_no_source = (
@@ -1683,6 +1741,9 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
                 # Increment voltage iteration counter.
                 voltage_iteration += 1
+                
+            print(f"Iterations Fixed-Point =",voltage_iteration)
+            breakpoint()
 
             # Outer solution algorithm based on voltage solution check.
             # - Checks if voltage solution exceeded iteration limit and adjusts power vector candidate if needed.

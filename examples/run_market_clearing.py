@@ -5,6 +5,8 @@ import pandas as pd
 import os
 import pyomo.environ as pyo
 import datetime as dt
+from functools import partial
+from multiprocessing import Pool, Manager
 
 import fledge.config
 import fledge.data_interface
@@ -20,9 +22,10 @@ def main():
 
     # Settings.
     # scenario_name = 'singapore_6node'
-    scenario_name = 'singapore_downtowncore'
+    scenario_name = 'singapore_benchmark'
     results_path = fledge.utils.get_results_path('run_market_clearing', scenario_name)
     price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
+    residual_demand_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'residual_demand')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -30,11 +33,19 @@ def main():
     # Obtain market model.
     market_model = fledge.market_models.MarketModel(scenario_name)
 
+    # Obtain DER model set.
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    timesteps = der_model_set.timesteps
+
     # TODO: Remove surrogate prices
     # Replace prices in the time series with surrogate prices
     clearing_prices = pd.read_csv(os.path.join(price_data_path, 'scenario_downtowncore.csv'), index_col=0)
     market_model.price_timeseries.loc[:, 'price_value'] = clearing_prices['clearing_price'].values / 1000
     flat_prices = pd.DataFrame(10.0, market_model.timesteps, ['price_value']) # For benchmarking
+
+    # Load residual demand data
+    residual_demand = pd.read_csv(os.path.join(residual_demand_data_path, 'scenario_downtowncore.csv'), index_col=0)
+    residual_demand.index = timesteps
 
     # Obtain electric grid model.
     # electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -45,20 +56,16 @@ def main():
     # der_active_power_vector = np.real(der_power_vector)
     # print(der_active_power_vector)
 
-    # Obtain DER model set.
-    der_model_set = fledge.der_models.DERModelSet(scenario_name)
-    timesteps = der_model_set.timesteps
-
     # Build initial forecast model
     forecast_model = forecast.forecast_model.forecastModel()
     price_forecast = forecast_model.forecast_prices(steps=len(timesteps))
     price_forecast.index = timesteps
-    forecast_timestep = forecast_model.df['timestep'].iloc[-1]
+    # forecast_timestep = forecast_model.df['timestep'].iloc[-1]
 
     # Create dicts to store actual and baseline dispatch quantities
     actual_dispatch = dict.fromkeys(der_model_set.der_names)
     baseline_dispatch = dict.fromkeys(der_model_set.der_names)
-    system_load = pd.Series(0.0, index=timesteps)
+    system_load = pd.DataFrame(0.0, timesteps, ['baseline', 'actual'])
     for der_name in der_model_set.der_names:
         actual_dispatch[der_name] = pd.Series(0.0, index=timesteps)
         baseline_dispatch[der_name] = pd.Series(0.0, index=timesteps)
@@ -85,53 +92,68 @@ def main():
             output_vector
         ) = results['state_vector'], results['control_vector'], results['output_vector']
         baseline_dispatch[der_name] = output_vector['grid_electric_power']
-        system_load += output_vector['grid_electric_power']
-    peak_scenario_load = system_load.max() / 1e6 # in MW.
+        system_load.loc[:, 'baseline'] += output_vector['grid_electric_power']
+    peak_scenario_load = system_load['baseline'].max() / 1e6 # in MW.
 
     # Obtain bids from every building in the scenario
-    # TODO: formulate linear bid curves instead of price-pair quantities
     for timestep in timesteps:
         # Define price range and points for the current timestep
         lower_price_limit = price_forecast.at[timestep, 'lower_limit']
         upper_price_limit = price_forecast.at[timestep, 'upper_limit']
         price_points = np.linspace(lower_price_limit, upper_price_limit, 4)
-        for der_name in der_model_set.der_names:
-            # Obtain DERModel from the model set
-            der_model = der_model_set.flexible_der_models[der_name]
-            der_bids[der_name][timestep].index = price_points
-            for price in price_points:
-                # Create optimization problem and solve
-                optimization_problem = pyo.ConcreteModel()
-                der_model.define_optimization_variables(optimization_problem)
-                der_model.define_optimization_constraints(optimization_problem)
-                # Additional variables and constraints for robust optimization
-                der_model.define_optimization_variables_bids(optimization_problem)
-                der_model.define_optimization_constraints_bids(optimization_problem,
-                                                               timestep,
-                                                               price_forecast,
-                                                               actual_dispatch[der_name])
-                # Objective function for robust optimization
-                der_model.define_optimization_objective_bids(optimization_problem,
-                                                             timestep,
-                                                             price,
-                                                             price_forecast)
-                results = der_model.get_optimization_results(optimization_problem)
-                (
-                    state_vector,
-                    control_vector,
-                    output_vector
-                ) = results['state_vector'], results['control_vector'], results['output_vector']
-
-                der_bids[der_name][timestep][price] = output_vector.at[timestep, 'grid_electric_power']
-
-            der_bids[der_name][timestep].iloc[:-1] -= der_bids[der_name][timestep].min() # Convert to block bids
-            der_bids[der_name][timestep] = -der_bids[der_name][timestep] # Convert to negative power
-
+        func = partial(get_bids, der_model_set, timestep, price_forecast, actual_dispatch, price_points, der_bids)
+        with Pool(16) as p:
+            results = p.map(func, der_model_set.der_names)
+        for index, der_name in enumerate(der_model_set.der_names):
+            der_bids[der_name][timestep].index = results[index].index
+            der_bids[der_name][timestep].loc[:] = results[index].values
             # Save bids to CSV
             der_bids[der_name][timestep].to_csv(os.path.join(
-                results_path, f'der_bids_{der_name}_{timestep}.csv'.replace(':','_')
+                results_path, f'der_bids_{der_name}_{timestep}.csv'.replace(':', '_')
                 )
             )
+        # for der_name in der_model_set.der_names:
+        #     # Obtain DERModel from the model set
+        #     der_model = der_model_set.flexible_der_models[der_name]
+        #     der_bids[der_name][timestep].index = price_points
+        #     for price in price_points:
+        #         # Create optimization problem and solve
+        #         optimization_problem = pyo.ConcreteModel()
+        #         der_model.define_optimization_variables(optimization_problem)
+        #         der_model.define_optimization_constraints(optimization_problem)
+        #         # Additional variables and constraints for robust optimization
+        #         der_model.define_optimization_variables_bids(optimization_problem)
+        #         der_model.define_optimization_constraints_bids(optimization_problem,
+        #                                                        timestep,
+        #                                                        price_forecast,
+        #                                                        actual_dispatch[der_name])
+        #         # Objective function for robust optimization
+        #         der_model.define_optimization_objective_bids(optimization_problem,
+        #                                                      timestep,
+        #                                                      price,
+        #                                                      price_forecast)
+        #         results = der_model.get_optimization_results(optimization_problem)
+        #         (
+        #             state_vector,
+        #             control_vector,
+        #             output_vector
+        #         ) = results['state_vector'], results['control_vector'], results['output_vector']
+        #
+        #         der_bids[der_name][timestep][price] = output_vector.at[timestep, 'grid_electric_power']
+        #
+        #     # Convert to block bids
+        #     for price in reversed(der_bids[der_name][timestep].index):
+        #         der_bids[der_name][timestep].loc[der_bids[der_name][timestep].index < price] -= (
+        #             der_bids[der_name][timestep].loc[price]
+        #         )
+        #     # der_bids[der_name][timestep].iloc[:-1] -= der_bids[der_name][timestep].min()
+        #     der_bids[der_name][timestep] = -der_bids[der_name][timestep]  # Convert to negative power
+        #
+        #     # Save bids to CSV
+        #     der_bids[der_name][timestep].to_csv(os.path.join(
+        #         results_path, f'der_bids_{der_name}_{timestep}.csv'.replace(':','_')
+        #         )
+        #     )
 
         # Pass bids to MCE and obtain clearing price and power dispatch in return
         (
@@ -140,8 +162,16 @@ def main():
         ) = market_model.clear_market_supply_curves(
             der_bids,
             timestep,
-            peak_scenario_load,
-            scenario='low_price_noon')
+            residual_demand,
+            scenario='default'
+        )
+        # (
+        #     cleared_price,
+        #     active_power_dispatch
+        # ) = market_model.clear_market(
+        #     der_bids,
+        #     timestep
+        # )
 
         print(f'Clearing price for timestep {timestep}: {cleared_price}')
 
@@ -161,7 +191,6 @@ def main():
     # Create DataFrame to store electricity costs
     electricity_cost = pd.DataFrame(0.0, der_model_set.der_names, ['baseline', 'bids'])
 
-    # TODO: Calculate electricity costs for the buildings
     for der_name in der_model_set.der_names:
         electricity_cost.loc[der_name, 'baseline'] = np.sum(
                 baseline_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
@@ -171,6 +200,7 @@ def main():
                 actual_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
                 * 0.5 / 1e3
         )
+        system_load.loc[:, 'actual'] += actual_dispatch[der_name]
 
     electricity_cost.to_csv(os.path.join(results_path, 'electricity_cost.csv'))
 
@@ -212,13 +242,57 @@ def main():
 
     # Store results
     for der_name in der_model_set.der_names:
-        actual_dispatch[der_name].to_csv(
-            os.path.join(results_path, f'actual_dispatch_{der_name}.csv')
+        dispatch_df = pd.DataFrame({'baseline':baseline_dispatch[der_name], 'actual':actual_dispatch[der_name]})
+        dispatch_df.to_csv(
+            os.path.join(results_path, f'dispatch_profile_{der_name}.csv')
         )
-        baseline_dispatch[der_name].to_csv(
-            os.path.join(results_path, f'baseline_dispatch_{der_name}.csv')
-        )
+        # baseline_dispatch[der_name].to_csv(
+        #     os.path.join(results_path, f'baseline_dispatch_{der_name}.csv')
+        # )
     system_load.to_csv(os.path.join(results_path, 'system_load.csv'))
+
+
+def get_bids(der_model_set, timestep, price_forecast, actual_dispatch, price_points, der_bids, der_name):
+    # Obtain DERModel from the model set
+    der_model = der_model_set.flexible_der_models[der_name]
+    der_bids[der_name][timestep].index = price_points
+    for price in price_points:
+        # Create optimization problem and solve
+        optimization_problem = pyo.ConcreteModel()
+        der_model.define_optimization_variables(optimization_problem)
+        der_model.define_optimization_constraints(optimization_problem)
+        # Additional variables and constraints for robust optimization
+        # der_model.define_optimization_variables_bids(optimization_problem)
+        der_model.define_optimization_constraints_bids(optimization_problem,
+                                                       timestep,
+                                                       price_forecast,
+                                                       actual_dispatch[der_name])
+        # Objective function for robust optimization
+        der_model.define_optimization_objective_bids(optimization_problem,
+                                                     timestep,
+                                                     price,
+                                                     price_forecast)
+        results = der_model.get_optimization_results(optimization_problem)
+        (
+            state_vector,
+            control_vector,
+            output_vector
+        ) = results['state_vector'], results['control_vector'], results['output_vector']
+
+        der_bids[der_name][timestep][price] = output_vector.at[timestep, 'grid_electric_power']
+
+    # Convert to block bids
+    for price in reversed(der_bids[der_name][timestep].index):
+        der_bids[der_name][timestep].loc[der_bids[der_name][timestep].index < price] -= (
+            der_bids[der_name][timestep].loc[price]
+        )
+    der_bids[der_name][timestep] = -der_bids[der_name][timestep]  # Convert to negative power
+
+    return der_bids[der_name][timestep]
+    # shared_dict = der_bids
+    # print(shared_dict)
+
+
 
 
 if __name__ == "__main__":

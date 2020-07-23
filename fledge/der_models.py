@@ -697,9 +697,10 @@ class FlexibleBuildingModel(FlexibleDERModel):
             optimization_problem: pyo.ConcreteModel,
     ):
         optimization_problem.variable_z = pyo.Var(domain=pyo.NonNegativeReals)
-        optimization_problem.variable_gamma = len(self.timesteps)
+        optimization_problem.variable_gamma = pyo.Var(domain=pyo.NonNegativeReals)
         optimization_problem.variable_q = pyo.Var(self.timesteps, [self.der_name], domain=pyo.NonNegativeReals)
         optimization_problem.variable_y = pyo.Var(self.timesteps, [self.der_name], domain=pyo.NonNegativeReals)
+
 
     def define_optimization_constraints_bids(
             self,
@@ -711,28 +712,32 @@ class FlexibleBuildingModel(FlexibleDERModel):
         if optimization_problem.find_component('der_model_constraints') is None:
             optimization_problem.der_model_constraints = pyo.ConstraintList()
 
+        # optimization_problem.der_model_constraints.add(
+        #     optimization_problem.variable_gamma == len(self.timesteps[self.timesteps > current_timestep])
+        # )
+
         for timestep in self.timesteps:
             if timestep < current_timestep:
                 optimization_problem.der_model_constraints.add(
                     optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power'] ==
                     actual_dispatch[timestep]
                 )
-            elif timestep == current_timestep:
-                continue
-            else:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.variable_z + optimization_problem.variable_q[timestep, self.der_name]
-                    >=
-                    ((price_forecast.at[timestep, 'upper_limit'] - price_forecast.at[
-                        timestep, 'expected_price'])
-                     * optimization_problem.variable_y[timestep, self.der_name])
-                )
-                optimization_problem.der_model_constraints.add(
-                    (optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                     * 1800 / 3600.0 / 1000.0)
-                    <=
-                    optimization_problem.variable_y[timestep, self.der_name]
-                )
+            # elif timestep == current_timestep:
+            #     continue
+            # else:
+            #     optimization_problem.der_model_constraints.add(
+            #         optimization_problem.variable_z + optimization_problem.variable_q[timestep, self.der_name]
+            #         >=
+            #         ((price_forecast.at[timestep, 'upper_limit'] - price_forecast.at[
+            #             timestep, 'lower_limit'])
+            #          * optimization_problem.variable_y[timestep, self.der_name])
+            #     )
+            #     optimization_problem.der_model_constraints.add(
+            #         (optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+            #          * 1800 / 3600.0 / 1000.0)
+            #         <=
+            #         optimization_problem.variable_y[timestep, self.der_name]
+            #     )
 
     def define_optimization_objective_bids(
             self,
@@ -749,7 +754,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 price_forecast.at[timestep, 'expected_price']
                 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                 * 1800 / 3600.0 / 1000.0
-                + optimization_problem.variable_q[timestep, self.der_name]
+                # + optimization_problem.variable_q[timestep, self.der_name]
                 for timestep in self.timesteps if timestep > current_timestep
             )
         )
@@ -757,7 +762,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 current_price
                 * optimization_problem.output_vector[current_timestep, self.der_name, 'grid_electric_power']
                 * 1800 / 3600.0 / 1000.0
-                + optimization_problem.variable_gamma * optimization_problem.variable_z
+                # + optimization_problem.variable_gamma * optimization_problem.variable_z
         )
 
 

@@ -4,6 +4,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import math
+import random
 
 import fledge.config
 import fledge.data_interface
@@ -184,9 +185,8 @@ class MarketModel(object):
             self,
             der_bids: dict,
             timestep: pd.Timestamp,
-            peak_scenario_load: float,
-            peak_system_load = 7495.0,
-            scenario = 'default'
+            residual_demand: pd.DataFrame,
+            scenario='default'
     ):
         """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch,
         assuming bids are provided as PRICE-QUANTITY PAIRS."""
@@ -207,12 +207,29 @@ class MarketModel(object):
             aggregate_demand.loc[price] = aggregate_demand.loc[aggregate_demand.index >= price].sum()
 
         if scenario == 'default':
-            cleared_prices = np.exp(3.258+0.000211*-aggregate_demand*peak_system_load/peak_scenario_load/1e6)/1000
-        elif scenario == 'low_price_noon':
-            if 9 <= timestep.hour <= 17:
-                cleared_prices = np.exp(3.258 + 0.000106 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
-            else:
-                cleared_prices = np.exp(3.258 + 0.000211 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+            cleared_prices = np.exp(3.258+0.000211*(-aggregate_demand/1e6+residual_demand.loc[timestep].values))/1000
+        # elif scenario == 'low_price_noon':
+        #     if 9 <= timestep.hour <= 17:
+        #         if (timestep.hour % 2) == 0:
+        #             cleared_prices = np.exp(
+        #                 3.258 + 0.000211 * ((-aggregate_demand-0.5*peak_scenario_load*1e6)
+        #                                     * peak_system_load / peak_scenario_load / 1e6)
+        #             ) / 1000
+        #         else:
+        #             cleared_prices = np.exp(
+        #                 3.258 + 0.000211 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+        #     elif timestep.hour < 9:
+        #         cleared_prices = np.exp(3.258 + 0.0004 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+        #     else:
+        #         cleared_prices = np.exp(
+        #             3.258 + 0.000211 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+        # elif scenario == 'random_fluctuations':
+        #     gradient = random.uniform(0.00004, 0.000214)
+        #     cleared_prices = np.exp(
+        #         3.258 + gradient * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+        elif scenario == 'constant_price':
+            cleared_prices = aggregate_demand.copy()
+            cleared_prices.loc[:] = 0.03
 
         # Set cleared price to be the maximum price which is still lower than the bid price
         cleared_price = cleared_prices.loc[cleared_prices.index > cleared_prices].max()

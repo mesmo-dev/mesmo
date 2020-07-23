@@ -788,11 +788,11 @@ class ElectricGridModelDefault(ElectricGridModel):
                 phases_list = fledge.utils.get_element_phases_array(der).tolist()
 
                 # Select connection node based on phase arrangement of delta der.
-                # - Delta ders must be single-phase.
+                # - Delta DERs must be single-phase.
                 if phases_list in ([1, 2], [2, 3]):
-                    node_index = [node_index[1]]
+                    node_index = [node_index[0]]
                 elif phases_list == [1, 3]:
-                    node_index = [node_index[2]]
+                    node_index = [node_index[1]]
                 else:
                     logger.error(f"Unknown delta phase arrangement: {phases_list}")
                     raise ValueError
@@ -800,7 +800,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
                 incidence_matrix = np.array([1])
-                self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
+                self.der_incidence_delta_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             else:
                 logger.error(f"Unknown der connection type: {connection}")

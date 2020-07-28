@@ -135,6 +135,8 @@ parallel_pool = None
 plt.style.use(config['plots']['matplotlib_style'])
 matplotlib.rcParams['image.cmap'] = config['plots']['colormap']
 matplotlib.rcParams['font.family'] = config['plots']['font_family']
+matplotlib.rcParams['pdf.fonttype'] = 42  # Avoid "Type 3 fonts" in PDFs for better compatibility.
+matplotlib.rcParams['ps.fonttype'] = 42  # See: http://phyletica.org/matplotlib-fonts/
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.

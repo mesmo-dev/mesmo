@@ -17,16 +17,18 @@ import fledge.thermal_grid_models
 import fledge.utils
 
 
-def main():
+def main(
+        scenario_number=None
+):
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar_modified'
-    scenario = 1
+    scenario_number = 1 if scenario_number is None else scenario_number
     # Choices: 1 (unconstrained operation), 2 (constrained thermal grid branch flow),
     # 3 (constrained thermal grid pressure head), 4 (constrained electric grid branch power),
     # 5 (constrained electric grid voltage)
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario}', scenario_name)
+        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -75,11 +77,11 @@ def main():
     voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
     # Modify limits for scenarios.
-    if scenario in [4]:
+    if scenario_number in [4]:
         branch_power_vector_squared_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 2.0 / 100.0
-    elif scenario in [5]:
+    elif scenario_number in [5]:
         voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.99 / 0.5  # TODO: Check if sensitivity matrix wrong.
@@ -103,11 +105,11 @@ def main():
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
     # Modify limits for scenarios.
-    if scenario in [2]:
+    if scenario_number in [2]:
         branch_flow_vector_maximum[
             fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
         ] *= 0.05 / 1.5
-    elif scenario in [3]:
+    elif scenario_number in [3]:
         node_head_vector_minimum[
             fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
         ] *= 0.05 / 1.5
@@ -492,4 +494,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+
+    run_all = True
+
+    if run_all:
+        for scenario_number in [1, 2, 3, 4, 5]:
+            main(scenario_number)
+    else:
+        main()

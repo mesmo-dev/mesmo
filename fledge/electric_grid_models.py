@@ -235,11 +235,16 @@ class ElectricGridModel(object):
             ])
         )
         # Sort by `branch_type` / `branch_name`.
-        self.branches.sort_values('branch_type', inplace=True)
         self.branches = (
             self.branches.reindex(index=natsort.order_by_index(
                 self.branches.index,
                 natsort.index_natsorted(self.branches.loc[:, 'branch_name'])
+            ))
+        )
+        self.branches = (
+            self.branches.reindex(index=natsort.order_by_index(
+                self.branches.index,
+                natsort.index_natsorted(self.branches.loc[:, 'branch_type'])
             ))
         )
         self.branches = pd.MultiIndex.from_frame(self.branches)

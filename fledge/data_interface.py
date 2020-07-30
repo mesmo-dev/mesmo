@@ -2,6 +2,7 @@
 
 import glob
 from multimethod import multimethod
+import natsort
 import numpy as np
 import os
 import pandas as pd
@@ -263,13 +264,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY node_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
+        self.electric_grid_nodes = (
+            self.electric_grid_nodes.reindex(index=natsort.natsorted(self.electric_grid_nodes.index))
+        )
         self.electric_grid_ders = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -278,13 +281,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY der_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_ders.index = self.electric_grid_ders['der_name']
+        self.electric_grid_ders = (
+            self.electric_grid_ders.reindex(index=natsort.natsorted(self.electric_grid_ders.index))
+        )
         self.electric_grid_lines = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -294,13 +299,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY line_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_lines.index = self.electric_grid_lines['line_name']
+        self.electric_grid_lines = (
+            self.electric_grid_lines.reindex(index=natsort.natsorted(self.electric_grid_lines.index))
+        )
         self.electric_grid_line_types = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -312,7 +319,6 @@ class ElectricGridData(object):
                         WHERE scenario_name = ?
                     )
                 )
-                ORDER BY line_type ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
@@ -345,13 +351,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY transformer_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
+        self.electric_grid_transformers = (
+            self.electric_grid_transformers.reindex(index=natsort.natsorted(self.electric_grid_transformers.index))
+        )
 
 
 class ThermalGridData(object):
@@ -401,6 +409,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
+        self.thermal_grid_nodes = (
+            self.thermal_grid_nodes.reindex(index=natsort.natsorted(self.thermal_grid_nodes.index))
+        )
         self.thermal_grid_ders = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -415,6 +426,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
+        self.thermal_grid_ders = (
+            self.thermal_grid_ders.reindex(index=natsort.natsorted(self.thermal_grid_ders.index))
+        )
         self.thermal_grid_lines = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -430,6 +444,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
+        self.thermal_grid_lines = (
+            self.thermal_grid_lines.reindex(index=natsort.natsorted(self.thermal_grid_lines.index))
+        )
 
 
 class DERData(object):
@@ -495,6 +512,9 @@ class DERData(object):
                 ))
             )
             der_models.index = der_models['der_name']
+            der_models = (
+                der_models.reindex(index=natsort.natsorted(der_models.index))
+            )
 
             # Instantiate dictionary for unique `model_name`.
             der_models_unique = der_models.loc[:, ['model_name', 'definition_type']].drop_duplicates()
@@ -660,6 +680,9 @@ class DERData(object):
             )
         )
         self.cooling_plants.index = self.cooling_plants['der_name']
+        self.cooling_plants = (
+            self.cooling_plants.reindex(index=natsort.natsorted(self.cooling_plants.index))
+        )
 
         # Obtain flexible building data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
@@ -696,6 +719,9 @@ class DERData(object):
             )
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']
+        self.flexible_buildings = (
+            self.flexible_buildings.reindex(index=natsort.natsorted(self.flexible_buildings.index))
+        )
 
 
 class PriceData(object):

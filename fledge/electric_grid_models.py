@@ -86,14 +86,9 @@ class ElectricGridModel(object):
 
         # Obtain nodes index set, i.e., collection of all phases of all nodes
         # for generating indexing functions for the admittance matrix.
-        # - The admittance matrix has one entry for each phase of each node in
-        #   both dimensions.
-        # - There cannot be "empty" dimensions for missing phases of nodes,
-        #   because the matrix would become singular.
-        # - Therefore the admittance matrix must have the exact number of existing
-        #   phases of all nodes.
-        # - Nodes are sorted to match the order returned from OpenDSS
-        #   to enable comparing results.
+        # - The admittance matrix has one entry for each phase of each node in both dimensions.
+        # - There cannot be "empty" dimensions for missing phases of nodes, because the matrix would become singular.
+        # - Therefore the admittance matrix must have the exact number of existing phases of all nodes.
         node_dimension = (
             int(electric_grid_data.electric_grid_nodes.loc[
                 :,
@@ -147,18 +142,20 @@ class ElectricGridModel(object):
             self.nodes['node_name'] == (electric_grid_data.electric_grid['source_node_name']),
             'node_type'
         ] = 'source'
-        # Sort nodes to match order in `fledge.power_flow_solvers.get_voltage_opendss`.
-        self.nodes.sort_values(['node_name', 'phase'], inplace=True)
+        # Sort by `node_name`.
+        self.nodes = (
+            self.nodes.reindex(index=natsort.order_by_index(
+                self.nodes.index,
+                natsort.index_natsorted(self.nodes.loc[:, 'node_name'])
+            ))
+        )
         self.nodes = pd.MultiIndex.from_frame(self.nodes)
 
         # Obtain branches index set, i.e., collection of phases of all branches
         # for generating indexing functions for the branch admittance matrices.
-        # - Branches consider all power delivery elements, i.e., lines as well as
-        #   transformers.
-        # - The second dimension of the branch admittance matrices is the number of
-        #   phases of all nodes.
-        # - Transformers must have same number of phases per winding and exactly
-        #   two windings.
+        # - Branches consider all power delivery elements, i.e., lines as well as transformers.
+        # - The second dimension of the branch admittance matrices is the number of phases of all nodes.
+        # - Transformers must have same number of phases per winding and exactly two windings.
         line_dimension = (
             int(electric_grid_data.electric_grid_lines.loc[
                 :,
@@ -237,7 +234,14 @@ class ElectricGridModel(object):
                 np.repeat('transformer', transformer_dimension)
             ])
         )
-        self.branches.sort_values(['branch_type', 'branch_name', 'phase'], inplace=True)
+        # Sort by `branch_type` / `branch_name`.
+        self.branches.sort_values('branch_type', inplace=True)
+        self.branches = (
+            self.branches.reindex(index=natsort.order_by_index(
+                self.branches.index,
+                natsort.index_natsorted(self.branches.loc[:, 'branch_name'])
+            ))
+        )
         self.branches = pd.MultiIndex.from_frame(self.branches)
 
         # Obtain index set for DERs.
@@ -1907,9 +1911,13 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         - OpenDSS model must be readily set up, with the desired power being set for all DERs.
         """
 
-        # Extract nodal voltage vector.
-        # - Voltages are sorted by node names in the fashion as nodes are sorted in
-        #   `nodes` in `ElectricGridModelDefault`.
+        # Create index for OpenDSS nodes.
+        opendss_nodes = pd.Series(opendssdirect.Circuit.AllNodeNames()).str.split('.', expand=True)
+        opendss_nodes.columns = ['node_name', 'phase']
+        opendss_nodes.loc[:, 'phase'] = opendss_nodes.loc[:, 'phase'].astype(np.int)
+        opendss_nodes = pd.MultiIndex.from_frame(opendss_nodes)
+
+        # Extract nodal voltage vector and reindex to match FLEDGE nodes order.
         node_voltage_vector_solution = (
             np.transpose([
                 pd.Series(
@@ -1917,9 +1925,9 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
                         np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
                         + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
                     ),
-                    index=opendssdirect.Circuit.AllNodeNames()
+                    index=opendss_nodes
                 ).reindex(
-                    natsort.natsorted(opendssdirect.Circuit.AllNodeNames())
+                    electric_grid_model.nodes.droplevel('node_type')
                 ).values
             ])
         )

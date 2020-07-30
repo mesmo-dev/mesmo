@@ -531,6 +531,21 @@ class DERData(object):
                         )
                     )
 
+                    # If any NaN values, display warning and fill missing values.
+                    if der_model_timeseries_dict[model_name].isnull().any().any():
+                        logger.warning(
+                            f"Missing values in timeseries definition for {der_type} '{model_name}'."
+                            f" Please check if appropriate timestep_start/timestep_end are defined."
+                            f" Missing values are filled with 0."
+                        )
+                        # Fill model_name in corresponding column and 0.0 otherwise.
+                        der_model_timeseries_dict[model_name].loc[:, 'model_name'] = (
+                            der_model_timeseries_dict[model_name].loc[:, 'model_name'].fillna(model_name)
+                        )
+                        der_model_timeseries_dict[model_name] = (
+                            der_model_timeseries_dict[model_name].fillna(0.0)
+                        )
+
                 if 'schedule' in der_models_unique.at[model_name, 'definition_type']:
                     der_model_schedule = (
                         pd.read_sql(
@@ -570,7 +585,7 @@ class DERData(object):
                         ).fillna(method='ffill')
                     )
 
-                    # Reindex / fill internal gain schedule for given timesteps.
+                    # Reindex / fill schedule for given timesteps.
                     der_model_schedule_complete.index = (
                         pd.MultiIndex.from_arrays([
                             der_model_schedule_complete.index.day - 1,

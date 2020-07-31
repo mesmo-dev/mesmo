@@ -186,6 +186,7 @@ class MarketModel(object):
             der_bids: dict,
             timestep: pd.Timestamp,
             residual_demand: pd.DataFrame,
+            pv_generation: pd.Series,
             scenario='default'
     ):
         """Clear market for given timestep and DER bids to obtain cleared price and DER power dispatch,
@@ -207,26 +208,29 @@ class MarketModel(object):
             aggregate_demand.loc[price] = aggregate_demand.loc[aggregate_demand.index >= price].sum()
 
         if scenario == 'default':
-            cleared_prices = np.exp(3.258+0.000211*(-aggregate_demand/1e6+residual_demand.loc[timestep].values))/1000
-        # elif scenario == 'low_price_noon':
-        #     if 9 <= timestep.hour <= 17:
-        #         if (timestep.hour % 2) == 0:
-        #             cleared_prices = np.exp(
-        #                 3.258 + 0.000211 * ((-aggregate_demand-0.5*peak_scenario_load*1e6)
-        #                                     * peak_system_load / peak_scenario_load / 1e6)
-        #             ) / 1000
-        #         else:
-        #             cleared_prices = np.exp(
-        #                 3.258 + 0.000211 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
-        #     elif timestep.hour < 9:
-        #         cleared_prices = np.exp(3.258 + 0.0004 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
-        #     else:
-        #         cleared_prices = np.exp(
-        #             3.258 + 0.000211 * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
-        # elif scenario == 'random_fluctuations':
-        #     gradient = random.uniform(0.00004, 0.000214)
-        #     cleared_prices = np.exp(
-        #         3.258 + gradient * -aggregate_demand * peak_system_load / peak_scenario_load / 1e6) / 1000
+            cleared_prices = np.exp(3.258+0.000211*
+                                    (-aggregate_demand/1e6+residual_demand.loc[timestep].values)  #-pv_generation.loc[timestep]/1e3*2)
+                                    )/1000
+        elif scenario == 'low_price_noon':
+            if 10 <= timestep.hour <= 17:
+                if timestep.minute != 0:
+                    cleared_prices = np.exp(
+                        3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep].values-pv_generation.loc[timestep]/1e3*2)
+                                            )
+                    ) / 1000
+                else:
+                    cleared_prices = np.exp(
+                        3.258 + 0.000211 * (-aggregate_demand/1e6 + residual_demand.loc[timestep].values)
+                    ) / 1000
+            else:
+                cleared_prices = np.exp(
+                    3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep].values-pv_generation.loc[timestep]/1e3*2)
+                                            )
+                ) / 1000
+        elif scenario == 'random_fluctuations':
+            gradient = random.uniform(0.00004, 0.000214)
+            cleared_prices = np.exp(
+                3.258 + gradient * (-aggregate_demand/1e6+residual_demand.loc[timestep])) / 1000
         elif scenario == 'constant_price':
             cleared_prices = aggregate_demand.copy()
             cleared_prices.loc[:] = 0.03

@@ -22,10 +22,11 @@ def main():
 
     # Settings.
     # scenario_name = 'singapore_6node'
-    scenario_name = 'singapore_benchmark'
+    scenario_name = 'singapore_downtowncore'
     results_path = fledge.utils.get_results_path('run_market_clearing', scenario_name)
     price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
     residual_demand_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'residual_demand')
+    pv_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'pv_generation')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -46,6 +47,10 @@ def main():
     # Load residual demand data
     residual_demand = pd.read_csv(os.path.join(residual_demand_data_path, 'scenario_downtowncore.csv'), index_col=0)
     residual_demand.index = timesteps
+
+    # Load PV generation data
+    pv_generation = pd.read_csv(os.path.join(pv_data_path, 'singapore_5GW_typical.csv'), index_col=0, squeeze=True)
+    pv_generation.index = timesteps
 
     # Obtain electric grid model.
     # electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -70,6 +75,8 @@ def main():
         actual_dispatch[der_name] = pd.Series(0.0, index=timesteps)
         baseline_dispatch[der_name] = pd.Series(0.0, index=timesteps)
 
+    cleared_prices = pd.Series(0.0, index=timesteps)
+
     # Create dict to store bids
     der_bids = dict.fromkeys(der_model_set.der_names)
     for der_name in der_model_set.der_names:
@@ -93,6 +100,7 @@ def main():
         ) = results['state_vector'], results['control_vector'], results['output_vector']
         baseline_dispatch[der_name] = output_vector['grid_electric_power']
         system_load.loc[:, 'baseline'] += output_vector['grid_electric_power']
+        output_vector.to_csv(os.path.join(results_path, f'output_vector_{der_name}.csv'))
     peak_scenario_load = system_load['baseline'].max() / 1e6 # in MW.
 
     # Obtain bids from every building in the scenario
@@ -163,7 +171,8 @@ def main():
             der_bids,
             timestep,
             residual_demand,
-            scenario='default'
+            pv_generation,
+            scenario='low_price_noon'
         )
         # (
         #     cleared_price,
@@ -174,6 +183,7 @@ def main():
         # )
 
         print(f'Clearing price for timestep {timestep}: {cleared_price}')
+        cleared_prices.loc[timestep] = cleared_price
 
         # Update power dispatch
         for der_name in der_model_set.der_names:
@@ -193,16 +203,17 @@ def main():
 
     for der_name in der_model_set.der_names:
         electricity_cost.loc[der_name, 'baseline'] = np.sum(
-                baseline_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
+                baseline_dispatch[der_name].values * cleared_prices.values
                 * 0.5 / 1e3
         )
         electricity_cost.loc[der_name, 'bids'] = np.sum(
-                actual_dispatch[der_name].values * market_model.price_timeseries['price_value'].values
+                actual_dispatch[der_name].values * cleared_prices.values
                 * 0.5 / 1e3
         )
         system_load.loc[:, 'actual'] += actual_dispatch[der_name]
 
     electricity_cost.to_csv(os.path.join(results_path, 'electricity_cost.csv'))
+    cleared_prices.to_csv(os.path.join(results_path, 'cleared_prices.csv'))
 
     # # Define abritrary DER bids.
     # der_bids = dict.fromkeys(ders)

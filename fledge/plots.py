@@ -151,7 +151,10 @@ def plot_electric_grid_transformer_utilization(
             pos=electric_grid_graph.node_positions,
             node_size=200.0,
             node_color=(
-                100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, electric_grid_model.transformers]
+                100.0
+                * branch_power_vector_magnitude_per_unit.loc[timestep, electric_grid_model.transformers].mean(
+                    level='branch_name'  # Take mean across all phases.
+                )
             ).tolist(),
             vmin=vmin,
             vmax=vmax,
@@ -241,7 +244,7 @@ def plot_electric_grid_line_utilization(
         )
         nx.draw(
             electric_grid_graph,
-            edgelist=electric_grid_graph.edge_by_line_name.loc[electric_grid_model.lines.get_level_values('branch_name')].tolist(),
+            edgelist=electric_grid_graph.edge_by_line_name.loc[electric_grid_model.line_names].tolist(),
             pos=electric_grid_graph.node_positions,
             node_size=10.0,
             node_color='black',
@@ -249,7 +252,12 @@ def plot_electric_grid_line_utilization(
             width=5.0,
             edge_vmin=vmin,
             edge_vmax=vmax,
-            edge_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, electric_grid_model.lines]).tolist(),
+            edge_color=(
+                100.0
+                * branch_power_vector_magnitude_per_unit.loc[timestep, electric_grid_model.lines].mean(
+                    level='branch_name'  # Take mean across all phases.
+                )
+            ).tolist(),
         )
         # Adjust axis limits, to get a better view of surrounding map.
         xlim = plt.xlim()
@@ -330,13 +338,18 @@ def plot_electric_grid_node_voltage_drop(
         )
         nx.draw(
             electric_grid_graph,
-            nodelist=electric_grid_model.nodes.get_level_values('node_name').tolist(),
+            nodelist=electric_grid_model.node_names.tolist(),
             pos=electric_grid_graph.node_positions,
             node_size=50.0,
             arrows=False,
             vmin=vmin,
             vmax=vmax,
-            node_color=(-100.0 * (node_voltage_vector_magnitude_per_unit.loc[timestep, :] - 1.0)).tolist(),
+            node_color=(
+                -100.0
+                * (node_voltage_vector_magnitude_per_unit.loc[timestep, :] - 1.0).mean(
+                    level='node_name'  # Take mean across all phases.
+                )
+            ).tolist(),
             edgecolors='black',
         )
         # Adjust axis limits, to get a better view of surrounding map.

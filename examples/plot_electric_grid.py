@@ -75,7 +75,7 @@ def main():
     plt.close()
 
     # Print results path.
-    os.startfile(os.path.join(results_path))
+    os.startfile(results_path)
     print(f"Results are stored in: {results_path}")
 
 

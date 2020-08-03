@@ -88,15 +88,15 @@ def main():
         )
 
     # Plot some results.
-    plt.title('Branch utilization [%]')
+    plt.title('Line utilization [%]')
     plt.bar(
-        range(len(problem.electric_grid_model.branches)),
-        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', :]
+        range(len(problem.electric_grid_model.lines)),
+        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', problem.electric_grid_model.lines]
     )
-    plt.hlines(100.0, -0.5, len(problem.electric_grid_model.branches) - 0.5, colors='red')
+    plt.hlines(100.0, -0.5, len(problem.electric_grid_model.lines) - 0.5, colors='red')
     plt.xticks(
-        range(len(problem.electric_grid_model.branches)),
-        problem.electric_grid_model.branches,
+        range(len(problem.electric_grid_model.lines)),
+        problem.electric_grid_model.lines,
         rotation=45,
         ha='right'
     )
@@ -106,11 +106,6 @@ def main():
     plt.close()
 
     plt.title('Transformer utilization [%]')
-    problem.electric_grid_model.transformers = (
-        problem.electric_grid_model.branches[
-            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
-        ]
-    )
     plt.bar(
         range(len(problem.electric_grid_model.transformers)),
         100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', problem.electric_grid_model.transformers]

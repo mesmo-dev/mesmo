@@ -166,16 +166,14 @@ def main(
             optimization_problem,
             power_flow_solution,
             scenario_data.timesteps,
-            in_per_unit=in_per_unit,
-            with_mean=True
+            in_per_unit=in_per_unit
         )
     )
     results.update(
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem,
             scenario_data.timesteps,
-            in_per_unit=in_per_unit,
-            with_mean=True
+            in_per_unit=in_per_unit
         )
     )
     results.update(
@@ -183,6 +181,26 @@ def main(
             optimization_problem
         )
     )
+
+    # Obtain additional results.
+    branch_power_vector_magnitude_per_unit = (
+        (
+            np.sqrt(np.abs(results['branch_power_vector_1_squared']))
+            + np.sqrt(np.abs(results['branch_power_vector_2_squared']))
+        ) / 2
+        # / electric_grid_model.branch_power_vector_magnitude_reference
+    )
+    branch_power_vector_magnitude_per_unit.loc['maximum', :] = branch_power_vector_magnitude_per_unit.max(axis='rows')
+    node_voltage_vector_magnitude_per_unit = (
+        np.abs(results['voltage_magnitude_vector'])
+        # / np.abs(electric_grid_model.node_voltage_vector_reference)
+    )
+    node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
+    node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
+    results.update({
+        'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
+        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
+    })
 
     # Print results.
     print(results)
@@ -380,6 +398,10 @@ def main(
         plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
         plt.close()
 
+    # Obtain graphs.
+    electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
+    thermal_grid_graph = fledge.plots.ThermalGridGraph(scenario_name)
+
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
         'thermal_grid_energy_dlmp',
@@ -389,7 +411,6 @@ def main(
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:
-            thermal_grid_graph = fledge.plots.ThermalGridGraph(scenario_name)
             node_color = (
                 dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(thermal_grid_graph.nodes).values
                 * 1.0e3
@@ -443,7 +464,6 @@ def main(
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:
-            electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
             node_color = (
                 dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(electric_grid_graph.nodes).values
                 * 1.0e3
@@ -487,6 +507,22 @@ def main(
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
             # plt.show()
             plt.close()
+
+    # Plot electric grid line utilization.
+    fledge.plots.plot_electric_grid_line_utilization(
+        electric_grid_model,
+        electric_grid_graph,
+        branch_power_vector_magnitude_per_unit,
+        results_path
+    )
+
+    # Plot electric grid nodes voltage drop.
+    fledge.plots.plot_electric_grid_node_voltage_drop(
+        electric_grid_model,
+        electric_grid_graph,
+        node_voltage_vector_magnitude_per_unit,
+        results_path
+    )
 
     # Print results path.
     os.startfile(results_path)

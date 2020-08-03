@@ -17,6 +17,7 @@ class ElectricGridGraph(nx.DiGraph):
     """Electric grid graph object."""
 
     edge_by_line_name: pd.Series
+    transformer_nodes: list
     node_positions: dict
     node_labels: dict
 
@@ -48,12 +49,17 @@ class ElectricGridGraph(nx.DiGraph):
             electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
         )
 
-        # Obtain edges labelled by line name.
+        # Obtain edges indexed by line name.
         self.edge_by_line_name = (
             pd.Series(
                 electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False),
                 index=electric_grid_data.electric_grid_lines.loc[:, 'line_name']
             )
+        )
+
+        # Obtain transformer nodes (secondary nodes of transformers).
+        self.transformer_nodes = (
+            electric_grid_data.electric_grid_transformers.loc[:, 'node_2_name'].tolist()
         )
 
         # Obtain node positions / labels.

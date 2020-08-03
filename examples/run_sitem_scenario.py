@@ -60,19 +60,6 @@ def main():
     # Obtain electric grid graph.
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
-    # Obtain element indexes for graph plots.
-    # TODO: Consider including these within the graph object.
-    transformer_nodes = (
-        problem.electric_grid_model.nodes[
-            np.array(np.nonzero(
-                problem.electric_grid_model.branch_incidence_2_matrix[
-                    fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer'),
-                    :
-                ] > 0
-            ))[:, 1]
-        ]
-    )
-
     # Plot electric grid transformer utilization.
     for timestep in branch_power_vector_magnitude_per_unit.index:
         vmin = 20.0
@@ -93,7 +80,7 @@ def main():
         )
         nx.draw(
             electric_grid_graph,
-            nodelist=transformer_nodes.get_level_values('node_name').tolist(),
+            nodelist=electric_grid_graph.transformer_nodes,
             edgelist=[],
             pos=electric_grid_graph.node_positions,
             node_size=200.0,
@@ -169,7 +156,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                nodelist=transformer_nodes.get_level_values('node_name').tolist(),
+                nodelist=electric_grid_graph.transformer_nodes,
                 edgelist=[],
                 pos=electric_grid_graph.node_positions,
                 node_size=100.0,
@@ -249,7 +236,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                nodelist=transformer_nodes.get_level_values('node_name').tolist(),
+                nodelist=electric_grid_graph.transformer_nodes,
                 edgelist=[],
                 pos=electric_grid_graph.node_positions,
                 node_size=100.0,

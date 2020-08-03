@@ -67,16 +67,6 @@ def main():
             problem.electric_grid_model.nodes.get_level_values('node_name').isin(electric_grid_graph.nodes)
         ]
     )
-    transformers = (
-        problem.electric_grid_model.branches[
-            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
-        ]
-    )
-    lines = (
-        problem.electric_grid_model.branches[
-            fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='line')
-        ]
-    )
     transformer_nodes = (
         problem.electric_grid_model.nodes[
             np.array(np.nonzero(
@@ -112,7 +102,7 @@ def main():
             edgelist=[],
             pos=electric_grid_graph.node_positions,
             node_size=200.0,
-            node_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, transformers]).tolist(),
+            node_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, problem.electric_grid_model.transformers]).tolist(),
             vmin=vmin,
             vmax=vmax,
             edgecolors='black',
@@ -192,7 +182,7 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                edgelist=electric_grid_graph.edge_by_line_name.loc[lines.get_level_values('branch_name')].tolist(),
+                edgelist=electric_grid_graph.edge_by_line_name.loc[problem.electric_grid_model.lines.get_level_values('branch_name')].tolist(),
                 pos=electric_grid_graph.node_positions,
                 node_size=10.0,
                 node_color='black',
@@ -200,7 +190,7 @@ def main():
                 width=5.0,
                 edge_vmin=vmin,
                 edge_vmax=vmax,
-                edge_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, lines]).tolist(),
+                edge_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, problem.electric_grid_model.lines]).tolist(),
             )
             # Adjust axis limits, to get a better view of surrounding map.
             xlim = plt.xlim()
@@ -348,19 +338,19 @@ def main():
     plt.close()
 
     plt.title('Transformer utilization [%]')
-    transformers = (
+    problem.electric_grid_model.transformers = (
         problem.electric_grid_model.branches[
             fledge.utils.get_index(problem.electric_grid_model.branches, branch_type='transformer')
         ]
     )
     plt.bar(
-        range(len(transformers)),
-        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', transformers]
+        range(len(problem.electric_grid_model.transformers)),
+        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', problem.electric_grid_model.transformers]
     )
-    plt.hlines(100.0, -0.5, len(transformers) - 0.5, colors='red')
+    plt.hlines(100.0, -0.5, len(problem.electric_grid_model.transformers) - 0.5, colors='red')
     plt.xticks(
-        range(len(transformers)),
-        transformers,
+        range(len(problem.electric_grid_model.transformers)),
+        problem.electric_grid_model.transformers,
         rotation=45,
         ha='right'
     )

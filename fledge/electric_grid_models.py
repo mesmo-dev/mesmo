@@ -33,10 +33,14 @@ class ElectricGridModel(object):
         branch_types (pd.Index): Index set of the branch types.
         der_names (pd.Index): Index set of the DER names.
         der_types (pd.Index): Index set of the DER types.
-        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            corresponding to the dimension of the branch admittance matrices.
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
+        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to the dimension of the branch admittance matrices.
+        lines (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the lines only.
+        transformers (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the transformers only.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
@@ -54,6 +58,8 @@ class ElectricGridModel(object):
     der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
+    lines: pd.Index
+    transformers: pd.Index
     ders: pd.Index
     node_voltage_vector_reference: np.ndarray
     branch_power_vector_magnitude_reference: np.ndarray
@@ -249,6 +255,14 @@ class ElectricGridModel(object):
         )
         self.branches = pd.MultiIndex.from_frame(self.branches)
 
+        # Obtain index sets for lines / transformers corresponding to branches.
+        self.lines = (
+            self.branches[fledge.utils.get_index(self.branches, branch_type='line')]
+        )
+        self.transformers = (
+            self.branches[fledge.utils.get_index(self.branches, branch_type='transformer')]
+        )
+
         # Obtain index set for DERs.
         self.ders = pd.MultiIndex.from_frame(electric_grid_data.electric_grid_ders[['der_type', 'der_name']])
 
@@ -332,10 +346,14 @@ class ElectricGridModelDefault(ElectricGridModel):
         branch_types (pd.Index): Index set of the branch types.
         der_names (pd.Index): Index set of the DER names.
         der_types (pd.Index): Index set of the DER types.
-        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            corresponding to the dimension of the branch admittance matrices.
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
+        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to the dimension of the branch admittance matrices.
+        lines (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the lines only.
+        transformers (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the transformers only.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
@@ -962,10 +980,14 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         branch_types (pd.Index): Index set of the branch types.
         der_names (pd.Index): Index set of the DER names.
         der_types (pd.Index): Index set of the DER types.
-        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            corresponding to the dimension of the branch admittance matrices.
         nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
             corresponding to the dimension of the node admittance matrices.
+        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            corresponding to the dimension of the branch admittance matrices.
+        lines (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the lines only.
+        transformers (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
+            for the transformers only.
         ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.

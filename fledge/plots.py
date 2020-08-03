@@ -41,6 +41,9 @@ class ElectricGridGraph(nx.DiGraph):
 
         # Create electric grid graph.
         super().__init__()
+        self.add_nodes_from(
+            electric_grid_data.electric_grid_nodes.loc[:, 'node_name'].tolist()
+        )
         self.add_edges_from(
             electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
         )
@@ -51,13 +54,6 @@ class ElectricGridGraph(nx.DiGraph):
                 electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False),
                 index=electric_grid_data.electric_grid_lines.loc[:, 'line_name']
             )
-        )
-
-        # Remove nodes without latitude / longitude.
-        self.remove_nodes_from(
-            electric_grid_data.electric_grid_nodes.index[
-                electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']].isnull().any(axis='columns')
-            ]
         )
 
         # Obtain node positions / labels.
@@ -96,15 +92,11 @@ class ThermalGridGraph(nx.DiGraph):
 
         # Create thermal grid graph.
         super().__init__()
+        self.add_nodes_from(
+            thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name'].tolist()
+        )
         self.add_edges_from(
             thermal_grid_data.thermal_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
-        )
-
-        # Remove nodes without latitude / longitude.
-        self.remove_nodes_from(
-            thermal_grid_data.thermal_grid_nodes.index[
-                thermal_grid_data.thermal_grid_nodes.loc[:, ['longitude', 'latitude']].isnull().any(axis='columns')
-            ]
         )
 
         # Obtain node positions / labels.

@@ -62,11 +62,6 @@ def main():
 
     # Obtain element indexes for graph plots.
     # TODO: Consider including these within the graph object.
-    nodes = (
-        problem.electric_grid_model.nodes[
-            problem.electric_grid_model.nodes.get_level_values('node_name').isin(electric_grid_graph.nodes)
-        ]
-    )
     transformer_nodes = (
         problem.electric_grid_model.nodes[
             np.array(np.nonzero(
@@ -262,13 +257,13 @@ def main():
             )
             nx.draw(
                 electric_grid_graph,
-                nodelist=nodes.get_level_values('node_name').tolist(),
+                nodelist=problem.electric_grid_model.nodes.get_level_values('node_name').tolist(),
                 pos=electric_grid_graph.node_positions,
                 node_size=50.0,
                 arrows=False,
                 vmin=vmin,
                 vmax=vmax,
-                node_color=(-100.0 * (node_voltage_vector_magnitude_per_unit.loc[timestep, nodes] - 1.0)).tolist(),
+                node_color=(-100.0 * (node_voltage_vector_magnitude_per_unit.loc[timestep, :] - 1.0)).tolist(),
                 edgecolors='black',
             )
             # Adjust axis limits, to get a better view of surrounding map.

@@ -21,7 +21,6 @@ import cobmo.config
 def main():
 
     # Settings.
-    # scenario_name = 'singapore_6node'
     scenario_name = 'singapore_downtowncore'
     results_path = fledge.utils.get_results_path('run_market_clearing', scenario_name)
     price_data_path = os.path.join(cobmo.config.config['paths']['supplementary_data'], 'clearing_price')
@@ -54,12 +53,6 @@ def main():
 
     # Obtain electric grid model.
     # electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-
-    # Obtain DERs.
-    # ders = electric_grid_model.ders
-    # der_power_vector = electric_grid_model.der_power_vector_reference
-    # der_active_power_vector = np.real(der_power_vector)
-    # print(der_active_power_vector)
 
     # Build initial forecast model
     forecast_model = forecast.forecast_model.forecastModel()
@@ -215,42 +208,6 @@ def main():
     electricity_cost.to_csv(os.path.join(results_path, 'electricity_cost.csv'))
     cleared_prices.to_csv(os.path.join(results_path, 'cleared_prices.csv'))
 
-    # # Define abritrary DER bids.
-    # der_bids = dict.fromkeys(ders)
-    # for der_index, der in enumerate(ders):
-    #     der_bids[der] = (
-    #         pd.Series(
-    #             [der_active_power_vector[der_index] / 2, der_active_power_vector[der_index] / 2],
-    #             index=[0.0, 1.0]
-    #         )
-    #     )
-
-    # # Define arbitrary clearing price.
-    # cleared_price = 0.5
-    #
-    # # Obtain dispatch power.
-    # der_active_power_vector_dispatch = np.zeros(der_active_power_vector.shape, dtype=np.float)
-    # for der_index, der in enumerate(ders):
-    #     if der_active_power_vector[der_index] < 0.0:
-    #         der_active_power_vector_dispatch[der_index] += (
-    #             der_bids[der].loc[der_bids[der].index > cleared_price].sum()
-    #         )
-    #     elif der_active_power_vector[der_index] > 0.0:
-    #         der_active_power_vector_dispatch[der_index] += (
-    #             der_bids[der].loc[der_bids[der].index < cleared_price].sum()
-    #         )
-
-    # (
-    #     cleared_prices,
-    #     der_active_power_vector_dispatch
-    # ) = market_model.clear_market(
-    #     der_bids
-    # )
-
-    # Print results.
-    # print(f"der_bids = \n{der_bids}")
-    # print(f"der_active_power_vector_dispatch = \n{active_power_vector_dispatch}")
-
     # Store results
     for der_name in der_model_set.der_names:
         dispatch_df = pd.DataFrame({'baseline':baseline_dispatch[der_name], 'actual':actual_dispatch[der_name]})
@@ -300,10 +257,6 @@ def get_bids(der_model_set, timestep, price_forecast, actual_dispatch, price_poi
     der_bids[der_name][timestep] = -der_bids[der_name][timestep]  # Convert to negative power
 
     return der_bids[der_name][timestep]
-    # shared_dict = der_bids
-    # print(shared_dict)
-
-
 
 
 if __name__ == "__main__":

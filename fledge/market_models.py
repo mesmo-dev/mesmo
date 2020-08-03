@@ -185,7 +185,7 @@ class MarketModel(object):
             self,
             der_bids: dict,
             timestep: pd.Timestamp,
-            residual_demand: pd.DataFrame,
+            residual_demand: pd.Series,
             pv_generation: pd.Series,
             scenario='default'
     ):
@@ -209,22 +209,22 @@ class MarketModel(object):
 
         if scenario == 'default':
             cleared_prices = np.exp(3.258+0.000211*
-                                    (-aggregate_demand/1e6+residual_demand.loc[timestep].values)  #-pv_generation.loc[timestep]/1e3*2)
+                                    (-aggregate_demand/1e6+residual_demand.loc[timestep])  #-pv_generation.loc[timestep]/1e3*2)
                                     )/1000
         elif scenario == 'low_price_noon':
             if 10 <= timestep.hour <= 17:
                 if timestep.minute != 0:
                     cleared_prices = np.exp(
-                        3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep].values-pv_generation.loc[timestep]/1e3*2)
+                        3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep]-pv_generation.loc[timestep]/1e3*2)
                                             )
                     ) / 1000
                 else:
                     cleared_prices = np.exp(
-                        3.258 + 0.000211 * (-aggregate_demand/1e6 + residual_demand.loc[timestep].values)
+                        3.258 + 0.000211 * (-aggregate_demand/1e6 + residual_demand.loc[timestep])
                     ) / 1000
             else:
                 cleared_prices = np.exp(
-                    3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep].values-pv_generation.loc[timestep]/1e3*2)
+                    3.258 + 0.000211 * ((-aggregate_demand/1e6+residual_demand.loc[timestep]-pv_generation.loc[timestep]/1e3*2)
                                             )
                 ) / 1000
         elif scenario == 'random_fluctuations':

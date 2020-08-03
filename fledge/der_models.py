@@ -1164,6 +1164,30 @@ class DERModelSet(object):
         )
 
 
+    @multimethod
+    def define_optimization_objective(
+        self,
+        optimization_problem: pyo.ConcreteModel,
+        pv_generation: pd.Series,
+        residual_demand: pd.Series
+    ):
+
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        for timestep in self.timesteps:
+            optimization_problem.objective.expr += (
+                    (30
+                    + 0.0133 * (sum(
+                                optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
+                                for der_name in self.der_names) / 1e6
+                                + residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3))  # aggregate demand in MW
+                                * (sum(
+                                optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
+                                for der_name in self.der_names
+                                ) / 1e6 + residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3)
+            )
+
     def get_optimization_results(
             self,
             optimization_problem: pyo.ConcreteModel

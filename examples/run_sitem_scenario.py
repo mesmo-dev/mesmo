@@ -35,11 +35,11 @@ def main():
     results = problem.get_results()
 
     # Obtain additional results.
-    branch_power_vector_magnitude_relative = (
+    branch_power_vector_magnitude_per_unit = (
         (np.abs(results['branch_power_vector_1']) + np.abs(results['branch_power_vector_2'])) / 2
         / problem.electric_grid_model.branch_power_vector_magnitude_reference
     )
-    branch_power_vector_magnitude_relative.loc['maximum', :] = branch_power_vector_magnitude_relative.max(axis='rows')
+    branch_power_vector_magnitude_per_unit.loc['maximum', :] = branch_power_vector_magnitude_per_unit.max(axis='rows')
     node_voltage_vector_magnitude_per_unit = (
         np.abs(results['node_voltage_vector'])
         / np.abs(problem.electric_grid_model.node_voltage_vector_reference)
@@ -47,7 +47,7 @@ def main():
     node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
     node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
     results.update({
-        'branch_power_vector_magnitude_relative': branch_power_vector_magnitude_relative,
+        'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
         'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
     })
 
@@ -89,7 +89,7 @@ def main():
     )
 
     # Plot electric grid transformer utilization.
-    for timestep in branch_power_vector_magnitude_relative.index:
+    for timestep in branch_power_vector_magnitude_per_unit.index:
         vmin = 20.0
         vmax = 120.0
         plt.figure(
@@ -112,7 +112,7 @@ def main():
             edgelist=[],
             pos=electric_grid_graph.node_positions,
             node_size=200.0,
-            node_color=(100.0 * branch_power_vector_magnitude_relative.loc[timestep, transformers]).tolist(),
+            node_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, transformers]).tolist(),
             vmin=vmin,
             vmax=vmax,
             edgecolors='black',
@@ -172,7 +172,7 @@ def main():
 
     # Plot electric grid line utilization.
     if plot_detailed_grid:
-        for timestep in branch_power_vector_magnitude_relative.index:
+        for timestep in branch_power_vector_magnitude_per_unit.index:
             vmin = 20.0
             vmax = 120.0
             plt.figure(
@@ -200,7 +200,7 @@ def main():
                 width=5.0,
                 edge_vmin=vmin,
                 edge_vmax=vmax,
-                edge_color=(100.0 * branch_power_vector_magnitude_relative.loc[timestep, lines]).tolist(),
+                edge_color=(100.0 * branch_power_vector_magnitude_per_unit.loc[timestep, lines]).tolist(),
             )
             # Adjust axis limits, to get a better view of surrounding map.
             xlim = plt.xlim()
@@ -333,7 +333,7 @@ def main():
     plt.title('Branch utilization [%]')
     plt.bar(
         range(len(problem.electric_grid_model.branches)),
-        100.0 * branch_power_vector_magnitude_relative.loc['maximum', :]
+        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', :]
     )
     plt.hlines(100.0, -0.5, len(problem.electric_grid_model.branches) - 0.5, colors='red')
     plt.xticks(
@@ -355,7 +355,7 @@ def main():
     )
     plt.bar(
         range(len(transformers)),
-        100.0 * branch_power_vector_magnitude_relative.loc['maximum', transformers]
+        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', transformers]
     )
     plt.hlines(100.0, -0.5, len(transformers) - 0.5, colors='red')
     plt.xticks(

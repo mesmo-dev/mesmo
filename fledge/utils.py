@@ -62,9 +62,24 @@ def log_timing_end(
 
 def get_index(
         index_set: pd.Index,
+        raise_empty_index_error: bool = True,
         **levels_values
 ):
-    """Utility function for obtaining the integer index array for given index set / level / value list combination."""
+    """Utility function for obtaining the integer index array for given index set / level / value list combination.
+
+    :syntax:
+        - ``get_index(electric_grid_model.nodes, node_type='source', phase=1)``: Get index array for entries in
+            index set `electric_grid_model.nodes` with given `node_type` and `phase`.
+
+    Arguments:
+        index_set (pd.Index): Index set, e.g., `electric_grid_model.nodes`.
+
+    Keyword Arguments:
+        raise_empty_index_error (bool): If true, raise an exception if obtained index array is empty. This is
+            the default behavior, because it is usually caused by an invalid level / value combination.
+        level (value): All other keyword arguments are interpreted as level / value combinations, where `level`
+            must correspond to a level name of the index set.
+    """
 
     # Obtain mask for each level / values combination keyword arguments.
     mask = np.ones(len(index_set), dtype=np.bool)
@@ -88,11 +103,12 @@ def get_index(
     index = np.flatnonzero(mask)
 
     # Assert that index is not empty.
-    try:
-        assert len(index) > 0
-    except AssertionError:
-        logger.error(f"Empty index returned for: {levels_values}")
-        raise
+    if raise_empty_index_error:
+        try:
+            assert len(index) > 0
+        except AssertionError:
+            logger.error(f"Empty index returned for: {levels_values}")
+            raise
 
     return index
 

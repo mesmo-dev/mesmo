@@ -257,10 +257,14 @@ class ElectricGridModel(object):
 
         # Obtain index sets for lines / transformers corresponding to branches.
         self.lines = (
-            self.branches[fledge.utils.get_index(self.branches, branch_type='line')]
+            self.branches[
+                fledge.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='line')
+            ]
         )
         self.transformers = (
-            self.branches[fledge.utils.get_index(self.branches, branch_type='transformer')]
+            self.branches[
+                fledge.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='transformer')
+            ]
         )
 
         # Obtain index set for DERs.

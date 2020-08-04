@@ -13,7 +13,7 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'test_2node'
     results_path = fledge.utils.get_results_path('run_electric_grid_power_flow_single_step', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.

@@ -2923,159 +2923,174 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         # Caculate branch flow sensitivity matrices.
-        # TODO: Document the removed factor two compared to Hanif.
         sensitivity_branch_power_1_by_voltage = (
-            scipy.sparse.diags(np.conj(
-                electric_grid_model.branch_admittance_1_matrix
-                @ self.power_flow_solution.node_voltage_vector
+            scipy.sparse.diags((
+                np.conj(electric_grid_model.branch_admittance_1_matrix)
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
             ).ravel())
             @ electric_grid_model.branch_incidence_1_matrix
             + scipy.sparse.diags((
                 electric_grid_model.branch_incidence_1_matrix
-                @ self.power_flow_solution.node_voltage_vector
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
             ).ravel())
             @ np.conj(electric_grid_model.branch_admittance_1_matrix)
         )
         sensitivity_branch_power_2_by_voltage = (
-            scipy.sparse.diags(np.conj(
-                electric_grid_model.branch_admittance_2_matrix
-                @ self.power_flow_solution.node_voltage_vector
+            scipy.sparse.diags((
+                np.conj(electric_grid_model.branch_admittance_2_matrix)
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
             ).ravel())
             @ electric_grid_model.branch_incidence_2_matrix
             + scipy.sparse.diags((
                 electric_grid_model.branch_incidence_2_matrix
-                @ self.power_flow_solution.node_voltage_vector
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
             ).ravel())
             @ np.conj(electric_grid_model.branch_admittance_2_matrix)
         )
 
         self.sensitivity_branch_power_1_by_power_wye_active = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.real(
                     sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_active)
-                ),
-                np.imag(
-                    sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_active)
+                    @ self.sensitivity_voltage_by_power_wye_active
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
         )
         self.sensitivity_branch_power_1_by_power_wye_reactive = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.real(
                     sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
-                ),
-                np.imag(
-                    sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
+                    @ self.sensitivity_voltage_by_power_wye_reactive
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
         )
         self.sensitivity_branch_power_1_by_power_delta_active = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.real(
                     sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_active)
-                ),
-                np.imag(
-                    sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_active)
+                    @ self.sensitivity_voltage_by_power_delta_active
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
         )
         self.sensitivity_branch_power_1_by_power_delta_reactive = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.real(
                     sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)
-                ),
-                np.imag(
-                    sensitivity_branch_power_1_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)
+                    @ self.sensitivity_voltage_by_power_delta_reactive
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
         )
         self.sensitivity_branch_power_2_by_power_wye_active = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.real(
                     sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_active)
-                ),
-                np.imag(
-                    sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_active)
+                    @ self.sensitivity_voltage_by_power_wye_active
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
         )
         self.sensitivity_branch_power_2_by_power_wye_reactive = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.real(
                     sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
-                ),
-                np.imag(
-                    sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_wye_reactive)
+                    @ self.sensitivity_voltage_by_power_wye_reactive
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
         )
         self.sensitivity_branch_power_2_by_power_delta_active = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.real(
                     sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_active)
-                ),
-                np.imag(
-                    sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_active)
+                    @ self.sensitivity_voltage_by_power_delta_active
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
         )
         self.sensitivity_branch_power_2_by_power_delta_reactive = (
-            scipy.sparse.hstack([
-                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel()),
-                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
-            ])
-            @ scipy.sparse.vstack([
-                np.real(
+            (
+                2.0
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.real(
                     sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)
-                ),
-                np.imag(
-                    sensitivity_branch_power_2_by_voltage
-                    @ np.conj(self.sensitivity_voltage_by_power_delta_reactive)
+                    @ self.sensitivity_voltage_by_power_delta_reactive
                 )
-            ])
+            )
+            + (
+                2.0
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
         )
 
         self.sensitivity_branch_power_1_by_der_power_active = (

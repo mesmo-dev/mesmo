@@ -35,7 +35,7 @@ def main():
     )
 
     # Obtain no load voltage vector.
-    node_voltage_vector_no_load = electric_grid_model.node_voltage_vector_no_load
+    node_voltage_vector_no_load = electric_grid_model.node_voltage_vector_reference
 
     # Define power vector multipliers for testing of linear model at different power conditions.
     power_multipliers = np.arange(-0.2, 1.2, 0.1)
@@ -110,26 +110,26 @@ def main():
         power_flow_solution = (
             fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
                 electric_grid_model,
-                power_multiplier * electric_grid_model.der_power_vector_nominal
+                power_multiplier * electric_grid_model.der_power_vector_reference
             )
         )
         node_voltage_vector_power_flow[:, multiplier_index] = (
-            power_flow_solution.node_voltage_vector.ravel()
+            power_flow_solution.node_voltage_vector
         )
         node_voltage_vector_magnitude_power_flow[:, multiplier_index] = (
-            abs(power_flow_solution.node_voltage_vector).ravel()
+            abs(power_flow_solution.node_voltage_vector)
         )
         branch_power_vector_1_squared_power_flow[:, multiplier_index] = (
-            (abs(power_flow_solution.branch_power_vector_1) ** 2).ravel()
+            (abs(power_flow_solution.branch_power_vector_1) ** 2)
         )
         branch_power_vector_2_squared_power_flow[:, multiplier_index] = (
-            (abs(power_flow_solution.branch_power_vector_2) ** 2).ravel()
+            (abs(power_flow_solution.branch_power_vector_2) ** 2)
         )
         loss_active_power_flow[multiplier_index] = (
-            np.real([power_flow_solution.loss]).ravel()
+            np.real([power_flow_solution.loss])
         )
         loss_reactive_power_flow[multiplier_index] = (
-            np.imag([power_flow_solution.loss]).ravel()
+            np.imag([power_flow_solution.loss])
         )
 
         # Obtain DER power vector change.
@@ -144,28 +144,28 @@ def main():
 
         # Calculate approximate voltage, power vectors and total losses.
         node_voltage_vector_linear_model[:, multiplier_index] = (
-            power_flow_solution_initial.node_voltage_vector
+            np.transpose([power_flow_solution_initial.node_voltage_vector])
             + linear_electric_grid_model.sensitivity_voltage_by_der_power_active
             @ np.transpose([der_power_vector_active_change])
             + linear_electric_grid_model.sensitivity_voltage_by_der_power_reactive
             @ np.transpose([der_power_vector_reactive_change])
         ).ravel()
         node_voltage_vector_magnitude_linear_model[:, multiplier_index] = (
-            np.abs(power_flow_solution_initial.node_voltage_vector)
+            np.transpose([np.abs(power_flow_solution_initial.node_voltage_vector)])
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
             @ np.transpose([der_power_vector_active_change])
             + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
             @ np.transpose([der_power_vector_reactive_change])
         ).ravel()
         branch_power_vector_1_squared_linear_model[:, multiplier_index] = (
-            np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)
+            np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)])
             + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_active
             @ np.transpose([der_power_vector_active_change])
             + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_reactive
             @ np.transpose([der_power_vector_reactive_change])
         ).ravel()
         branch_power_vector_2_squared_linear_model[:, multiplier_index] = (
-            np.abs(power_flow_solution_initial.branch_power_vector_2 ** 2)
+            np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_2 ** 2)])
             + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_active
             @ np.transpose([der_power_vector_active_change])
             + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_reactive

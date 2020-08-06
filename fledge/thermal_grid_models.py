@@ -27,7 +27,7 @@ class ThermalGridModel(object):
     ders = pd.Index
     branch_node_incidence_matrix: scipy.sparse.spmatrix
     der_node_incidence_matrix: scipy.sparse.spmatrix
-    der_thermal_power_vector_nominal: np.ndarray
+    der_thermal_power_vector_reference: np.ndarray
 
     def __init__(
             self,
@@ -82,7 +82,7 @@ class ThermalGridModel(object):
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
 
         # Obtain DER nominal thermal power vector.
-        self.der_thermal_power_vector_nominal = (
+        self.der_thermal_power_vector_reference = (
             thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
         )
 
@@ -207,7 +207,7 @@ class ThermalPowerFlowSolution(object):
     ):
 
         # Obtain DER thermal power vector.
-        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_nominal
+        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
 
         self.__init__(
             thermal_grid_model,
@@ -222,7 +222,7 @@ class ThermalPowerFlowSolution(object):
     ):
 
         # Obtain DER thermal power vector.
-        self.der_thermal_power_vector = der_thermal_power_vector
+        self.der_thermal_power_vector = der_thermal_power_vector.ravel()
 
         # Obtain DER / source volume flow vector.
         self.der_flow_vector = (
@@ -247,7 +247,7 @@ class ThermalPowerFlowSolution(object):
                 ]
                 @ np.transpose([self.der_flow_vector])
             )
-        )
+        ).ravel()
 
         # Obtain branch velocity vector.
         self.branch_velocity_vector = (
@@ -536,7 +536,7 @@ class LinearThermalGridModel(object):
         if node_head_vector_minimum is not None:
             # node_head_vector = (  # Define shorthand.
             #     lambda node:
-            #     self.thermal_power_flow_solution.node_head_vector.ravel()[
+            #     self.thermal_power_flow_solution.node_head_vector[
             #         self.thermal_grid_model.nodes.get_loc(node)
             #     ]
             # )
@@ -555,7 +555,7 @@ class LinearThermalGridModel(object):
         if branch_flow_vector_maximum is not None:
             # branch_flow_vector = (  # Define shorthand.
             #     lambda branch:
-            #     self.thermal_power_flow_solution.branch_flow_vector.ravel()[
+            #     self.thermal_power_flow_solution.branch_flow_vector[
             #         self.thermal_grid_model.branches.get_loc(branch)
             #     ]
             # )
@@ -750,15 +750,15 @@ class LinearThermalGridModel(object):
         if in_per_unit:
             der_thermal_power_vector = (
                 der_thermal_power_vector
-                / self.thermal_grid_model.der_thermal_power_vector_nominal.ravel()
+                / self.thermal_grid_model.der_thermal_power_vector_reference
             )
             branch_flow_vector = (
                 branch_flow_vector
-                / self.thermal_power_flow_solution.branch_flow_vector.ravel()
+                / self.thermal_power_flow_solution.branch_flow_vector
             )
             node_head_vector = (
                 node_head_vector
-                / self.thermal_power_flow_solution.node_head_vector.ravel()
+                / self.thermal_power_flow_solution.node_head_vector
             )
             node_head_vector.iloc[
                 :,

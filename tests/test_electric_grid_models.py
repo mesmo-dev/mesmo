@@ -45,7 +45,7 @@ class TestElectricGridModels(unittest.TestCase):
     def test_power_flow_solution_fixed_point_vs_opendss(self):
         # Setup.
         electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(fledge.config.config['tests']['scenario_name'])
-        node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_no_load)
+        node_voltage_vector_no_load = abs(electric_grid_model.node_voltage_vector_reference)
 
         # Get result.
         time_start = time.time()

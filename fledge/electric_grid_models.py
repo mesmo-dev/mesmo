@@ -321,7 +321,7 @@ class ElectricGridModel(object):
 class ElectricGridModelDefault(ElectricGridModel):
     """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
     node types / branch types, the nodal admittance / transformation matrices, branch admittance /
-    incidence matrices, DER incidence matrices and no load voltage vector as well as nominal power vector.
+    incidence matrices and DER incidence matrices.
 
     :syntax:
         - ``ElectricGridModelDefault(electric_grid_data)``: Instantiate electric grid model for given
@@ -330,15 +330,8 @@ class ElectricGridModelDefault(ElectricGridModel):
           The required `electric_grid_data` is obtained from the database.
 
     Arguments:
-        scenario_name (str): FLEDGE scenario name.
         electric_grid_data (fledge.data_interface.ElectricGridData): Electric grid data object.
-
-    Keyword Arguments:
-        voltage_no_load_method (str): Choices: `by_definition`, `by_calculation`. Default: `by_definition`.
-            Defines the construction method for the no load voltage vector.
-            If `by_definition`, the nodal voltage definition in the database is taken.
-            If `by_calculation`, the no load voltage is calculated from the source node voltage
-            and the nodal admittance matrix.
+        scenario_name (str): FLEDGE scenario name.
 
     Attributes:
         phases (pd.Index): Index set of the phases.
@@ -370,8 +363,6 @@ class ElectricGridModelDefault(ElectricGridModel):
         branch_incidence_2_matrix (scipy.sparse.spmatrix): Branch incidence matrix in the 'to' direction.
         der_incidence_wye_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'wye' DERs.
         der_incidence_delta_matrix (scipy.sparse.spmatrix): Load incidence matrix for 'delta' DERs.
-        node_voltage_vector_no_load (np.ndarray): Nodal voltage at no load conditions.
-        der_power_vector_nominal (np.ndarray): Load power vector at nominal power conditions.
     """
 
     node_admittance_matrix: scipy.sparse.spmatrix
@@ -382,14 +373,11 @@ class ElectricGridModelDefault(ElectricGridModel):
     branch_incidence_2_matrix: scipy.sparse.spmatrix
     der_incidence_wye_matrix: scipy.sparse.spmatrix
     der_incidence_delta_matrix: scipy.sparse.spmatrix
-    node_voltage_vector_no_load: np.ndarray
-    der_power_vector_nominal: np.ndarray
 
     @multimethod
     def __init__(
             self,
-            scenario_name: str,
-            **kwargs
+            scenario_name: str
     ):
 
         # Obtain electric grid data.
@@ -397,15 +385,13 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Instantiate electric grid model object.
         self.__init__(
-            electric_grid_data,
-            **kwargs
+            electric_grid_data
         )
 
     @multimethod
     def __init__(
             self,
             electric_grid_data: fledge.data_interface.ElectricGridData,
-            voltage_no_load_method='by_definition'
     ):
 
         # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
@@ -850,110 +836,6 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
-        # Construct no load voltage vector for the grid.
-        # - The nodal no load voltage vector can be constructed by
-        #   1) `voltage_no_load_method="by_definition"`, i.e., the nodal voltage
-        #   definition in the database is taken, or by
-        #   2) `voltage_no_load_method="by_calculation"`, i.e., the no load voltage is
-        #   calculated from the source node voltage and the nodal admittance matrix.
-        # - TODO: Check if no load voltage divide by sqrt(3) is correct.
-        # - TODO: Switch to use `node_voltage_vector_reference`.
-        self.node_voltage_vector_no_load = (
-            np.zeros((len(self.nodes), 1), dtype=np.complex)
-        )
-        # Define phase orientations.
-        voltage_phase_factors = (
-            np.array([
-                np.exp(0 * 1j),  # Phase 1.
-                np.exp(- 2 * np.pi / 3 * 1j),  # Phase 2.
-                np.exp(2 * np.pi / 3 * 1j)  # Phase 3.
-            ])
-        )
-        if voltage_no_load_method == 'by_definition':
-            for node_name, node in electric_grid_data.electric_grid_nodes.iterrows():
-                # Obtain node phases index.
-                phases_index = fledge.utils.get_element_phases_array(node) - 1
-
-                # Obtain node voltage level.
-                voltage = node['voltage']
-
-                # Obtain node index for positioning the node voltage in the voltage vector.
-                node_index = (
-                    fledge.utils.get_index(
-                        self.nodes,
-                        node_name=node['node_name']
-                    )
-                )
-
-                # Insert voltage into voltage vector.
-                self.node_voltage_vector_no_load[node_index] = (
-                    np.transpose([
-                        voltage
-                        * voltage_phase_factors[phases_index]
-                        / np.sqrt(3)
-                    ])
-                )
-        elif voltage_no_load_method == 'by_calculation':
-            # Obtain source node.
-            node = (
-                electric_grid_data.electric_grid_nodes.loc[
-                    electric_grid_data.electric_grid['source_node_name'],
-                    :
-                ]
-            )
-
-            # Obtain source node phases index.
-            phases_index = fledge.utils.get_element_phases_array(node) - 1
-
-            # Obtain source node voltage level.
-            voltage = node['voltage']
-
-            # Obtain source / no source node indexes for positioning the node voltage in the voltage vector.
-            node_source_index = (
-                fledge.utils.get_index(
-                    self.nodes,
-                    node_type='source'
-                )
-            )
-            node_no_source_index = (
-                fledge.utils.get_index(
-                    self.nodes,
-                    node_type='no_source'
-                )
-            )
-
-            # Insert source node voltage into voltage vector.
-            self.node_voltage_vector_no_load[node_source_index] = (
-                np.transpose([
-                    voltage
-                    * voltage_phase_factors[phases_index]
-                    / np.sqrt(3)
-                ])
-            )
-
-            # Calculate all remaining no load node voltages.
-            # TODO: Debug no load voltage calculation.
-            self.node_voltage_vector_no_load[node_no_source_index] = (
-                np.transpose([
-                    scipy.sparse.linalg.spsolve(
-                        - self.node_admittance_matrix[np.ix_(node_no_source_index, node_no_source_index)],
-                        (
-                            self.node_admittance_matrix[np.ix_(node_no_source_index, node_source_index)]
-                            @ self.node_voltage_vector_no_load[node_source_index]
-                        )
-                    )
-                ])
-            )
-
-        # Construct nominal DER power vector.
-        # TODO: Switch to use `der_power_vector_reference`
-        self.der_power_vector_nominal = (
-            (
-                electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
-                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
-            ).values
-        )
-
 
 class ElectricGridModelOpenDSS(ElectricGridModel):
     """OpenDSS electric grid model object.
@@ -1025,7 +907,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         super().__init__(electric_grid_data)
 
         # Construct nominal DER power vector.
-        self.der_power_vector_nominal = (
+        self.der_power_vector_reference = (
             (
                 electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
                 + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
@@ -1270,9 +1152,6 @@ class PowerFlowSolution(object):
 class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     """Fixed point power flow solution object."""
 
-    node_power_vector_wye: np.ndarray
-    node_power_vector_delta: np.ndarray
-
     @multimethod
     def __init__(
             self,
@@ -1296,7 +1175,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     ):
 
         # Obtain `der_power_vector`, assuming nominal power conditions.
-        der_power_vector = electric_grid_model.der_power_vector_nominal
+        der_power_vector = electric_grid_model.der_power_vector_reference
 
         self.__init__(
             electric_grid_model,
@@ -1313,21 +1192,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     ):
 
         # Store DER power vector.
-        self.der_power_vector = der_power_vector
-
-        # Obtain node power vectors.
-        self.node_power_vector_wye = (
-            np.transpose([
-                electric_grid_model.der_incidence_wye_matrix
-                @ self.der_power_vector
-            ])
-        )
-        self.node_power_vector_delta = (
-            np.transpose([
-                electric_grid_model.der_incidence_delta_matrix
-                @ self.der_power_vector
-            ])
-        )
+        self.der_power_vector = der_power_vector.ravel()
 
         # Obtain voltage solution.
         self.node_voltage_vector = (
@@ -1555,14 +1420,14 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Obtain nodal power and no-load nodal voltage vectors.
         node_power_vector_wye_no_source = (
             der_incidence_wye_matrix_no_source
-            @ np.transpose([der_power_vector.ravel()])
-        )
+            @ np.transpose([der_power_vector])
+        ).ravel()
         node_power_vector_delta_no_source = (
             der_incidence_delta_matrix_no_source
-            @ np.transpose([der_power_vector.ravel()])
-        )
+            @ np.transpose([der_power_vector])
+        ).ravel()
         node_voltage_vector_no_load_no_source = (
-            electric_grid_model.node_voltage_vector_no_load[
+            electric_grid_model.node_voltage_vector_reference[
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             ]
         )
@@ -1677,16 +1542,16 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
                 # Calculate fixed point equation.
                 node_voltage_vector_solution_no_source = (
-                    node_voltage_vector_no_load_no_source
+                    np.transpose([node_voltage_vector_no_load_no_source])
                     + np.transpose([
                         scipy.sparse.linalg.spsolve(
                             node_admittance_matrix_no_source,
                             (
                                 (
                                     (
-                                        np.conj(node_voltage_vector_initial_no_source) ** -1
+                                        np.conj(np.transpose([node_voltage_vector_initial_no_source])) ** -1
                                     )
-                                    * np.conj(node_power_vector_wye_candidate_no_source)
+                                    * np.conj(np.transpose([node_power_vector_wye_candidate_no_source]))
                                 )
                                 + (
                                     np.transpose(node_transformation_matrix_no_source)
@@ -1694,20 +1559,20 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                                         (
                                             (
                                                 node_transformation_matrix_no_source
-                                                @ np.conj(node_voltage_vector_initial_no_source)
+                                                @ np.conj(np.transpose([node_voltage_vector_initial_no_source]))
                                             ) ** -1
                                         )
-                                        * np.conj(node_power_vector_delta_candidate_no_source)
+                                        * np.conj(np.transpose([node_power_vector_delta_candidate_no_source]))
                                     )
                                 )
                             )
                         )
                     ])
-                )
+                ).ravel()
 
                 # Calculate voltage change from previous iteration.
                 voltage_change = (
-                    np.max(abs(
+                    np.max(np.abs(
                         node_voltage_vector_solution_no_source
                         - node_voltage_vector_initial_no_source
                     ))
@@ -1772,8 +1637,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # Get full voltage vector by concatenating source and calculated voltage.
         node_voltage_vector = (
-            np.vstack([
-                electric_grid_model.node_voltage_vector_no_load[
+            np.concatenate([
+                electric_grid_model.node_voltage_vector_reference[
                     fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
                 ],
                 node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_solution_no_source`.
@@ -1810,23 +1675,23 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         branch_power_vector_1 = (
             (
                 branch_incidence_1_matrix
-                @ node_voltage_vector
+                @ np.transpose([node_voltage_vector])
             )
             * np.conj(
                 branch_admittance_1_matrix
-                @ node_voltage_vector
+                @ np.transpose([node_voltage_vector])
             )
-        )
+        ).ravel()
         branch_power_vector_2 = (
             (
                 branch_incidence_2_matrix
-                @ node_voltage_vector
+                @ np.transpose([node_voltage_vector])
             )
             * np.conj(
                 branch_admittance_2_matrix
-                @ node_voltage_vector
+                @ np.transpose([node_voltage_vector])
             )
-        )
+        ).ravel()
 
         return (
             branch_power_vector_1,
@@ -1844,10 +1709,10 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # TODO: Validate loss solution.
         loss = (
             np.conj(
-                np.transpose(node_voltage_vector)
+                np.array([node_voltage_vector])
                 @ (
                     electric_grid_model.node_admittance_matrix
-                    @ node_voltage_vector
+                    @ np.transpose([node_voltage_vector])
                 )
             )
         )
@@ -1881,7 +1746,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
     ):
 
         # Obtain `der_power_vector`, assuming nominal power conditions.
-        der_power_vector = electric_grid_model.der_power_vector_nominal
+        der_power_vector = electric_grid_model.der_power_vector_reference
 
         self.__init__(
             electric_grid_model,
@@ -1898,14 +1763,14 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
     ):
 
         # Store DER power vector.
-        self.der_power_vector = der_power_vector
+        self.der_power_vector = der_power_vector.ravel()
 
         # Set DER power vector in OpenDSS model.
         for der_index, der_name in enumerate(electric_grid_model.der_names):
             # TODO: For OpenDSS, all DERs are assumed to be loads.
             opendss_command_string = (
-                f"load.{der_name}.kw = {- np.real(self.der_power_vector.ravel()[der_index]) / 1000.0}"
-                + f"\nload.{der_name}.kvar = {- np.imag(self.der_power_vector.ravel()[der_index]) / 1000.0}"
+                f"load.{der_name}.kw = {- np.real(self.der_power_vector[der_index]) / 1000.0}"
+                + f"\nload.{der_name}.kvar = {- np.imag(self.der_power_vector[der_index]) / 1000.0}"
             )
             logger.debug(f"opendss_command_string = \n{opendss_command_string}")
             opendssdirect.run_command(opendss_command_string)
@@ -1950,17 +1815,15 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         # Extract nodal voltage vector and reindex to match FLEDGE nodes order.
         node_voltage_vector_solution = (
-            np.transpose([
-                pd.Series(
-                    (
-                        np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
-                        + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
-                    ),
-                    index=opendss_nodes
-                ).reindex(
-                    electric_grid_model.nodes.droplevel('node_type')
-                ).values
-            ])
+            pd.Series(
+                (
+                    np.array(opendssdirect.Circuit.AllBusVolts()[0::2])
+                    + 1j * np.array(opendssdirect.Circuit.AllBusVolts()[1::2])
+                ),
+                index=opendss_nodes
+            ).reindex(
+                electric_grid_model.nodes.droplevel('node_type')
+            ).values
         )
 
         # Adjust voltage solution for single-phase grid.
@@ -2030,8 +1893,8 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         # TODO: Sort vector by branch name if not in order.
         branch_power_vector_1 = branch_power_vector_1.flatten()
         branch_power_vector_2 = branch_power_vector_2.flatten()
-        branch_power_vector_1 = np.transpose([branch_power_vector_1[~np.isnan(branch_power_vector_1)]])
-        branch_power_vector_2 = np.transpose([branch_power_vector_2[~np.isnan(branch_power_vector_2)]])
+        branch_power_vector_1 = branch_power_vector_1[~np.isnan(branch_power_vector_1)]
+        branch_power_vector_2 = branch_power_vector_2[~np.isnan(branch_power_vector_2)]
 
         return (
             branch_power_vector_1,
@@ -2294,7 +2157,7 @@ class LinearElectricGridModel(object):
             voltage_magnitude_vector = (  # Define shorthand.
                 lambda node:
                 np.abs(
-                    self.power_flow_solution.node_voltage_vector.ravel()[
+                    self.power_flow_solution.node_voltage_vector[
                         self.electric_grid_model.nodes.get_loc(node)
                     ]
                 )
@@ -2345,7 +2208,7 @@ class LinearElectricGridModel(object):
             branch_power_vector_2_squared = (  # Define shorthand.
                 lambda branch:
                 np.abs(
-                    self.power_flow_solution.branch_power_vector_2.ravel()[
+                    self.power_flow_solution.branch_power_vector_2[
                         self.electric_grid_model.branches.get_loc(branch)
                     ] ** 2
                 )
@@ -2737,7 +2600,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
 
         # Obtain der power vector.
         der_power_vector = (
-            electric_grid_model.der_power_vector_nominal
+            electric_grid_model.der_power_vector_reference
         )
 
         # Obtain power flow solution.
@@ -2820,7 +2683,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )] = (
             scipy.sparse.linalg.spsolve(
                 node_admittance_matrix_no_source.tocsc(),
-                scipy.sparse.diags(np.conj(node_voltage_no_source).ravel() ** -1, format='csc')
+                scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
         self.sensitivity_voltage_by_power_wye_reactive[np.ix_(
@@ -2829,7 +2692,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )] = (
             scipy.sparse.linalg.spsolve(
                 1.0j * node_admittance_matrix_no_source.tocsc(),
-                scipy.sparse.diags(np.conj(node_voltage_no_source).ravel() ** -1, format='csc')
+                scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
         self.sensitivity_voltage_by_power_delta_active[np.ix_(
@@ -2881,30 +2744,30 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         self.sensitivity_voltage_magnitude_by_power_wye_active = (
-            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
                 @ self.sensitivity_voltage_by_power_wye_active
             )
         )
         self.sensitivity_voltage_magnitude_by_power_wye_reactive = (
-            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
                 @ self.sensitivity_voltage_by_power_wye_reactive
             )
         )
         self.sensitivity_voltage_magnitude_by_power_delta_active = (
-            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
                 @ self.sensitivity_voltage_by_power_delta_active
             )
         )
         self.sensitivity_voltage_magnitude_by_power_delta_reactive = (
-            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector).ravel() ** -1)
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
             @ np.real(
-                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector).ravel())
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
                 @ self.sensitivity_voltage_by_power_delta_reactive
             )
         )
@@ -2951,7 +2814,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_1_by_power_wye_active = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
                 @ np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_active
@@ -2959,7 +2822,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
                 @ np.imag(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_active
@@ -2969,7 +2832,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_1_by_power_wye_reactive = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
                 @ np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_reactive
@@ -2977,7 +2840,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
                 @ np.imag(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_reactive
@@ -2987,7 +2850,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_1_by_power_delta_active = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
                 @ np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_active
@@ -2995,7 +2858,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
                 @ np.imag(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_active
@@ -3005,7 +2868,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_1_by_power_delta_reactive = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
                 @ np.real(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_reactive
@@ -3013,7 +2876,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
                 @ np.imag(
                     sensitivity_branch_power_1_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_reactive
@@ -3023,7 +2886,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_2_by_power_wye_active = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
                 @ np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_active
@@ -3031,7 +2894,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
                 @ np.imag(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_active
@@ -3041,7 +2904,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_2_by_power_wye_reactive = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
                 @ np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_reactive
@@ -3049,7 +2912,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
                 @ np.imag(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_wye_reactive
@@ -3059,7 +2922,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_2_by_power_delta_active = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
                 @ np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_active
@@ -3067,7 +2930,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
                 @ np.imag(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_active
@@ -3077,7 +2940,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.sensitivity_branch_power_2_by_power_delta_reactive = (
             (
                 2.0
-                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
                 @ np.real(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_reactive
@@ -3085,7 +2948,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
             + (
                 2.0
-                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2).ravel())
+                * scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
                 @ np.imag(
                     sensitivity_branch_power_2_by_voltage
                     @ self.sensitivity_voltage_by_power_delta_reactive

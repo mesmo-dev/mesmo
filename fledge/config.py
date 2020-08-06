@@ -137,13 +137,14 @@ matplotlib.rcParams['image.cmap'] = config['plots']['colormap']
 matplotlib.rcParams['font.family'] = config['plots']['font_family']
 matplotlib.rcParams['pdf.fonttype'] = 42  # Avoid "Type 3 fonts" in PDFs for better compatibility.
 matplotlib.rcParams['ps.fonttype'] = 42  # See: http://phyletica.org/matplotlib-fonts/
+matplotlib.rcParams['axes.axisbelow'] = True  # Ensure that axis grid is behind plot elements.
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.
 # - These settings ensure that that data frames are always printed in full, rather than cropped.
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
+pd.set_option('display.width', int(9e9))
 try:
     pd.set_option('display.max_colwidth', None)
 except ValueError:

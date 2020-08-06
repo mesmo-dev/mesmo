@@ -3119,9 +3119,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         # Caculate loss sensitivity matrices.
-        # TODO: Document the inverted real / imag parts compared to Hanif.
         sensitivity_loss_by_voltage = (
-            np.transpose(self.power_flow_solution.node_voltage_vector)
+            np.array([self.power_flow_solution.node_voltage_vector])
             @ np.conj(electric_grid_model.node_admittance_matrix)
             + np.transpose(
                 electric_grid_model.node_admittance_matrix
@@ -3130,50 +3129,50 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         self.sensitivity_loss_active_by_power_wye_active = (
-            np.imag(
+            np.real(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_wye_active
             )
         )
         self.sensitivity_loss_active_by_power_wye_reactive = (
-            np.imag(
+            np.real(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_wye_reactive
             )
         )
         self.sensitivity_loss_active_by_power_delta_active = (
-            np.imag(
+            np.real(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_delta_active
             )
         )
         self.sensitivity_loss_active_by_power_delta_reactive = (
-            np.imag(
+            np.real(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_delta_reactive
             )
         )
 
         self.sensitivity_loss_reactive_by_power_wye_active = (
-            np.real(
+            np.imag(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_wye_active
             )
         )
         self.sensitivity_loss_reactive_by_power_wye_reactive = (
-            np.real(
+            np.imag(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_wye_reactive
             )
         )
         self.sensitivity_loss_reactive_by_power_delta_active = (
-            np.real(
+            np.imag(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_delta_active
             )
         )
         self.sensitivity_loss_reactive_by_power_delta_reactive = (
-            np.real(
+            np.imag(
                 sensitivity_loss_by_voltage
                 @ self.sensitivity_voltage_by_power_delta_reactive
             )

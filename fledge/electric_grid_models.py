@@ -1706,15 +1706,17 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         """Get total electric losses with given nodal voltage."""
 
         # Calculate total losses.
-        # TODO: Validate loss solution.
+        # TODO: Check if summing up branch power is faster.
+        # loss = (
+        #     np.sum(
+        #         branch_power_vector_1
+        #         + branch_power_vector_2
+        #     )
+        # )
         loss = (
-            np.conj(
-                np.array([node_voltage_vector])
-                @ (
-                    electric_grid_model.node_admittance_matrix
-                    @ np.transpose([node_voltage_vector])
-                )
-            )
+            np.array([node_voltage_vector])
+            @ np.conj(electric_grid_model.node_admittance_matrix)
+            @ np.transpose([np.conj(node_voltage_vector)])
         )
 
         return loss

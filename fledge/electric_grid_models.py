@@ -878,7 +878,13 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
         der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
+        circuit_name (str): Circuit name, stored for validation that the correct OpenDSS model is being accessed.
+        electric_grid_data: (fledge.data_interface.ElectricGridData): Electric grid data object, stored for
+            possible reinitialization of the OpenDSS model.
     """
+
+    circuit_name: str
+    electric_grid_data: fledge.data_interface.ElectricGridData
 
     @multimethod
     def __init__(
@@ -906,13 +912,11 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
         super().__init__(electric_grid_data)
 
-        # Construct nominal DER power vector.
-        self.der_power_vector_reference = (
-            (
-                electric_grid_data.electric_grid_ders.loc[:, 'active_power_nominal']
-                + 1j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
-            ).values
-        )
+        # Obtain circuit name.
+        self.circuit_name = electric_grid_data.electric_grid.at['electric_grid_name']
+
+        # Store electric grid data.
+        self.electric_grid_data = electric_grid_data
 
         # Clear OpenDSS.
         opendss_command_string = "clear"
@@ -930,7 +934,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # Add circuit info to OpenDSS command string.
         opendss_command_string = (
             f"set defaultbasefrequency={electric_grid_data.electric_grid.at['base_frequency']}"
-            + f"\nnew circuit.{electric_grid_data.electric_grid.at['electric_grid_name']}"
+            + f"\nnew circuit.{self.circuit_name}"
             + f" phases={len(self.phases)}"
             + f" bus1={electric_grid_data.electric_grid.at['source_node_name']}"
             + f" basekv={source_voltage / 1000}"
@@ -1717,7 +1721,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             np.array([node_voltage_vector])
             @ np.conj(electric_grid_model.node_admittance_matrix)
             @ np.transpose([np.conj(node_voltage_vector)])
-        )
+        ).ravel()
 
         return loss
 
@@ -1766,6 +1770,10 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         # Store DER power vector.
         self.der_power_vector = der_power_vector.ravel()
+
+        # Check if correct OpenDSS circuit is initialized, otherwise reinitialize.
+        if opendssdirect.Circuit.Name() != electric_grid_model.circuit_name:
+            electric_grid_model.__init__(electric_grid_model.electric_grid_data)
 
         # Set DER power vector in OpenDSS model.
         for der_index, der_name in enumerate(electric_grid_model.der_names):

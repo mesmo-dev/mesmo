@@ -43,7 +43,7 @@ Price timeseries.
 | --- |:---:| --- |
 | `price_type` | | Unique type identifier.|
 | `time` | | Timestamp according to ISO 8601. |
-| `price_value` | S$/kWh | Price value. Currently, prices are assumed to be in SGD. |
+| `price_value` | $/kWh | Price value. *Currently, prices / costs are assumed to be in SGD.* |
 
 ## Electric grid data
 
@@ -65,8 +65,8 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`, `fixed_generator`, `cooling_plant`. |
-| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers` or in CoBMo, for flexible buildings. Currently not defined for `fixed_generator` |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers`, `fixed_generators`, `flexible_generators` or in CoBMo, for flexible buildings. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
@@ -196,8 +196,8 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `thermal_grid_name` | | Thermal grid identifier as defined in `thermal_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `cooling_plant`.  |
-| `model_name` | | DER model identifier depending on the DER type, defined in CoBMo for flexible buildings. Currently not defined for `fixed_generator`. |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_generators`, `flexible_generators` or CoBMo for flexible buildings. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
 
 ### `thermal_grid_line_types`
@@ -335,6 +335,38 @@ Fixed load timeseries definition.
 | `active_power` | W | Active power value. |
 | `reactive_power` | VAr | Reactive power value. |
 
+### `fixed_generators`
+
+Fixed load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+
+### `fixed_generator_schedules`
+
+Fixed load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `fixed_generator_timeseries`
+
+Fixed load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
 ### `flexible_loads`
 
 Flexible load model definition.
@@ -361,6 +393,38 @@ Flexible load schedules definition.
 ### `flexible_load_timeseries`
 
 Flexible load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `flexible_generators`
+
+Fixed load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+
+### `flexible_generator_schedules`
+
+Fixed load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `flexible_generator_timeseries`
+
+Fixed load timeseries definition.
 
 | Column | Unit | Description |
 | --- |:---:| --- |

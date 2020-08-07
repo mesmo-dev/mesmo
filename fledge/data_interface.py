@@ -461,6 +461,8 @@ class DERData(object):
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     fixed_generators: pd.DataFrame
     fixed_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    flexible_generators: pd.DataFrame
+    flexible_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
     cooling_plants: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
@@ -487,7 +489,13 @@ class DERData(object):
 
             # Check validity of DER type.
             try:
-                assert der_type in ['fixed_load', 'ev_charger', 'flexible_load', 'fixed_generator']
+                assert der_type in [
+                    'fixed_load',
+                    'ev_charger',
+                    'flexible_load',
+                    'fixed_generator',
+                    'flexible_generator'
+                ]
             except AssertionError:
                 logger.error(f"Invalid DER type: {der_type}")
                 raise
@@ -642,6 +650,7 @@ class DERData(object):
         self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
         self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
+        self.flexible_generators, self.flexible_generator_timeseries_dict = get_der_type_data('flexible_generator')
 
         # Obtain cooling plant data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,

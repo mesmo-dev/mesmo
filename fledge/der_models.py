@@ -429,7 +429,16 @@ class FlexibleDERModel(DERModel):
         # Define objective.
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-        if type(self) is FlexibleBuildingModel:
+        if type(self) is FlexibleGeneratorModel:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * self.levelized_cost_of_energy
+                    * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                    for timestep in self.timesteps
+                )
+            )
+        elif type(self) is FlexibleBuildingModel:
             optimization_problem.objective.expr += (
                 sum(
                     price_timeseries.at[timestep, 'price_value']
@@ -536,7 +545,6 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
 
         # Instantiate state space matrices.
-        # TODO: Consolidate indexing approach with electric grid model.
         self.state_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.states)
         )
@@ -601,6 +609,106 @@ class FlexibleLoadModel(FlexibleDERModel):
                     (1.0 + flexible_load['power_increase_percentage_maximum'])
                     * self.reactive_power_nominal_timeseries
                 ),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+            ], axis='columns')
+        )
+
+
+class FlexibleGeneratorModel(FlexibleDERModel):
+    """Fixed generator model object, representing a generic generator with fixed nominal output."""
+
+    levelized_cost_of_energy: np.float
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get fixed generator data by `der_name`.
+        flexible_generator = der_data.flexible_generators.loc[self.der_name, :]
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Obtain levelized cost of energy.
+        self.levelized_cost_of_energy = flexible_generator.at['levelized_cost_of_energy']
+
+        # Construct nominal active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            np.abs(der_data.fixed_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'active_power'].copy())
+        )
+        self.reactive_power_nominal_timeseries = (
+            np.abs(der_data.fixed_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'reactive_power'].copy())
+        )
+        if 'per_unit' in flexible_generator.at['definition_type']:
+            # If per unit definition, multiply nominal active / reactive power.
+            self.active_power_nominal_timeseries *= flexible_generator.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= flexible_generator.at['reactive_power_nominal']
+        else:
+            self.active_power_nominal_timeseries *= np.sign(flexible_generator.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(flexible_generator.at['reactive_power_nominal'])
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
+        )
+
+        # Instantiate indexes.
+        self.states = pd.Index([])
+        self.controls = pd.Index(['active_power', 'reactive_power'])
+        self.disturbances = pd.Index([])
+        self.outputs = pd.Index(['active_power', 'reactive_power', 'power_factor_constant'])
+
+        # Instantiate initial state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.states)
+        )
+
+        # Instantiate state space matrices.
+        self.state_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
+        )
+        self.control_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        )
+        self.disturbance_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.state_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        )
+        self.control_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        )
+        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
+        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_generator['active_power_nominal']
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_generator['reactive_power_nominal']
+        self.disturbance_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbances)
+        )
+
+        # Construct output constraint timeseries
+        self.output_maximum_timeseries = (
+            pd.concat([
+                self.active_power_nominal_timeseries,
+                self.reactive_power_nominal_timeseries,
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+            ], axis='columns')
+        )
+        self.output_minimum_timeseries = (
+            pd.concat([
+                0.0 * self.active_power_nominal_timeseries,
+                0.0 * self.reactive_power_nominal_timeseries,
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
             ], axis='columns')
         )
@@ -907,6 +1015,7 @@ class DERModelSet(object):
         self.flexible_der_names = (
             pd.Index(pd.concat([
                 der_data.flexible_loads['der_name'],
+                der_data.flexible_generators['der_name'],
                 der_data.flexible_buildings['der_name'],
                 der_data.cooling_plants['der_name']
             ]))
@@ -935,6 +1044,10 @@ class DERModelSet(object):
             elif der_name in der_data.flexible_loads['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleLoadModel(der_data, der_name)
+                )
+            elif der_name in der_data.flexible_generators['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
                 )
             elif der_name in der_data.flexible_buildings['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (

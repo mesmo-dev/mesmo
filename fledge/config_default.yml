@@ -13,6 +13,7 @@ optimization:
   show_solver_output: true  # If True, activate verbose solver output.
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.
+  test_examples: true
 logs:
   level: info  # Choices: `debug`, `info`, `warn`, `error`.
   format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'

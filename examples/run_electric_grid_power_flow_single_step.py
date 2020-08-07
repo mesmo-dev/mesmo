@@ -74,7 +74,7 @@ def main():
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     plt.show()
     plt.title('Nodal voltage magnitude [kV]')
-    plt.bar(range(len(electric_grid_model.nodes)), np.abs(node_voltage_vecto) / 1e3)
+    plt.bar(range(len(electric_grid_model.nodes)), np.abs(node_voltage_vector) / 1e3)
     plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))

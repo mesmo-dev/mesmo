@@ -137,16 +137,16 @@ def main():
     ).transpose()
     branch_power_vector_1_squared_linear_model.loc[:, :] = (
         np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)])
-        + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_active
+        + linear_electric_grid_model.sensitivity_branch_power_1_squared_by_der_power_active
         @ np.transpose(der_power_vector_active_change.values)
-        + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_reactive
+        + linear_electric_grid_model.sensitivity_branch_power_1_squared_by_der_power_reactive
         @ np.transpose(der_power_vector_reactive_change.values)
     ).transpose()
     branch_power_vector_2_squared_linear_model.loc[:, :] = (
         np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_2 ** 2)] * len(power_multipliers))
-        + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_active
+        + linear_electric_grid_model.sensitivity_branch_power_2_squared_by_der_power_active
         @ np.transpose(der_power_vector_active_change.values)
-        + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_reactive
+        + linear_electric_grid_model.sensitivity_branch_power_2_squared_by_der_power_reactive
         @ np.transpose(der_power_vector_reactive_change.values)
     ).transpose()
     loss_active_linear_model.loc[:] = (

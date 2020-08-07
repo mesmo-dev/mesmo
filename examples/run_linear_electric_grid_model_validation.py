@@ -273,7 +273,7 @@ def main():
         plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_1[branch_index] ** 2)], label='Initial point')
         plt.legend()
         plt.title(f"Branch power 1 squared [VA²] for\n (branch_type, branch_name, phase): {branch}")
-        plt.savefig(os.path.join(results_path, f'branch_power_1_{branch}.png'))
+        plt.savefig(os.path.join(results_path, f'branch_power_1_squared_{branch}.png'))
         # plt.show()
         plt.close()
 
@@ -283,7 +283,7 @@ def main():
         plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_2[branch_index] ** 2)], label='Initial point')
         plt.legend()
         plt.title(f"Branch power 2 squared [VA²] for\n (branch_type, branch_name, phase): {branch}")
-        plt.savefig(os.path.join(results_path, f'branch_power_2_{branch}.png'))
+        plt.savefig(os.path.join(results_path, f'branch_power_2_squared_{branch}.png'))
         # plt.show()
         plt.close()
 

@@ -639,10 +639,10 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.fixed_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'active_power'].copy())
+            np.abs(der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.fixed_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'reactive_power'].copy())
+            np.abs(der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'reactive_power'].copy())
         )
         if 'per_unit' in flexible_generator.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.

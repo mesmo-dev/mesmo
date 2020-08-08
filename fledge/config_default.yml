@@ -21,3 +21,4 @@ plots:
   matplotlib_style: seaborn-colorblind
   colormap: viridis_r
   font_family: ['Arial', 'Helvetica']
+  add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.

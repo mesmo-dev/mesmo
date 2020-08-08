@@ -1,6 +1,5 @@
 """Plots module."""
 
-import contextily as ctx  # TODO: Document contextily dependency.
 import cv2
 from multimethod import multimethod
 import matplotlib.pyplot as plt
@@ -14,6 +13,10 @@ import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.utils
+
+if fledge.config.config['plots']['add_basemap']:
+    # Basemap requires `contextily`, which is an optional dependency, due to needing installation through `conda`.
+    import contextily as ctx
 
 logger = fledge.config.get_logger(__name__)
 
@@ -183,13 +186,14 @@ def plot_electric_grid_transformer_utilization(
         )
         cb = plt.colorbar(sm, shrink=0.9)
         cb.set_label('Utilization [%]')
-        # Add basemap / open street map for better orientation.
-        ctx.add_basemap(
-            plt.gca(),
-            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-            source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
-        )
+        if fledge.config.config['plots']['add_basemap']:
+            # Add contextual basemap layer for orientation.
+            ctx.add_basemap(
+                plt.gca(),
+                crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+                source=ctx.providers.CartoDB.Positron,
+                attribution=False  # Do not show copyright notice.
+            )
         name_string = re.sub(r'\W+', '-', f'{timestep}')
         plt.savefig(os.path.join(results_path, f'transformer_utilization_{name_string}.png'), bbox_inches='tight')
         # plt.show()
@@ -277,13 +281,14 @@ def plot_electric_grid_line_utilization(
         )
         cb = plt.colorbar(sm, shrink=0.9)
         cb.set_label('Utilization [%]')
-        # Add basemap / open street map for better orientation.
-        ctx.add_basemap(
-            plt.gca(),
-            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-            source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
-        )
+        if fledge.config.config['plots']['add_basemap']:
+            # Add contextual basemap layer for orientation.
+            ctx.add_basemap(
+                plt.gca(),
+                crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+                source=ctx.providers.CartoDB.Positron,
+                attribution=False  # Do not show copyright notice.
+            )
         name_string = re.sub(r'\W+', '-', f'{timestep}')
         plt.savefig(os.path.join(results_path, f'line_utilization_{name_string}.png'), bbox_inches='tight')
         # plt.show()
@@ -370,13 +375,14 @@ def plot_electric_grid_node_voltage_drop(
         )
         cb = plt.colorbar(sm, shrink=0.9)
         cb.set_label('Voltage drop [%]')
-        # Add basemap / open street map for better orientation.
-        ctx.add_basemap(
-            plt.gca(),
-            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-            source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
-        )
+        if fledge.config.config['plots']['add_basemap']:
+            # Add contextual basemap layer for orientation.
+            ctx.add_basemap(
+                plt.gca(),
+                crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+                source=ctx.providers.CartoDB.Positron,
+                attribution=False  # Do not show copyright notice.
+            )
         name_string = re.sub(r'\W+', '-', f'{timestep}')
         plt.savefig(os.path.join(results_path, f'node_voltage_drop_{name_string}.png'), bbox_inches='tight')
         # plt.show()

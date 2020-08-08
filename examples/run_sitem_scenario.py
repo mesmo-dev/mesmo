@@ -1,8 +1,4 @@
-"""Project SITEM scenario evaluation script.
-
-- This script depends on `contextily`, which is not included in the package dependencies, but can be installed
-  under Anaconda via `conda install -c conda-forge contextily`.
-"""
+"""Project SITEM scenario evaluation script."""
 
 import matplotlib.pyplot as plt
 import networkx as nx

@@ -133,11 +133,11 @@ parallel_pool = None
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
-matplotlib.rcParams['image.cmap'] = config['plots']['colormap']
-matplotlib.rcParams['font.family'] = config['plots']['font_family']
-matplotlib.rcParams['pdf.fonttype'] = 42  # Avoid "Type 3 fonts" in PDFs for better compatibility.
-matplotlib.rcParams['ps.fonttype'] = 42  # See: http://phyletica.org/matplotlib-fonts/
-matplotlib.rcParams['axes.axisbelow'] = True  # Ensure that axis grid is behind plot elements.
+matplotlib.rc('image', cmap=config['plots']['colormap'])
+matplotlib.rc('font', family=config['plots']['font_family'])
+matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
+matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
+matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.

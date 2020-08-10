@@ -310,7 +310,7 @@ def main(
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
+        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
@@ -320,6 +320,7 @@ def main(
         lax.axis("off")
         plt.tight_layout()
         plt.savefig(os.path.join(results_path, f'thermal_grid_der_dlmp_{der}.png'))
+        # plt.show()
         plt.close()
 
     # Plot electric grid DLMPs.
@@ -395,7 +396,7 @@ def main(
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
+        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
@@ -405,6 +406,7 @@ def main(
         lax.axis("off")
         plt.tight_layout()
         plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
+        # plt.show()
         plt.close()
 
     # Obtain graphs.

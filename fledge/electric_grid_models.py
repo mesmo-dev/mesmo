@@ -2234,6 +2234,51 @@ class LinearElectricGridModel(object):
                 )
             )
 
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries=pd.DataFrame(1.0, columns=['price_value'], index=[0]),
+            timesteps=pd.Index([0], name='timestep')
+    ):
+
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        if len(timesteps) > 1:
+            timestep_interval_hours = (timesteps[1] - timesteps[0]) / pd.Timedelta('1h')
+        else:
+            timestep_interval_hours = 1.0
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        # Define objective related to electric power supply at source node.
+        optimization_problem.objective.expr += (
+            sum(
+                price_timeseries.at[timestep, 'price_value']
+                * -1.0
+                * (
+                    np.real(self.power_flow_solution.der_power_vector[der_index])
+                    + optimization_problem.der_active_power_vector_change[timestep, der]
+                )
+                * timestep_interval_hours  # In Wh.
+                for der_index, der in enumerate(self.electric_grid_model.ders)
+                for timestep in timesteps
+            )
+        )
+
+        # Define objective related to electric losses.
+        optimization_problem.objective.expr += (
+            sum(
+                price_timeseries.at[timestep, 'price_value']
+                * (
+                    np.real(np.sum(self.power_flow_solution.loss))
+                    + optimization_problem.loss_active_change[timestep]
+                )
+                * timestep_interval_hours  # In Wh.
+                for timestep in timesteps
+            )
+        )
+
     def get_optimization_dlmps(
             self,
             optimization_problem: pyo.ConcreteModel,

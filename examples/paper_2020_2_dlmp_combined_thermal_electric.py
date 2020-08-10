@@ -136,17 +136,26 @@ def main(
         thermal_power_flow_solution=thermal_power_flow_solution
     )
 
-    # Define objective.
+    # Define electric grid objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_timeseries=price_timeseries,
+        timesteps=scenario_data.timesteps
+    )
+
+    # Define thermal grid objective.
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        price_timeseries,
-        scenario_data.timesteps
+        price_timeseries=price_timeseries,
+        timesteps=scenario_data.timesteps
     )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_timeseries
+        price_timeseries,
+        electric_grid_model=electric_grid_model,
+        thermal_grid_model=thermal_grid_model
     )
 
     # Solve optimization problem.

@@ -2396,7 +2396,8 @@ class LinearElectricGridModel(object):
                 ).ravel()
             )
             loss_active_dlmp.loc[timestep, :] = (
-                self.sensitivity_loss_active_by_power_wye_active.ravel()
+                -1.0
+                * self.sensitivity_loss_active_by_power_wye_active.ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
             loss_reactive_dlmp.loc[timestep, :] = (
@@ -2418,7 +2419,6 @@ class LinearElectricGridModel(object):
         )
         electric_grid_loss_dlmp = (
             loss_active_dlmp
-            + loss_reactive_dlmp
         )
 
         return fledge.data_interface.ResultsDict(

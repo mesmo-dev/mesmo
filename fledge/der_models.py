@@ -86,13 +86,13 @@ class FixedDERModel(DERModel):
     ):
 
         # Define objective.
+        # TODO: Consider timestep interval.
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
         if type(self) is FixedGeneratorModel:
             optimization_problem.objective.expr += (
                 sum(
-                    -1.0
-                    * self.levelized_cost_of_energy
+                    self.levelized_cost_of_energy
                     * self.active_power_nominal_timeseries.at[timestep]
                     for timestep in self.timesteps
                 )
@@ -440,13 +440,13 @@ class FlexibleDERModel(DERModel):
     ):
 
         # Define objective.
+        # TODO: Consider timestep interval.
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
         if type(self) is FlexibleGeneratorModel:
             optimization_problem.objective.expr += (
                 sum(
-                    -1.0
-                    * self.levelized_cost_of_energy
+                    self.levelized_cost_of_energy
                     * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                     for timestep in self.timesteps
                 )

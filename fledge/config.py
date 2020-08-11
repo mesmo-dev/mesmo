@@ -1,5 +1,6 @@
 """Configuration module."""
 
+import diskcache
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
@@ -130,6 +131,11 @@ gravitational_acceleration = 9.81  # [m^2/s]
 # Instantiate multiprocessing / parallel computing pool.
 # - Pool is instantiated as None and only created on first use in `fledge.utils.starmap`.
 parallel_pool = None
+
+# Instantiate cache.
+cache = diskcache.Cache(os.path.join(base_path, 'cache'))
+if config['caching']['reset_cache']:
+    cache.clear()
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

@@ -31,6 +31,7 @@ autodoc_mock_imports = [
     # Please note: Do not remove deprecated dependencies, because these are still needed for docs of previous versions.
     'cobmo',
     'cv2',
+    'diskcache',
     'matplotlib',
     'multimethod',
     'networkx',

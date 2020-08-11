@@ -9,6 +9,7 @@ setuptools.setup(
     install_requires=[
         # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
         # 'hvplot',  # TODO: Currently causes error on Github Actions.
+        'diskcache',
         'matplotlib',
         'multimethod',
         'networkx',

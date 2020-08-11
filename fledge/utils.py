@@ -10,6 +10,7 @@ import re
 import time
 import typing
 
+import cobmo.building_model
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
@@ -178,3 +179,9 @@ def get_results_path(
     os.mkdir(results_path)
 
     return results_path
+
+
+@fledge.config.cache.memoize(expire=(3600 if fledge.config.config['caching']['cache_building_models'] else 0))
+def get_building_model(*args, **kwargs):
+    """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
+    return cobmo.building_model.BuildingModel(*args, **kwargs)

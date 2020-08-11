@@ -7,7 +7,6 @@ import pyomo.environ as pyo
 import scipy.constants
 import typing
 
-import cobmo.building_model
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
@@ -827,7 +826,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Obtain CoBMo building model.
         flexible_building_model = (
-            cobmo.building_model.BuildingModel(
+            fledge.utils.get_building_model(
                 flexible_building.at['model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],

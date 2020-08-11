@@ -2251,6 +2251,17 @@ class LinearElectricGridModel(object):
                     branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
                 )
             )
+            optimization_problem.branch_power_vector_1_squared_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, *branch: (
+                    optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
+                    + branch_power_vector_1_squared(branch)
+                    >=
+                    -1.0
+                    * branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
+                )
+            )
             branch_power_vector_2_squared = (  # Define shorthand.
                 lambda branch:
                 np.abs(
@@ -2267,6 +2278,17 @@ class LinearElectricGridModel(object):
                     + branch_power_vector_2_squared(branch)
                     <=
                     branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
+                )
+            )
+            optimization_problem.branch_power_vector_2_squared_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.electric_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, *branch: (
+                    optimization_problem.branch_power_vector_2_squared_change[timestep, branch]
+                    + branch_power_vector_2_squared(branch)
+                    >=
+                    -1.0
+                    * branch_power_vector_squared_maximum.ravel()[self.electric_grid_model.branches.get_loc(branch)]
                 )
             )
 
@@ -2332,13 +2354,18 @@ class LinearElectricGridModel(object):
         branch_power_vector_1_squared_maximum_dual = (
             pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
+        branch_power_vector_1_squared_minimum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
+        )
         branch_power_vector_2_squared_maximum_dual = (
+            pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
+        )
+        branch_power_vector_2_squared_minimum_dual = (
             pd.DataFrame(0.0, columns=self.electric_grid_model.branches, index=timesteps, dtype=np.float)
         )
 
         # Obtain duals.
         for timestep in timesteps:
-
             if optimization_problem.find_component('voltage_magnitude_vector_minimum_constraint') is not None:
                 for node_index, node in enumerate(self.electric_grid_model.nodes):
                     voltage_magnitude_vector_minimum_dual.at[timestep, node] = (
@@ -2346,7 +2373,6 @@ class LinearElectricGridModel(object):
                             optimization_problem.voltage_magnitude_vector_minimum_constraint[timestep, node]
                         ]
                     )
-
             if optimization_problem.find_component('voltage_magnitude_vector_maximum_constraint') is not None:
                 for node_index, node in enumerate(self.electric_grid_model.nodes):
                     voltage_magnitude_vector_maximum_dual.at[timestep, node] = (
@@ -2354,7 +2380,6 @@ class LinearElectricGridModel(object):
                             optimization_problem.voltage_magnitude_vector_maximum_constraint[timestep, node]
                         ]
                     )
-
             if optimization_problem.find_component('branch_power_vector_1_squared_maximum_constraint') is not None:
                 for branch_index, branch in enumerate(self.electric_grid_model.branches):
                     branch_power_vector_1_squared_maximum_dual.at[timestep, branch] = (
@@ -2362,12 +2387,25 @@ class LinearElectricGridModel(object):
                             optimization_problem.branch_power_vector_1_squared_maximum_constraint[timestep, branch]
                         ]
                     )
-
+            if optimization_problem.find_component('branch_power_vector_1_squared_minimum_constraint') is not None:
+                for branch_index, branch in enumerate(self.electric_grid_model.branches):
+                    branch_power_vector_1_squared_minimum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_power_vector_1_squared_minimum_constraint[timestep, branch]
+                        ]
+                    )
             if optimization_problem.find_component('branch_power_vector_2_squared_maximum_constraint') is not None:
                 for branch_index, branch in enumerate(self.electric_grid_model.branches):
                     branch_power_vector_2_squared_maximum_dual.at[timestep, branch] = (
                         optimization_problem.dual[
                             optimization_problem.branch_power_vector_2_squared_maximum_constraint[timestep, branch]
+                        ]
+                    )
+            if optimization_problem.find_component('branch_power_vector_2_squared_minimum_constraint') is not None:
+                for branch_index, branch in enumerate(self.electric_grid_model.branches):
+                    branch_power_vector_2_squared_minimum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_power_vector_2_squared_minimum_constraint[timestep, branch]
                         ]
                     )
 
@@ -2382,7 +2420,13 @@ class LinearElectricGridModel(object):
         branch_power_vector_1_squared_maximum_dlmp = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
+        branch_power_vector_1_squared_minimum_dlmp = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
         branch_power_vector_2_squared_maximum_dlmp = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        branch_power_vector_2_squared_minimum_dlmp = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         loss_active_dlmp = (
@@ -2425,10 +2469,22 @@ class LinearElectricGridModel(object):
                     @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
                 ).ravel()
             )
+            branch_power_vector_1_squared_minimum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_power_1_squared_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
             branch_power_vector_2_squared_maximum_dlmp.loc[timestep, :] = (
                 (
                     self.sensitivity_branch_power_2_squared_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            branch_power_vector_2_squared_minimum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_power_2_squared_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_minimum_dual.loc[timestep, :].values])
                 ).ravel()
             )
             loss_active_dlmp.loc[timestep, :] = (
@@ -2450,7 +2506,9 @@ class LinearElectricGridModel(object):
         )
         electric_grid_congestion_dlmp = (
             branch_power_vector_1_squared_maximum_dlmp
+            + branch_power_vector_1_squared_minimum_dlmp
             + branch_power_vector_2_squared_maximum_dlmp
+            + branch_power_vector_2_squared_minimum_dlmp
         )
         electric_grid_loss_dlmp = (
             loss_active_dlmp
@@ -2460,7 +2518,9 @@ class LinearElectricGridModel(object):
             voltage_magnitude_vector_minimum_dlmp=voltage_magnitude_vector_minimum_dlmp,
             voltage_magnitude_vector_maximum_dlmp=voltage_magnitude_vector_maximum_dlmp,
             branch_power_vector_1_squared_maximum_dlmp=branch_power_vector_1_squared_maximum_dlmp,
+            branch_power_vector_1_squared_minimum_dlmp=branch_power_vector_1_squared_minimum_dlmp,
             branch_power_vector_2_squared_maximum_dlmp=branch_power_vector_2_squared_maximum_dlmp,
+            branch_power_vector_2_squared_minimum_dlmp=branch_power_vector_2_squared_minimum_dlmp,
             loss_active_dlmp=loss_active_dlmp,
             loss_reactive_dlmp=loss_reactive_dlmp,
             electric_grid_energy_dlmp=electric_grid_energy_dlmp,

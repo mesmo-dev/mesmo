@@ -72,6 +72,18 @@ def main():
     branch_power_vector_2_squared_linear_model = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
     )
+    branch_power_vector_1_magnitude_power_flow = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+    )
+    branch_power_vector_1_magnitude_linear_model = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+    )
+    branch_power_vector_2_magnitude_power_flow = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+    )
+    branch_power_vector_2_magnitude_linear_model = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+    )
     loss_active_power_flow = (
         pd.Series(index=power_multipliers, dtype=np.float)
     )
@@ -115,6 +127,8 @@ def main():
         power_flow_solution = power_flow_solutions[power_multiplier]
         node_voltage_vector_power_flow.loc[power_multiplier, :] = power_flow_solution.node_voltage_vector
         node_voltage_vector_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.node_voltage_vector)
+        branch_power_vector_1_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_1)
+        branch_power_vector_2_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_2)
         branch_power_vector_1_squared_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_1) ** 2
         branch_power_vector_2_squared_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_2) ** 2
         loss_active_power_flow.loc[power_multiplier] = np.real(power_flow_solution.loss)
@@ -135,8 +149,22 @@ def main():
         + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
         @ np.transpose(der_power_vector_reactive_change.values)
     ).transpose()
+    branch_power_vector_1_magnitude_linear_model.loc[:, :] = (
+        np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_1)] * len(power_multipliers))
+        + linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+        @ np.transpose(der_power_vector_active_change.values)
+        + linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+        @ np.transpose(der_power_vector_reactive_change.values)
+    ).transpose()
+    branch_power_vector_2_magnitude_linear_model.loc[:, :] = (
+        np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_2)] * len(power_multipliers))
+        + linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+        @ np.transpose(der_power_vector_active_change.values)
+        + linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+        @ np.transpose(der_power_vector_reactive_change.values)
+    ).transpose()
     branch_power_vector_1_squared_linear_model.loc[:, :] = (
-        np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)])
+        np.transpose([np.abs(power_flow_solution_initial.branch_power_vector_1 ** 2)] * len(power_multipliers))
         + linear_electric_grid_model.sensitivity_branch_power_1_squared_by_der_power_active
         @ np.transpose(der_power_vector_active_change.values)
         + linear_electric_grid_model.sensitivity_branch_power_1_squared_by_der_power_reactive
@@ -171,6 +199,12 @@ def main():
     node_voltage_vector_magnitude_error = (
         pd.Series(index=power_multipliers, dtype=np.float)
     )
+    branch_power_vector_1_magnitude_error = (
+        pd.Series(index=power_multipliers, dtype=np.float)
+    )
+    branch_power_vector_2_magnitude_error = (
+        pd.Series(index=power_multipliers, dtype=np.float)
+    )
     branch_power_vector_1_squared_error = (
         pd.Series(index=power_multipliers, dtype=np.float)
     )
@@ -195,6 +229,18 @@ def main():
         100.0 * (
             (node_voltage_vector_magnitude_linear_model - node_voltage_vector_magnitude_power_flow)
             / node_voltage_vector_magnitude_power_flow
+        ).mean(axis='columns')
+    )
+    branch_power_vector_1_magnitude_error = (
+        100.0 * (
+            (branch_power_vector_1_magnitude_linear_model - branch_power_vector_1_magnitude_power_flow)
+            / branch_power_vector_1_magnitude_power_flow
+        ).mean(axis='columns')
+    )
+    branch_power_vector_2_magnitude_error = (
+        100.0 * (
+            (branch_power_vector_2_magnitude_linear_model - branch_power_vector_2_magnitude_power_flow)
+            / branch_power_vector_2_magnitude_power_flow
         ).mean(axis='columns')
     )
     branch_power_vector_1_squared_error = (
@@ -228,6 +274,8 @@ def main():
             [
                 node_voltage_vector_error,
                 node_voltage_vector_magnitude_error,
+                branch_power_vector_1_magnitude_error,
+                branch_power_vector_2_magnitude_error,
                 branch_power_vector_1_squared_error,
                 branch_power_vector_2_squared_error,
                 loss_active_error,
@@ -236,6 +284,8 @@ def main():
             index=[
                 'node_voltage_vector_error',
                 'node_voltage_vector_magnitude_error',
+                'branch_power_vector_1_magnitude_error',
+                'branch_power_vector_2_magnitude_error',
                 'branch_power_vector_1_squared_error',
                 'branch_power_vector_2_squared_error',
                 'loss_active_error',
@@ -267,6 +317,26 @@ def main():
 
     # Branch flow.
     for branch_index, branch in enumerate(electric_grid_model.branches):
+        plt.plot(power_multipliers, branch_power_vector_1_magnitude_power_flow.loc[:, branch], label='Power flow')
+        plt.plot(power_multipliers, branch_power_vector_1_magnitude_linear_model.loc[:, branch], label='Linear model')
+        plt.scatter([0.0], [0.0], label='No load')
+        plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_1[branch_index])], label='Initial point')
+        plt.legend()
+        plt.title(f"Branch power 1 magnitude [VA] for\n (branch_type, branch_name, phase): {branch}")
+        plt.savefig(os.path.join(results_path, f'branch_power_1_magnitude_{branch}.png'))
+        # plt.show()
+        plt.close()
+
+        plt.plot(power_multipliers, branch_power_vector_2_magnitude_power_flow.loc[:, branch], label='Power flow')
+        plt.plot(power_multipliers, branch_power_vector_2_magnitude_linear_model.loc[:, branch], label='Linear model')
+        plt.scatter([0.0], [0.0], label='No load')
+        plt.scatter([1.0], [abs(power_flow_solution_initial.branch_power_vector_2[branch_index])], label='Initial point')
+        plt.legend()
+        plt.title(f"Branch power 2 magnitude [VA] for\n (branch_type, branch_name, phase): {branch}")
+        plt.savefig(os.path.join(results_path, f'branch_power_2_magnitude_{branch}.png'))
+        # plt.show()
+        plt.close()
+
         plt.plot(power_multipliers, branch_power_vector_1_squared_power_flow.loc[:, branch], label='Power flow')
         plt.plot(power_multipliers, branch_power_vector_1_squared_linear_model.loc[:, branch], label='Linear model')
         plt.scatter([0.0], [0.0], label='No load')

@@ -289,6 +289,7 @@ def main(
             color='red',
             linewidth=1.0
         )
+        ax1.grid(True)
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
         # ax1.set_ylim((0.0, 10.0))
@@ -375,6 +376,7 @@ def main(
             color='red',
             linewidth=1.0
         )
+        ax1.grid(True)
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
         # ax1.set_ylim((0.0, 10.0))

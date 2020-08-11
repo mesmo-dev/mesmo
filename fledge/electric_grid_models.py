@@ -2397,15 +2397,14 @@ class LinearElectricGridModel(object):
             )
             loss_active_dlmp.loc[timestep, :] = (
                 -1.0
-                * self.sensitivity_loss_active_by_power_wye_active.ravel()
+                * self.sensitivity_loss_active_by_power_wye_active.toarray().ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
             loss_reactive_dlmp.loc[timestep, :] = (
                 -1.0
-                * self.sensitivity_loss_reactive_by_power_wye_active.ravel()
+                * self.sensitivity_loss_reactive_by_power_wye_active.toarray().ravel()
                 * price_timeseries.at[timestep, 'price_value']
             )
-
             electric_grid_energy_dlmp.loc[timestep, :] = (
                 price_timeseries.at[timestep, 'price_value']
             )
@@ -3023,46 +3022,76 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
         # Calculate loss sensitivity matrices.
+        # sensitivity_loss_by_voltage = (
+        #     np.array([self.power_flow_solution.node_voltage_vector])
+        #     @ np.conj(electric_grid_model.node_admittance_matrix)
+        #     + np.transpose(
+        #         electric_grid_model.node_admittance_matrix
+        #         @ np.transpose([self.power_flow_solution.node_voltage_vector])
+        #     )
+        # )
         sensitivity_loss_by_voltage = (
-            np.array([self.power_flow_solution.node_voltage_vector])
-            @ np.conj(electric_grid_model.node_admittance_matrix)
-            + np.transpose(
-                electric_grid_model.node_admittance_matrix
-                @ np.transpose([self.power_flow_solution.node_voltage_vector])
-            )
+            sum(np.transpose(
+                np.transpose(sensitivity_branch_power_1_by_voltage)
+                + np.transpose(sensitivity_branch_power_2_by_voltage)
+            ))
         )
 
         self.sensitivity_loss_active_by_power_wye_active = (
-            np.real(sensitivity_loss_by_voltage)
-            @ np.real(self.sensitivity_voltage_by_power_wye_active)
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+            / (2 * np.sqrt(3))
         )
         self.sensitivity_loss_active_by_power_wye_reactive = (
-            np.real(sensitivity_loss_by_voltage)
-            @ np.real(self.sensitivity_voltage_by_power_wye_reactive)
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+            / (2 * np.sqrt(3))
         )
         self.sensitivity_loss_active_by_power_delta_active = (
-            np.real(sensitivity_loss_by_voltage)
-            @ np.real(self.sensitivity_voltage_by_power_delta_active)
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+            / (2 * np.sqrt(3))
         )
         self.sensitivity_loss_active_by_power_delta_reactive = (
-            np.real(sensitivity_loss_by_voltage)
-            @ np.real(self.sensitivity_voltage_by_power_delta_reactive)
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+            / (2 * np.sqrt(3))
         )
         self.sensitivity_loss_reactive_by_power_wye_active = (
-            np.imag(sensitivity_loss_by_voltage)
-            @ np.imag(self.sensitivity_voltage_by_power_wye_active)
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+            * -1 * np.sqrt(3)
         )
         self.sensitivity_loss_reactive_by_power_wye_reactive = (
-            np.imag(sensitivity_loss_by_voltage)
-            @ np.imag(self.sensitivity_voltage_by_power_wye_reactive)
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+            * -1 * np.sqrt(3)
         )
         self.sensitivity_loss_reactive_by_power_delta_active = (
-            np.imag(sensitivity_loss_by_voltage)
-            @ np.imag(self.sensitivity_voltage_by_power_delta_active)
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+            * -1 * np.sqrt(3)
         )
         self.sensitivity_loss_reactive_by_power_delta_reactive = (
-            np.imag(sensitivity_loss_by_voltage)
-            @ np.imag(self.sensitivity_voltage_by_power_delta_reactive)
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+            * -1 * np.sqrt(3)
         )
 
         self.sensitivity_loss_active_by_der_power_active = (

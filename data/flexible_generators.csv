@@ -1,2 +1,3 @@
 model_name,definition_type,levelized_cost_of_energy
 photovoltaic,schedule_per_unit,0.04
+thermal,schedule_per_unit,0.1

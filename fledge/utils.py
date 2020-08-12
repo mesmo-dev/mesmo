@@ -70,7 +70,7 @@ def get_index(
 
     :syntax:
         - ``get_index(electric_grid_model.nodes, node_type='source', phase=1)``: Get index array for entries in
-            index set `electric_grid_model.nodes` with given `node_type` and `phase`.
+          index set `electric_grid_model.nodes` with given `node_type` and `phase`.
 
     Arguments:
         index_set (pd.Index): Index set, e.g., `electric_grid_model.nodes`.

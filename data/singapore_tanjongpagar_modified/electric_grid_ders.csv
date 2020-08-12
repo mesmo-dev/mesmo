@@ -1,4 +1,5 @@
 electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+singapore_tanjongpagar_modified,0,thermal_grid_source,,0,1,1,1,wye,-100000000.0,-50000000.0
 singapore_tanjongpagar_modified,1,flexible_building,tanjongpagar_building_1,1,1,1,1,wye,-4556459.59,-2278229.795
 singapore_tanjongpagar_modified,2,flexible_building,tanjongpagar_building_2,2,1,1,1,wye,-4556459.59,-2278229.795
 singapore_tanjongpagar_modified,3,flexible_building,tanjongpagar_building_3,3,1,1,1,wye,-6827742.456,-3413871.228

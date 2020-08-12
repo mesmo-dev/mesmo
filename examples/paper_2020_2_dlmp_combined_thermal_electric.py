@@ -136,6 +136,29 @@ def main(
         thermal_power_flow_solution=thermal_power_flow_solution
     )
 
+    # Connect thermal grid source.
+    # TODO: Incorporate this workaround in model definition.
+    der_index = fledge.utils.get_index(electric_grid_model.ders, der_type='thermal_grid_source')[0]
+    der = electric_grid_model.ders[der_index]
+    for timestep in scenario_data.timesteps:
+        optimization_problem.der_model_constraints.add(
+            optimization_problem.der_active_power_vector_change[timestep, der]
+            ==
+            sum(
+                optimization_problem.der_thermal_power_vector[timestep, thermal_der]
+                for thermal_der in thermal_grid_model.ders
+            )
+            / thermal_grid_model.cooling_plant_efficiency
+            + optimization_problem.pump_power[timestep]
+            - np.real(power_flow_solution.der_power_vector[der_index])
+        )
+        optimization_problem.der_model_constraints.add(
+            optimization_problem.der_reactive_power_vector_change[timestep, der]
+            ==
+            0.5  # Constant power factor.
+            * optimization_problem.der_active_power_vector_change[timestep, der]
+        )
+
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
@@ -144,11 +167,11 @@ def main(
     )
 
     # Define thermal grid objective.
-    linear_thermal_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_timeseries=price_timeseries,
-        timesteps=scenario_data.timesteps
-    )
+    # linear_thermal_grid_model.define_optimization_objective(
+    #     optimization_problem,
+    #     price_timeseries=price_timeseries,
+    #     timesteps=scenario_data.timesteps
+    # )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(

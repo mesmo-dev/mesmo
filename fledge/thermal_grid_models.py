@@ -431,7 +431,7 @@ class LinearThermalGridModel(object):
         self.sensitivity_node_head_by_node_power = (
             branch_node_incidence_matrix_transpose_inverse
             @ scipy.sparse.diags(
-                thermal_power_flow_solution.branch_flow_vector
+                np.abs(thermal_power_flow_solution.branch_flow_vector)
                 * thermal_power_flow_solution.branch_friction_factor_vector
                 * 8.0 * self.thermal_grid_model.line_length_vector
                 / (

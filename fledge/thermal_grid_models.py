@@ -447,12 +447,21 @@ class LinearThermalGridModel(object):
             @ self.sensitivity_node_power_by_der_power
         )
         self.sensitivity_pump_power_by_node_power = (
-            (-1.0 * thermal_power_flow_solution.der_flow_vector)
-            @ (-2.0 * der_node_incidence_matrix_transpose)
-            @ self.sensitivity_node_head_by_node_power
-            * fledge.config.water_density
-            * fledge.config.gravitational_acceleration
-            / self.thermal_grid_model.distribution_pump_efficiency
+            (
+                (-1.0 * thermal_power_flow_solution.der_flow_vector)
+                @ (-2.0 * der_node_incidence_matrix_transpose)
+                @ self.sensitivity_node_head_by_node_power
+                * fledge.config.water_density
+                * fledge.config.gravitational_acceleration
+                / self.thermal_grid_model.distribution_pump_efficiency
+            )
+            + (
+                -1.0
+                * self.thermal_grid_model.energy_transfer_station_head_loss
+                * fledge.config.gravitational_acceleration
+                / self.thermal_grid_model.enthalpy_difference_distribution_water
+                / self.thermal_grid_model.distribution_pump_efficiency
+            )
         )
         self.sensitivity_pump_power_by_der_power = (
             self.sensitivity_pump_power_by_node_power
@@ -520,14 +529,6 @@ class LinearThermalGridModel(object):
                 sum(
                     self.sensitivity_pump_power_by_der_power[der_index]
                     * optimization_problem.der_thermal_power_vector[timestep, der]
-                    for der_index, der in enumerate(self.thermal_grid_model.ders)
-                )
-                + sum(
-                    -1.0 * self.thermal_power_flow_solution.der_flow_vector[der_index]
-                    * self.thermal_grid_model.energy_transfer_station_head_loss
-                    * fledge.config.water_density
-                    * fledge.config.gravitational_acceleration
-                    / self.thermal_grid_model.distribution_pump_efficiency
                     for der_index, der in enumerate(self.thermal_grid_model.ders)
                 )
             )

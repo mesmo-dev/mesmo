@@ -22,11 +22,43 @@ def main(
 ):
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar_modified'
     scenario_number = 1 if scenario_number is None else scenario_number
-    # Choices: 1 (unconstrained operation), 2 (constrained thermal grid branch flow),
-    # 3 (constrained thermal grid pressure head), 4 (constrained electric grid branch power),
-    # 5 (constrained electric grid voltage)
+    # Choices:
+    # 1 - unconstrained operation,
+    # 2 - constrained thermal grid branch flow,
+    # 3 - constrained thermal grid pressure head,
+    # 4 - constrained electric grid branch power,
+    # 5 - constrained electric grid voltage,
+    # 6 - added cooling plant (cheaper than source),
+    # 7 - added cooling plant (more expensive than source),
+    # 8 - added cooling plant (more expensive than source) + constrained thermal grid branch flow,
+    # 9 - added very large cooling plant (cheaper than source) + constrained thermal grid branch flow,
+    # 10 - added PV plant (cheaper than source),
+    # 11 - added PV plant (more expensive than source),
+    # 12 - added PV plant (more expensive than source) + constrained electric grid branch power,
+    # 13 - added very large PV plant (cheaper than source) + constrained electric grid branch power,
+    # 14 - added cooling plant (more expensive than source) + added very large PV plant (cheaper than source)
+    #      + constrained electric grid branch power.
+    # 15 - added cooling plant (more expensive than source) + added very large PV plant (cheaper than source)
+    #      + constrained electric grid branch power + constrained thermal grid branch flow.
+    if scenario_number in [1, 2, 3, 4, 5]:
+        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
+    elif scenario_number in [6, 7, 8]:
+        scenario_name = 'paper_2020_2_scenario_6_7_8'
+    elif scenario_number in [9]:
+        scenario_name = 'paper_2020_2_scenario_9'
+    elif scenario_number in [10, 11, 12]:
+        scenario_name = 'paper_2020_2_scenario_10_11_12'
+    elif scenario_number in [13]:
+        scenario_name = 'paper_2020_2_scenario_13'
+    elif scenario_number in [14]:
+        scenario_name = 'paper_2020_2_scenario_14'
+    elif scenario_number in [15]:
+        scenario_name = 'paper_2020_2_scenario_15'
+    else:
+        scenario_name = 'singapore_tanjongpagar_modified'
+
+    # Obtain results path.
     results_path = (
         fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
     )
@@ -44,7 +76,8 @@ def main(
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
+    # Use base scenario power flow for consistent linear model behavior and per unit values.
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -52,9 +85,8 @@ def main(
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_grid_model.energy_transfer_station_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
-    # thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    # Use base scenario power flow for consistent linear model behavior and per unit values.
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,
@@ -62,6 +94,19 @@ def main(
         )
     )
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
+
+    # Modify DER models depending on scenario.
+    # Cooling plant.
+    if scenario_number in [6, 9]:
+        der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 2.0
+    elif scenario_number in [7, 8, 14, 15]:
+        # Cooling plant COP must remain larger than building cooling COP, otherwise cooling plant never dispatched.
+        der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 0.8
+    # PV plant.
+    if scenario_number in [11, 12]:
+        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.1
+    if scenario_number in [15]:
+        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.04
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()
@@ -77,14 +122,14 @@ def main(
     voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
     # Modify limits for scenarios.
-    if scenario_number in [4]:
+    if scenario_number in [4, 12, 13, 14, 15]:
         branch_power_vector_squared_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
-        ] *= 2.0 / 100.0
+        ] *= 8.5 / 100.0
     elif scenario_number in [5]:
         voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
-        ] *= 0.99 / 0.5  # TODO: Check if sensitivity matrix wrong.
+        ] *= 0.9985 / 0.5
     else:
         pass
     linear_electric_grid_model.define_optimization_constraints(
@@ -102,17 +147,19 @@ def main(
     )
 
     # Define thermal grid model constraints.
-    node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    # TODO: Rename branch_flow_vector_maximum to branch_flow_vector_magnitude_maximum.
+    # TODO: Revise node_head_vector constraint formulation.
+    node_head_vector_minimum = 100.0 * thermal_power_flow_solution.node_head_vector
+    branch_flow_vector_maximum = 100.0 * np.abs(thermal_power_flow_solution.branch_flow_vector)
     # Modify limits for scenarios.
-    if scenario_number in [2]:
+    if scenario_number in [2, 8, 9, 15]:
         branch_flow_vector_maximum[
             fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
-        ] *= 0.05 / 1.5
+        ] *= 0.2 / 100.0
     elif scenario_number in [3]:
         node_head_vector_minimum[
             fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
-        ] *= 0.05 / 1.5
+        ] *= 0.2 / 100.0
     else:
         pass
     linear_thermal_grid_model.define_optimization_constraints(
@@ -570,7 +617,7 @@ if __name__ == '__main__':
     run_all = True
 
     if run_all:
-        for scenario_number in [1, 2, 3, 4, 5]:
+        for scenario_number in range(1, 14):
             main(scenario_number)
     else:
         main()

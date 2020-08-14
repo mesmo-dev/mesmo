@@ -570,6 +570,17 @@ class LinearThermalGridModel(object):
                     branch_flow_vector_maximum.ravel()[self.thermal_grid_model.branches.get_loc(branch)]
                 )
             )
+            optimization_problem.branch_flow_vector_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.thermal_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, branch: (  # Will not work if `branches` becomes MultiIndex.
+                    optimization_problem.branch_flow_vector[timestep, branch]
+                    # + branch_flow_vector(branch)
+                    >=
+                    -1.0
+                    * branch_flow_vector_maximum.ravel()[self.thermal_grid_model.branches.get_loc(branch)]
+                )
+            )
 
     def define_optimization_objective(
             self,
@@ -612,6 +623,9 @@ class LinearThermalGridModel(object):
         branch_flow_vector_maximum_dual = (
             pd.DataFrame(0.0, columns=self.thermal_grid_model.branches, index=timesteps, dtype=np.float)
         )
+        branch_flow_vector_minimum_dual = (
+            pd.DataFrame(0.0, columns=self.thermal_grid_model.branches, index=timesteps, dtype=np.float)
+        )
 
         # Obtain duals.
         for timestep in timesteps:
@@ -631,12 +645,20 @@ class LinearThermalGridModel(object):
                             optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
                         ]
                     )
+                    branch_flow_vector_minimum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_flow_vector_minimum_constraint[timestep, branch]
+                        ]
+                    )
 
         # Instantiate DLMP variables.
         node_head_vector_minimum_dlmp = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         branch_flow_vector_maximum_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        branch_flow_vector_minimum_dlmp = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         pump_power_dlmp = (
@@ -672,6 +694,13 @@ class LinearThermalGridModel(object):
                 ).ravel()
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
+            branch_flow_vector_minimum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_flow_by_node_power.transpose()
+                    @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                / self.thermal_grid_model.cooling_plant_efficiency
+            )
             pump_power_dlmp.loc[timestep, :] = (
                 -1.0
                 * self.sensitivity_pump_power_by_node_power.ravel()
@@ -687,6 +716,7 @@ class LinearThermalGridModel(object):
         )
         thermal_grid_congestion_dlmp = (
             branch_flow_vector_maximum_dlmp
+            + branch_flow_vector_minimum_dlmp
         )
         thermal_grid_pump_dlmp = (
             pump_power_dlmp
@@ -695,6 +725,7 @@ class LinearThermalGridModel(object):
         return fledge.data_interface.ResultsDict(
             node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
             branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
+            branch_flow_vector_minimum_dlmp=branch_flow_vector_minimum_dlmp,
             pump_power_dlmp=pump_power_dlmp,
             thermal_grid_energy_dlmp=thermal_grid_energy_dlmp,
             thermal_grid_head_dlmp=thermal_grid_head_dlmp,

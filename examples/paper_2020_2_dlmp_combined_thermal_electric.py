@@ -617,7 +617,7 @@ if __name__ == '__main__':
     run_all = True
 
     if run_all:
-        for scenario_number in range(1, 14):
+        for scenario_number in range(1, 16):
             main(scenario_number)
     else:
         main()

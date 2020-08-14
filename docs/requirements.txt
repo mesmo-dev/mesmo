@@ -2,5 +2,5 @@ pyyaml
 recommonmark
 sphinx
 sphinx_markdown_tables
-git+https://github.com/Holzhaus/sphinx-multiversion.git#egg=sphinx-multiversion
+sphinx-multiversion
 sphinx-rtd-theme

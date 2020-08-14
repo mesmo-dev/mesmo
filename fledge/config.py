@@ -116,6 +116,17 @@ def get_parallel_pool() -> multiprocessing.Pool:
     return multiprocessing.Pool()
 
 
+def memoize(name):
+    """Wrapper for memoize decorator of cache. Invokes memoize with `expiry_time` from config,
+    but only if caching is enabled for given `name` in config.
+    """
+
+    if config['caching']['enable'] and config['caching'][name]:
+        return cache.memoize(expire=config['caching']['expiry_time'])
+    else:
+        return lambda function: function  # If caching not enabled, return empty decorator (do nothing).
+
+
 # Obtain repository base directory path.
 base_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
 
@@ -132,10 +143,11 @@ gravitational_acceleration = 9.81  # [m^2/s]
 # - Pool is instantiated as None and only created on first use in `fledge.utils.starmap`.
 parallel_pool = None
 
-# Instantiate cache.
-cache = diskcache.Cache(os.path.join(base_path, 'cache'))
-if config['caching']['reset_cache']:
-    cache.clear()
+# Instantiate / reload cache.
+if config['caching']['enable']:
+    cache = diskcache.Cache(os.path.join(base_path, 'cache'))
+    if config['caching']['reset_cache']:
+        cache.clear()
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

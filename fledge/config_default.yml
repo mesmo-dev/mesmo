@@ -9,8 +9,10 @@ paths:
 multiprocessing:
   run_parallel: true
 caching:
-  reset_cache: true  # Reset the cache on each restart of FLEDGE, to incorporate changes in the database.
-  cache_building_models: true
+  enable: false  # If false, no cache is created.
+  reset_cache: false  # If true, reset the cache on each restart of FLEDGE, to incorporate changes in the database.
+  expiry_time: 3600  # Expiry time of the cache, in seconds.
+  get_building_model: true
 optimization:
   solver_name: gurobi  # Must be valid input string for Pyomo's `SolverFactory`.
   show_solver_output: true  # If True, activate verbose solver output.

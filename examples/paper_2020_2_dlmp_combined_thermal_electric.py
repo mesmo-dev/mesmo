@@ -608,7 +608,7 @@ def main(
     )
 
     # Print results path.
-    os.startfile(results_path)
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

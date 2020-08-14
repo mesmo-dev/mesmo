@@ -9,6 +9,8 @@ import pandas as pd
 import re
 import time
 import typing
+import subprocess
+import sys
 
 import cobmo.building_model
 import fledge.config
@@ -181,7 +183,19 @@ def get_results_path(
     return results_path
 
 
+def launch(path):
+    """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
+
+    if sys.platform == 'win32':
+        os.startfile(path)
+    elif sys.platform == 'darwin':
+        subprocess.call(['open', path])
+    else:
+        subprocess.call(['xdg-open', path])
+
+
 @fledge.config.memoize('get_building_model')
 def get_building_model(*args, **kwargs):
     """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
+
     return cobmo.building_model.BuildingModel(*args, **kwargs)

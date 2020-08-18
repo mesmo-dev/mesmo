@@ -183,6 +183,14 @@ def get_results_path(
     return results_path
 
 
+def get_alphanumeric_string(
+        string: str
+):
+    """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
+
+    return re.sub(r'\W+', '_', string).strip('_').lower()
+
+
 def launch(path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 

@@ -159,6 +159,26 @@ CREATE TABLE fixed_loads (
      definition_type TEXT,
      PRIMARY KEY(model_name)
 );
+CREATE TABLE flexible_generator_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
+CREATE TABLE flexible_generator_timeseries (
+    model_name TEXT,
+    time TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
+);
+CREATE TABLE flexible_generators (
+     model_name TEXT,
+     definition_type TEXT,
+     levelized_cost_of_energy TEXT,
+     PRIMARY KEY(model_name)
+);
 CREATE TABLE flexible_load_schedules (
     model_name TEXT,
     time_period TEXT,

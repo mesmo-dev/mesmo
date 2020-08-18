@@ -1,5 +1,6 @@
 """Configuration module."""
 
+import diskcache
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
@@ -115,6 +116,17 @@ def get_parallel_pool() -> multiprocessing.Pool:
     return multiprocessing.Pool()
 
 
+def memoize(name):
+    """Wrapper for memoize decorator of cache. Invokes memoize with `expiry_time` from config,
+    but only if caching is enabled for given `name` in config.
+    """
+
+    if config['caching']['enable'] and config['caching'][name]:
+        return cache.memoize(expire=config['caching']['expiry_time'])
+    else:
+        return lambda function: function  # If caching not enabled, return empty decorator (do nothing).
+
+
 # Obtain repository base directory path.
 base_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
 
@@ -131,17 +143,26 @@ gravitational_acceleration = 9.81  # [m^2/s]
 # - Pool is instantiated as None and only created on first use in `fledge.utils.starmap`.
 parallel_pool = None
 
+# Instantiate / reload cache.
+if config['caching']['enable']:
+    cache = diskcache.Cache(os.path.join(base_path, 'cache'))
+    if config['caching']['reset_cache']:
+        cache.clear()
+
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
-matplotlib.rcParams['image.cmap'] = config['plots']['colormap']
-matplotlib.rcParams['font.family'] = config['plots']['font_family']
+matplotlib.rc('image', cmap=config['plots']['colormap'])
+matplotlib.rc('font', family=config['plots']['font_family'])
+matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
+matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
+matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.
 # - These settings ensure that that data frames are always printed in full, rather than cropped.
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
+pd.set_option('display.width', int(9e9))
 try:
     pd.set_option('display.max_colwidth', None)
 except ValueError:

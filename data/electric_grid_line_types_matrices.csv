@@ -27,3 +27,8 @@ hougang_linetype_66,3,1,0.146581463,0.353622346,-1.549637123
 hougang_linetype_66,3,2,0.142169728,0.325474229,-0.980843491
 hougang_linetype_66,3,3,1.194213294,0.882906325,7.771919682
 singapore_cable_22_copper_300,1,1,0.077,0.108,312.0
+singapore_cable_22_copper_300,2,1,0.0,0.0,0.0
+singapore_cable_22_copper_300,2,2,0.077,0.108,312.0
+singapore_cable_22_copper_300,3,1,0.0,0.0,0.0
+singapore_cable_22_copper_300,3,2,0.0,0.0,0.0
+singapore_cable_22_copper_300,3,3,0.077,0.108,312.0

@@ -141,16 +141,16 @@ class NominalOperationProblem(object):
             for timestep in self.timesteps:
                 power_flow_solution = power_flow_solutions[timestep]
                 # TODO: Flatten power flow solution arrays.
-                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
-                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
-                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
-                loss.loc[timestep, :] = power_flow_solution.loss.ravel()
+                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector
+                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1
+                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2
+                loss.loc[timestep, :] = power_flow_solution.loss
         if self.thermal_grid_model is not None:
             for timestep in self.timesteps:
                 thermal_power_flow_solution = thermal_power_flow_solutions[timestep]
-                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
-                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
-                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
+                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector
+                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector
+                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector
 
         # Store results.
         self.results = fledge.data_interface.ResultsDict()

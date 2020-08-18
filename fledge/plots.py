@@ -94,8 +94,9 @@ class ElectricGridGraph(nx.DiGraph):
 
 
 class ThermalGridGraph(nx.DiGraph):
-    """Electric grid graph object."""
+    """Thermal grid graph object."""
 
+    edge_by_line_name: pd.Series
     node_positions: dict
     node_labels: dict
 
@@ -125,6 +126,14 @@ class ThermalGridGraph(nx.DiGraph):
         )
         self.add_edges_from(
             thermal_grid_data.thermal_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False)
+        )
+
+        # Obtain edges indexed by line name.
+        self.edge_by_line_name = (
+            pd.Series(
+                thermal_grid_data.thermal_grid_lines.loc[:, ['node_1_name', 'node_2_name']].itertuples(index=False),
+                index=thermal_grid_data.thermal_grid_lines.loc[:, 'line_name']
+            )
         )
 
         # Obtain node positions / labels.

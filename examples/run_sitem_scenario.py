@@ -65,11 +65,14 @@ def main():
 
     # Plot electric grid line utilization.
     if plot_detailed_grid:
-        fledge.plots.plot_electric_grid_line_utilization(
+        fledge.plots.plot_grid_line_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            branch_power_vector_magnitude_per_unit,
+            branch_power_vector_magnitude_per_unit * 100.0,
             results_path,
+            vmin=20.0,
+            vmax=120.0,
+            value_unit='%',
             make_video=True
         )
 

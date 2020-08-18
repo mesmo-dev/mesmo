@@ -592,11 +592,19 @@ def main(
             plt.close()
 
     # Plot electric grid line utilization.
-    fledge.plots.plot_electric_grid_line_utilization(
+    fledge.plots.plot_grid_line_utilization(
         electric_grid_model,
         electric_grid_graph,
-        branch_power_vector_magnitude_per_unit,
-        results_path
+        branch_power_vector_magnitude_per_unit * 100.0,
+        results_path,
+        value_unit='%',
+    )
+    fledge.plots.plot_grid_line_utilization(
+        thermal_grid_model,
+        thermal_grid_graph,
+        results['branch_flow_vector'] * (100.0 if in_per_unit else 1.0e-3),
+        results_path,
+        value_unit='%' if in_per_unit else 'kW',
     )
 
     # Plot electric grid nodes voltage drop.

@@ -71,9 +71,23 @@ class ElectricGridGraph(nx.DiGraph):
         )
 
         # Obtain node positions / labels.
-        self.node_positions = (
-            electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']].T.to_dict('list')
-        )
+        if pd.notnull(electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']]).any().any():
+            self.node_positions = (
+                electric_grid_data.electric_grid_nodes.loc[:, ['longitude', 'latitude']].T.to_dict('list')
+            )
+        else:
+            # If latitude / longitude are not defined, generate node positions based on networkx layout.
+            self.node_positions = (
+                nx.spring_layout(self)
+            )
+            # Only keep positions for nodes with line connections.
+            # Only keep positions for nodes with line connections.
+            for node_name in self.node_positions:
+                if (
+                        node_name not in
+                        electric_grid_data.electric_grid_lines.loc[:, ['node_1_name', 'node_2_name']].values.ravel()
+                ):
+                    self.node_positions[node_name] = [np.nan, np.nan]
         self.node_labels = (
             electric_grid_data.electric_grid_nodes.loc[:, 'node_name'].to_dict()
         )
@@ -114,9 +128,22 @@ class ThermalGridGraph(nx.DiGraph):
         )
 
         # Obtain node positions / labels.
-        self.node_positions = (
-            thermal_grid_data.thermal_grid_nodes.loc[:, ['longitude', 'latitude']].T.to_dict('list')
-        )
+        if pd.notnull(thermal_grid_data.thermal_grid_nodes.loc[:, ['longitude', 'latitude']]).any().any():
+            self.node_positions = (
+                thermal_grid_data.thermal_grid_nodes.loc[:, ['longitude', 'latitude']].T.to_dict('list')
+            )
+        else:
+            # If latitude / longitude are not defined, generate node positions based on networkx layout.
+            self.node_positions = (
+                nx.spring_layout(self)
+            )
+            # Only keep positions for nodes with line connections.
+            for node_name in self.node_positions:
+                if (
+                        node_name not in
+                        thermal_grid_data.thermal_grid_lines.loc[:, ['node_1_name', 'node_2_name']].values.ravel()
+                ):
+                    self.node_positions[node_name] = [np.nan, np.nan]
         self.node_labels = (
             thermal_grid_data.thermal_grid_nodes.loc[:, 'node_name'].to_dict()
         )

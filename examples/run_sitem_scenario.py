@@ -81,11 +81,15 @@ def main():
 
     # Plot electric grid nodes voltage drop.
     if plot_detailed_grid:
-        fledge.plots.plot_electric_grid_node_voltage_drop(
+        fledge.plots.plot_grid_node_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            node_voltage_vector_magnitude_per_unit,
+            (node_voltage_vector_magnitude_per_unit - 1) * -100.0,
             results_path,
+            vmin=0.0,
+            vmax=10.0,
+            value_unit='%',
+            suffix='drop',
             make_video=True
         )
 

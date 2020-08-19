@@ -309,7 +309,7 @@ def plot_grid_transformer_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
+            attribution=fledge.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.
@@ -450,7 +450,7 @@ def plot_grid_line_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
+            attribution=fledge.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.
@@ -599,7 +599,7 @@ def plot_grid_node_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=False  # Do not show copyright notice.
+            attribution=fledge.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.

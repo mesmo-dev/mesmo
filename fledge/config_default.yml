@@ -27,3 +27,4 @@ plots:
   colormap: viridis_r
   font_family: ['Arial', 'Helvetica']
   add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
+  show_basemap_attribution: false # If True, show copyright notice for basemap.

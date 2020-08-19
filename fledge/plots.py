@@ -517,7 +517,7 @@ def plot_grid_node_utilization(
         vmin=None,
         vmax=None,
         label=None,
-        value_unit='W',
+        value_unit=None,
         suffix=''
 ):
 
@@ -534,15 +534,17 @@ def plot_grid_node_utilization(
     else:
         node_color = node_vector
 
-    # Obtain plot title / filename.
+    # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
         title = f'Node {suffix} voltage'
         filename = 'node_voltage'
         colorbar_label = f'Voltage {suffix}'
+        value_unit = 'V' if value_unit is None else value_unit
     else:
         title = f'Node {suffix} head'
         filename = 'node_head'
         colorbar_label = f'Head {suffix}'
+        value_unit = 'm' if value_unit is None else value_unit
     if label is not None:
         title = f"{title}: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
         filename = f"{filename}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"

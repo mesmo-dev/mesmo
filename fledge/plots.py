@@ -258,6 +258,42 @@ def plot_electric_grid_transformer_utilization(
         cv2.destroyAllWindows()
 
 
+def create_video(
+        name: str,
+        labels: pd.Index,
+        results_path: str
+):
+
+    # Obtain images / frames based on given name / labels.
+    images = []
+    for label in labels:
+        if type(label) is pd.Timestamp:
+            filename = f"{name}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+            images.append(cv2.imread(os.path.join(results_path, filename)))
+        try:
+            assert len(images) > 0
+        except AssertionError:
+            logger.error(f"No images / frames found for video of '{name}'. Check if given labels are valid timesteps.")
+
+    # Setup video.
+    video_writer = (
+        cv2.VideoWriter(
+            os.path.join(results_path, f'{name}.avi'),  # Filename.
+            cv2.VideoWriter_fourcc(*'XVID'),  # Format.
+            2.0,  # FPS.
+            images[0].shape[1::-1]  # Size.
+        )
+    )
+
+    # Write frames to video.
+    for image in images:
+        video_writer.write(image)
+
+    # Cleanup.
+    video_writer.release()
+    cv2.destroyAllWindows()
+
+
 @multimethod
 def plot_grid_line_utilization(
         grid_model: typing.Union[
@@ -294,23 +330,11 @@ def plot_grid_line_utilization(
 
     # Stitch images to video.
     if make_video:
-        images = []
-        for label in branch_vector.index:
-            if type(label) is pd.Timestamp:
-                filename = f"line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
-                images.append(cv2.imread(os.path.join(results_path, filename)))
-        video_writer = (
-            cv2.VideoWriter(
-                os.path.join(results_path, 'line_utilization.avi'),  # Filename.
-                cv2.VideoWriter_fourcc(*'XVID'),  # Format.
-                2.0,  # FPS.
-                images[0].shape[1::-1]  # Size.
-            )
+        create_video(
+            name='line_utilization',
+            labels=branch_vector.index,
+            results_path=results_path
         )
-        for image in images:
-            video_writer.write(image)
-        video_writer.release()
-        cv2.destroyAllWindows()
 
 
 @multimethod

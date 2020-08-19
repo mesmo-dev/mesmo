@@ -385,7 +385,7 @@ def plot_grid_line_utilization(
 
     # Obtain edge color values.
     if isinstance(grid_graph, ElectricGridGraph):
-        # Take mean across all phases.
+        # Take only lines & mean across all phases.
         edge_color = (
             branch_vector.loc[grid_model.lines].mean(level='branch_name')
         )

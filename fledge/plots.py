@@ -197,7 +197,114 @@ def create_video(
 
 
 @multimethod
-def plot_grid_transformer_utilization(
+def plot_line_utilization(
+        grid_model: typing.Union[
+            fledge.electric_grid_models.ElectricGridModel,
+            fledge.thermal_grid_models.ThermalGridModel
+        ],
+        grid_graph: typing.Union[
+            ElectricGridGraph,
+            ThermalGridGraph
+        ],
+        branch_vector: pd.DataFrame,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        make_video=False,
+        **kwargs
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
+    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+
+    for label in branch_vector.index:
+        plot_line_utilization(
+            grid_model,
+            grid_graph,
+            branch_vector.loc[label, :],
+            results_path,
+            vmin=vmin,
+            vmax=vmax,
+            label=label,
+            **kwargs
+        )
+
+    # Stitch images to video.
+    if make_video:
+        create_video(
+            name='line_utilization',
+            labels=branch_vector.index,
+            results_path=results_path
+        )
+
+
+@multimethod
+def plot_line_utilization(
+        grid_model: typing.Union[
+            fledge.electric_grid_models.ElectricGridModel,
+            fledge.thermal_grid_models.ThermalGridModel
+        ],
+        grid_graph: typing.Union[
+            ElectricGridGraph,
+            ThermalGridGraph
+        ],
+        branch_vector: pd.Series,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        label=None,
+        value_unit='W',
+        horizontal_line_value=None
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
+    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+
+    # Obtain values for plotting.
+    if isinstance(grid_graph, ElectricGridGraph):
+        # Take only lines & mean across all phases.
+        values = (
+            branch_vector.loc[grid_model.lines].mean(level='branch_name')
+        )
+    else:
+        values = branch_vector
+
+    # Obtain plot title / filename.
+    if label is not None:
+        title = f"Line utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
+        filename = f"line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+    else:
+        title = f"Line utilization"
+        filename = "line_utilization.png"
+    y_label = f"Utilization [{value_unit}]"
+
+    # Create plot.
+    plt.figure()
+    plt.title(title)
+    plt.bar(
+        range(len(grid_model.line_names)),
+        values
+    )
+    if horizontal_line_value is not None:
+        plt.hlines(horizontal_line_value, -0.5, len(grid_model.line_names) - 0.5, colors='red')
+    plt.xticks(
+        range(len(grid_model.line_names)),
+        grid_model.line_names,
+        rotation=45,
+        ha='right'
+    )
+    plt.ylim([vmin, vmax])
+    plt.ylabel(y_label)
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    # plt.show()
+    plt.close()
+
+
+@multimethod
+def plot_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         branch_vector: pd.DataFrame,
@@ -213,7 +320,7 @@ def plot_grid_transformer_utilization(
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
     for label in branch_vector.index:
-        plot_grid_transformer_utilization(
+        plot_transformer_utilization(
             grid_model,
             grid_graph,
             branch_vector.loc[label, :],
@@ -227,14 +334,14 @@ def plot_grid_transformer_utilization(
     # Stitch images to video.
     if make_video:
         create_video(
-            name='grid_transformer_utilization',
+            name='transformer_utilization',
             labels=branch_vector.index,
             results_path=results_path
         )
 
 
 @multimethod
-def plot_grid_transformer_utilization(
+def plot_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         branch_vector: pd.Series,
@@ -242,78 +349,168 @@ def plot_grid_transformer_utilization(
         vmin=None,
         vmax=None,
         label=None,
-        value_unit='W'
+        value_unit='W',
+        horizontal_line_value=None
 ):
 
     # Obtain colorscale minimum / maximum value.
     vmin = branch_vector.values.ravel().min() if vmin is None else vmin
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
-    # Obtain edge color values.
-    # - Take only transformers & mean across all phases.
-    node_color = (
-        branch_vector.loc[grid_model.transformers].mean(level='branch_name')
-    )
+    # Obtain values for plotting.
+    if isinstance(grid_graph, ElectricGridGraph):
+        # Take only transformers & mean across all phases.
+        values = (
+            branch_vector.loc[grid_model.transformers].mean(level='branch_name')
+        )
+    else:
+        values = branch_vector
 
     # Obtain plot title / filename.
     if label is not None:
         title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"grid_transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
-        title = "Transformer utilization"
-        filename = "grid_transformer_utilization.png"
+        title = f"Transformer utilization"
+        filename = "transformer_utilization.png"
+    y_label = f"Utilization [{value_unit}]"
 
     # Create plot.
     plt.figure()
     plt.title(title)
-    # Plot nodes all nodes, but with node size 0.0, just to get appropriate map extent.
-    nx.draw(
-        grid_graph,
-        edgelist=[],
-        pos=grid_graph.node_positions,
-        node_size=0.0
+    plt.bar(
+        range(len(grid_model.transformer_names)),
+        values
     )
-    nx.draw(
-        grid_graph,
-        nodelist=grid_graph.transformer_nodes,
-        edgelist=[],
-        pos=grid_graph.node_positions,
-        node_size=200.0,
-        node_color=node_color.tolist(),
-        vmin=vmin,
-        vmax=vmax,
-        edgecolors='black'
+    if horizontal_line_value is not None:
+        plt.hlines(horizontal_line_value, -0.5, len(grid_model.transformer_names) - 0.5, colors='red')
+    plt.xticks(
+        range(len(grid_model.transformer_names)),
+        grid_model.transformer_names,
+        rotation=45,
+        ha='right'
     )
-    # Add colorbar.
-    sm = (
-        plt.cm.ScalarMappable(
-            norm=plt.Normalize(
-                vmin=vmin,
-                vmax=vmax
-            )
-        )
-    )
-    cb = plt.colorbar(sm, shrink=0.9)
-    cb.set_label(f'Utilization [{value_unit}]')
+    plt.ylim([vmin, vmax])
+    plt.ylabel(y_label)
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    # plt.show()
+    plt.close()
 
-    if fledge.config.config['plots']['add_basemap']:
-        # Adjust axis limits, to get a better view of surrounding map.
-        xlim = plt.xlim()
-        xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
-        plt.xlim(xlim)
-        ylim = plt.ylim()
-        ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
-        plt.ylim(ylim)
-        # Add contextual basemap layer for orientation.
-        ctx.add_basemap(
-            plt.gca(),
-            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
-            source=ctx.providers.CartoDB.Positron,
-            attribution=fledge.config.config['plots']['show_basemap_attribution']
+
+@multimethod
+def plot_node_utilization(
+        grid_model: typing.Union[
+            fledge.electric_grid_models.ElectricGridModel,
+            fledge.thermal_grid_models.ThermalGridModel
+        ],
+        grid_graph: typing.Union[
+            ElectricGridGraph,
+            ThermalGridGraph
+        ],
+        branch_vector: pd.DataFrame,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        make_video=False,
+        **kwargs
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
+    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+
+    for label in branch_vector.index:
+        plot_node_utilization(
+            grid_model,
+            grid_graph,
+            branch_vector.loc[label, :],
+            results_path,
+            vmin=vmin,
+            vmax=vmax,
+            label=label,
+            **kwargs
         )
 
-    # Store / show / close figure.
-    plt.savefig(os.path.join(results_path, filename), bbox_inches='tight')
+    # Stitch images to video.
+    if make_video:
+        create_video(
+            name='node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'node_head',
+            labels=branch_vector.index,
+            results_path=results_path
+        )
+
+
+@multimethod
+def plot_node_utilization(
+        grid_model: typing.Union[
+            fledge.electric_grid_models.ElectricGridModel,
+            fledge.thermal_grid_models.ThermalGridModel
+        ],
+        grid_graph: typing.Union[
+            ElectricGridGraph,
+            ThermalGridGraph
+        ],
+        node_vector: pd.Series,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        label=None,
+        value_unit=None,
+        suffix=None,
+        horizontal_line_value=None
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = node_vector.values.ravel().min() if vmin is None else vmin
+    vmax = node_vector.values.ravel().max() if vmax is None else vmax
+
+    # Obtain values for plotting.
+    if isinstance(grid_graph, ElectricGridGraph):
+        # Take mean across all phases.
+        values = (
+            node_vector.mean(level='node_name')
+        )
+    else:
+        values = node_vector
+
+    # Obtain plot title / filename / unit.
+    if isinstance(grid_graph, ElectricGridGraph):
+        title = 'Node voltage' + f' {suffix}' if suffix is not None else ''
+        filename = 'node_voltage'
+        y_label = 'Voltage' + f' {suffix}' if suffix is not None else ''
+        value_unit = 'V' if value_unit is None else value_unit
+    else:
+        title = 'Node head' + f' {suffix}' if suffix is not None else ''
+        filename = 'node_head'
+        y_label = 'Head' + f' {suffix}' if suffix is not None else ''
+        value_unit = 'm' if value_unit is None else value_unit
+    if label is not None:
+        title = f"{title}: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
+        filename = f"{filename}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+    else:
+        title = f"{title}"
+        filename = f"{filename}.png"
+
+    # Create plot.
+    plt.figure()
+    plt.title(title)
+    plt.bar(
+        range(len(grid_model.node_names)),
+        values
+    )
+    if horizontal_line_value is not None:
+        plt.hlines(horizontal_line_value, -0.5, len(grid_model.node_names) - 0.5, colors='red')
+    plt.xticks(
+        range(len(grid_model.node_names)),
+        grid_model.node_names,
+        rotation=45,
+        ha='right'
+    )
+    plt.ylim([vmin, vmax])
+    plt.ylabel(f'{y_label} [{value_unit}]')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
     # plt.show()
     plt.close()
 
@@ -460,6 +657,128 @@ def plot_grid_line_utilization(
 
 
 @multimethod
+def plot_grid_transformer_utilization(
+        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_graph: ElectricGridGraph,
+        branch_vector: pd.DataFrame,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        make_video=False,
+        **kwargs
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
+    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+
+    for label in branch_vector.index:
+        plot_grid_transformer_utilization(
+            grid_model,
+            grid_graph,
+            branch_vector.loc[label, :],
+            results_path,
+            vmin=vmin,
+            vmax=vmax,
+            label=label,
+            **kwargs
+        )
+
+    # Stitch images to video.
+    if make_video:
+        create_video(
+            name='grid_transformer_utilization',
+            labels=branch_vector.index,
+            results_path=results_path
+        )
+
+
+@multimethod
+def plot_grid_transformer_utilization(
+        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_graph: ElectricGridGraph,
+        branch_vector: pd.Series,
+        results_path: str,
+        vmin=None,
+        vmax=None,
+        label=None,
+        value_unit='W'
+):
+
+    # Obtain colorscale minimum / maximum value.
+    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
+    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+
+    # Obtain edge color values.
+    # - Take only transformers & mean across all phases.
+    node_color = (
+        branch_vector.loc[grid_model.transformers].mean(level='branch_name')
+    )
+
+    # Obtain plot title / filename.
+    if label is not None:
+        title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
+        filename = f"grid_transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+    else:
+        title = "Transformer utilization"
+        filename = "grid_transformer_utilization.png"
+
+    # Create plot.
+    plt.figure()
+    plt.title(title)
+    # Plot nodes all nodes, but with node size 0.0, just to get appropriate map extent.
+    nx.draw(
+        grid_graph,
+        edgelist=[],
+        pos=grid_graph.node_positions,
+        node_size=0.0
+    )
+    nx.draw(
+        grid_graph,
+        nodelist=grid_graph.transformer_nodes,
+        edgelist=[],
+        pos=grid_graph.node_positions,
+        node_size=200.0,
+        node_color=node_color.tolist(),
+        vmin=vmin,
+        vmax=vmax,
+        edgecolors='black'
+    )
+    # Add colorbar.
+    sm = (
+        plt.cm.ScalarMappable(
+            norm=plt.Normalize(
+                vmin=vmin,
+                vmax=vmax
+            )
+        )
+    )
+    cb = plt.colorbar(sm, shrink=0.9)
+    cb.set_label(f'Utilization [{value_unit}]')
+
+    if fledge.config.config['plots']['add_basemap']:
+        # Adjust axis limits, to get a better view of surrounding map.
+        xlim = plt.xlim()
+        xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
+        plt.xlim(xlim)
+        ylim = plt.ylim()
+        ylim = (ylim[0] - 0.05 * (ylim[1] - ylim[0]), ylim[1] + 0.05 * (ylim[1] - ylim[0]))
+        plt.ylim(ylim)
+        # Add contextual basemap layer for orientation.
+        ctx.add_basemap(
+            plt.gca(),
+            crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
+            source=ctx.providers.CartoDB.Positron,
+            attribution=fledge.config.config['plots']['show_basemap_attribution']
+        )
+
+    # Store / show / close figure.
+    plt.savefig(os.path.join(results_path, filename), bbox_inches='tight')
+    # plt.show()
+    plt.close()
+
+
+@multimethod
 def plot_grid_node_utilization(
         grid_model: typing.Union[
             fledge.electric_grid_models.ElectricGridModel,
@@ -518,7 +837,7 @@ def plot_grid_node_utilization(
         vmax=None,
         label=None,
         value_unit=None,
-        suffix=''
+        suffix=None
 ):
 
     # Obtain colorscale minimum / maximum value.
@@ -536,14 +855,14 @@ def plot_grid_node_utilization(
 
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
-        title = f'Node {suffix} voltage'
+        title = 'Node voltage' + f' {suffix}' if suffix is not None else ''
         filename = 'grid_node_voltage'
         colorbar_label = f'Voltage {suffix}'
         value_unit = 'V' if value_unit is None else value_unit
     else:
-        title = f'Node {suffix} head'
+        title = 'Node head' + f' {suffix}' if suffix is not None else ''
         filename = 'grid_node_head'
-        colorbar_label = f'Head {suffix}'
+        colorbar_label = 'Head' + f' {suffix}' if suffix is not None else ''
         value_unit = 'm' if value_unit is None else value_unit
     if label is not None:
         title = f"{title}: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"

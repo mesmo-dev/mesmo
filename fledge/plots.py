@@ -227,7 +227,7 @@ def plot_grid_transformer_utilization(
     # Stitch images to video.
     if make_video:
         create_video(
-            name='transformer_utilization',
+            name='grid_transformer_utilization',
             labels=branch_vector.index,
             results_path=results_path
         )
@@ -258,10 +258,10 @@ def plot_grid_transformer_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"grid_transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = "Transformer utilization"
-        filename = "transformer_utilization.png"
+        filename = "grid_transformer_utilization.png"
 
     # Create plot.
     plt.figure()
@@ -355,7 +355,7 @@ def plot_grid_line_utilization(
     # Stitch images to video.
     if make_video:
         create_video(
-            name='line_utilization',
+            name='grid_line_utilization',
             labels=branch_vector.index,
             results_path=results_path
         )
@@ -395,10 +395,10 @@ def plot_grid_line_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Line utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"grid_line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = "Line utilization"
-        filename = "line_utilization.png"
+        filename = "grid_line_utilization.png"
 
     # Create plot.
     plt.figure()
@@ -496,7 +496,7 @@ def plot_grid_node_utilization(
     # Stitch images to video.
     if make_video:
         create_video(
-            name='node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'node_head',
+            name='grid_node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'grid_node_head',
             labels=node_vector.index,
             results_path=results_path
         )
@@ -537,12 +537,12 @@ def plot_grid_node_utilization(
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
         title = f'Node {suffix} voltage'
-        filename = 'node_voltage'
+        filename = 'grid_node_voltage'
         colorbar_label = f'Voltage {suffix}'
         value_unit = 'V' if value_unit is None else value_unit
     else:
         title = f'Node {suffix} head'
-        filename = 'node_head'
+        filename = 'grid_node_head'
         colorbar_label = f'Head {suffix}'
         value_unit = 'm' if value_unit is None else value_unit
     if label is not None:

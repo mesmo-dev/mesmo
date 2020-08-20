@@ -128,7 +128,7 @@ def main():
     # plt.show()
     plt.close()
 
-    plt.title('Maximum voltage drop [%]')
+    plt.title('Voltage drop [%]')
     plt.bar(
         range(len(problem.electric_grid_model.nodes)),
         100.0 * (node_voltage_vector_magnitude_per_unit.loc['minimum', :] - 1.0)

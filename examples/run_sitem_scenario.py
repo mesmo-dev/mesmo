@@ -18,6 +18,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_district25'
     results_path = fledge.utils.get_results_path('run_sitem_baseline', scenario_name)
+    plot_grid = False
     plot_detailed_grid = True
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -55,19 +56,20 @@ def main():
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
     # Plot electric grid transformer utilization.
-    fledge.plots.plot_grid_transformer_utilization(
-        problem.electric_grid_model,
-        electric_grid_graph,
-        branch_power_vector_magnitude_per_unit * 100.0,
-        results_path,
-        vmin=20.0,
-        vmax=120.0,
-        value_unit='%',
-        make_video=True
-    )
+    if plot_grid:
+        fledge.plots.plot_grid_transformer_utilization(
+            problem.electric_grid_model,
+            electric_grid_graph,
+            branch_power_vector_magnitude_per_unit * 100.0,
+            results_path,
+            vmin=20.0,
+            vmax=120.0,
+            value_unit='%',
+            make_video=True
+        )
 
     # Plot electric grid line utilization.
-    if plot_detailed_grid:
+    if plot_grid and plot_detailed_grid:
         fledge.plots.plot_grid_line_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
@@ -80,7 +82,7 @@ def main():
         )
 
     # Plot electric grid nodes voltage drop.
-    if plot_detailed_grid:
+    if plot_grid and plot_detailed_grid:
         fledge.plots.plot_grid_node_utilization(
             problem.electric_grid_model,
             electric_grid_graph,

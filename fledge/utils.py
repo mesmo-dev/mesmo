@@ -42,10 +42,15 @@ def starmap(
         function_partial = function
 
     if fledge.config.config['multiprocessing']['run_parallel']:
+        # If `run_parallel`, use starmap from `multiprocess.Pool` for parallel execution.
         if fledge.config.parallel_pool is None:
+            # Setup parallel pool on first execution.
+            log_time('parallel pool setup')
             fledge.config.parallel_pool = fledge.config.get_parallel_pool()
+            log_time('parallel pool setup')
         results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
     else:
+        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
         results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results

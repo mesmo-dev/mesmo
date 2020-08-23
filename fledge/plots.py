@@ -1,6 +1,7 @@
 """Plots module."""
 
 import cv2
+import itertools
 from multimethod import multimethod
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -218,17 +219,21 @@ def plot_line_utilization(
     vmin = branch_vector.values.ravel().min() if vmin is None else vmin
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in branch_vector.index:
-        plot_line_utilization(
-            grid_model,
-            grid_graph,
-            branch_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `branch_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_line_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in branch_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
@@ -271,6 +276,9 @@ def plot_line_utilization(
     else:
         values = branch_vector
 
+    # Obtain label.
+    label = branch_vector.name if label is None else label
+
     # Obtain plot title / filename.
     if label is not None:
         title = f"Line utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
@@ -303,6 +311,11 @@ def plot_line_utilization(
     plt.close()
 
 
+def wrapper_plot_line_utilization(*args, **kwargs):
+
+    plot_line_utilization(*args, **kwargs)
+
+
 @multimethod
 def plot_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
@@ -319,17 +332,21 @@ def plot_transformer_utilization(
     vmin = branch_vector.values.ravel().min() if vmin is None else vmin
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in branch_vector.index:
-        plot_transformer_utilization(
-            grid_model,
-            grid_graph,
-            branch_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `branch_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_transformer_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in branch_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
@@ -366,6 +383,9 @@ def plot_transformer_utilization(
     else:
         values = branch_vector
 
+    # Obtain label.
+    label = branch_vector.name if label is None else label
+
     # Obtain plot title / filename.
     if label is not None:
         title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
@@ -398,6 +418,11 @@ def plot_transformer_utilization(
     plt.close()
 
 
+def wrapper_plot_transformer_utilization(*args, **kwargs):
+
+    plot_transformer_utilization(*args, **kwargs)
+
+
 @multimethod
 def plot_node_utilization(
         grid_model: typing.Union[
@@ -408,7 +433,7 @@ def plot_node_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        branch_vector: pd.DataFrame,
+        node_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -417,26 +442,30 @@ def plot_node_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = node_vector.values.ravel().min() if vmin is None else vmin
+    vmax = node_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in branch_vector.index:
-        plot_node_utilization(
-            grid_model,
-            grid_graph,
-            branch_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `node_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_node_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in node_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
         create_video(
             name='node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'node_head',
-            labels=branch_vector.index,
+            labels=node_vector.index,
             results_path=results_path
         )
 
@@ -473,6 +502,9 @@ def plot_node_utilization(
         )
     else:
         values = node_vector
+
+    # Obtain label.
+    label = node_vector.name if label is None else label
 
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -515,6 +547,11 @@ def plot_node_utilization(
     plt.close()
 
 
+def wrapper_plot_node_utilization(*args, **kwargs):
+
+    plot_node_utilization(*args, **kwargs)
+
+
 @multimethod
 def plot_grid_line_utilization(
         grid_model: typing.Union[
@@ -537,17 +574,21 @@ def plot_grid_line_utilization(
     vmin = branch_vector.values.ravel().min() if vmin is None else vmin
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in branch_vector.index:
-        plot_grid_line_utilization(
-            grid_model,
-            grid_graph,
-            branch_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `branch_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_grid_line_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in branch_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
@@ -588,6 +629,9 @@ def plot_grid_line_utilization(
         )
     else:
         edge_color = branch_vector
+
+    # Obtain label.
+    label = branch_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -656,6 +700,11 @@ def plot_grid_line_utilization(
     plt.close()
 
 
+def wrapper_plot_grid_line_utilization(*args, **kwargs):
+
+    plot_grid_line_utilization(*args, **kwargs)
+
+
 @multimethod
 def plot_grid_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
@@ -672,17 +721,21 @@ def plot_grid_transformer_utilization(
     vmin = branch_vector.values.ravel().min() if vmin is None else vmin
     vmax = branch_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in branch_vector.index:
-        plot_grid_transformer_utilization(
-            grid_model,
-            grid_graph,
-            branch_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `branch_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_grid_transformer_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in branch_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
@@ -714,6 +767,9 @@ def plot_grid_transformer_utilization(
     node_color = (
         branch_vector.loc[grid_model.transformers].mean(level='branch_name')
     )
+
+    # Obtain label.
+    label = branch_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -778,6 +834,11 @@ def plot_grid_transformer_utilization(
     plt.close()
 
 
+def wrapper_plot_grid_transformer_utilization(*args, **kwargs):
+
+    plot_grid_transformer_utilization(*args, **kwargs)
+
+
 @multimethod
 def plot_grid_node_utilization(
         grid_model: typing.Union[
@@ -800,17 +861,21 @@ def plot_grid_node_utilization(
     vmin = node_vector.values.ravel().min() if vmin is None else vmin
     vmax = node_vector.values.ravel().max() if vmax is None else vmax
 
-    for label in node_vector.index:
-        plot_grid_node_utilization(
-            grid_model,
-            grid_graph,
-            node_vector.loc[label, :],
-            results_path,
+    # Create plot for each column in `node_vector`.
+    fledge.utils.starmap(
+        wrapper_plot_grid_node_utilization,
+        zip(
+            itertools.repeat(grid_model),
+            itertools.repeat(grid_graph),
+            [row[1] for row in node_vector.iterrows()],
+            itertools.repeat(results_path)
+        ),
+        dict(
             vmin=vmin,
             vmax=vmax,
-            label=label,
             **kwargs
         )
+    )
 
     # Stitch images to video.
     if make_video:
@@ -852,6 +917,9 @@ def plot_grid_node_utilization(
         )
     else:
         node_color = node_vector
+
+    # Obtain label.
+    label = node_vector.name if label is None else label
 
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -927,3 +995,8 @@ def plot_grid_node_utilization(
     plt.savefig(os.path.join(results_path, filename), bbox_inches='tight')
     # plt.show()
     plt.close()
+
+
+def wrapper_plot_grid_node_utilization(*args, **kwargs):
+
+    plot_grid_node_utilization(*args, **kwargs)

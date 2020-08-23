@@ -1,5 +1,6 @@
 """Problems module for mathematical optimization and simulation problem type definitions."""
 
+import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
@@ -122,7 +123,10 @@ class NominalOperationProblem(object):
             power_flow_solutions = (
                 fledge.utils.starmap(
                     fledge.electric_grid_models.PowerFlowSolutionFixedPoint,
-                    [(self.electric_grid_model, row) for row in der_power_vector.values]
+                    zip(
+                        itertools.repeat(self.electric_grid_model),
+                        der_power_vector.values
+                    )
                 )
             )
             power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))

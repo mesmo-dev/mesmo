@@ -11,6 +11,7 @@ setuptools.setup(
         'diskcache',
         'matplotlib',
         'multimethod',
+        'multiprocess',
         'networkx',
         'natsort',
         'numpy',
@@ -21,5 +22,5 @@ setuptools.setup(
         'pyomo',
         'pyyaml',
         'scipy',
-    ],
+    ]
 )

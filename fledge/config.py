@@ -4,7 +4,7 @@ import diskcache
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
-import multiprocessing
+import multiprocess
 import os
 import pandas as pd
 import typing
@@ -76,7 +76,7 @@ def get_config() -> dict:
 
     # If not running as main process, set `run_parallel` to False.
     # - Workaround to avoid that subprocesses / workers infinitely spawn further subprocesses / workers.
-    if multiprocessing.current_process().name != 'MainProcess':
+    if multiprocess.current_process().name != 'MainProcess':
         complete_config['multiprocessing']['run_parallel'] = False
 
     return complete_config
@@ -107,13 +107,13 @@ def get_logger(
     return logger
 
 
-def get_parallel_pool() -> multiprocessing.Pool:
+def get_parallel_pool() -> multiprocess.Pool:
     """Create multiprocessing / parallel computing pool.
 
     - Number of parallel processes / workers defaults to number of CPU threads as returned by `os.cpu_count()`.
     """
 
-    return multiprocessing.Pool()
+    return multiprocess.Pool()
 
 
 def memoize(name):

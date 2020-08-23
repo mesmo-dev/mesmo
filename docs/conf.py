@@ -34,6 +34,7 @@ autodoc_mock_imports = [
     'diskcache',
     'matplotlib',
     'multimethod',
+    'multiprocess',
     'networkx',
     'natsort',
     'numpy',

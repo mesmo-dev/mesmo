@@ -1,6 +1,7 @@
 """Utility functions module."""
 
 import datetime
+import functools
 import itertools
 import logging
 import numpy as np
@@ -20,22 +21,29 @@ logger = fledge.config.get_logger(__name__)
 
 def starmap(
         function: typing.Callable,
-        argument_sequence: typing.List[tuple]
+        argument_sequence: typing.Iterable[tuple],
+        keyword_arguments: dict = None
 ) -> list:
     """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
 
     - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
-      of `multiprocessing.Pool`, hence running the function calls in parallel.
+      of `multiprocess.Pool`, hence running the function calls in parallel.
     - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
     """
+
+    # Apply keyword arguments.
+    if keyword_arguments is not None:
+        function_partial = functools.partial(function, **keyword_arguments)
+    else:
+        function_partial = function
 
     if fledge.config.config['multiprocessing']['run_parallel']:
         if fledge.config.parallel_pool is None:
             fledge.config.parallel_pool = fledge.config.get_parallel_pool()
-        results = fledge.config.parallel_pool.starmap(function, argument_sequence)
+        results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
     else:
-        results = itertools.starmap(function, argument_sequence)
+        results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
 

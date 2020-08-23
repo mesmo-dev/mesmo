@@ -207,7 +207,7 @@ def plot_line_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        branch_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -216,16 +216,16 @@ def plot_line_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `branch_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_line_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in branch_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -239,7 +239,7 @@ def plot_line_utilization(
     if make_video:
         create_video(
             name='line_utilization',
-            labels=branch_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -254,7 +254,7 @@ def plot_line_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        branch_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -264,20 +264,20 @@ def plot_line_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):
         # Take only lines & mean across all phases.
         values = (
-            branch_vector.loc[grid_model.lines].mean(level='branch_name')
+            value_vector.loc[grid_model.lines].mean(level='branch_name')
         )
     else:
-        values = branch_vector
+        values = value_vector
 
     # Obtain label.
-    label = branch_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -320,7 +320,7 @@ def wrapper_plot_line_utilization(*args, **kwargs):
 def plot_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
-        branch_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -329,16 +329,16 @@ def plot_transformer_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `branch_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_transformer_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in branch_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -352,7 +352,7 @@ def plot_transformer_utilization(
     if make_video:
         create_video(
             name='transformer_utilization',
-            labels=branch_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -361,7 +361,7 @@ def plot_transformer_utilization(
 def plot_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
-        branch_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -371,20 +371,20 @@ def plot_transformer_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):
         # Take only transformers & mean across all phases.
         values = (
-            branch_vector.loc[grid_model.transformers].mean(level='branch_name')
+            value_vector.loc[grid_model.transformers].mean(level='branch_name')
         )
     else:
-        values = branch_vector
+        values = value_vector
 
     # Obtain label.
-    label = branch_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -433,7 +433,7 @@ def plot_node_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        node_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -442,16 +442,16 @@ def plot_node_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = node_vector.values.ravel().min() if vmin is None else vmin
-    vmax = node_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `node_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_node_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in node_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -465,7 +465,7 @@ def plot_node_utilization(
     if make_video:
         create_video(
             name='node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'node_head',
-            labels=node_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -480,7 +480,7 @@ def plot_node_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        node_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -491,20 +491,20 @@ def plot_node_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = node_vector.values.ravel().min() if vmin is None else vmin
-    vmax = node_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):
         # Take mean across all phases.
         values = (
-            node_vector.mean(level='node_name')
+            value_vector.mean(level='node_name')
         )
     else:
-        values = node_vector
+        values = value_vector
 
     # Obtain label.
-    label = node_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -562,7 +562,7 @@ def plot_grid_line_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        branch_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -571,16 +571,16 @@ def plot_grid_line_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `branch_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_grid_line_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in branch_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -594,7 +594,7 @@ def plot_grid_line_utilization(
     if make_video:
         create_video(
             name='grid_line_utilization',
-            labels=branch_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -609,7 +609,7 @@ def plot_grid_line_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        branch_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -618,20 +618,20 @@ def plot_grid_line_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain edge color values.
     if isinstance(grid_graph, ElectricGridGraph):
         # Take only lines & mean across all phases.
-        edge_color = (
-            branch_vector.loc[grid_model.lines].mean(level='branch_name')
+        values = (
+            value_vector.loc[grid_model.lines].mean(level='branch_name')
         )
     else:
-        edge_color = branch_vector
+        values = value_vector
 
     # Obtain label.
-    label = branch_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -664,7 +664,7 @@ def plot_grid_line_utilization(
         width=5.0,
         edge_vmin=vmin,
         edge_vmax=vmax,
-        edge_color=edge_color.tolist()
+        edge_color=values.tolist()
     )
     # Add colorbar.
     sm = (
@@ -709,7 +709,7 @@ def wrapper_plot_grid_line_utilization(*args, **kwargs):
 def plot_grid_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
-        branch_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -718,16 +718,16 @@ def plot_grid_transformer_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `branch_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_grid_transformer_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in branch_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -741,7 +741,7 @@ def plot_grid_transformer_utilization(
     if make_video:
         create_video(
             name='grid_transformer_utilization',
-            labels=branch_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -750,7 +750,7 @@ def plot_grid_transformer_utilization(
 def plot_grid_transformer_utilization(
         grid_model: fledge.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
-        branch_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -759,17 +759,17 @@ def plot_grid_transformer_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = branch_vector.values.ravel().min() if vmin is None else vmin
-    vmax = branch_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain edge color values.
     # - Take only transformers & mean across all phases.
-    node_color = (
-        branch_vector.loc[grid_model.transformers].mean(level='branch_name')
+    values = (
+        value_vector.loc[grid_model.transformers].mean(level='branch_name')
     )
 
     # Obtain label.
-    label = branch_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename.
     if label is not None:
@@ -795,7 +795,7 @@ def plot_grid_transformer_utilization(
         edgelist=[],
         pos=grid_graph.node_positions,
         node_size=200.0,
-        node_color=node_color.tolist(),
+        node_color=values.tolist(),
         vmin=vmin,
         vmax=vmax,
         edgecolors='black'
@@ -849,7 +849,7 @@ def plot_grid_node_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        node_vector: pd.DataFrame,
+        value_vector: pd.DataFrame,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -858,16 +858,16 @@ def plot_grid_node_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = node_vector.values.ravel().min() if vmin is None else vmin
-    vmax = node_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
-    # Create plot for each column in `node_vector`.
+    # Create plot for each column in `value_vector`.
     fledge.utils.starmap(
         wrapper_plot_grid_node_utilization,
         zip(
             itertools.repeat(grid_model),
             itertools.repeat(grid_graph),
-            [row[1] for row in node_vector.iterrows()],
+            [row[1] for row in value_vector.iterrows()],
             itertools.repeat(results_path)
         ),
         dict(
@@ -881,7 +881,7 @@ def plot_grid_node_utilization(
     if make_video:
         create_video(
             name='grid_node_voltage' if isinstance(grid_graph, ElectricGridGraph) else 'grid_node_head',
-            labels=node_vector.index,
+            labels=value_vector.index,
             results_path=results_path
         )
 
@@ -896,7 +896,7 @@ def plot_grid_node_utilization(
             ElectricGridGraph,
             ThermalGridGraph
         ],
-        node_vector: pd.Series,
+        value_vector: pd.Series,
         results_path: str,
         vmin=None,
         vmax=None,
@@ -906,20 +906,20 @@ def plot_grid_node_utilization(
 ):
 
     # Obtain colorscale minimum / maximum value.
-    vmin = node_vector.values.ravel().min() if vmin is None else vmin
-    vmax = node_vector.values.ravel().max() if vmax is None else vmax
+    vmin = value_vector.values.ravel().min() if vmin is None else vmin
+    vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Obtain edge color values.
     if isinstance(grid_graph, ElectricGridGraph):
         # Take mean across all phases.
-        node_color = (
-            node_vector.mean(level='node_name')
+        values = (
+            value_vector.mean(level='node_name')
         )
     else:
-        node_color = node_vector
+        values = value_vector
 
     # Obtain label.
-    label = node_vector.name if label is None else label
+    label = value_vector.name if label is None else label
 
     # Obtain plot title / filename / unit.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -960,7 +960,7 @@ def plot_grid_node_utilization(
         arrows=False,
         vmin=vmin,
         vmax=vmax,
-        node_color=node_color.tolist(),
+        node_color=values.tolist(),
         edgecolors='black',
     )
     # Add colorbar.

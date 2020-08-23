@@ -18,6 +18,9 @@ import fledge.config
 
 logger = fledge.config.get_logger(__name__)
 
+# Instantiate dictionary for execution time logging.
+log_times = dict()
+
 
 def starmap(
         function: typing.Callable,
@@ -69,6 +72,21 @@ def log_timing_end(
     logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
 
     return time.time()
+
+
+def log_time(
+        label: str,
+        logger_object: logging.Logger = logger
+):
+    """Log start message and return start time. Should be used together with `log_timing_end`."""
+
+    time_now = time.time()
+
+    if label in log_times.keys():
+        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+    else:
+        log_times[label] = time_now
+        logger_object.debug(f"Starting {label}.")
 
 
 def get_index(

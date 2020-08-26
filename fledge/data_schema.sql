@@ -27,6 +27,7 @@ CREATE TABLE electric_grid_ders (
     connection TEXT,
     active_power_nominal TEXT,
     reactive_power_nominal TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (
@@ -54,6 +55,7 @@ CREATE TABLE electric_grid_lines (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     length TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
@@ -65,6 +67,7 @@ CREATE TABLE electric_grid_nodes (
     voltage TEXT,
     latitude TEXT,
     longitude TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
@@ -93,6 +96,7 @@ CREATE TABLE electric_grid_transformers (
     is_phase_3_connected TEXT,
     connection TEXT,
     apparent_power TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,transformer_name)
 );
 CREATE TABLE electric_grids (
@@ -233,6 +237,7 @@ CREATE TABLE thermal_grid_ders (
     der_type TEXT,
     model_name TEXT,
     thermal_power_nominal TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)
 );
 CREATE TABLE thermal_grid_line_types (
@@ -249,6 +254,7 @@ CREATE TABLE thermal_grid_lines (
     node_1_name TEXT,
     node_2_name TEXT,
     length TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,line_name)
 );
 CREATE TABLE thermal_grid_nodes (
@@ -257,6 +263,7 @@ CREATE TABLE thermal_grid_nodes (
     node_type TEXT,
     latitude TEXT,
     longitude TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,node_name)
 );
 CREATE TABLE thermal_grid_operation_limit_types (

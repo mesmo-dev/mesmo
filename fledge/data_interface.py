@@ -217,6 +217,10 @@ class ScenarioData(object):
         for column in selected_columns:
             dataframe[column] = self.parse_parameters_column(dataframe[column].values)
 
+        # If dataframe contains `in_service` column, remove all not-in-service elements.
+        if 'in_service' in dataframe.columns:
+            dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
+
         return dataframe
 
 

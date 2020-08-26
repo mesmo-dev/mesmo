@@ -1,6 +1,7 @@
 """Utility functions module."""
 
 import datetime
+import functools
 import itertools
 import logging
 import numpy as np
@@ -17,25 +18,40 @@ import fledge.config
 
 logger = fledge.config.get_logger(__name__)
 
+# Instantiate dictionary for execution time logging.
+log_times = dict()
+
 
 def starmap(
         function: typing.Callable,
-        argument_sequence: typing.List[tuple]
+        argument_sequence: typing.Iterable[tuple],
+        keyword_arguments: dict = None
 ) -> list:
     """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
 
     - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
-      of `multiprocessing.Pool`, hence running the function calls in parallel.
+      of `multiprocess.Pool`, hence running the function calls in parallel.
     - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
     """
 
-    if fledge.config.config['multiprocessing']['run_parallel']:
-        if fledge.config.parallel_pool is None:
-            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
-        results = fledge.config.parallel_pool.starmap(function, argument_sequence)
+    # Apply keyword arguments.
+    if keyword_arguments is not None:
+        function_partial = functools.partial(function, **keyword_arguments)
     else:
-        results = itertools.starmap(function, argument_sequence)
+        function_partial = function
+
+    if fledge.config.config['multiprocessing']['run_parallel']:
+        # If `run_parallel`, use starmap from `multiprocess.Pool` for parallel execution.
+        if fledge.config.parallel_pool is None:
+            # Setup parallel pool on first execution.
+            log_time('parallel pool setup')
+            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
+            log_time('parallel pool setup')
+        results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
+    else:
+        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
+        results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
 
@@ -61,6 +77,21 @@ def log_timing_end(
     logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
 
     return time.time()
+
+
+def log_time(
+        label: str,
+        logger_object: logging.Logger = logger
+):
+    """Log start message and return start time. Should be used together with `log_timing_end`."""
+
+    time_now = time.time()
+
+    if label in log_times.keys():
+        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+    else:
+        log_times[label] = time_now
+        logger_object.debug(f"Starting {label}.")
 
 
 def get_index(

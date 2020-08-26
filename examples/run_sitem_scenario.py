@@ -55,7 +55,34 @@ def main():
     # Obtain electric grid graph.
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
-    # Plot electric grid transformer utilization.
+    # Plot utilization.
+    fledge.plots.plot_line_utilization(
+        problem.electric_grid_model,
+        electric_grid_graph,
+        branch_power_vector_magnitude_per_unit.loc['maximum', :] * 100.0,
+        results_path,
+        value_unit='%',
+        horizontal_line_value=100.0
+    )
+    fledge.plots.plot_transformer_utilization(
+        problem.electric_grid_model,
+        electric_grid_graph,
+        branch_power_vector_magnitude_per_unit.loc['maximum', :] * 100.0,
+        results_path,
+        value_unit='%',
+        horizontal_line_value=100.0
+    )
+    fledge.plots.plot_node_utilization(
+        problem.electric_grid_model,
+        electric_grid_graph,
+        (node_voltage_vector_magnitude_per_unit.loc['maximum', :] - 1.0) * -100.0,
+        results_path,
+        value_unit='%',
+        suffix='drop',
+        horizontal_line_value=5.0
+    )
+
+    # Plot utilization on grid layout.
     if plot_grid:
         fledge.plots.plot_grid_transformer_utilization(
             problem.electric_grid_model,
@@ -67,8 +94,6 @@ def main():
             value_unit='%',
             make_video=True
         )
-
-    # Plot electric grid line utilization.
     if plot_grid and plot_detailed_grid:
         fledge.plots.plot_grid_line_utilization(
             problem.electric_grid_model,
@@ -80,13 +105,10 @@ def main():
             value_unit='%',
             make_video=True
         )
-
-    # Plot electric grid nodes voltage drop.
-    if plot_grid and plot_detailed_grid:
         fledge.plots.plot_grid_node_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            (node_voltage_vector_magnitude_per_unit - 1) * -100.0,
+            (node_voltage_vector_magnitude_per_unit - 1.0) * -100.0,
             results_path,
             vmin=0.0,
             vmax=10.0,
@@ -94,58 +116,6 @@ def main():
             suffix='drop',
             make_video=True
         )
-
-    # Plot some results.
-    plt.title('Line utilization [%]')
-    plt.bar(
-        range(len(problem.electric_grid_model.lines)),
-        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', problem.electric_grid_model.lines]
-    )
-    plt.hlines(100.0, -0.5, len(problem.electric_grid_model.lines) - 0.5, colors='red')
-    plt.xticks(
-        range(len(problem.electric_grid_model.lines)),
-        problem.electric_grid_model.lines,
-        rotation=45,
-        ha='right'
-    )
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    # plt.show()
-    plt.close()
-
-    plt.title('Transformer utilization [%]')
-    plt.bar(
-        range(len(problem.electric_grid_model.transformers)),
-        100.0 * branch_power_vector_magnitude_per_unit.loc['maximum', problem.electric_grid_model.transformers]
-    )
-    plt.hlines(100.0, -0.5, len(problem.electric_grid_model.transformers) - 0.5, colors='red')
-    plt.xticks(
-        range(len(problem.electric_grid_model.transformers)),
-        problem.electric_grid_model.transformers,
-        rotation=45,
-        ha='right'
-    )
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    # plt.show()
-    plt.close()
-
-    plt.title('Voltage drop [%]')
-    plt.bar(
-        range(len(problem.electric_grid_model.nodes)),
-        100.0 * (node_voltage_vector_magnitude_per_unit.loc['minimum', :] - 1.0)
-    )
-    plt.hlines(-5.0, -0.5, len(problem.electric_grid_model.nodes) - 0.5, colors='red')
-    plt.xticks(
-        range(len(problem.electric_grid_model.nodes)),
-        problem.electric_grid_model.nodes,
-        rotation=45,
-        ha='right'
-    )
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    # plt.show()
-    plt.close()
 
     # Print results path.
     fledge.utils.launch(results_path)

@@ -74,6 +74,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
 | `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
 | `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_line_types`
 
@@ -113,6 +114,7 @@ Electric grid lines.
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `length` | km | Line length. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_nodes`
 
@@ -128,6 +130,7 @@ Electric grid nodes.
 | `voltage` | V | Nominal voltage. |
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_operation_limit_types`
 
@@ -168,6 +171,7 @@ Electric grid transformers, which are limited to transformers with two windings,
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. Note that Wye-connected windings are assumed to be grounded. |
 | `apparent_power` | VA | Nominal apparent power loading. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ## Thermal grid data
 
@@ -199,6 +203,7 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
 | `model_name` | | DER model identifier depending on the DER type, defined in `fixed_generators`, `flexible_generators` or CoBMo for flexible buildings. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_line_types`
 
@@ -223,6 +228,7 @@ Thermal grid line (pipe) definitions. The definition only includes the supply si
 | `node_1_name` | | Start node identifier as defined in `thermal_grid_nodes` |
 | `node_2_name` | | End node identifier as defined in `thermal_grid_nodes`. |
 | `length` | km | Line length. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_nodes`
 
@@ -234,6 +240,7 @@ Thermal grid nodes.
 | `node_name` | | Unique node identifier (must only be unique within the associated thermal grid). |
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_operation_limit_types`
 

@@ -200,9 +200,8 @@ class ScenarioData(object):
         # Define excluded columns. By default, all columns containing the following strings are excluded:
         # `_name`, `_type`, `connection`
         if excluded_columns is None:
-            excluded_columns = []
+            excluded_columns = ['parameter_set', 'storage_capacity']
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
-        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('parameter_set')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
@@ -468,6 +467,7 @@ class DERData(object):
     flexible_generators: pd.DataFrame
     flexible_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
     cooling_plants: pd.DataFrame
+    storages: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
     @multimethod
@@ -655,6 +655,27 @@ class DERData(object):
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
         self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
         self.flexible_generators, self.flexible_generator_timeseries_dict = get_der_type_data('flexible_generator')
+
+        # Obtain storage data.
+        self.storages = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_ders
+                JOIN storages USING (model_name)
+                WHERE der_type = 'storage'
+                AND electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.storages.index = self.storages['der_name']
+        self.storages = (
+            self.storages.reindex(index=natsort.natsorted(self.storages.index))
+        )
 
         # Obtain cooling plant data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,

@@ -1,0 +1,2 @@
+model_name,storage_capacity,self_discharge_rate,charging_efficiency,power_minimum,power_maximum
+default_battery_storage,12:00:00,0.01,0.99,0.0,1.0

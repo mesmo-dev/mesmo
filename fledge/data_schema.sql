@@ -230,6 +230,17 @@ CREATE TABLE scenarios (
     timestep_interval TEXT,
     PRIMARY KEY(scenario_name)
 );
+CREATE TABLE storages (
+    model_name TEXT,
+    storage_capacity TEXT,
+    self_discharge_rate TEXT,
+    charging_efficiency TEXT,
+    power_minimum TEXT,
+    power_maximum TEXT,
+    power_factor_minimum TEXT,
+    power_factor_maximum TEXT,
+    PRIMARY KEY(model_name)
+);
 CREATE TABLE thermal_grid_ders (
     thermal_grid_name TEXT,
     der_name TEXT,

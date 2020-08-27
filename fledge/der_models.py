@@ -332,12 +332,35 @@ class FlexibleDERModel(DERModel):
             optimization_problem.der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
-        for state in self.states:
-            optimization_problem.der_model_constraints.add(
-                optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
-                ==
-                self.state_vector_initial.at[state]
-            )
+        if type(self) is StorageModel:
+            for state in self.states:
+                # For storage model, initial state of charge is final state of charge.
+                optimization_problem.der_model_constraints.add(
+                    optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
+                    ==
+                    sum(
+                        self.state_matrix.at[state, state_other]
+                        * optimization_problem.state_vector[self.timesteps[-1], self.der_name, state_other]
+                        for state_other in self.states
+                    )
+                    + sum(
+                        self.control_matrix.at[state, control]
+                        * optimization_problem.control_vector[self.timesteps[-1], self.der_name, control]
+                        for control in self.controls
+                    )
+                    + sum(
+                        self.disturbance_matrix.at[state, disturbance]
+                        * self.disturbance_timeseries.at[self.timesteps[-1], disturbance]
+                        for disturbance in self.disturbances
+                    )
+                )
+        else:
+            for state in self.states:
+                optimization_problem.der_model_constraints.add(
+                    optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
+                    ==
+                    self.state_vector_initial.at[state]
+                )
 
         for timestep in self.timesteps[:-1]:
 
@@ -800,6 +823,156 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
 
 
+class StorageModel(FlexibleDERModel):
+    """Energy storage model object."""
+
+    levelized_cost_of_energy: np.float
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get fixed generator data by `der_name`.
+        energy_storage = der_data.storages.loc[self.der_name, :]
+
+        # Obtain grid connection flags.
+        # - Currently only implemented for electric grids.
+        self.is_electric_grid_connected = pd.notnull(energy_storage.at['electric_grid_name'])
+        self.is_thermal_grid_connected = False
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Construct nominal active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='active_power')
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='reactive_power')
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
+        )
+
+        # Instantiate indexes.
+        self.states = pd.Index(['state_of_charge'])
+        self.controls = pd.Index(['active_power_charge', 'active_power_discharge', 'reactive_power'])
+        self.disturbances = pd.Index([])
+        self.outputs = (
+            pd.Index([
+                'state_of_charge', 'active_power_charge', 'active_power_discharge',
+                'active_power', 'reactive_power', 'power_factor_constant'
+            ])
+        )
+
+        # Instantiate initial state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.states)
+        )
+
+        # Instantiate state space matrices.
+        self.state_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
+        )
+        self.state_matrix.at['state_of_charge', 'state_of_charge'] = (
+            1.0
+            - energy_storage['self_discharge_rate']
+            * (der_data.scenario_data.scenario.at['timestep_interval'].seconds / 3600.0)
+        )
+        self.control_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        )
+        self.control_matrix.at['state_of_charge', 'active_power_charge'] = (
+            energy_storage['charging_efficiency']
+            * der_data.scenario_data.scenario.at['timestep_interval']
+            / energy_storage['active_power_nominal']
+            / pd.Timedelta(energy_storage['storage_capacity'])
+        )
+        self.control_matrix.at['state_of_charge', 'active_power_discharge'] = (
+            -1.0
+            * der_data.scenario_data.scenario.at['timestep_interval']
+            / energy_storage['active_power_nominal']
+            / pd.Timedelta(energy_storage['storage_capacity'])
+        )
+        self.disturbance_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.state_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        )
+        self.state_output_matrix.at['state_of_charge', 'state_of_charge'] = 1.0
+        self.control_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        )
+        self.control_output_matrix.at['active_power_charge', 'active_power_charge'] = 1.0
+        self.control_output_matrix.at['active_power_discharge', 'active_power_discharge'] = 1.0
+        self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
+        self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
+        self.control_output_matrix.at['power_factor_constant', 'active_power_charge'] = (
+            1.0 / energy_storage['active_power_nominal']
+        )
+        self.control_output_matrix.at['power_factor_constant', 'active_power_discharge'] = (
+            -1.0 / energy_storage['active_power_nominal']
+        )
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
+            1.0 / energy_storage['reactive_power_nominal']
+        )
+        self.disturbance_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbances)
+        )
+
+        # Construct output constraint timeseries
+        self.output_maximum_timeseries = (
+            pd.concat([
+                pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
+                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
+                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
+                (
+                    energy_storage['power_maximum']
+                    * energy_storage['active_power_nominal']
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
+                ),
+                (
+                    energy_storage['power_maximum']
+                    * energy_storage['reactive_power_nominal']
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
+                ),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+            ], axis='columns')
+        )
+        self.output_minimum_timeseries = (
+            pd.concat([
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
+                (
+                    energy_storage['power_minimum']
+                    * energy_storage['active_power_nominal']
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
+                ),
+                (
+                    energy_storage['power_minimum']
+                    * energy_storage['reactive_power_nominal']
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
+                ),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+            ], axis='columns')
+        )
+
+
 class FlexibleBuildingModel(FlexibleDERModel):
     """Flexible load model object."""
 
@@ -1112,6 +1285,7 @@ class DERModelSet(object):
             pd.Index(pd.concat([
                 der_data.flexible_loads['der_name'],
                 der_data.flexible_generators['der_name'],
+                der_data.storages['der_name'],
                 der_data.flexible_buildings['der_name'],
                 der_data.cooling_plants['der_name']
             ]))
@@ -1144,6 +1318,10 @@ class DERModelSet(object):
             elif der_name in der_data.flexible_generators['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
+                )
+            elif der_name in der_data.storages['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    fledge.der_models.StorageModel(der_data, der_name)
                 )
             elif der_name in der_data.flexible_buildings['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (

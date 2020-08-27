@@ -1,4 +1,4 @@
-"""Test electric grid models."""
+"""Test DER models."""
 
 import time
 import unittest
@@ -76,6 +76,19 @@ class TestDERModels(unittest.TestCase):
         )
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleGeneratorModel: Completed in {time_duration:.6f} seconds.")
+
+    def test_storage_model(self):
+        # Obtain test data.
+        der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.StorageModel(
+            der_data,
+            der_data.storages.index[0]  # Take `der_name` of first row.
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test StorageModel: Completed in {time_duration:.6f} seconds.")
 
     def test_flexible_building_model(self):
         # Obtain test data.

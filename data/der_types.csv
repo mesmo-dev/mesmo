@@ -1,0 +1,6 @@
+der_type,model_name,timeseries_schedule_type,timeseries_schedule_name,power_minimum,power_maximum,power_factor_minimum,power_factor_maximum,storage_capacity,charge_efficiency,discharge_rate,marginal_cost,extra_definition_type,extra_definition_name
+fixed_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,,,,,,,,,,
+flexible_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,0.4,1.4,,,06:00:00,,,,,
+fixed_generator,photovoltaic,schedule_per_unit,photovoltaic,,,,,,,,0.06,,
+flexible_generator,thermal,,,0.0,1.0,0.5,1.5,,,,0.1,,
+cooling_plant,singapore_cooling_plant,,,,,,,,,,,cooling_plant,singapore_cooling_plant

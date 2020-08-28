@@ -273,13 +273,13 @@ class OptimalOperationProblem(object):
             )
             voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
-                * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+                * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
                 else None
             )
             voltage_magnitude_vector_maximum = (
                 scenario_data.scenario['voltage_per_unit_maximum']
-                * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+                * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
                 else None
             )

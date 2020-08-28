@@ -350,7 +350,7 @@ class ElectricGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_transformers
-                JOIN electric_grid_transformer_types USING (transformer_type)
+                LEFT JOIN electric_grid_transformer_types USING (transformer_type)
                 WHERE electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?

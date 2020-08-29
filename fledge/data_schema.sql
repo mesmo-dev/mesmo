@@ -103,6 +103,7 @@ CREATE TABLE electric_grids (
     electric_grid_name TEXT,
     source_node_name TEXT,
     base_frequency TEXT,
+    is_single_phase_equivalent TEXT DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
 );
 CREATE TABLE ev_charger_schedules (

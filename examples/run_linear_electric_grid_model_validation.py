@@ -370,7 +370,6 @@ def main():
 
     plt.plot(power_multipliers, loss_reactive_power_flow, label='Power flow')
     plt.plot(power_multipliers, loss_reactive_linear_model, label='Linear model')
-    plt.scatter([0.0], [0.0], label='No load')
     plt.scatter([1.0], [np.imag([power_flow_solution_initial.loss])], label='Initial point')
     plt.legend()
     plt.title("Total loss reactive [VAr]")

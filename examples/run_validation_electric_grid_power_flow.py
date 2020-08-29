@@ -170,11 +170,29 @@ def main():
     )
     power_flow_solution_error = power_flow_solution_error.round(2)
 
+    # Compile results.
+    results = fledge.data_interface.ResultsDict(
+        der_power_vector=der_power_vector,
+        node_voltage_vector_fledge=node_voltage_vector_fledge,
+        node_voltage_vector_opendss=node_voltage_vector_opendss,
+        node_voltage_vector_magnitude_fledge=node_voltage_vector_magnitude_fledge,
+        node_voltage_vector_magnitude_opendss=node_voltage_vector_magnitude_opendss,
+        branch_power_vector_1_magnitude_fledge=branch_power_vector_1_magnitude_fledge,
+        branch_power_vector_1_magnitude_opendss=branch_power_vector_1_magnitude_opendss,
+        branch_power_vector_2_magnitude_fledge=branch_power_vector_2_magnitude_fledge,
+        branch_power_vector_2_magnitude_opendss=branch_power_vector_2_magnitude_opendss,
+        loss_active_fledge=loss_active_fledge,
+        loss_active_opendss=loss_active_opendss,
+        loss_reactive_fledge=loss_reactive_fledge,
+        loss_reactive_opendss=loss_reactive_opendss,
+        power_flow_solution_error=power_flow_solution_error
+    )
+
     # Print results.
-    print(power_flow_solution_error)
+    print(results)
 
     # Store results as CSV.
-    power_flow_solution_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))
+    results.to_csv(results_path)
 
     # Plot results.
 

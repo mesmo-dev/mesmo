@@ -817,7 +817,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
                 incidence_matrix = np.array([1])
-                self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
+                self.der_incidence_delta_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             else:
                 logger.error(f"Unknown der connection type: {connection}")

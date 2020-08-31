@@ -295,11 +295,36 @@ def main():
     )
     linear_electric_grid_model_error = linear_electric_grid_model_error.round(2)
 
+    # Compile results.
+    results = fledge.data_interface.ResultsDict(
+        der_power_vector_active=der_power_vector_active,
+        der_power_vector_reactive=der_power_vector_reactive,
+        der_power_vector_active_change=der_power_vector_active_change,
+        der_power_vector_reactive_change=der_power_vector_reactive_change,
+        node_voltage_vector_power_flow=node_voltage_vector_power_flow,
+        node_voltage_vector_linear_model=node_voltage_vector_linear_model,
+        node_voltage_vector_magnitude_power_flow=node_voltage_vector_magnitude_power_flow,
+        node_voltage_vector_magnitude_linear_model=node_voltage_vector_magnitude_linear_model,
+        branch_power_vector_1_squared_power_flow=branch_power_vector_1_squared_power_flow,
+        branch_power_vector_1_squared_linear_model=branch_power_vector_1_squared_linear_model,
+        branch_power_vector_2_squared_power_flow=branch_power_vector_2_squared_power_flow,
+        branch_power_vector_2_squared_linear_model=branch_power_vector_2_squared_linear_model,
+        branch_power_vector_1_magnitude_power_flow=branch_power_vector_1_magnitude_power_flow,
+        branch_power_vector_1_magnitude_linear_model=branch_power_vector_1_magnitude_linear_model,
+        branch_power_vector_2_magnitude_power_flow=branch_power_vector_2_magnitude_power_flow,
+        branch_power_vector_2_magnitude_linear_model=branch_power_vector_2_magnitude_linear_model,
+        loss_active_power_flow=loss_active_power_flow,
+        loss_active_linear_model=loss_active_linear_model,
+        loss_reactive_power_flow=loss_reactive_power_flow,
+        loss_reactive_linear_model=loss_reactive_linear_model,
+        linear_electric_grid_model_error=linear_electric_grid_model_error
+    )
+
     # Print results.
-    print(linear_electric_grid_model_error)
+    print(results)
 
     # Store results as CSV.
-    linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))
+    results.to_csv(results_path)
 
     # Plot results.
 
@@ -370,7 +395,6 @@ def main():
 
     plt.plot(power_multipliers, loss_reactive_power_flow, label='Power flow')
     plt.plot(power_multipliers, loss_reactive_linear_model, label='Linear model')
-    plt.scatter([0.0], [0.0], label='No load')
     plt.scatter([1.0], [np.imag([power_flow_solution_initial.loss])], label='Initial point')
     plt.legend()
     plt.title("Total loss reactive [VAr]")

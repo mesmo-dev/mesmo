@@ -75,7 +75,7 @@ def main():
     fledge.plots.plot_node_utilization(
         problem.electric_grid_model,
         electric_grid_graph,
-        (node_voltage_vector_magnitude_per_unit.loc['maximum', :] - 1.0) * -100.0,
+        (node_voltage_vector_magnitude_per_unit.loc['maximum', :] - 1.0) * - 100.0,
         results_path,
         value_unit='%',
         suffix='drop',

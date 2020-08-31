@@ -45,6 +45,8 @@ class ElectricGridModel(object):
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
         der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
+        is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
+            as single-phase-equivalent of three-phase balanced system.
     """
 
     phases: pd.Index
@@ -307,7 +309,10 @@ class ElectricGridModel(object):
             branch_index = fledge.utils.get_index(self.branches, branch_type='transformer', branch_name=transformer_name)
 
             # Insert rated power into branch flow vector.
-            self.branch_power_vector_magnitude_reference[branch_index] = transformer.at['apparent_power']
+            self.branch_power_vector_magnitude_reference[branch_index] = (
+                transformer.at['apparent_power']
+                / len(branch_index)  # Divide total capacity by number of phases.
+            )
 
         # Obtain reference / nominal DER power vector.
         self.der_power_vector_reference = (
@@ -316,6 +321,20 @@ class ElectricGridModel(object):
                 + 1.0j * electric_grid_data.electric_grid_ders.loc[:, 'reactive_power_nominal']
             ).values
         )
+
+        # Obtain flag for single-phase-equivalent modelling.
+        if electric_grid_data.electric_grid.at['is_single_phase_equivalent'] == 1:
+            try:
+                assert len(self.phases) == 1
+            except AssertionError:
+                logger.error(f"Cannot model electric grid with {len(self.phases)} phase as single-phase-equivalent.")
+            self.is_single_phase_equivalent = True
+        else:
+            self.is_single_phase_equivalent = False
+
+        # Make modifications for single-phase-equivalent modelling.
+        if self.is_single_phase_equivalent:
+            self.branch_power_vector_magnitude_reference[fledge.utils.get_index(self.branches, branch_type='line')] *= 3
 
 
 class ElectricGridModelDefault(ElectricGridModel):
@@ -355,6 +374,8 @@ class ElectricGridModelDefault(ElectricGridModel):
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
         der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
+        is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
+            as single-phase-equivalent of three-phase balanced system.
         node_admittance_matrix (scipy.sparse.spmatrix): Nodal admittance matrix.
         node_transformation_matrix (scipy.sparse.spmatrix): Nodal transformation matrix.
         branch_admittance_1_matrix (scipy.sparse.spmatrix): Branch admittance matrix in the 'from' direction.
@@ -817,11 +838,16 @@ class ElectricGridModelDefault(ElectricGridModel):
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
                 incidence_matrix = np.array([1])
-                self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
+                self.der_incidence_delta_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             else:
                 logger.error(f"Unknown der connection type: {connection}")
                 raise ValueError
+
+        # Make modifications for single-phase-equivalent modelling.
+        if self.is_single_phase_equivalent:
+            self.der_incidence_wye_matrix /= 3
+            # Note that there won't be any delta loads in the single-phase-equivalent grid.
 
         # Convert sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrices.
@@ -878,6 +904,8 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
         branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
         der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
+        is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
+            as single-phase-equivalent of three-phase balanced system.
         circuit_name (str): Circuit name, stored for validation that the correct OpenDSS model is being accessed.
         electric_grid_data: (fledge.data_interface.ElectricGridData): Electric grid data object, stored for
             possible reinitialization of the OpenDSS model.
@@ -930,6 +958,10 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                 'voltage'
             ]
         )
+
+        # Adjust source voltage for single-phase, non-single-phase-equivalent modelling.
+        if (len(self.phases) == 1) and not self.is_single_phase_equivalent:
+            source_voltage /= np.sqrt(3)
 
         # Add circuit info to OpenDSS command string.
         opendss_command_string = (
@@ -1085,12 +1117,16 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
             # Convert to line-to-neutral voltage for single-phase DERs, according to:
             # https://sourceforge.net/p/electricdss/discussion/861976/thread/9c9e0efb/
-            if n_phases == 1:
+            # - Not needed for single-phase-equivalent modelling.
+            if (n_phases == 1) and not self.is_single_phase_equivalent:
                 voltage /= np.sqrt(3)
 
-            # Add ground-phase connection for single-phase, wye DERs.
-            if (n_phases == 1) and (der['connection'] == 'wye'):
-                ground_phase_string = ".0"  # TODO: Check if any difference without ".0" for wye-connected DERs.
+            # Add explicit ground-phase connection for single-phase, wye DERs, according to:
+            # https://sourceforge.net/p/electricdss/discussion/861976/thread/d420e8fb/
+            # - This does not seem to make a difference if omitted, but is kept here to follow the recommendation.
+            # - Not needed for single-phase-equivalent modelling.
+            if (n_phases == 1) and (der['connection'] == 'wye') and not self.is_single_phase_equivalent:
+                ground_phase_string = ".0"
             else:
                 ground_phase_string = ""
 
@@ -1697,6 +1733,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             )
         ).ravel()
 
+        # Make modifications for single-phase-equivalent modelling.
+        if electric_grid_model.is_single_phase_equivalent:
+            branch_power_vector_1 *= 3
+            branch_power_vector_2 *= 3
+
         return (
             branch_power_vector_1,
             branch_power_vector_2
@@ -1722,6 +1763,10 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             @ np.conj(electric_grid_model.node_admittance_matrix)
             @ np.transpose([np.conj(node_voltage_vector)])
         ).ravel()
+
+        # Make modifications for single-phase-equivalent modelling.
+        if electric_grid_model.is_single_phase_equivalent:
+            loss *= 3
 
         return loss
 
@@ -1836,9 +1881,8 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
             ).values
         )
 
-        # Adjust voltage solution for single-phase grid.
-        # TODO: Validate single phase behavior of OpenDSS.
-        if len(electric_grid_model.phases) == 1:
+        # Make modifications for single-phase-equivalent modelling.
+        if electric_grid_model.is_single_phase_equivalent:
             node_voltage_vector_solution /= np.sqrt(3)
 
         return node_voltage_vector_solution

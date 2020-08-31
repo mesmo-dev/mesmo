@@ -266,6 +266,9 @@ def plot_line_utilization(
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
+    if horizontal_line_value is not None:
+        vmin = min(vmin, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
+        vmax = max(vmax, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -373,6 +376,9 @@ def plot_transformer_utilization(
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
+    if horizontal_line_value is not None:
+        vmin = min(vmin, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
+        vmax = max(vmax, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):
@@ -493,6 +499,9 @@ def plot_node_utilization(
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
+    if horizontal_line_value is not None:
+        vmin = min(vmin, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
+        vmax = max(vmax, 1.05 * horizontal_line_value, 0.95 * horizontal_line_value)
 
     # Obtain values for plotting.
     if isinstance(grid_graph, ElectricGridGraph):

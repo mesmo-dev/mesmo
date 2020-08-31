@@ -88,11 +88,11 @@ def main():
     # - In the synthetic grid, some of the 66/22kV transformers are already loaded up to 104% with nominal load.
     branch_power_vector_magnitude_maximum = (
         1.05
-        * linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+        * np.abs(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference)
     )
     voltage_vector_magnitude_minimum = (
         0.95
-        * linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+        * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
     )
 
     # Store to CSVs.

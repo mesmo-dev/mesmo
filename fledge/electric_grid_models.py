@@ -309,7 +309,10 @@ class ElectricGridModel(object):
             branch_index = fledge.utils.get_index(self.branches, branch_type='transformer', branch_name=transformer_name)
 
             # Insert rated power into branch flow vector.
-            self.branch_power_vector_magnitude_reference[branch_index] = transformer.at['apparent_power']
+            self.branch_power_vector_magnitude_reference[branch_index] = (
+                transformer.at['apparent_power']
+                / len(branch_index)  # Divide total capacity by number of phases.
+            )
 
         # Obtain reference / nominal DER power vector.
         self.der_power_vector_reference = (
@@ -328,6 +331,10 @@ class ElectricGridModel(object):
             self.is_single_phase_equivalent = True
         else:
             self.is_single_phase_equivalent = False
+
+        # Make modifications for single-phase-equivalent modelling.
+        if self.is_single_phase_equivalent:
+            self.branch_power_vector_magnitude_reference[fledge.utils.get_index(self.branches, branch_type='line')] *= 3
 
 
 class ElectricGridModelDefault(ElectricGridModel):

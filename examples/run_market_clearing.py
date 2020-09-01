@@ -44,11 +44,11 @@ def main():
     flat_prices = pd.DataFrame(10.0, market_model.timesteps, ['price_value']) # For benchmarking
 
     # Load residual demand data
-    residual_demand = pd.read_csv(os.path.join(residual_demand_data_path, 'scenario_downtowncore.csv'), index_col=0)
+    residual_demand = pd.read_csv(os.path.join(residual_demand_data_path, 'scenario_downtowncore.csv'), index_col=0, squeeze=True)
     residual_demand.index = timesteps
 
     # Load PV generation data
-    pv_generation = pd.read_csv(os.path.join(pv_data_path, 'singapore_5GW_typical.csv'), index_col=0, squeeze=True)
+    pv_generation = pd.read_csv(os.path.join(pv_data_path, 'singapore_20GW_intermittent.csv'), index_col=0, squeeze=True)
     pv_generation.index = timesteps
 
     # Obtain electric grid model.
@@ -58,7 +58,7 @@ def main():
     forecast_model = forecast.forecast_model.forecastModel()
     price_forecast = forecast_model.forecast_prices(steps=len(timesteps))
     price_forecast.index = timesteps
-    # forecast_timestep = forecast_model.df['timestep'].iloc[-1]
+    forecast_timestep = forecast_model.df['timestep'].iloc[-1]
 
     # Create dicts to store actual and baseline dispatch quantities
     actual_dispatch = dict.fromkeys(der_model_set.der_names)
@@ -96,11 +96,15 @@ def main():
         output_vector.to_csv(os.path.join(results_path, f'output_vector_{der_name}.csv'))
     peak_scenario_load = system_load['baseline'].max() / 1e6 # in MW.
 
+    # Obtain price points from initial forecast
+    initial_price_forecast = price_forecast.copy()
+
     # Obtain bids from every building in the scenario
     for timestep in timesteps:
+        price_forecast.to_csv(os.path.join(results_path, f'price_forecast_{timestep}.csv'.replace(':','_')))
         # Define price range and points for the current timestep
-        lower_price_limit = price_forecast.at[timestep, 'lower_limit']
-        upper_price_limit = price_forecast.at[timestep, 'upper_limit']
+        lower_price_limit = initial_price_forecast.at[timestep, 'lower_limit']
+        upper_price_limit = initial_price_forecast.at[timestep, 'upper_limit']
         price_points = np.linspace(lower_price_limit, upper_price_limit, 4)
         func = partial(get_bids, der_model_set, timestep, price_forecast, actual_dispatch, price_points, der_bids)
         with Pool(16) as p:
@@ -165,7 +169,7 @@ def main():
             timestep,
             residual_demand,
             pv_generation,
-            scenario='low_price_noon'
+            scenario='default'
         )
         # (
         #     cleared_price,
@@ -174,7 +178,7 @@ def main():
         #     der_bids,
         #     timestep
         # )
-
+        print(f"Expected price: {price_forecast.at[timestep, 'expected_price']}")
         print(f'Clearing price for timestep {timestep}: {cleared_price}')
         cleared_prices.loc[timestep] = cleared_price
 
@@ -182,14 +186,14 @@ def main():
         for der_name in der_model_set.der_names:
             actual_dispatch[der_name][timestep] = -active_power_dispatch[der_name] # Convert back to positive to follow CoBMo convention
 
-        # Optional: update forecast with the new market clearing price
-        # if timestep == timesteps[-1]: # Skip forecast model update if at the last timestep
-        #     continue
-        # new_timesteps = timesteps[timesteps > timestep]
-        # forecast_timestep += dt.timedelta(minutes=30)
-        # forecast_model.update_model(cleared_price, forecast_timestep)
-        # price_forecast = forecast_model.forecast_prices(steps=len(new_timesteps))
-        # price_forecast.index = new_timesteps
+        # # Optional: update forecast with the new market clearing price
+        if timestep == timesteps[-1]: # Skip forecast model update if at the last timestep
+            continue
+        new_timesteps = timesteps[timesteps > timestep]
+        forecast_timestep += dt.timedelta(minutes=30)
+        forecast_model.update_model(cleared_price*1000, forecast_timestep) # update_model requires the cleared price to be in $/MWh
+        price_forecast = forecast_model.forecast_prices(steps=len(new_timesteps))
+        price_forecast.index = new_timesteps
 
     # Create DataFrame to store electricity costs
     electricity_cost = pd.DataFrame(0.0, der_model_set.der_names, ['baseline', 'bids'])

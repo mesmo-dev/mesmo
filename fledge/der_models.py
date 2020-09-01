@@ -1081,7 +1081,7 @@ class DERModelSet(object):
         optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
         optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
         optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
-        optimization_problem.peak_load = pyo.Var(domain=pyo.NonNegativeReals) # peak load over the entire planning horizon
+        # optimization_problem.peak_load = pyo.Var(domain=pyo.NonNegativeReals)
 
     def define_optimization_constraints(
             self,
@@ -1103,11 +1103,11 @@ class DERModelSet(object):
             )
 
         # Additional constraints for peak load reduction
-        for timestep in self.timesteps:
-            optimization_problem.der_model_constraints.add(
-                sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-                    for der_name in self.der_names) <= optimization_problem.peak_load
-            )
+        # for timestep in self.timesteps:
+        #     optimization_problem.der_model_constraints.add(
+        #         sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
+        #             for der_name in self.der_names) <= optimization_problem.peak_load
+        #     )
 
     @multimethod
     def define_optimization_objective(
@@ -1177,15 +1177,15 @@ class DERModelSet(object):
 
         for timestep in self.timesteps:
             optimization_problem.objective.expr += (
-                    (30
-                    + 0.0133 * (sum(
+                    (14.198
+                    + 0.0139 * (sum(
                                 optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
                                 for der_name in self.der_names) / 1e6
                                 + residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3))  # aggregate demand in MW
                                 * (sum(
                                 optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
                                 for der_name in self.der_names
-                                ) / 1e6 + residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3)
+                                ) / 1e6)
             )
 
     def get_optimization_results(

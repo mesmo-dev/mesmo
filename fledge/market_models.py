@@ -207,8 +207,8 @@ class MarketModel(object):
             aggregate_demand.loc[price] = aggregate_demand.loc[aggregate_demand.index >= price].sum()
 
         if scenario == 'default':
-            cleared_prices = np.exp(3.258+0.000211*
-                                    (-aggregate_demand/1e6+residual_demand.loc[timestep])  #-pv_generation.loc[timestep]/1e3*2)
+            cleared_prices = np.exp(3.258+0.000211 *
+                                    (-aggregate_demand/1e6+residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3)
                                     )/1000
         elif scenario == 'low_price_noon':
             if 10 <= timestep.hour <= 17:
@@ -236,6 +236,9 @@ class MarketModel(object):
 
         # Set cleared price to be the maximum price which is still lower than the bid price
         cleared_price = cleared_prices.loc[cleared_prices.index > cleared_prices].max()
+        # print(cleared_price)
+        # if cleared_price == np.nan:
+        #     cleared_price = cleared_prices.min()
 
         # Obtain dispatch power.
         der_active_power_vector_dispatch = pd.Series(0.0, der_bids.keys())
@@ -246,6 +249,8 @@ class MarketModel(object):
                 der_active_power_vector_dispatch[der] += (
                     der_bids[der][timestep].loc[der_bids[der][timestep].index > cleared_price].sum()
                 )
+                # if der_active_power_vector_dispatch[der] == 0.0:
+                #     der_active_power_vector_dispatch[der] = der_bids[der][timestep].min()
 
             # For generators (positive power).
             elif der_bids[der][timestep].sum() > 0.0:
@@ -286,6 +291,7 @@ class MarketModel(object):
         # Calculate system-wide demand in MW
         total_demand = -aggregate_demand/1e6 + residual_demand.loc[timestep].values - pv_generation.loc[
                                 timestep] / 1e3
+        total_demand = total_demand.round()
         # print(total_demand)
 
         if scenario == 'default':
@@ -294,6 +300,7 @@ class MarketModel(object):
         if len(cleared_prices.unique()) == 1 or cleared_prices.iloc[0] < price_indexes[0]:
             cleared_price = cleared_prices.iloc[0]
         else:
+            # print(cleared_prices)
             bid_prices = price_indexes.copy()
             bid_price_intervals = pd.arrays.IntervalArray(
                 [pd.Interval(bid_prices[i], bid_prices[i + 1]) for i in range(len(bid_prices) - 1)], closed='both'
@@ -304,6 +311,7 @@ class MarketModel(object):
             # print(bid_price_intervals)
             # print(cleared_price_intervals)
             for bid, cleared in zip(bid_price_intervals, cleared_price_intervals):
+                # print(bid, cleared)
                 if (cleared.left in bid) or (cleared.right in bid):
                     lower_price_boundary = bid.left
                     upper_price_boundary = bid.right
@@ -313,14 +321,17 @@ class MarketModel(object):
                         gradient = (lower_price_boundary - upper_price_boundary) / (
                                 lower_price_dispatch - upper_price_dispatch)
                         intercept = lower_price_boundary - gradient * lower_price_dispatch
-                        gradient_supply = cleared.left-cleared.right / (
+                        # print(cleared.left, cleared.right)
+                        print(upper_price_dispatch, lower_price_dispatch)
+                        gradient_supply = (cleared.left-cleared.right) / (
                                 upper_price_dispatch - lower_price_dispatch
                         )
                         intercept_supply = cleared.left-gradient_supply*upper_price_dispatch
-                        print(gradient, intercept)
+                        # print(gradient, intercept)
+                        # print(gradient_supply, intercept_supply)
                         cleared_power = (intercept - intercept_supply) / (gradient_supply - gradient)
                         cleared_price = gradient * cleared_power + intercept
-                        print(cleared_power, cleared_price)
+                        # print(cleared_power, cleared_price)
                         break
                     except FloatingPointError:
                         cleared_price = cleared.left

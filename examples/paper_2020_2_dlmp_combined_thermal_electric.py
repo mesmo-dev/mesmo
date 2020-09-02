@@ -502,7 +502,7 @@ def main(
                 f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
                 f" at {timestep.strftime('%H:%M:%S')}"
             )
-            nx.draw_networkx_nodes(
+            nx.draw(
                 thermal_grid_graph,
                 pos=thermal_grid_graph.node_positions,
                 nodelist=(
@@ -510,11 +510,11 @@ def main(
                         fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
+                edgelist=[],
                 node_size=150.0,
-                node_color='red',
-                with_labels=False
+                node_color='red'
             )
-            nx.draw_networkx(
+            nx.draw(
                 thermal_grid_graph,
                 pos=thermal_grid_graph.node_positions,
                 arrows=False,
@@ -535,7 +535,7 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            # plt.show()
+            plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.
@@ -555,7 +555,7 @@ def main(
                 f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
                 f" at {timestep.strftime('%H:%M:%S')}"
             )
-            nx.draw_networkx_nodes(
+            nx.draw(
                 electric_grid_graph,
                 pos=electric_grid_graph.node_positions,
                 nodelist=(
@@ -563,11 +563,11 @@ def main(
                         fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
+                edgelist=[],
                 node_size=150.0,
-                node_color='red',
-                with_labels=False
+                node_color='red'
             )
-            nx.draw_networkx(
+            nx.draw(
                 electric_grid_graph,
                 pos=electric_grid_graph.node_positions,
                 arrows=False,

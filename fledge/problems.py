@@ -285,7 +285,7 @@ class OptimalOperationProblem(object):
             )
             branch_power_vector_squared_maximum = (
                 scenario_data.scenario['branch_flow_per_unit_maximum']
-                * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+                * np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )

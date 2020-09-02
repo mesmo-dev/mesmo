@@ -105,21 +105,21 @@ CREATE TABLE electric_grids (
     base_frequency TEXT,
     PRIMARY KEY(electric_grid_name)
 );
-CREATE TABLE ev_charger_schedules (
+CREATE TABLE fixed_ev_charger_schedules (
     model_name TEXT,
     time_period TEXT,
     active_power REAL,
     reactive_power REAL,
     PRIMARY KEY(model_name,time_period)
 );
-CREATE TABLE ev_charger_timeseries (
+CREATE TABLE fixed_ev_charger_timeseries (
     model_name TEXT,
     time TEXT,
     active_power REAL,
     reactive_power REAL,
     PRIMARY KEY(model_name,time)
 );
-CREATE TABLE ev_chargers (
+CREATE TABLE fixed_ev_chargers (
     model_name TEXT,
     definition_type TEXT,
     PRIMARY KEY(model_name)

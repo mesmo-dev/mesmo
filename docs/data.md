@@ -56,6 +56,9 @@ Electric grid definition.
 | `electric_grid_name` | | Unique electric grid identifier. |
 | `source_node_name` | | Source node name as defined in `electric_grid_nodes` |
 | `base_frequency` | Hz | Nominal grid frequency. |
+| `is_single_phase_equivalent` | | Single-phase-equivalent modelling flag¹. If `0`, electric grid is modelled as multi-phase system. If `1`, electric grid is modelled as single-phase-equivalent of a three-phase balanced system. Optional column, which defaults to `0` if not explicitly defined. |
+
+¹ If single-phase-equivalent modelling is used, all nodes, lines, transformers and DERs must be defined as single-phase elements, i.e., these elements should be connected only to phase 1. However, all power values (DER active / reactive power, transformer apparent power) must be defined as total three-phase power.
 
 ### `electric_grid_ders`
 

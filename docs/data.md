@@ -68,8 +68,8 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
-| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers`, `fixed_generators`, `flexible_generators` or in CoBMo, for flexible buildings. |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `fixed_ev_chargers`, `fixed_generators`, `flexible_generators` or in CoBMo, for flexible buildings. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
@@ -283,7 +283,7 @@ Cooling plants for modelling distributed generation facilities / heat pumps in t
 | `cooling_tower_set_reference_temperature_slope` | °C | Cooling tower reference temperature slope, used to model the cooling tower efficiency. |
 | `cooling_tower_set_ventilation_factor` | - | Cooling tower set ventilation factor, used to model the ventilation requirements depending on the condenser water flow. |
 
-### `ev_chargers`
+### `fixed_ev_chargers`
 
 EV charger model definition.
 
@@ -292,7 +292,7 @@ EV charger model definition.
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
 | `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
 
-### `ev_charger_schedules`
+### `fixed_ev_charger_schedules`
 
 EV charger schedules definition.
 
@@ -303,7 +303,7 @@ EV charger schedules definition.
 | `active_power` | W | Active power value. |
 | `reactive_power` | VAr | Reactive power value. |
 
-### `ev_charger_timeseries`
+### `fixed_ev_charger_timeseries`
 
 EV charger timeseries definition.
 

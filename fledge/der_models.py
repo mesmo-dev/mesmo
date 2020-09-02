@@ -192,7 +192,7 @@ class FixedLoadModel(FixedDERModel):
         )
 
 
-class EVChargerModel(FixedDERModel):
+class FixedEVChargerModel(FixedDERModel):
     """EV charger model object."""
 
     def __init__(
@@ -206,30 +206,30 @@ class EVChargerModel(FixedDERModel):
         self.der_name = der_name
 
         # Get fixed load data by `der_name`.
-        ev_charger = der_data.ev_chargers.loc[self.der_name, :]
+        fixed_ev_charger = der_data.fixed_ev_chargers.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - EV chargers are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(ev_charger.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(fixed_ev_charger.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
-        self.timesteps = der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].index
+        self.timesteps = der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].index
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'active_power'].copy())
+            np.abs(der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'active_power'].copy())
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.ev_charger_timeseries_dict[ev_charger.at['model_name']].loc[:, 'reactive_power'].copy())
+            np.abs(der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'reactive_power'].copy())
         )
-        if 'per_unit' in ev_charger.at['definition_type']:
+        if 'per_unit' in fixed_ev_charger.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= ev_charger.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= ev_charger.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= fixed_ev_charger.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= fixed_ev_charger.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(ev_charger.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(ev_charger.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(fixed_ev_charger.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(fixed_ev_charger.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -1104,7 +1104,7 @@ class DERModelSet(object):
         self.fixed_der_names = (
             pd.Index(pd.concat([
                 der_data.fixed_loads['der_name'],
-                der_data.ev_chargers['der_name'],
+                der_data.fixed_ev_chargers['der_name'],
                 der_data.fixed_generators['der_name']
             ]))
         )
@@ -1129,9 +1129,9 @@ class DERModelSet(object):
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedLoadModel(der_data, der_name)
                 )
-            elif der_name in der_data.ev_chargers['der_name']:
+            elif der_name in der_data.fixed_ev_chargers['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.EVChargerModel(der_data, der_name)
+                    fledge.der_models.FixedEVChargerModel(der_data, der_name)
                 )
             elif der_name in der_data.fixed_generators['der_name']:
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (

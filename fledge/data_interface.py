@@ -459,8 +459,8 @@ class DERData(object):
     scenario_data: ScenarioData
     fixed_loads: pd.DataFrame
     fixed_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    ev_chargers: pd.DataFrame
-    ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    fixed_ev_chargers: pd.DataFrame
+    fixed_ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     fixed_generators: pd.DataFrame
@@ -495,7 +495,7 @@ class DERData(object):
             try:
                 assert der_type in [
                     'fixed_load',
-                    'ev_charger',
+                    'fixed_ev_charger',
                     'flexible_load',
                     'fixed_generator',
                     'flexible_generator'
@@ -651,7 +651,7 @@ class DERData(object):
         # Obtain fixed load / EV charger / flexible load data.
         # TODO: Enable thermal grid connection for appropriate types.
         self.fixed_loads, self.fixed_load_timeseries_dict = get_der_type_data('fixed_load')
-        self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
+        self.fixed_ev_chargers, self.fixed_ev_charger_timeseries_dict = get_der_type_data('fixed_ev_charger')
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
         self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
         self.flexible_generators, self.flexible_generator_timeseries_dict = get_der_type_data('flexible_generator')

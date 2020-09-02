@@ -608,7 +608,7 @@ def main(
     )
 
     # Plot electric grid nodes voltage drop.
-    fledge.plots.plot_electric_grid_node_voltage_drop(
+    fledge.plots.plot_grid_node_utilization(
         electric_grid_model,
         electric_grid_graph,
         node_voltage_vector_magnitude_per_unit,

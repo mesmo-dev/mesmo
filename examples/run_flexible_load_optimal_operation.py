@@ -30,7 +30,7 @@ def main():
     price_timeseries = price_data.price_timeseries_dict[price_type]
 
     # Obtain model.
-    der_name = der_data.flexible_loads['der_name'][0]  # Pick first `der_name`.
+    der_name = der_data.ders['der_name'][0]  # Pick first `der_name`.
     flexible_load_model = fledge.der_models.FlexibleLoadModel(der_data, der_name)
 
     # Instantiate optimization problem.

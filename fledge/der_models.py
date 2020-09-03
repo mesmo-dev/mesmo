@@ -162,34 +162,32 @@ class FixedLoadModel(FixedDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get fixed load data by `der_name`.
-        fixed_load = der_data.fixed_loads.loc[self.der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Fixed loads are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(fixed_load.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
-        self.timesteps = der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].index
+        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('active_power')
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('reactive_power')
-            * fixed_load.at['reactive_power_nominal'] / fixed_load.at['active_power_nominal']
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
         )
-        if 'per_unit' in fixed_load.at['definition_type']:
+        if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= fixed_load.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= fixed_load.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(fixed_load.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(fixed_load.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -210,34 +208,32 @@ class FixedEVChargerModel(FixedDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get fixed load data by `der_name`.
-        fixed_ev_charger = der_data.fixed_ev_chargers.loc[self.der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - EV chargers are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(fixed_ev_charger.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
-        self.timesteps = der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].index
+        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('active_power')
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('reactive_power')
-            * fixed_ev_charger.at['reactive_power_nominal'] / fixed_ev_charger.at['active_power_nominal']
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
         )
-        if 'per_unit' in fixed_ev_charger.at['definition_type']:
+        if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= fixed_ev_charger.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= fixed_ev_charger.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(fixed_ev_charger.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(fixed_ev_charger.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -259,37 +255,35 @@ class FixedGeneratorModel(FixedDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get fixed generator data by `der_name`.
-        fixed_generator = der_data.fixed_generators.loc[self.der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Fixed generators are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(fixed_generator.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
-        self.marginal_cost = fixed_generator.at['marginal_cost']
+        self.marginal_cost = der.at['marginal_cost']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('active_power')
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('reactive_power')
-            * fixed_generator.at['reactive_power_nominal'] / fixed_generator.at['active_power_nominal']
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
         )
-        if 'per_unit' in fixed_generator.at['definition_type']:
+        if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= fixed_generator.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= fixed_generator.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(fixed_generator.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(fixed_generator.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -611,34 +605,32 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get flexible load data by `der_name`.
-        flexible_load = der_data.flexible_loads.loc[der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Flexible loads are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(flexible_load.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
-        self.timesteps = der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].index
+        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('active_power')
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('reactive_power')
-            * flexible_load.at['reactive_power_nominal'] / flexible_load.at['active_power_nominal']
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
         )
-        if 'per_unit' in flexible_load.at['definition_type']:
+        if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= flexible_load.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= flexible_load.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(flexible_load.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(flexible_load.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -668,8 +660,8 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.control_matrix.at['state_of_charge', 'active_power'] = (
             1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / flexible_load['active_power_nominal']
-            / (flexible_load['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            / der['active_power_nominal']
+            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
@@ -677,8 +669,8 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.disturbance_matrix.at['state_of_charge', 'active_power'] = (
             -1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / flexible_load['active_power_nominal']
-            / (flexible_load['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            / der['active_power_nominal']
+            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.state_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.states)
@@ -690,10 +682,10 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
         self.control_output_matrix.at['power_factor_constant', 'active_power'] = (
-            -1.0 / flexible_load['active_power_nominal']
+            -1.0 / der['active_power_nominal']
         )
         self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
-            1.0 / flexible_load['reactive_power_nominal']
+            1.0 / der['reactive_power_nominal']
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -709,11 +701,11 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.concat([
                 pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
-                    flexible_load['power_per_unit_minimum']  # Take minimum, because load is negative power.
+                    der['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.active_power_nominal_timeseries
                 ),
                 (
-                    flexible_load['power_per_unit_minimum']  # Take minimum, because load is negative power.
+                    der['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
@@ -723,11 +715,11 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.concat([
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
-                    flexible_load['power_per_unit_maximum']  # Take maximum, because load is negative power.
+                    der['power_per_unit_maximum']  # Take maximum, because load is negative power.
                     * self.active_power_nominal_timeseries
                 ),
                 (
-                    flexible_load['power_per_unit_maximum']  # Take maximum, because load is negative power.
+                    der['power_per_unit_maximum']  # Take maximum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
@@ -749,37 +741,35 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get fixed generator data by `der_name`.
-        flexible_generator = der_data.flexible_generators.loc[self.der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Flexible generators are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(flexible_generator.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
-        self.marginal_cost = flexible_generator.at['marginal_cost']
+        self.marginal_cost = der.at['marginal_cost']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('active_power')
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'value']
-            .copy().abs().rename('reactive_power')
-            * flexible_generator.at['reactive_power_nominal'] / flexible_generator.at['active_power_nominal']
+            der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
         )
-        if 'per_unit' in flexible_generator.at['definition_type']:
+        if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
-            self.active_power_nominal_timeseries *= flexible_generator.at['active_power_nominal']
-            self.reactive_power_nominal_timeseries *= flexible_generator.at['reactive_power_nominal']
+            self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+            self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
-            self.active_power_nominal_timeseries *= np.sign(flexible_generator.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(flexible_generator.at['reactive_power_nominal'])
+            self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -815,8 +805,12 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_generator['active_power_nominal']
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_generator['reactive_power_nominal']
+        self.control_output_matrix.at['power_factor_constant', 'active_power'] = (
+            -1.0 / der['active_power_nominal']
+        )
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
+            1.0 / der['reactive_power_nominal']
+        )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )
@@ -855,12 +849,12 @@ class StorageModel(FlexibleDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get fixed generator data by `der_name`.
-        energy_storage = der_data.storages.loc[self.der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(energy_storage.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
 
         # Store timesteps index.
@@ -901,23 +895,23 @@ class StorageModel(FlexibleDERModel):
         )
         self.state_matrix.at['state_of_charge', 'state_of_charge'] = (
             1.0
-            - energy_storage['self_discharge_rate']
+            - der['self_discharge_rate']
             * (der_data.scenario_data.scenario.at['timestep_interval'].seconds / 3600.0)
         )
         self.control_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['state_of_charge', 'active_power_charge'] = (
-            energy_storage['charging_efficiency']
+            der['charging_efficiency']
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / energy_storage['active_power_nominal']
-            / (energy_storage['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            / der['active_power_nominal']
+            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.control_matrix.at['state_of_charge', 'active_power_discharge'] = (
             -1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / energy_storage['active_power_nominal']
-            / (energy_storage['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            / der['active_power_nominal']
+            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
@@ -935,13 +929,13 @@ class StorageModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
         self.control_output_matrix.at['power_factor_constant', 'active_power_charge'] = (
-            1.0 / energy_storage['active_power_nominal']
+            1.0 / der['active_power_nominal']
         )
         self.control_output_matrix.at['power_factor_constant', 'active_power_discharge'] = (
-            -1.0 / energy_storage['active_power_nominal']
+            -1.0 / der['active_power_nominal']
         )
         self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
-            1.0 / energy_storage['reactive_power_nominal']
+            1.0 / der['reactive_power_nominal']
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -959,13 +953,13 @@ class StorageModel(FlexibleDERModel):
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
                 (
-                    energy_storage['power_per_unit_maximum']
-                    * energy_storage['active_power_nominal']
+                    der['power_per_unit_maximum']
+                    * der['active_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
                 ),
                 (
-                    energy_storage['power_per_unit_maximum']
-                    * energy_storage['reactive_power_nominal']
+                    der['power_per_unit_maximum']
+                    * der['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
@@ -977,13 +971,13 @@ class StorageModel(FlexibleDERModel):
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
                 (
-                    energy_storage['power_per_unit_minimum']
-                    * energy_storage['active_power_nominal']
+                    der['power_per_unit_minimum']
+                    * der['active_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
                 ),
                 (
-                    energy_storage['power_per_unit_minimum']
-                    * energy_storage['reactive_power_nominal']
+                    der['power_per_unit_minimum']
+                    * der['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
@@ -1008,17 +1002,20 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Obtain flexible building data by `der_name`.
-        flexible_building = der_data.flexible_buildings.loc[der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
-        self.is_electric_grid_connected = pd.notnull(flexible_building.at['electric_grid_name'])
-        self.is_thermal_grid_connected = pd.notnull(flexible_building.at['thermal_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
+        self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
+
+        # Store timesteps.
+        self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain CoBMo building model.
         flexible_building_model = (
             fledge.utils.get_building_model(
-                flexible_building.at['model_name'],
+                der.at['model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
                 timestep_interval=der_data.scenario_data.scenario.at['timestep_interval'],
@@ -1027,15 +1024,12 @@ class FlexibleBuildingModel(FlexibleDERModel):
             )
         )
 
-        # Store timesteps.
-        self.timesteps = flexible_building_model.timesteps
-
         # Obtain nominal power factor.
         if self.is_electric_grid_connected:
             self.power_factor_nominal = (
                 np.cos(np.arctan(
-                    flexible_building.at['reactive_power_nominal']
-                    / flexible_building.at['active_power_nominal']
+                    der.at['reactive_power_nominal']
+                    / der.at['active_power_nominal']
                 ))
             )
 
@@ -1045,16 +1039,16 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.active_power_nominal_timeseries = (
             pd.Series(1.0, index=self.timesteps, name='active_power')
             * (
-                flexible_building.at['active_power_nominal']
-                if pd.notnull(flexible_building.at['active_power_nominal'])
+                der.at['active_power_nominal']
+                if pd.notnull(der.at['active_power_nominal'])
                 else 0.0
             )
         )
         self.reactive_power_nominal_timeseries = (
             pd.Series(1.0, index=self.timesteps, name='reactive_power')
             * (
-                flexible_building.at['reactive_power_nominal']
-                if pd.notnull(flexible_building.at['reactive_power_nominal'])
+                der.at['reactive_power_nominal']
+                if pd.notnull(der.at['reactive_power_nominal'])
                 else 0.0
             )
         )
@@ -1063,8 +1057,8 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.thermal_power_nominal_timeseries = (
             pd.Series(1.0, index=self.timesteps, name='thermal_power')
             * (
-                flexible_building.at['thermal_power_nominal']
-                if pd.notnull(flexible_building.at['thermal_power_nominal'])
+                der.at['thermal_power_nominal']
+                if pd.notnull(der.at['thermal_power_nominal'])
                 else 0.0
             )
         )
@@ -1109,12 +1103,13 @@ class CoolingPlantModel(FlexibleDERModel):
         # Store DER name.
         self.der_name = der_name
 
-        # Get flexible load data by `der_name`.
-        cooling_plant = der_data.cooling_plants.loc[der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :].copy()
+        der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
         # Obtain grid connection flags.
-        self.is_electric_grid_connected = pd.notnull(cooling_plant.at['electric_grid_name'])
-        self.is_thermal_grid_connected = pd.notnull(cooling_plant.at['thermal_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
+        self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
         # Cooling plant must be connected to both thermal grid and electric grid.
         try:
             assert self.is_electric_grid_connected and self.is_thermal_grid_connected
@@ -1125,60 +1120,60 @@ class CoolingPlantModel(FlexibleDERModel):
         # Obtain cooling plant efficiency.
         # TODO: Enable consideration for dynamic wet bulb temperature.
         ambient_air_wet_bulb_temperature = (
-            cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+            der.at['cooling_tower_set_reference_temperature_wet_bulb']
         )
         condensation_temperature = (
-            cooling_plant.at['cooling_tower_set_reference_temperature_condenser_water']
+            der.at['cooling_tower_set_reference_temperature_condenser_water']
             + (
-                cooling_plant.at['cooling_tower_set_reference_temperature_slope']
+                der.at['cooling_tower_set_reference_temperature_slope']
                 * (
                     ambient_air_wet_bulb_temperature
-                    - cooling_plant.at['cooling_tower_set_reference_temperature_wet_bulb']
+                    - der.at['cooling_tower_set_reference_temperature_wet_bulb']
                 )
             )
-            + cooling_plant.at['condenser_water_temperature_difference']
-            + cooling_plant.at['chiller_set_condenser_minimum_temperature_difference']
+            + der.at['condenser_water_temperature_difference']
+            + der.at['chiller_set_condenser_minimum_temperature_difference']
             + 273.15
         )
         chiller_inverse_coefficient_of_performance = (
             (
                 (
                     condensation_temperature
-                    / cooling_plant.at['chiller_set_evaporation_temperature']
+                    / der.at['chiller_set_evaporation_temperature']
                 )
                 - 1.0
             )
             * (
-                cooling_plant.at['chiller_set_beta']
+                der.at['chiller_set_beta']
                 + 1.0
             )
         )
         evaporator_pump_specific_electric_power = (
-            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            (1.0 / der.at['plant_pump_efficiency'])
             * scipy.constants.value('standard acceleration of gravity')
-            * cooling_plant.at['water_density']
-            * cooling_plant.at['evaporator_pump_head']
+            * der.at['water_density']
+            * der.at['evaporator_pump_head']
             / (
-                cooling_plant.at['water_density']
-                * cooling_plant.at['enthalpy_difference_distribution_water']
+                der.at['water_density']
+                * der.at['enthalpy_difference_distribution_water']
             )
         )
         condenser_specific_thermal_power = (
             1.0 + chiller_inverse_coefficient_of_performance
         )
         condenser_pump_specific_electric_power = (
-            (1.0 / cooling_plant.at['plant_pump_efficiency'])
+            (1.0 / der.at['plant_pump_efficiency'])
             * scipy.constants.value('standard acceleration of gravity')
-            * cooling_plant.at['water_density']
-            * cooling_plant.at['condenser_pump_head']
+            * der.at['water_density']
+            * der.at['condenser_pump_head']
             * condenser_specific_thermal_power
             / (
-                cooling_plant.at['water_density']
-                * cooling_plant.at['condenser_water_enthalpy_difference']
+                der.at['water_density']
+                * der.at['condenser_water_enthalpy_difference']
             )
         )
         cooling_tower_ventilation_specific_electric_power = (
-            cooling_plant.at['cooling_tower_set_ventilation_factor']
+            der.at['cooling_tower_set_ventilation_factor']
             * condenser_specific_thermal_power
         )
         self.cooling_plant_efficiency = (
@@ -1235,8 +1230,8 @@ class CoolingPlantModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            cooling_plant.at['reactive_power_nominal']
-            / cooling_plant.at['active_power_nominal']
+            der.at['reactive_power_nominal']
+            / der.at['active_power_nominal']
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.cooling_plant_efficiency
         self.disturbance_output_matrix = (
@@ -1251,14 +1246,14 @@ class CoolingPlantModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.DataFrame(
-                [[0.0, 0.0, cooling_plant.at['thermal_power_nominal']]],
+                [[0.0, 0.0, der.at['thermal_power_nominal']]],
                 index=self.timesteps,
                 columns=self.outputs
             )
         )
         self.output_minimum_timeseries = (
             pd.DataFrame(
-                [[cooling_plant.at['active_power_nominal'], cooling_plant.at['reactive_power_nominal'], 0.0]],
+                [[der.at['active_power_nominal'], der.at['reactive_power_nominal'], 0.0]],
                 index=self.timesteps,
                 columns=self.outputs
             )
@@ -1292,24 +1287,20 @@ class DERModelSet(object):
         self.timesteps = scenario_data.timesteps
 
         # Obtain DER names.
+        self.der_names = der_data.ders.index
         self.fixed_der_names = (
-            pd.Index(pd.concat([
-                der_data.fixed_loads['der_name'],
-                der_data.fixed_ev_chargers['der_name'],
-                der_data.fixed_generators['der_name']
-            ]))
+            der_data.ders.index[
+                der_data.ders.loc[:, 'der_type'].isin(
+                    ['fixed_load', 'fixed_generator', 'fixed_ev_charger']
+                )
+            ]
         )
         self.flexible_der_names = (
-            pd.Index(pd.concat([
-                der_data.flexible_loads['der_name'],
-                der_data.flexible_generators['der_name'],
-                der_data.storages['der_name'],
-                der_data.flexible_buildings['der_name'],
-                der_data.cooling_plants['der_name']
-            ]))
-        )
-        self.der_names = (
-            self.fixed_der_names.append(self.flexible_der_names)
+            der_data.ders.index[
+                der_data.ders.loc[:, 'der_type'].isin(
+                    ['flexible_load', 'flexible_generator', 'storage', 'flexible_building', 'cooling_plant']
+                )
+            ]
         )
 
         # Obtain models.
@@ -1317,35 +1308,35 @@ class DERModelSet(object):
         self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
         self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
         for der_name in self.der_names:
-            if der_name in der_data.fixed_loads['der_name']:
+            if der_data.ders.at[der_name, 'der_type'] == 'fixed_load':
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedLoadModel(der_data, der_name)
                 )
-            elif der_name in der_data.fixed_ev_chargers['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_ev_charger':
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedEVChargerModel(der_data, der_name)
                 )
-            elif der_name in der_data.fixed_generators['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_generator':
                 self.der_models[der_name] = self.fixed_der_models[der_name] = (
                     fledge.der_models.FixedGeneratorModel(der_data, der_name)
                 )
-            elif der_name in der_data.flexible_loads['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_load':
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleLoadModel(der_data, der_name)
                 )
-            elif der_name in der_data.flexible_generators['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_generator':
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
                 )
-            elif der_name in der_data.storages['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'storage':
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.StorageModel(der_data, der_name)
                 )
-            elif der_name in der_data.flexible_buildings['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_building':
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.FlexibleBuildingModel(der_data, der_name)
                 )
-            elif der_name in der_data.cooling_plants['der_name']:
+            elif der_data.ders.at[der_name, 'der_type'] == 'cooling_plant':
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.CoolingPlantModel(der_data, der_name)
                 )

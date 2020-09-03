@@ -1,4 +1,4 @@
-thermal_grid_name,der_name,node_name,der_type,model_name,thermal_power_nominal
+thermal_grid_name,der_name,node_name,der_type,der_model_name,thermal_power_nominal
 singapore_tanjongpagar,1,1,flexible_building,tanjongpagar_building_1,-55749261.95
 singapore_tanjongpagar,2,2,flexible_building,tanjongpagar_building_2,-55749261.95
 singapore_tanjongpagar,3,3,flexible_building,tanjongpagar_building_3,-83538895.74

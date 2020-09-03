@@ -1,5 +1,5 @@
-CREATE TABLE cooling_plants (
-    model_name TEXT,
+CREATE TABLE der_cooling_plants (
+    definition_name TEXT,
     plant_pump_efficiency TEXT,
     condenser_pump_head TEXT,
     evaporator_pump_head TEXT,
@@ -13,7 +13,22 @@ CREATE TABLE cooling_plants (
     cooling_tower_set_reference_temperature_wet_bulb TEXT,
     cooling_tower_set_reference_temperature_slope TEXT,
     cooling_tower_set_ventilation_factor TEXT,
-    PRIMARY KEY(model_name)
+    PRIMARY KEY(definition_name)
+);
+CREATE TABLE der_models (
+    der_type TEXT,
+    der_model_name TEXT,
+    definition_type TEXT,
+    definition_name TEXT,
+    power_per_unit_minimum TEXT,
+    power_per_unit_maximum TEXT,
+    power_factor_minimum TEXT,
+    power_factor_maximum TEXT,
+    energy_storage_capacity_per_unit TEXT,
+    charging_efficiency TEXT,
+    self_discharge_rate TEXT,
+    marginal_cost TEXT,
+    PRIMARY KEY(der_type,der_model_name)
 );
 CREATE TABLE der_schedules (
     definition_name TEXT,
@@ -27,26 +42,11 @@ CREATE TABLE der_timeseries (
     value REAL,
     PRIMARY KEY(definition_name,time)
 );
-CREATE TABLE der_types (
-    der_type TEXT,
-    model_name TEXT,
-    definition_type TEXT,
-    definition_name TEXT,
-    power_per_unit_minimum TEXT,
-    power_per_unit_maximum TEXT,
-    power_factor_minimum TEXT,
-    power_factor_maximum TEXT,
-    energy_storage_capacity_per_unit TEXT,
-    charging_efficiency TEXT,
-    self_discharge_rate TEXT,
-    marginal_cost TEXT,
-    PRIMARY KEY(der_type,model_name)
-);
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,
     der_type TEXT,
-    model_name TEXT,
+    der_model_name TEXT,
     node_name TEXT,
     is_phase_1_connected TEXT,
     is_phase_2_connected TEXT,
@@ -163,7 +163,7 @@ CREATE TABLE thermal_grid_ders (
     der_name TEXT,
     node_name TEXT,
     der_type TEXT,
-    model_name TEXT,
+    der_model_name TEXT,
     thermal_power_nominal TEXT,
     in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)

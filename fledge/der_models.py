@@ -1015,7 +1015,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
         # Obtain CoBMo building model.
         flexible_building_model = (
             fledge.utils.get_building_model(
-                der.at['model_name'],
+                der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
                 timestep_interval=der_data.scenario_data.scenario.at['timestep_interval'],

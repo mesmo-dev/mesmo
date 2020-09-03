@@ -69,7 +69,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
 | `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
-| `model_name` | | DER model identifier as defined in `der_types`. For `flexible_building`, this defines the CoBMo the scenario name. |
+| `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
@@ -192,7 +192,7 @@ Thermal grid definition.
 | `water_density` | kg/m³ | Density of the distribution water. |
 | `water_kinematic_viscosity` | m²/s | Kinematic viscosity of the distribution water. |
 | `plant_type` | | Thermal supply plant type. Currently only `cooling_plant` is supported. |
-| `plant_model_name` | | Plant model identifier. If plant type `cooling_plant`, as defined in `cooling_plants`. |
+| `plant_model_name` | | Plant model identifier. If plant type `cooling_plant`, as defined in `der_cooling_plants`. |
 
 ### `thermal_grid_ders`
 
@@ -204,7 +204,7 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
 | `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
-| `model_name` | | DER model identifier as defined in `der_types`. For `flexible_building`, this defines the CoBMo the scenario name. |
+| `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
 | `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
@@ -257,7 +257,7 @@ Thermal line limits are currently defined in per unit of the nominal thermal pow
 
 ## Distributed energy resource (DER) data
 
-### `der_types`
+### `der_models`
 
 DER model parameter definitions. Note that not all columns / parameters are required by all DER model types. For most DER model types, this table is supplemented by timeseries / schedule definitions in the tables `der_timeseries` or `der_schedules` based on the columns `definition_type` / `definition_name`. A mapping from DER model type to required columns and supplementary definitions is given below.
 
@@ -266,9 +266,9 @@ The DER type `flexible_buildings` is not defined in this table, instead the mode
 | Column | Unit | Description |
 | --- |:---:| --- |
 | `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `cooling_plant`, `storage`. |
-| `model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
+| `der_model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
 | `definition_type` | | Definition type selector for timeseries / schedule definition¹ or other supplementary definitions. Choices: `timeseries` (Defines  timeseries of absolute values.) `schedule` (Defines schedule of absolute values.), `timeseries_per_unit` (Define timeseries of per unit values.), `schedule_per_unit` (Defines schedule of per unit values.), `cooling_plant` (Defines cooling plant.) |
-| `definition_name` | | Definition identifier, depending on `definition_type` defined in `der_timeseries`, `der_schedules` or `cooling_plants`. |
+| `definition_name` | | Definition identifier, depending on `definition_type` defined in `der_timeseries`, `der_schedules` or `der_cooling_plants`. |
 | `power_per_unit_minimum` | - | Minimum permitted power (load or generation) in per unit of the nominal power. |
 | `power_per_unit_maximum` | - | Maximum permitted power (load or generation) in per unit of the nominal power. |
 | `power_factor_minimum` | | Minimum permitted power factor. *Currently not used.* |
@@ -278,7 +278,7 @@ The DER type `flexible_buildings` is not defined in this table, instead the mode
 | `self_discharge_rate` | 1/h | Energy storage self discharge rate. |
 | `marginal_cost` | $/kWh | Marginal cost of power generation. *Currently, prices / costs are assumed to be in SGD.* |
 
-Mapping from DER model type to required columns and supplementary definitions (`der_type` / `model_name` are always required and omitted here):
+Mapping from DER model type to required columns and supplementary definitions (`der_type` / `der_model_name` are always required and omitted here):
 
 | DER type | Required columns | Supplementary definitions |
 | --- |:---:| --- |
@@ -287,7 +287,7 @@ Mapping from DER model type to required columns and supplementary definitions (`
 | `fixed_generator` | `definition_type`, `definition_name`, `marginal_cost` | Timeseries for nominal active / reactive / thermal power². |
 | `flexible_generator` | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost` | Timeseries for nominal active / reactive / thermal power². |
 | `fixed_ev_charger` | `definition_type`, `definition_name` | Timeseries for nominal active / reactive / thermal power². |
-| `cooling_plant` | `definition_type`, `definition_name` | Cooling plant parameter definition according to `cooling_plants`. |
+| `cooling_plant` | `definition_type`, `definition_name` | Cooling plant parameter definition according to `der_cooling_plants`. |
 | `storage` | `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit`, `charging_efficiency`, `self_discharge_rate` | N.A. |
 
 ¹ For DER model types which require the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule, where the latter describes recurring schedules based on weekday / time of day.
@@ -300,7 +300,7 @@ DER timeseries definition.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `model_name` | | DER model identifier. |
+| `der_model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `value` | - | Power value. |
 
@@ -310,17 +310,17 @@ DER schedules definition. The timeseries is constructed by obtaining the appropr
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `model_name` | | DER model identifier. |
+| `der_model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
 | `value` | - | Power value. |
 
-### `cooling_plants`
+### `der_cooling_plants`
 
 Cooling plants for modelling distributed generation facilities / heat pumps in the thermal grid. Cooling plants are connected to both electric and thermal grid, therefore must be defined both in `electric_grid_ders` and `thermal_grid_ders`.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `model_name` | | DER model identifier (corresponding to `electric_grid_ders` / `thermal_grid_ders`). |
+| `der_model_name` | | DER model identifier (corresponding to `electric_grid_ders` / `thermal_grid_ders`). |
 | `cooling_efficiency` | | Coefficient of performance (COP). |
 | `plant_pump_efficiency` | - | Pump efficiency (pump power / electric power) of the primary side pumps, i.e. the pumps within the district cooling plant. |
 | `condenser_pump_head` | m | Pump pressure head across the condenser. |

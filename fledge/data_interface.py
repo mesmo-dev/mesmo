@@ -388,7 +388,7 @@ class ThermalGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grids
-                JOIN cooling_plants ON cooling_plants.model_name = thermal_grids.plant_model_name
+                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.plant_model_name
                 WHERE thermal_grid_name = (
                     SELECT thermal_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -480,17 +480,17 @@ class DERData(object):
             pd.merge(
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
-                    SELECT * FROM der_types
-                    WHERE (der_type, model_name) IN (
-                        SELECT der_type, model_name
+                    SELECT * FROM der_models
+                    WHERE (der_type, der_model_name) IN (
+                        SELECT der_type, der_model_name
                         FROM electric_grid_ders
                         WHERE electric_grid_name = (
                             SELECT electric_grid_name FROM scenarios
                             WHERE scenario_name = ?
                         )
                     )
-                    OR (der_type, model_name) IN (
-                        SELECT der_type, model_name
+                    OR (der_type, der_model_name) IN (
+                        SELECT der_type, der_model_name
                         FROM thermal_grid_ders
                         WHERE thermal_grid_name = (
                             SELECT thermal_grid_name FROM scenarios
@@ -528,11 +528,11 @@ class DERData(object):
                         params=[scenario_name]
                     )),
                     how='outer',
-                    on=['der_name', 'der_type', 'model_name', 'in_service'],
+                    on=['der_name', 'der_type', 'der_model_name', 'in_service'],
                     suffixes=('_electric_grid', '_thermal_grid')
                 ),
                 how='outer',
-                on=['der_type', 'model_name'],
+                on=['der_type', 'der_model_name'],
             )
         )
         self.ders.index = self.ders['der_name']
@@ -673,8 +673,8 @@ class DERData(object):
                         )).iloc[0],
                         self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                             """
-                            SELECT * FROM cooling_plants
-                            WHERE model_name = ?
+                            SELECT * FROM der_cooling_plants
+                            WHERE definition_name = ?
                             """,
                             con=database_connection,
                             params=[definition_index[1]]

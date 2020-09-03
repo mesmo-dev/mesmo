@@ -201,9 +201,9 @@ CREATE TABLE flexible_load_timeseries (
 CREATE TABLE flexible_loads (
     model_name TEXT,
     definition_type TEXT,
-    power_increase_percentage_maximum TEXT,
-    power_decrease_percentage_maximum TEXT,
-    time_period_power_shift_maximum TEXT,
+    power_per_unit_minimum TEXT,
+    power_per_unit_maximum TEXT,
+    energy_storage_capacity_per_unit TEXT,
     PRIMARY KEY(model_name)
 );
 CREATE TABLE parameters (

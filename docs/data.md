@@ -385,9 +385,9 @@ Flexible load model definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
 | `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
-| `power_increase_percentage_maximum` | - | Maximum permitted per unit power increase in each timestep. *To be revised* |
-| `power_decrease_percentage_maximum` | - | Maximum permitted per unit power decrease in each timestep. *To be revised* |
-| `time_period_power_shift_maximum` | - | Number timesteps for which energy consumption can be deferred or advanced. *To be revised* |
+| `power_per_unit_minimum` | - | Maximum power in per unit of the load timeseries. |
+| `power_per_unit_maximum` | - | Minimum power in per unit of the load timeseries. |
+| `energy_storage_capacity_per_unit` | h | Maximum time period for which energy consumption can be deferred or advanced. |
 
 ### `flexible_load_schedules`
 

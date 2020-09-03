@@ -631,17 +631,11 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.Series(0.0, index=self.timesteps, name='thermal_power')
         )
 
-        # Calculate nominal accumulated energy timeseries.
-        # TODO: Consider reactive power in accumulated energy.
-        accumulated_energy_nominal_timeseries = (
-            self.active_power_nominal_timeseries.cumsum().rename('accumulated_energy')
-        )
-
         # Instantiate indexes.
-        self.states = pd.Index(['accumulated_energy'])
+        self.states = pd.Index(['state_of_charge'])
         self.controls = pd.Index(['active_power', 'reactive_power'])
-        self.disturbances = pd.Index([])
-        self.outputs = pd.Index(['accumulated_energy', 'active_power', 'reactive_power', 'power_factor_constant'])
+        self.disturbances = pd.Index(['active_power'])
+        self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power', 'power_factor_constant'])
 
         # Instantiate initial state.
         self.state_vector_initial = (
@@ -649,51 +643,63 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
 
         # Instantiate state space matrices.
+        # TODO: Add shifting losses / self discharge.
         self.state_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.states)
         )
-        self.state_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.state_matrix.at['state_of_charge', 'state_of_charge'] = 1.0
         self.control_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
-        self.control_matrix.at['accumulated_energy', 'active_power'] = 1.0
+        self.control_matrix.at['state_of_charge', 'active_power'] = (
+            1.0
+            * der_data.scenario_data.scenario.at['timestep_interval']
+            / flexible_load['active_power_nominal']
+            / (flexible_load['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+        )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.disturbance_matrix.at['state_of_charge', 'active_power'] = (
+            -1.0
+            * der_data.scenario_data.scenario.at['timestep_interval']
+            / flexible_load['active_power_nominal']
+            / (flexible_load['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.state_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.states)
         )
-        self.state_output_matrix.at['accumulated_energy', 'accumulated_energy'] = 1.0
+        self.state_output_matrix.at['state_of_charge', 'state_of_charge'] = 1.0
         self.control_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power'] = -1.0 / flexible_load['active_power_nominal']
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = 1.0 / flexible_load['reactive_power_nominal']
+        self.control_output_matrix.at['power_factor_constant', 'active_power'] = (
+            -1.0 / flexible_load['active_power_nominal']
+        )
+        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
+            1.0 / flexible_load['reactive_power_nominal']
+        )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )
 
         # Instantiate disturbance timeseries.
         self.disturbance_timeseries = (
-            pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbances)
+            self.active_power_nominal_timeseries.to_frame()
         )
 
         # Construct output constraint timeseries
-        # TODO: Fix offset of accumulated energy constraints.
         self.output_maximum_timeseries = (
             pd.concat([
+                pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
-                    accumulated_energy_nominal_timeseries
-                    - accumulated_energy_nominal_timeseries[int(flexible_load['time_period_power_shift_maximum'])]
-                ),
-                (
-                    (1.0 - flexible_load['power_decrease_percentage_maximum'])
+                    flexible_load['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.active_power_nominal_timeseries
                 ),
                 (
-                    (1.0 - flexible_load['power_decrease_percentage_maximum'])
+                    flexible_load['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
@@ -701,16 +707,13 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.output_minimum_timeseries = (
             pd.concat([
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
-                    accumulated_energy_nominal_timeseries
-                    + accumulated_energy_nominal_timeseries[int(flexible_load['time_period_power_shift_maximum'])]
-                ),
-                (
-                    (1.0 + flexible_load['power_increase_percentage_maximum'])
+                    flexible_load['power_per_unit_maximum']  # Take maximum, because load is negative power.
                     * self.active_power_nominal_timeseries
                 ),
                 (
-                    (1.0 + flexible_load['power_increase_percentage_maximum'])
+                    flexible_load['power_per_unit_maximum']  # Take maximum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
                 ),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')

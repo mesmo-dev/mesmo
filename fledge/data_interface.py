@@ -200,7 +200,7 @@ class ScenarioData(object):
         # Define excluded columns. By default, all columns containing the following strings are excluded:
         # `_name`, `_type`, `connection`
         if excluded_columns is None:
-            excluded_columns = ['parameter_set', 'storage_capacity']
+            excluded_columns = ['parameter_set']
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])

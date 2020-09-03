@@ -826,8 +826,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 class StorageModel(FlexibleDERModel):
     """Energy storage model object."""
 
-    levelized_cost_of_energy: np.float
-
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -893,13 +891,13 @@ class StorageModel(FlexibleDERModel):
             energy_storage['charging_efficiency']
             * der_data.scenario_data.scenario.at['timestep_interval']
             / energy_storage['active_power_nominal']
-            / pd.Timedelta(energy_storage['storage_capacity'])
+            / (energy_storage['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.control_matrix.at['state_of_charge', 'active_power_discharge'] = (
             -1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
             / energy_storage['active_power_nominal']
-            / pd.Timedelta(energy_storage['storage_capacity'])
+            / (energy_storage['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
@@ -941,12 +939,12 @@ class StorageModel(FlexibleDERModel):
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
                 (
-                    energy_storage['power_maximum']
+                    energy_storage['power_per_unit_maximum']
                     * energy_storage['active_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
                 ),
                 (
-                    energy_storage['power_maximum']
+                    energy_storage['power_per_unit_maximum']
                     * energy_storage['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
                 ),
@@ -959,12 +957,12 @@ class StorageModel(FlexibleDERModel):
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
                 (
-                    energy_storage['power_minimum']
+                    energy_storage['power_per_unit_minimum']
                     * energy_storage['active_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
                 ),
                 (
-                    energy_storage['power_minimum']
+                    energy_storage['power_per_unit_minimum']
                     * energy_storage['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
                 ),

@@ -300,8 +300,7 @@ EV charger schedules definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `fixed_ev_charger_timeseries`
 
@@ -311,8 +310,7 @@ EV charger timeseries definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `fixed_loads`
 
@@ -331,8 +329,7 @@ Fixed load schedules definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `fixed_load_timeseries`
 
@@ -342,8 +339,7 @@ Fixed load timeseries definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `fixed_generators`
 
@@ -363,8 +359,7 @@ Fixed load schedules definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `fixed_generator_timeseries`
 
@@ -374,8 +369,7 @@ Fixed load timeseries definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `flexible_loads`
 
@@ -397,8 +391,7 @@ Flexible load schedules definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `flexible_load_timeseries`
 
@@ -408,8 +401,7 @@ Flexible load timeseries definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `flexible_generators`
 
@@ -429,8 +421,7 @@ Fixed load schedules definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |
 
 ### `flexible_generator_timeseries`
 
@@ -440,5 +431,4 @@ Fixed load timeseries definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `active_power` | W | Active power value. |
-| `reactive_power` | VAr | Reactive power value. |
+| `value` | - | Power value. |

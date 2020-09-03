@@ -15,6 +15,8 @@ import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
+# TODO: Validate model behavior for active / reactive nominal power defined as zero.
+
 
 class DERModel(object):
     """DER model object."""
@@ -173,10 +175,13 @@ class FixedLoadModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'active_power'].copy())
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'reactive_power'].copy())
+            der_data.fixed_load_timeseries_dict[fixed_load.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('reactive_power')
+            * fixed_load.at['reactive_power_nominal'] / fixed_load.at['active_power_nominal']
         )
         if 'per_unit' in fixed_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -218,10 +223,13 @@ class FixedEVChargerModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'active_power'].copy())
+            der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'reactive_power'].copy())
+            der_data.fixed_ev_charger_timeseries_dict[fixed_ev_charger.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('reactive_power')
+            * fixed_ev_charger.at['reactive_power_nominal'] / fixed_ev_charger.at['active_power_nominal']
         )
         if 'per_unit' in fixed_ev_charger.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -267,10 +275,13 @@ class FixedGeneratorModel(FixedDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'active_power'].copy())
+            der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'reactive_power'].copy())
+            der_data.fixed_generator_timeseries_dict[fixed_generator.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('reactive_power')
+            * fixed_generator.at['reactive_power_nominal'] / fixed_generator.at['active_power_nominal']
         )
         if 'per_unit' in fixed_generator.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -613,10 +624,13 @@ class FlexibleLoadModel(FlexibleDERModel):
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'active_power'].copy())
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'reactive_power'].copy())
+            der_data.flexible_load_timeseries_dict[flexible_load.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('reactive_power')
+            * flexible_load.at['reactive_power_nominal'] / flexible_load.at['active_power_nominal']
         )
         if 'per_unit' in flexible_load.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -751,10 +765,13 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
-            np.abs(der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'active_power'].copy())
+            der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('active_power')
         )
         self.reactive_power_nominal_timeseries = (
-            np.abs(der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'reactive_power'].copy())
+            der_data.flexible_generator_timeseries_dict[flexible_generator.at['model_name']].loc[:, 'value']
+            .copy().abs().rename('reactive_power')
+            * flexible_generator.at['reactive_power_nominal'] / flexible_generator.at['active_power_nominal']
         )
         if 'per_unit' in flexible_generator.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.

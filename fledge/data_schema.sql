@@ -109,15 +109,13 @@ CREATE TABLE electric_grids (
 CREATE TABLE fixed_ev_charger_schedules (
     model_name TEXT,
     time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE fixed_ev_charger_timeseries (
     model_name TEXT,
     time TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time)
 );
 CREATE TABLE fixed_ev_chargers (
@@ -128,15 +126,13 @@ CREATE TABLE fixed_ev_chargers (
 CREATE TABLE fixed_generator_schedules (
     model_name TEXT,
     time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE fixed_generator_timeseries (
     model_name TEXT,
     time TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time)
 );
 CREATE TABLE fixed_generators (
@@ -148,15 +144,13 @@ CREATE TABLE fixed_generators (
 CREATE TABLE fixed_load_schedules (
     model_name TEXT,
     time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE fixed_load_timeseries (
     model_name TEXT,
     time TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time)
 );
 CREATE TABLE fixed_loads (
@@ -167,15 +161,13 @@ CREATE TABLE fixed_loads (
 CREATE TABLE flexible_generator_schedules (
     model_name TEXT,
     time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE flexible_generator_timeseries (
     model_name TEXT,
     time TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time)
 );
 CREATE TABLE flexible_generators (
@@ -187,15 +179,13 @@ CREATE TABLE flexible_generators (
 CREATE TABLE flexible_load_schedules (
     model_name TEXT,
     time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time_period)
 );
 CREATE TABLE flexible_load_timeseries (
     model_name TEXT,
     time TEXT,
-    active_power REAL,
-    reactive_power REAL,
+    value REAL,
     PRIMARY KEY(model_name,time)
 );
 CREATE TABLE flexible_loads (

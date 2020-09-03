@@ -126,7 +126,7 @@ class FixedDERModel(DERModel):
             if type(self) is FixedGeneratorModel:
                 optimization_problem.objective.expr += (
                     sum(
-                        self.levelized_cost_of_energy
+                        self.marginal_cost
                         * self.active_power_nominal_timeseries.at[timestep]
                         * timestep_interval_hours  # In Wh.
                         for timestep in self.timesteps
@@ -240,7 +240,7 @@ class FixedEVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
-    levelized_cost_of_energy: np.float
+    marginal_cost: np.float
 
     def __init__(
             self,
@@ -263,7 +263,7 @@ class FixedGeneratorModel(FixedDERModel):
         self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
-        self.levelized_cost_of_energy = fixed_generator.at['levelized_cost_of_energy']
+        self.marginal_cost = fixed_generator.at['marginal_cost']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -543,7 +543,7 @@ class FlexibleDERModel(DERModel):
             if type(self) is FlexibleGeneratorModel:
                 optimization_problem.objective.expr += (
                     sum(
-                        self.levelized_cost_of_energy
+                        self.marginal_cost
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
                         for timestep in self.timesteps
@@ -721,7 +721,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
-    levelized_cost_of_energy: np.float
+    marginal_cost: np.float
 
     def __init__(
             self,
@@ -744,7 +744,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
-        self.levelized_cost_of_energy = flexible_generator.at['levelized_cost_of_energy']
+        self.marginal_cost = flexible_generator.at['marginal_cost']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (

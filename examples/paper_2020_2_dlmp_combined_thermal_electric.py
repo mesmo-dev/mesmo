@@ -104,9 +104,9 @@ def main(
         der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 0.8
     # PV plant.
     if scenario_number in [11, 12]:
-        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.1
+        der_model_set.flexible_der_models['24'].marginal_cost = 0.1
     if scenario_number in [15]:
-        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.04
+        der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()

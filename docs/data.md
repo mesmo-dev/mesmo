@@ -353,7 +353,7 @@ Fixed load model definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
 | `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
-| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+| `marginal_cost` | $/kWh | Marginal cost. *Currently, prices / costs are assumed to be in SGD.* |
 
 ### `fixed_generator_schedules`
 
@@ -419,7 +419,7 @@ Fixed load model definition.
 | --- |:---:| --- |
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
 | `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
-| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+| `marginal_cost` | $/kWh | Marginal cost. *Currently, prices / costs are assumed to be in SGD.* |
 
 ### `flexible_generator_schedules`
 

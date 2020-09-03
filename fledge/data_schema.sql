@@ -142,7 +142,7 @@ CREATE TABLE fixed_generator_timeseries (
 CREATE TABLE fixed_generators (
      model_name TEXT,
      definition_type TEXT,
-     levelized_cost_of_energy TEXT,
+     marginal_cost TEXT,
      PRIMARY KEY(model_name)
 );
 CREATE TABLE fixed_load_schedules (
@@ -181,7 +181,7 @@ CREATE TABLE flexible_generator_timeseries (
 CREATE TABLE flexible_generators (
      model_name TEXT,
      definition_type TEXT,
-     levelized_cost_of_energy TEXT,
+     marginal_cost TEXT,
      PRIMARY KEY(model_name)
 );
 CREATE TABLE flexible_load_schedules (

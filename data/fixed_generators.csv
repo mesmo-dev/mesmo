@@ -1,2 +1,2 @@
-model_name,definition_type,levelized_cost_of_energy
+model_name,definition_type,marginal_cost
 photovoltaic,schedule_per_unit,0.04

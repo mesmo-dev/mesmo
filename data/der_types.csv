@@ -1,6 +1,11 @@
-der_type,model_name,timeseries_schedule_type,timeseries_schedule_name,power_minimum,power_maximum,power_factor_minimum,power_factor_maximum,storage_capacity,charge_efficiency,discharge_rate,marginal_cost,extra_definition_type,extra_definition_name
-fixed_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,,,,,,,,,,
-flexible_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,0.4,1.4,,,06:00:00,,,,,
-fixed_generator,photovoltaic,schedule_per_unit,photovoltaic,,,,,,,,0.06,,
-flexible_generator,thermal,,,0.0,1.0,0.5,1.5,,,,0.1,,
-cooling_plant,singapore_cooling_plant,,,,,,,,,,,cooling_plant,singapore_cooling_plant
+der_type,model_name,definition_type,definition_name,power_per_unit_minimum,power_per_unit_maximum,power_factor_minimum,power_factor_maximum,energy_storage_capacity_per_unit,charging_efficiency,self_discharge_rate,marginal_cost
+fixed_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,,,,,,,,
+fixed_load,residential_landed,schedule_per_unit,residential_landed,,,,,,,,
+flexible_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,0.6,1.4,,,6.0,,,
+flexible_load,residential_landed,schedule_per_unit,residential_landed,0.6,1.4,,,6.0,,,
+fixed_generator,photovoltaic,schedule_per_unit,photovoltaic,,,,,,,,0.06
+flexible_generator,photovoltaic,schedule_per_unit,photovoltaic,0.0,1.0,,,,,,0.06
+flexible_generator,thermal,schedule_per_unit,thermal,0.0,1.0,,,,,,0.1
+fixed_ev_charger,fixed_ev_charger_generic,schedule_per_unit,fixed_ev_charger_generic,,,,,,,,
+cooling_plant,cooling_plant_singapore,cooling_plant,cooling_plant_singapore,,,,,,,,
+storage,default_battery_storage,,,0.0,1.0,,,12,0.99,0.01,

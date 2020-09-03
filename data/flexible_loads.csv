@@ -1,3 +1,0 @@
-model_name,definition_type,power_per_unit_minimum,power_per_unit_maximum,energy_storage_capacity_per_unit
-mixed_commercial_residential,schedule_per_unit,0.6,1.4,6.0
-residential_landed,schedule_per_unit,0.6,1.4,6.0

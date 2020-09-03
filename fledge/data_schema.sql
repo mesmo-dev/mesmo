@@ -15,6 +15,33 @@ CREATE TABLE cooling_plants (
     cooling_tower_set_ventilation_factor TEXT,
     PRIMARY KEY(model_name)
 );
+CREATE TABLE der_schedules (
+    definition_name TEXT,
+    time_period TEXT,
+    value REAL,
+    PRIMARY KEY(definition_name,time_period)
+);
+CREATE TABLE der_timeseries (
+    definition_name TEXT,
+    time TEXT,
+    value REAL,
+    PRIMARY KEY(definition_name,time)
+);
+CREATE TABLE der_types (
+    der_type TEXT,
+    model_name TEXT,
+    definition_type TEXT,
+    definition_name TEXT,
+    power_per_unit_minimum TEXT,
+    power_per_unit_maximum TEXT,
+    power_factor_minimum TEXT,
+    power_factor_maximum TEXT,
+    energy_storage_capacity_per_unit TEXT,
+    charging_efficiency TEXT,
+    self_discharge_rate TEXT,
+    marginal_cost TEXT,
+    PRIMARY KEY(der_type,model_name)
+);
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,
@@ -106,96 +133,6 @@ CREATE TABLE electric_grids (
     is_single_phase_equivalent TEXT DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
 );
-CREATE TABLE fixed_ev_charger_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_ev_charger_timeseries (
-    model_name TEXT,
-    time TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_ev_chargers (
-    model_name TEXT,
-    definition_type TEXT,
-    PRIMARY KEY(model_name)
-);
-CREATE TABLE fixed_generator_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_generator_timeseries (
-    model_name TEXT,
-    time TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_generators (
-     model_name TEXT,
-     definition_type TEXT,
-     marginal_cost TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE fixed_load_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_load_timeseries (
-    model_name TEXT,
-    time TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_loads (
-     model_name TEXT,
-     definition_type TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE flexible_generator_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE flexible_generator_timeseries (
-    model_name TEXT,
-    time TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE flexible_generators (
-     model_name TEXT,
-     definition_type TEXT,
-     marginal_cost TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE flexible_load_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE flexible_load_timeseries (
-    model_name TEXT,
-    time TEXT,
-    value REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE flexible_loads (
-    model_name TEXT,
-    definition_type TEXT,
-    power_per_unit_minimum TEXT,
-    power_per_unit_maximum TEXT,
-    energy_storage_capacity_per_unit TEXT,
-    PRIMARY KEY(model_name)
-);
 CREATE TABLE parameters (
     parameter_set TEXT,
     parameter_name TEXT,
@@ -220,17 +157,6 @@ CREATE TABLE scenarios (
     timestep_end TEXT,
     timestep_interval TEXT,
     PRIMARY KEY(scenario_name)
-);
-CREATE TABLE storages (
-    model_name TEXT,
-    energy_storage_capacity_per_unit TEXT,
-    self_discharge_rate TEXT,
-    charging_efficiency TEXT,
-    power_per_unit_minimum TEXT,
-    power_per_unit_maximum TEXT,
-    power_factor_minimum TEXT,
-    power_factor_maximum TEXT,
-    PRIMARY KEY(model_name)
 );
 CREATE TABLE thermal_grid_ders (
     thermal_grid_name TEXT,

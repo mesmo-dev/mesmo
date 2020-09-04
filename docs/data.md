@@ -62,7 +62,7 @@ Electric grid definition.
 
 ### `electric_grid_ders`
 
-Distributed energy resources (DERs) in the electric grid. Can define both loads (negative power) and generations (positive power). The selection of DER types will be extended in the future.
+Distributed energy resources (DERs) in the electric grid. Can define both loads (negative power) and generations (positive power). The corresponding DER models are defined in `der_models`. The selection of DER types will be extended in the future.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
@@ -137,7 +137,7 @@ Electric grid nodes.
 
 ### `electric_grid_operation_limit_types`
 
-Operation limit type definition for the electric grid. This information is utilized for the definition of the operational constraints in an optimal operation problem. The per unit definition is currently based on the nominal power flow, but may be changed in future.
+Operation limit type definition for the electric grid. This information is utilized for the definition of the operational constraints in an optimal operation problem.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
@@ -196,7 +196,7 @@ Thermal grid definition.
 
 ### `thermal_grid_ders`
 
-Distributed energy resources (DERs) in the thermal grid. Can define both loads (negative power) and generations (positive power). The selection of DER types will be extended in the future.
+Distributed energy resources (DERs) in the thermal grid. Can define both loads (negative power) and generations (positive power). The corresponding DER models are defined in `der_models`. The selection of DER types will be extended in the future.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
@@ -247,7 +247,7 @@ Thermal grid nodes.
 
 ### `thermal_grid_operation_limit_types`
 
-Thermal line limits are currently defined in per unit of the nominal thermal power solution, i.e., the thermal power flow solution for nominal loading conditions as defined in `thermal_grid_ders`.
+Operation limit type definition for the thermal grid. This information is utilized for the definition of the operational constraints in an optimal operation problem. Note that thermal line limits are currently defined in per unit of the nominal thermal power solution, i.e., the thermal power flow solution for nominal loading conditions as defined in `thermal_grid_ders`, but this should be changed in future.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
@@ -259,15 +259,13 @@ Thermal line limits are currently defined in per unit of the nominal thermal pow
 
 ### `der_models`
 
-DER model parameter definitions. Note that not all columns / parameters are required by all DER model types. For most DER model types, this table is supplemented by timeseries / schedule definitions in the tables `der_timeseries` or `der_schedules` based on the columns `definition_type` / `definition_name`. A mapping from DER model type to required columns and supplementary definitions is given below.
-
-The DER type `flexible_buildings` is not defined in this table, instead the model definition is obtained from the Control-oriented Building Model (CoBMo) submodule.
+DER model parameter definitions. This table incorporates the definition of various DER types, which have different characteristics and require a different subset of the columns. See below for a detailed description of each DER type.
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `cooling_plant`, `storage`. |
+| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `cooling_plant`, `storage`. Note: `flexible_buildings` cannot be defined here, because it is obtained from the CoBMo submodule directly. |
 | `der_model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
-| `definition_type` | | Definition type selector for timeseries / schedule definition¹ or other supplementary definitions. Choices: `timeseries` (Defines  timeseries of absolute values.) `schedule` (Defines schedule of absolute values.), `timeseries_per_unit` (Define timeseries of per unit values.), `schedule_per_unit` (Defines schedule of per unit values.), `cooling_plant` (Defines cooling plant.) |
+| `definition_type` | | Definition type selector for timeseries / schedule definition¹ or other supplementary definitions. Choices: `timeseries` (Defines timeseries of absolute values².) `schedule` (Defines schedule of absolute values².), `timeseries_per_unit` (Define timeseries of per unit values².), `schedule_per_unit` (Defines schedule of per unit values².), `cooling_plant` (Defines cooling plant.) |
 | `definition_name` | | Definition identifier, depending on `definition_type` defined in `der_timeseries`, `der_schedules` or `der_cooling_plants`. |
 | `power_per_unit_minimum` | - | Minimum permitted power (load or generation) in per unit of the nominal power. |
 | `power_per_unit_maximum` | - | Maximum permitted power (load or generation) in per unit of the nominal power. |
@@ -278,21 +276,25 @@ The DER type `flexible_buildings` is not defined in this table, instead the mode
 | `self_discharge_rate` | 1/h | Energy storage self discharge rate. |
 | `marginal_cost` | $/kWh | Marginal cost of power generation. *Currently, prices / costs are assumed to be in SGD.* |
 
-Mapping from DER model type to required columns and supplementary definitions (`der_type` / `der_model_name` are always required and omitted here):
+For most DER types, the `der_models` table is supplemented by timeseries / schedule definitions in the tables `der_timeseries` or `der_schedules` based on the columns `definition_type` / `definition_name`. Furthermore, not all columns / parameters are required by all DER types:
 
-| DER type | Required columns | Supplementary definitions |
-| --- |:---:| --- |
-| `fixed_load` | `definition_type`, `definition_name` | Timeseries for nominal active / reactive / thermal power². |
-| `flexible_load` | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit` | Timeseries for nominal active / reactive / thermal power². |
-| `fixed_generator` | `definition_type`, `definition_name`, `marginal_cost` | Timeseries for nominal active / reactive / thermal power². |
-| `flexible_generator` | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost` | Timeseries for nominal active / reactive / thermal power². |
-| `fixed_ev_charger` | `definition_type`, `definition_name` | Timeseries for nominal active / reactive / thermal power². |
-| `cooling_plant` | `definition_type`, `definition_name` | Cooling plant parameter definition according to `der_cooling_plants`. |
-| `storage` | `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit`, `charging_efficiency`, `self_discharge_rate` | N.A. |
+| DER type | Description | Required columns | Required supplementary definitions |
+| --- | --- | --- | --- |
+| `fixed_load` | Fixed load, following a fixed demand timeseries. | `definition_type`, `definition_name` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `flexible_load` | Flexible load, following a demand timeseries, but able shift a share of its nominal load, limited by its energy storage capacity. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `fixed_generator` | Fixed generator, following a fixed generation timeseries. | `definition_type`, `definition_name`, `marginal_cost` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `flexible_generator` | Flexible generator, dispatchable within given limits and based on a generation timeseries. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `fixed_ev_charger` | Fixed EV charger, following a fixed demand timeseries. | `definition_type`, `definition_name` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `cooling_plant` | Cooling plant, converts electric power to thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name` | Cooling plant parameters according to `der_cooling_plants`. |
+| `storage` | Energy storage, can charge / discharge within given limits and based on its energy storage capacity. | `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit`, `charging_efficiency`, `self_discharge_rate` | N.A. |
 
-¹ For DER model types which require the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule, where the latter describes recurring schedules based on weekday / time of day.
+The selection of DER types will be extended in the future. Note that the DER type `flexible_buildings` is not defined here, instead the model definition is obtained from the Control-oriented Building Model (CoBMo) submodule.
 
-² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` and `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption.
+Not all DER types can be connected to all grid types, e.g. `fixed_ev_charger` is only available in the electric grid. Refer to `electric_grid_ders` / `thermal_grid_ders` to check which DER types can be connected respectively.
+
+¹ For DER types which require the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule, where the latter describes recurring schedules based on weekday / time of day.
+
+² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption.
 
 ### `der_timeseries`
 
@@ -316,7 +318,7 @@ DER schedules definition. The timeseries is constructed by obtaining the appropr
 
 ### `der_cooling_plants`
 
-Cooling plants for modelling distributed generation facilities / heat pumps in the thermal grid. Cooling plants are connected to both electric and thermal grid, therefore must be defined both in `electric_grid_ders` and `thermal_grid_ders`.
+Supplementary cooling plant model parameter definition. The cooling plant model can represent district cooling plants as well as distributed cooling plants. Cooling plants must be connected to both electric and thermal grid, therefore must be defined both in `electric_grid_ders` and `thermal_grid_ders`.
 
 | Column | Unit | Description |
 | --- |:---:| --- |

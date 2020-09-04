@@ -292,9 +292,9 @@ The selection of DER types will be extended in the future. Note that the DER typ
 
 Not all DER types can be connected to all grid types, e.g. `fixed_ev_charger` is only available in the electric grid. Refer to `electric_grid_ders` / `thermal_grid_ders` to check which DER types can be connected respectively.
 
-¹ For DER types which require the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule, where the latter describes recurring schedules based on weekday / time of day.
+¹ For DER types which require the definition of timeseries values, these can be defined either directly as a timeseries or as a schedule, where the latter describes recurring schedules based on weekday / time of day.
 
-² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption.
+² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption. Additionally, note that `der_timeseries` / `der_schedules` only define a single power value for each timestep. Thus, for electric DERs the active power is derived directly based on the value in `der_timeseries` / `der_schedules` and the reactive power is calculated from the active power assuming a fixed power factor according to the nominal active / reactive power in `electric_grid_ders`.
 
 ### `der_timeseries`
 
@@ -304,7 +304,7 @@ DER timeseries definition.
 | --- |:---:| --- |
 | `der_model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `value` | - | Power value. |
+| `value` | - | Power value (absolute or per unit according to `der_models`). |
 
 ### `der_schedules`
 
@@ -314,7 +314,7 @@ DER schedules definition. The timeseries is constructed by obtaining the appropr
 | --- |:---:| --- |
 | `der_model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `value` | - | Power value. |
+| `value` | - | Power value (absolute or per unit according to `der_models`). |
 
 ### `der_cooling_plants`
 

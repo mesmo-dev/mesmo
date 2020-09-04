@@ -1,14 +1,15 @@
 der_name,electric_grid_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
-PV 3,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,3,1,0,0,wye,2000000.0,0
+PV 3,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,3,1,0,0,wye,20000.0,0
 PV 4,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,4,1,0,0,wye,20000.0,0
-PV 5,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,5,1,0,0,wye,3000000.0,0
-PV 6,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,6,1,0,0,wye,3000000.0,0
+PV 5,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,5,1,0,0,wye,30000.0,0
+PV 6,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,6,1,0,0,wye,30000.0,0
 PV 7,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,7,1,0,0,wye,30000.0,0
 PV 8,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,8,1,0,0,wye,30000.0,0
 PV 9,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,9,1,0,0,wye,30000.0,0
 PV 10,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,10,1,0,0,wye,40000.0,0
 PV 11,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,11,1,0,0,wye,10000.0,0
 WKA 7,cigre_mv_network_with_all_ders,fixed_generator,cigre_wind_NUTS2_DE21,7,1,0,0,wye,1500000.0,0
+Biogas 9,cigre_mv_network_with_all_ders,biogas_plant,scenario_1,9,1,0,0,wye,0,0
 Load R1,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,1,1,0,0,wye,-14994000.0,-3044661.5575462645
 Load R3,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,3,1,0,0,wye,-276450.0,-69284.90095251643
 Load R4,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,4,1,0,0,wye,-431650.0,-108181.68745217475

@@ -469,6 +469,7 @@ class DERData(object):
     flexible_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
     cooling_plants: pd.DataFrame
     flexible_buildings: pd.DataFrame
+    biogas_plants: pd.DataFrame
 
     @multimethod
     def __init__(
@@ -735,6 +736,45 @@ class DERData(object):
         self.flexible_buildings = (
             self.flexible_buildings.reindex(index=natsort.natsorted(self.flexible_buildings.index))
         )
+
+        # Obtain biogas plant data.
+        # - Obtain DERs in the same manner as above
+        self.biogas_plants = (
+            pd.merge(
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM electric_grid_ders
+                    WHERE der_type = 'biogas_plant'
+                    AND electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM thermal_grid_ders
+                    WHERE der_type = 'biogas_plant'
+                    AND thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                how='outer',
+                on=['der_name', 'der_type', 'model_name'],
+                suffixes=('_electric_grid', '_thermal_grid')
+            )
+        )
+        self.biogas_plants.index = self.biogas_plants['der_name']
+        self.biogas_plants = (
+            self.biogas_plants.reindex(index=natsort.natsorted(self.biogas_plants.index))
+        )
+
 
 
 class PriceData(object):

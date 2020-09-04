@@ -12,6 +12,7 @@ import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
 import fledge.utils
+import bipmo.bipmo.biogas_models
 
 logger = fledge.config.get_logger(__name__)
 
@@ -1113,7 +1114,8 @@ class DERModelSet(object):
                 der_data.flexible_loads['der_name'],
                 der_data.flexible_generators['der_name'],
                 der_data.flexible_buildings['der_name'],
-                der_data.cooling_plants['der_name']
+                der_data.cooling_plants['der_name'],
+                der_data.biogas_plants['der_name']
             ]))
         )
         self.der_names = (
@@ -1152,6 +1154,10 @@ class DERModelSet(object):
             elif der_name in der_data.cooling_plants['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
                     fledge.der_models.CoolingPlantModel(der_data, der_name)
+                )
+            elif der_name in der_data.biogas_plants['der_name']:
+                self.der_models[der_name] = self.flexible_der_models[der_name] = (
+                    bipmo.bipmo.biogas_models.FlexibleBiogasPlantModel(der_data, der_name)
                 )
             else:
                 logger.error(f"Cannot determine type of DER: {der_name}")

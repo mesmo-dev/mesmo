@@ -265,8 +265,8 @@ DER model parameter definitions. This table incorporates the definition of vario
 | --- |:---:| --- |
 | `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `cooling_plant`, `storage`. Note: `flexible_buildings` cannot be defined here, because it is obtained from the CoBMo submodule directly. |
 | `der_model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
-| `definition_type` | | Definition type selector for timeseries / schedule definition¹ or other supplementary definitions. Choices: `timeseries` (Defines timeseries of absolute values².) `schedule` (Defines schedule of absolute values².), `timeseries_per_unit` (Define timeseries of per unit values².), `schedule_per_unit` (Defines schedule of per unit values².), `cooling_plant` (Defines cooling plant.) |
-| `definition_name` | | Definition identifier, depending on `definition_type` defined in `der_timeseries`, `der_schedules` or `der_cooling_plants`. |
+| `definition_type` | | Definition type selector, because most DER types require either additional timeseries / schedule definition¹ or other supplementary parameter definitions from either of the tables `der_timeseries`, `der_schedules` or `der_cooling_plants`. Choices: `timeseries` (Defines timeseries of absolute values².) `schedule` (Defines schedule of absolute values².), `timeseries_per_unit` (Define timeseries of per unit values².), `schedule_per_unit` (Defines schedule of per unit values².), `cooling_plant` (Defines cooling plant.) |
+| `definition_name` | | Definition identifier, which corresponds to `definition_name` in either `der_timeseries`, `der_schedules` or `der_cooling_plants`. If `definition_type` is `timeseries` or `timeseries_per_unit`: defined in `der_timeseries`; if `definition_type` is `schedule` or `schedule_per_unit`: defined in `der_schedules`; if `definition_type` is `cooling_plant`: defined in `der_cooling_plants`. |
 | `power_per_unit_minimum` | - | Minimum permitted power (load or generation) in per unit of the nominal power. |
 | `power_per_unit_maximum` | - | Maximum permitted power (load or generation) in per unit of the nominal power. |
 | `power_factor_minimum` | | Minimum permitted power factor. *Currently not used.* |
@@ -276,7 +276,7 @@ DER model parameter definitions. This table incorporates the definition of vario
 | `self_discharge_rate` | 1/h | Energy storage self discharge rate. |
 | `marginal_cost` | $/kWh | Marginal cost of power generation. *Currently, prices / costs are assumed to be in SGD.* |
 
-For most DER types, the `der_models` table is supplemented by timeseries / schedule definitions in the tables `der_timeseries` or `der_schedules` based on the columns `definition_type` / `definition_name`. Furthermore, not all columns / parameters are required by all DER types:
+For most DER types, the `der_models` table is supplemented by timeseries / schedule definitions in the tables `der_timeseries` / `der_schedules` or supplementary parameter definitions in `der_cooling_plants` based on the columns `definition_type` / `definition_name`. Furthermore, each DER type relies on a different subset of columns / parameters in `der_models`. The table below outlines the required supplementary definitions for as well as the required columns for each DER type:
 
 | DER type | Description | Required columns | Required supplementary definitions |
 | --- | --- | --- | --- |
@@ -292,9 +292,9 @@ The selection of DER types will be extended in the future. Note that the DER typ
 
 Not all DER types can be connected to all grid types, e.g. `fixed_ev_charger` is only available in the electric grid. Refer to `electric_grid_ders` / `thermal_grid_ders` to check which DER types can be connected respectively.
 
-¹ For DER types which require the definition of timeseries values, these can be defined either directly as timeseries or through as a schedule, where the latter describes recurring schedules based on weekday / time of day.
+¹ For DER types which require the definition of timeseries values, these can be defined either directly as a timeseries or as a schedule, where the latter describes recurring schedules based on weekday / time of day (see `der_schedules`).
 
-² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption.
+² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption. Additionally, note that `der_timeseries` / `der_schedules` only define a single power value for each timestep. Thus, for electric DERs the active power is derived directly based on the value in `der_timeseries` / `der_schedules` and the reactive power is calculated from the active power assuming a fixed power factor according to the nominal active / reactive power in `electric_grid_ders`.
 
 ### `der_timeseries`
 
@@ -304,7 +304,7 @@ DER timeseries definition.
 | --- |:---:| --- |
 | `der_model_name` | | DER model identifier. |
 | `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
-| `value` | - | Power value. |
+| `value` | - | Power value (absolute or per unit according to `der_models`). |
 
 ### `der_schedules`
 
@@ -314,7 +314,7 @@ DER schedules definition. The timeseries is constructed by obtaining the appropr
 | --- |:---:| --- |
 | `der_model_name` | | DER model identifier. |
 | `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
-| `value` | - | Power value. |
+| `value` | - | Power value (absolute or per unit according to `der_models`). |
 
 ### `der_cooling_plants`
 

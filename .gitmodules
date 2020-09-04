@@ -1,3 +1,7 @@
 [submodule "cobmo"]
 	path = cobmo
 	url = https://github.com/TUMCREATE-ESTL/cobmo
+[submodule "bipmo"]
+	path = bipmo
+	url = https://github.com/tum-ens/bipmo.git
+	branch = develop

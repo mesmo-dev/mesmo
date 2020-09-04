@@ -12,7 +12,7 @@ author = 'TUMCREATE'
 #   ones.
 extensions = [
     'sphinx.ext.napoleon',
-    'sphinx_markdown_tables',  # TODO: `sphinx_markdown_tables` doesn't support Readthedocs PDF properly.
+    'sphinx_markdown_tables',
     'sphinx.ext.mathjax',
     'recommonmark',
     'sphinx_multiversion'

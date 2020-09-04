@@ -1,3 +1,5 @@
 model_name,definition_type
 mixed_commercial_residential,schedule_per_unit
 residential_landed,schedule_per_unit
+cigre_residential,schedule_per_unit
+cigre_commercial,schedule_per_unit

@@ -6,13 +6,14 @@ import pandas as pd
 import pyomo.environ as pyo
 import scipy.constants
 import typing
+import datetime as dt
 
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
 import fledge.utils
-import bipmo.bipmo.biogas_models
+import bipmo.bipmo.biogas_plant_model
 
 logger = fledge.config.get_logger(__name__)
 
@@ -27,6 +28,7 @@ class DERModel(object):
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
+    switches: pd.Index
 
     # TODO: Define method templates.
 
@@ -365,7 +367,6 @@ class FlexibleDERModel(DERModel):
                 )
 
         for timestep in self.timesteps:
-
             # Output equation.
             for output in self.outputs:
                 optimization_problem.der_model_constraints.add(
@@ -390,16 +391,32 @@ class FlexibleDERModel(DERModel):
 
             # Output limits.
             for output in self.outputs:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    >=
-                    self.output_minimum_timeseries.at[timestep, output]
-                )
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    <=
-                    self.output_maximum_timeseries.at[timestep, output]
-                )
+                if type(self) is FlexibleBiogasPlantModel and 'active_power' in output:
+                    for chp in self.CHP_list:
+                        if output.__contains__(chp) and any(self.switches.str.contains(chp)):
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, self.der_name, output]
+                                >=
+                                self.output_minimum_timeseries.at[timestep, output]
+                                * optimization_problem.binary_variable[timestep, self.der_name, chp+'_switch']
+                            )
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, self.der_name, output]
+                                <=
+                                self.output_maximum_timeseries.at[timestep, output]
+                                * optimization_problem.binary_variable[timestep, self.der_name, chp+'_switch']
+                            )
+                else:
+                    optimization_problem.der_model_constraints.add(
+                        optimization_problem.output_vector[timestep, self.der_name, output]
+                        >=
+                        self.output_minimum_timeseries.at[timestep, output]
+                    )
+                    optimization_problem.der_model_constraints.add(
+                        optimization_problem.output_vector[timestep, self.der_name, output]
+                        <=
+                        self.output_maximum_timeseries.at[timestep, output]
+                    )
 
         # Define connection constraints.
         if (electric_grid_model is not None) and self.is_electric_grid_connected:
@@ -422,6 +439,30 @@ class FlexibleDERModel(DERModel):
                         -1.0 * (
                             optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                             * np.tan(np.arccos(self.power_factor_nominal))
+                        )
+                        - np.imag(
+                            power_flow_solution.der_power_vector[der_index]
+                        )
+                    )
+            elif type(self) is FlexibleBiogasPlantModel:
+                for timestep in self.timesteps:
+                    optimization_problem.der_model_constraints.add(
+                        optimization_problem.der_active_power_vector_change[timestep, der]
+                        ==
+                        sum(
+                            optimization_problem.output_vector[timestep, self.der_name, output]
+                            for output in self.outputs if 'active' in output
+                        )
+                        - np.real(
+                            power_flow_solution.der_power_vector[der_index]
+                        )
+                    )
+                    optimization_problem.der_model_constraints.add(
+                        optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        ==
+                        sum(
+                            optimization_problem.output_vector[timestep, self.der_name, output]
+                            for output in self.outputs if 'react' in output
                         )
                         - np.imag(
                             power_flow_solution.der_power_vector[der_index]
@@ -904,6 +945,271 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 
 
+class FlexibleBiogasPlantModel(FlexibleDERModel):
+    """Flexible Biogas plant model object."""
+
+    power_factor_nominal: np.float
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Obtain biogas data by `der_name`.
+        biogas_plant = der_data.biogas_plants.loc[der_name, :]
+
+        # Store biogas scenario name
+        self.scenario_name = biogas_plant['model_name']
+
+        # Obtain grid connection flags.
+        self.is_electric_grid_connected = pd.notnull(biogas_plant.at['electric_grid_name'])
+
+        # Obtain bipmo biogas plant model.
+        flexible_biogas_plant_model = (
+            bipmo.bipmo.biogas_plant_model.BiogasModel(
+                biogas_plant.at['model_name'],
+                timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
+                timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
+                timestep_interval=der_data.scenario_data.scenario.at['timestep_interval'],
+            )
+        )
+
+        # Store timesteps.
+        self.timesteps = flexible_biogas_plant_model.timesteps
+        self.timestep_interval = flexible_biogas_plant_model.timestep_interval
+        self.timestep_end = flexible_biogas_plant_model.timestep_end
+
+        # Construct nominal active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+                pd.Series(1.0, index=self.timesteps, name='active_power')
+                * (
+                    biogas_plant.at['active_power_nominal']
+                    if pd.notnull(biogas_plant.at['active_power_nominal'])
+                    else 0.0
+                )
+        )
+        self.reactive_power_nominal_timeseries = (
+                pd.Series(1.0, index=self.timesteps, name='reactive_power')
+                * (
+                    biogas_plant.at['reactive_power_nominal']
+                    if pd.notnull(biogas_plant.at['reactive_power_nominal'])
+                    else 0.0
+                )
+        )
+
+        # Obtain indexes.
+        self.states = flexible_biogas_plant_model.states
+        self.controls = flexible_biogas_plant_model.controls
+        self.outputs = flexible_biogas_plant_model.outputs
+        self.disturbances = flexible_biogas_plant_model.disturbances
+
+        # Obtain switches to turn on/off CHPs
+        self.switches = flexible_biogas_plant_model.switches
+
+        # Obtain ramp information
+        self.CHP_list = flexible_biogas_plant_model.CHP_list
+        self.elec_cap_list = flexible_biogas_plant_model.elec_cap_list
+        self.ramp_rate_list = flexible_biogas_plant_model.ramp_rate_list
+
+        # Obtain digester information
+        self.time_constant = flexible_biogas_plant_model.a1
+        self.feedstock_cost = flexible_biogas_plant_model.plant_feedstock.loc[
+            self.scenario_name, 'cost_feedstock_euro_Wh']
+        self.feedstock_limit_type = flexible_biogas_plant_model.plant_scenarios.loc[
+            self.scenario_name, 'availability_limit_type']
+        self.available_feedstock = flexible_biogas_plant_model.plant_scenarios.loc[
+            self.scenario_name, 'availability_substrate_ton_per_year']
+
+        # Obtain storage information
+        self.SOC_end = flexible_biogas_plant_model.plant_storage.loc[self.scenario_name, 'SOC_end']
+        self.SOC_min = flexible_biogas_plant_model.plant_storage.loc[self.scenario_name, 'SOC_min_m3']
+
+        # Obtain initial state.
+        self.state_vector_initial = flexible_biogas_plant_model.state_vector_initial
+
+        # Obtain state space matrices.
+        self.state_matrix = flexible_biogas_plant_model.state_matrix
+        self.control_matrix = flexible_biogas_plant_model.control_matrix
+        self.disturbance_matrix = flexible_biogas_plant_model.disturbance_matrix
+        self.state_output_matrix = flexible_biogas_plant_model.state_output_matrix
+        self.control_output_matrix = flexible_biogas_plant_model.control_output_matrix
+        self.disturbance_output_matrix = flexible_biogas_plant_model.disturbance_output_matrix
+
+        # Obtain disturbance timeseries
+        self.disturbance_timeseries = flexible_biogas_plant_model.disturbance_timeseries
+
+        # Obtain output constraint timeseries.
+        self.output_maximum_timeseries = flexible_biogas_plant_model.output_constraint_timeseries_maximum
+        self.output_minimum_timeseries = flexible_biogas_plant_model.output_constraint_timeseries_minimum
+
+    def define_optimization_constraints(
+        self,
+        optimization_problem: pyo.ConcreteModel,
+        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+        power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
+        thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+        thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
+    ):
+
+        super().define_optimization_constraints(
+            optimization_problem,
+            electric_grid_model,
+            power_flow_solution,
+            thermal_grid_model,
+            thermal_power_flow_solution
+        )
+        # Output limits.
+        for timestep in self.timesteps:
+            # Feedstock input limits (maximum daily or hourly feed-in depending on available feedstock).
+            for control in self.controls:
+                if self.feedstock_limit_type == 'daily':
+                    if ('mass_flow' in control) and (timestep + dt.timedelta(days=1) - self.timestep_interval <= self.timestep_end):
+                        optimization_problem.der_model_constraints.add(
+                            sum(
+                                self.timestep_interval.seconds *
+                                optimization_problem.control_vector[timestep + i * self.timestep_interval, self.der_name, control]
+                                for i in range(int(dt.timedelta(days=1)/self.timestep_interval))
+                            )
+                            <= self.available_feedstock * 1000/365
+                        )
+                elif self.feedstock_limit_type == 'hourly':
+                    if ('mass_flow' in control) and (timestep + dt.timedelta(hours=1) - self.timestep_interval <= self.timestep_end):
+                        optimization_problem.der_model_constraints.add(
+                            sum(
+                                self.timestep_interval.seconds *
+                                optimization_problem.control_vector[
+                                    timestep + i * self.timestep_interval, self.der_name, control]
+                                for i in range(int(dt.timedelta(hours=1) / self.timestep_interval))
+                            )
+                            <= self.available_feedstock * 1000 / (365*24)
+                        )
+
+        # CHP Ramp rate constraints.
+        for timestep in self.timesteps[:-1]:
+            for output in self.outputs:
+                for i in self.CHP_list:
+                    if ('active_power' in output) and (i in output):
+                        optimization_problem.der_model_constraints.add(
+                            optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
+                            - optimization_problem.output_vector[timestep, self.der_name, output]
+                            <=
+                            self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
+                        )
+                        optimization_problem.der_model_constraints.add(
+                            optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
+                            - optimization_problem.output_vector[timestep, self.der_name, output]
+                            >=
+                            - self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
+                        )
+
+        # Final SOC storage
+        if self.SOC_end == 'init':
+            # Final SOC greater or equal to initial SOC
+            optimization_problem.der_model_constraints.add(
+                optimization_problem.output_vector[self.timesteps[-1], self.der_name, self.scenario_name
+                                                   + '_storage_content_m3']
+                == self.state_vector_initial[self.scenario_name + '_storage_content_m3']
+            )
+
+    def define_optimization_objective(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+    ):
+
+        # Define objective.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
+
+        # feedstock_cost is equivalent to marginal costs of energy production from biogas plant
+        optimization_problem.objective.expr += (
+            sum(
+                self.feedstock_cost
+                * sum(
+                    optimization_problem.output_vector[timestep, self.der_name, output]
+                    for output in self.outputs if 'active_power' in output
+                )
+                * timestep_interval_hours  # In Wh.
+                for timestep in self.timesteps
+            )
+        )
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+    ):
+        super().define_optimization_variables(optimization_problem)
+        optimization_problem.binary_variable = pyo.Var(self.timesteps, [self.der_name], self.switches, domain=pyo.Binary)
+
+    def get_optimization_results(
+            self,
+            optimization_problem: pyo.ConcreteModel,
+            price_timeseries: pd.DataFrame
+    ) -> fledge.data_interface.ResultsDict:
+
+        # Instantiate results variables.
+        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
+        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
+        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
+        profit_vector = pd.DataFrame(0.0, index=self.timesteps, columns=pd.Index(['profit_value']))
+
+        # Obtain results.
+        for timestep in self.timesteps:
+            for state in self.states:
+                state_vector.at[timestep, state] = (
+                    optimization_problem.state_vector[timestep, self.der_name, state].value
+                )
+            for control in self.controls:
+                control_vector.at[timestep, control] = (
+                    optimization_problem.control_vector[timestep, self.der_name, control].value
+                )
+            for output in self.outputs:
+                output_vector.at[timestep, output] = (
+                    optimization_problem.output_vector[timestep, self.der_name, output].value
+                )
+
+            profit_vector.at[timestep, 'profit_value'] = (
+                price_timeseries.at[timestep, 'price_value']/1000000
+                * (
+                    # Income from selling power
+                    sum(
+                        output_vector.at[timestep, output]
+                        for output in self.outputs if 'active_power' in output
+                        ) * self.timestep_interval.seconds / 3600
+                    -
+                    # Power requirements
+                    sum(
+                        output_vector.at[timestep, output]
+                        for output in self.outputs if 'act_power_own_consumption' in output
+                        ) * self.timestep_interval.seconds / 3600
+                )
+                -
+                # Substrate costs
+                self.feedstock_cost
+                * sum(
+                    output_vector.at[timestep, output]
+                    for output in self.outputs if 'active_power' in output
+                    ) * self.timestep_interval.seconds / 3600
+            )
+
+        return fledge.data_interface.ResultsDict(
+            state_vector=state_vector,
+            control_vector=control_vector,
+            output_vector=output_vector,
+            profit_vector=profit_vector
+        )
+
+
+
 class CoolingPlantModel(FlexibleDERModel):
     """Cooling plant model object."""
 
@@ -1088,6 +1394,7 @@ class DERModelSet(object):
     states: pd.Index
     controls: pd.Index
     outputs: pd.Index
+    switches: pd.Index
 
     def __init__(
             self,
@@ -1157,7 +1464,7 @@ class DERModelSet(object):
                 )
             elif der_name in der_data.biogas_plants['der_name']:
                 self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    bipmo.bipmo.biogas_models.FlexibleBiogasPlantModel(der_data, der_name)
+                    fledge.der_models.FlexibleBiogasPlantModel(der_data, der_name)
                 )
             else:
                 logger.error(f"Cannot determine type of DER: {der_name}")
@@ -1188,6 +1495,14 @@ class DERModelSet(object):
             ])
             if len(self.flexible_der_names) > 0 else pd.Index([])
         )
+        self.switches = (
+            pd.MultiIndex.from_tuples([
+                (der_name, switches)
+                for der_name in self.flexible_der_names
+                for switches in self.flexible_der_models[der_name].switches
+            ])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
+        )
 
     def define_optimization_variables(
             self,
@@ -1198,6 +1513,7 @@ class DERModelSet(object):
         optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
         optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
         optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
+        optimization_problem.binary_variable = pyo.Var(self.timesteps, self.switches.tolist(), domain=pyo.Binary)
 
     def define_optimization_constraints(
             self,

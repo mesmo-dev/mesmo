@@ -60,7 +60,7 @@ def main(
 
     # Obtain results path.
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
+        fledge.utils.get_results_path(f'paper_2020_3_coordination_thermal_electric_scenario_{scenario_number}', scenario_name)
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -112,8 +112,9 @@ def main(
 
     # Instantiate ADMM variables.
     admm_iteration = 0
+    admm_iteration_limit = 100
     admm_continue = True
-    admm_rho = 0.5
+    admm_rho = 1e-3
     admm_exchange_der_active_power = (
         pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
     )
@@ -132,13 +133,18 @@ def main(
     admm_lambda_thermal_der_reactive_power = (
         pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
     )
+    admm_residuals = pd.DataFrame()
 
     # Instantiate optimization problems.
     optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
     optimization_problem_electric = pyo.ConcreteModel()
+    optimization_problem_electric.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_problem_thermal = pyo.ConcreteModel()
+    optimization_problem_thermal.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
     # ADMM: Electric sub-problem.
+
+    # Log progress.
     fledge.utils.log_time(f"electric sub-problem setup")
 
     # Define linear electric grid model variables.
@@ -174,6 +180,8 @@ def main(
     fledge.utils.log_time(f"electric sub-problem setup")
 
     # ADMM: Thermal sub-problem.
+
+    # Log progress.
     fledge.utils.log_time(f"thermal sub-problem setup")
 
     # Define thermal grid model variables.
@@ -259,6 +267,8 @@ def main(
         admm_iteration += 1
 
         # ADMM: Electric sub-problem.
+
+        # Log progress.
         fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
 
         # Reset objective, if any.
@@ -308,6 +318,8 @@ def main(
         fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
 
         # ADMM: Thermal sub-problem.
+
+        # Log progress.
         fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
 
         # Reset objective, if any.
@@ -366,7 +378,6 @@ def main(
 
         # Solve electric sub-problem.
         fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-        optimization_problem_electric.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         optimization_result_electric = optimization_solver.solve(optimization_problem_electric, tee=fledge.config.config['optimization']['show_solver_output'])
         try:
             assert optimization_result_electric.solver.termination_condition is pyo.TerminationCondition.optimal
@@ -376,7 +387,6 @@ def main(
 
         # Solve thermal sub-problem.
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-        optimization_problem_thermal.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         optimization_result_thermal = optimization_solver.solve(optimization_problem_thermal, tee=fledge.config.config['optimization']['show_solver_output'])
         try:
             assert optimization_result_thermal.solver.termination_condition is pyo.TerminationCondition.optimal
@@ -384,7 +394,13 @@ def main(
             raise AssertionError(f"Solver termination condition: {optimization_result_thermal.solver.termination_condition}")
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
 
+        # Print objective values.
+        print(f"optimization_problem_electric.objective = {pyo.value(optimization_problem_electric.objective.expr)}")
+        print(f"optimization_problem_thermal.objective = {pyo.value(optimization_problem_thermal.objective.expr)}")
+
         # ADMM intermediate steps.
+
+        # Log progress.
         fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 
         # Get electric sub-problem results.
@@ -469,15 +485,49 @@ def main(
             )
         )
 
-        # Print intermediate results.
-        print(f"admm_exchange_der_active_power = \n{admm_exchange_der_active_power}")
-        print(f"admm_exchange_der_reactive_power = \n{admm_exchange_der_reactive_power}")
+        # Calculate residuals.
+        admm_residual_der_active_power = (
+            (
+                results_electric['der_active_power_vector']
+                - results_thermal['der_active_power_vector']
+            ).abs().sum().sum()
+        )
+        admm_residual_der_reactive_power = (
+            (
+                results_electric['der_reactive_power_vector']
+                - results_thermal['der_reactive_power_vector']
+            ).abs().sum().sum()
+        )
+        admm_lambda_residual_der_active_power = (
+            (
+                admm_lambda_electric_der_active_power
+                - admm_lambda_thermal_der_active_power
+            ).abs().sum().sum()
+        )
+        admm_lambda_residual_der_reactive_power = (
+            (
+                admm_lambda_electric_der_reactive_power
+                - admm_lambda_thermal_der_reactive_power
+            ).abs().sum().sum()
+        )
+        admm_residuals = admm_residuals.append(
+            dict(
+                admm_residual_der_active_power=admm_residual_der_active_power,
+                admm_residual_der_reactive_power=admm_residual_der_reactive_power,
+                admm_lambda_residual_der_active_power=admm_lambda_residual_der_active_power,
+                admm_lambda_residual_der_reactive_power=admm_lambda_residual_der_reactive_power
+            ),
+            ignore_index=True
+        )
+
+        # Print residuals.
+        print(f"admm_residuals = \n{admm_residuals}")
 
         # Log progress.
         fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 
         # ADMM termination condition.
-        admm_continue = True if admm_iteration < 3 else False
+        admm_continue = True if admm_iteration < admm_iteration_limit else False
 
     # Obtain final results.
     in_per_unit = True
@@ -519,7 +569,8 @@ def main(
     node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
     results.update({
         'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
-        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
+        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit,
+        'admm_residuals': admm_residuals
     })
 
     # Print results.
@@ -776,7 +827,7 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            plt.show()
+            # plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.

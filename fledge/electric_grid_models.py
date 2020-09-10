@@ -1466,7 +1466,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Debug message.
         logger.debug("Starting fixed point solution algorithm...")
 
-        # Obtain nodal power and no-load nodal voltage vectors.
+        # Obtain nodal power vectors.
         node_power_vector_wye_no_source = (
             electric_grid_model.der_incidence_wye_matrix_no_source
             @ np.transpose([der_power_vector])
@@ -1572,86 +1572,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source.copy()
                 )
 
-            # Implicit Z-Bus power flow solution (Arif Ahmed).
-            # - “Can, Can, Lah!” (literal meaning, can accomplish)
-            # - <https://www.financialexpress.com/opinion/singapore-turns-50-the-remarkable-nation-that-can-lah/115775/>
-
-            # Obtain utility variables.
-            node_admittance_matrix_no_source_inverse = (
-                scipy.sparse.linalg.inv(electric_grid_model.node_admittance_matrix_no_source.tocsc())
-            )
-            node_admittance_matrix_source_to_no_source = (
-                electric_grid_model.node_admittance_matrix[np.ix_(
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-                )]
-            )
-            node_voltage_vector_initial_no_source = (
-                electric_grid_model.node_voltage_vector_reference_no_source.copy()
-            )
-
-            # Instantiate implicit Z-bus power flow iteration variables.
-            voltage_iteration = 0
-            voltage_change = np.inf
-
-            while (
-                    (voltage_iteration < voltage_iteration_limit)
-                    & (voltage_change > voltage_tolerance)
-            ):
-
-                # Calculate current injections.
-                node_current_injection_delta_in_wye_no_source = (
-                    electric_grid_model.node_transformation_matrix_no_source.transpose()
-                    @ np.conj(
-                        np.linalg.inv(np.diag((
-                            electric_grid_model.node_transformation_matrix_no_source
-                            @ node_voltage_vector_initial_no_source
-                        ).ravel()))
-                        @ node_power_vector_delta_candidate_no_source
-                    )
-                )
-                node_current_injection_wye_no_source = (
-                    np.conj(node_power_vector_wye_candidate_no_source)
-                    / np.conj(node_voltage_vector_initial_no_source)
-                )
-                node_current_injection_no_source = (
-                    node_current_injection_delta_in_wye_no_source
-                    + node_current_injection_wye_no_source
-                )
-
-                # Calculate voltage.
-                node_voltage_vector_estimate_no_source = (
-                    node_admittance_matrix_no_source_inverse @ (
-                        - node_admittance_matrix_source_to_no_source
-                        @ electric_grid_model.node_voltage_vector_reference_source
-                        + node_current_injection_no_source
-                    )
-                )
-                # node_voltage_vector_estimate_no_source = (
-                #     electric_grid_model.node_voltage_vector_reference_no_source
-                #     + node_admittance_matrix_no_source_inverse @ node_current_injection_no_source
-                # )
-
-                # Calculate voltage change from previous iteration.
-                voltage_change = (
-                    np.max(np.abs(
-                        node_voltage_vector_estimate_no_source
-                        - node_voltage_vector_initial_no_source
-                    ))
-                )
-
-                # Set voltage solution as initial voltage for next iteration.
-                node_voltage_vector_initial_no_source = node_voltage_vector_estimate_no_source.copy()
-                node_voltage_estimate = (
-                    np.concatenate([
-                        electric_grid_model.node_voltage_vector_reference_source.copy(),
-                        node_voltage_vector_estimate_no_source.copy()
-                    ])
-                )
-
-                # Increment voltage iteration counter.
-                voltage_iteration += 1
-
             # Print results.
             print(f"Iterations implicit Z-bus = {voltage_iteration}")
             print(f"Voltage estimate = \n{abs(node_voltage_estimate)}")
@@ -1709,9 +1629,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
                 # Increment voltage iteration counter.
                 voltage_iteration += 1
-                
-            print(f"Iterations Fixed-Point =",voltage_iteration)
-            breakpoint()
 
             # Outer solution algorithm based on voltage solution check.
             # - Checks if voltage solution exceeded iteration limit and adjusts power vector candidate if needed.
@@ -1743,7 +1660,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     else:
                         is_final = True
 
-            # For other solution algorithm, reaching the iteration limit is considered undesired and triggers a warning
+            # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning
             elif voltage_iteration >= voltage_iteration_limit:
                 logger.warning(
                     "Fixed point voltage solution algorithm reached "
@@ -1769,9 +1686,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Get full voltage vector by concatenating source and calculated voltage.
         node_voltage_vector = (
             np.concatenate([
-                electric_grid_model.node_voltage_vector_reference[
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-                ],
+                electric_grid_model.node_voltage_vector_reference_source,
                 node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
             ])
         )
@@ -1860,6 +1775,124 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             loss *= 3
 
         return loss
+
+
+class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
+    """Implicit Z-bus power flow solution object."""
+
+    # Overwrite `check_solution_conditions`, which is invalid for the Z-bus power flow.
+    @staticmethod
+    def check_solution_conditions(*args, **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_voltage(
+            electric_grid_model: ElectricGridModelDefault,
+            der_power_vector: np.ndarray,
+            voltage_iteration_limit=100,
+            voltage_tolerance=1e-2,
+            **kwargs
+    ) -> np.ndarray:
+        """Get nodal voltage vector by solving with the implicit Z-bus method."""
+
+        # Implicit Z-bus power flow solution (Arif Ahmed).
+        # - “Can, Can, Lah!” (literal meaning, can accomplish)
+        # - <https://www.financialexpress.com/opinion/singapore-turns-50-the-remarkable-nation-that-can-lah/115775/>
+
+        # Obtain nodal power vectors.
+        node_power_vector_wye_no_source = (
+            electric_grid_model.der_incidence_wye_matrix_no_source
+            @ np.transpose([der_power_vector])
+        ).ravel()
+        node_power_vector_delta_no_source = (
+            electric_grid_model.der_incidence_delta_matrix_no_source
+            @ np.transpose([der_power_vector])
+        ).ravel()
+
+        # Obtain utility variables.
+        node_admittance_matrix_no_source_inverse = (
+            scipy.sparse.linalg.inv(electric_grid_model.node_admittance_matrix_no_source.tocsc())
+        )
+        node_admittance_matrix_source_to_no_source = (
+            electric_grid_model.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+            )]
+        )
+        node_voltage_vector_initial_no_source = (
+            electric_grid_model.node_voltage_vector_reference_no_source.copy()
+        )
+
+        # Instantiate implicit Z-bus power flow iteration variables.
+        voltage_iteration = 0
+        voltage_change = np.inf
+        while (
+                (voltage_iteration < voltage_iteration_limit)
+                & (voltage_change > voltage_tolerance)
+        ):
+
+            # Calculate current injections.
+            node_current_injection_delta_in_wye_no_source = (
+                electric_grid_model.node_transformation_matrix_no_source.transpose()
+                @ np.conj(
+                    np.linalg.inv(np.diag((
+                        electric_grid_model.node_transformation_matrix_no_source
+                        @ node_voltage_vector_initial_no_source
+                    ).ravel()))
+                    @ node_power_vector_wye_no_source
+                )
+            )
+            node_current_injection_wye_no_source = (
+                np.conj(node_power_vector_delta_no_source)
+                / np.conj(node_voltage_vector_initial_no_source)
+            )
+            node_current_injection_no_source = (
+                node_current_injection_delta_in_wye_no_source
+                + node_current_injection_wye_no_source
+            )
+
+            # Calculate voltage.
+            node_voltage_vector_estimate_no_source = (
+                node_admittance_matrix_no_source_inverse @ (
+                    - node_admittance_matrix_source_to_no_source
+                    @ electric_grid_model.node_voltage_vector_reference_source
+                    + node_current_injection_no_source
+                )
+            )
+            # node_voltage_vector_estimate_no_source = (
+            #     electric_grid_model.node_voltage_vector_reference_no_source
+            #     + node_admittance_matrix_no_source_inverse @ node_current_injection_no_source
+            # )
+
+            # Calculate voltage change from previous iteration.
+            voltage_change = (
+                np.max(np.abs(
+                    node_voltage_vector_estimate_no_source
+                    - node_voltage_vector_initial_no_source
+                ))
+            )
+
+            # Set voltage estimate as new initial voltage for next iteration.
+            node_voltage_vector_initial_no_source = node_voltage_vector_estimate_no_source.copy()
+
+            # Increment voltage iteration counter.
+            voltage_iteration += 1
+
+        # Reaching the iteration limit is considered undesired and triggers a warning.
+        if voltage_iteration >= voltage_iteration_limit:
+            logger.warning(
+                "Z-bus solution algorithm reached "
+                f"maximum limit of {voltage_iteration_limit} iterations."
+            )
+
+        # Get full voltage vector by concatenating source and calculated voltage.
+        node_voltage_vector = (
+            np.concatenate([
+                electric_grid_model.node_voltage_vector_reference_source,
+                node_voltage_vector_estimate_no_source
+            ])
+        )
+        return node_voltage_vector
 
 
 class PowerFlowSolutionOpenDSS(PowerFlowSolution):

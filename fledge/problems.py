@@ -341,9 +341,17 @@ class OptimalOperationProblem(object):
                 self.price_timeseries,
                 self.timesteps
             )
+        if self.electric_grid_model is not None:
+            self.linear_electric_grid_model.define_optimization_objective(
+                self.optimization_problem,
+                self.price_timeseries,
+                self.timesteps
+            )
         self.der_model_set.define_optimization_objective(
             self.optimization_problem,
-            self.price_timeseries
+            self.price_timeseries,
+            electric_grid_model=self.electric_grid_model,
+            thermal_grid_model=self.thermal_grid_model
         )
 
     def solve(self):

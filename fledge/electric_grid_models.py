@@ -1572,12 +1572,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source.copy()
                 )
 
-            # Print results.
-            print(f"Iterations implicit Z-bus = {voltage_iteration}")
-            print(f"Voltage estimate = \n{abs(node_voltage_estimate)}")
-
-            breakpoint()
-            
             # Instantiate fixed point iteration variables.
             voltage_iteration = 0
             voltage_change = np.inf

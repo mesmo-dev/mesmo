@@ -862,6 +862,43 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
+        # Define shorthands for no-source variables.
+        # TODO: Add in class documentation.
+        # TODO: Validate behavior if source node not first node.
+        self.node_admittance_matrix_no_source = (
+            self.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(self.nodes, node_type='no_source'),
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            )]
+        )
+        self.node_transformation_matrix_no_source = (
+            self.node_transformation_matrix[np.ix_(
+                fledge.utils.get_index(self.nodes, node_type='no_source'),
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            )]
+        )
+        self.der_incidence_wye_matrix_no_source = (
+            self.der_incidence_wye_matrix[
+                np.ix_(
+                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    range(len(self.ders))
+                )
+            ]
+        )
+        self.der_incidence_delta_matrix_no_source = (
+            self.der_incidence_delta_matrix[
+                np.ix_(
+                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    range(len(self.ders))
+                )
+            ]
+        )
+        self.node_voltage_vector_reference_no_source = (
+            self.node_voltage_vector_reference[
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            ]
+        )
+
 
 class ElectricGridModelOpenDSS(ElectricGridModel):
     """OpenDSS electric grid model object.
@@ -1264,13 +1301,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def check_solution_conditions(
-        node_admittance_matrix_no_source: scipy.sparse.spmatrix,
-        node_transformation_matrix_no_source: scipy.sparse.spmatrix,
+        electric_grid_model: ElectricGridModelDefault,
         node_power_vector_wye_initial_no_source: np.ndarray,
         node_power_vector_delta_initial_no_source: np.ndarray,
         node_power_vector_wye_candidate_no_source: np.ndarray,
         node_power_vector_delta_candidate_no_source: np.ndarray,
-        node_voltage_vector_no_load_no_source: np.ndarray,
         node_voltage_vector_initial_no_source: np.ndarray
     ) -> np.bool:
         """Check conditions for fixed-point solution existence, uniqueness and non-singularity for
@@ -1285,11 +1320,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         xi_initial = (
             np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
-                            (node_voltage_vector_no_load_no_source ** -1)
+                            (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                             * node_power_vector_wye_initial_no_source
                         )
                     )
@@ -1298,15 +1333,15 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             ))
             + np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
                             (
-                                node_transformation_matrix_no_source
+                                electric_grid_model.node_transformation_matrix_no_source
                                 * (
-                                    np.abs(node_transformation_matrix_no_source)
-                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                    np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                                    @ np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                                 ) ** -1
                             )
                             * node_power_vector_delta_initial_no_source
@@ -1321,11 +1356,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         xi_candidate = (
             np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
-                            (node_voltage_vector_no_load_no_source ** -1)
+                            (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                             * (
                                 node_power_vector_wye_candidate_no_source
                                 - node_power_vector_wye_initial_no_source
@@ -1337,15 +1372,15 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             ))
             + np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
                             (
-                                node_transformation_matrix_no_source
+                                electric_grid_model.node_transformation_matrix_no_source
                                 * (
-                                    np.abs(node_transformation_matrix_no_source)
-                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                    np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                                    @ np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                                 ) ** -1
                             ) * (
                                 node_power_vector_delta_candidate_no_source
@@ -1363,16 +1398,16 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             np.min([
                 np.min(
                     np.abs(node_voltage_vector_initial_no_source)
-                    / np.abs(node_voltage_vector_no_load_no_source)
+                    / np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                 ),
                 np.min(
                     np.abs(
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         * node_voltage_vector_initial_no_source
                     )
                     / (
-                        np.abs(node_transformation_matrix_no_source)
-                        * np.abs(node_voltage_vector_no_load_no_source)
+                        np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                        * np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                     )
                 )
             ])
@@ -1422,60 +1457,25 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # TODO: Add proper documentation.
         # TODO: Validate fixed-point solution conditions.
-        # TODO: Make algorithm more robust.
 
         # Debug message.
         logger.debug("Starting fixed point solution algorithm...")
 
-        # Obtain no-source variables for fixed point equation.
-        node_admittance_matrix_no_source = (
-            electric_grid_model.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            )]
-        )
-        node_transformation_matrix_no_source = (
-            electric_grid_model.node_transformation_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            )]
-        )
-        der_incidence_wye_matrix_no_source = (
-            electric_grid_model.der_incidence_wye_matrix[
-                np.ix_(
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                    range(len(electric_grid_model.ders))
-                )
-            ]
-        )
-        der_incidence_delta_matrix_no_source = (
-            electric_grid_model.der_incidence_delta_matrix[
-                np.ix_(
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                    range(len(electric_grid_model.ders))
-                )
-            ]
-        )
-
         # Obtain nodal power and no-load nodal voltage vectors.
         node_power_vector_wye_no_source = (
-            der_incidence_wye_matrix_no_source
+            electric_grid_model.der_incidence_wye_matrix_no_source
             @ np.transpose([der_power_vector])
         ).ravel()
         node_power_vector_delta_no_source = (
-            der_incidence_delta_matrix_no_source
+            electric_grid_model.der_incidence_delta_matrix_no_source
             @ np.transpose([der_power_vector])
         ).ravel()
-        node_voltage_vector_no_load_no_source = (
-            electric_grid_model.node_voltage_vector_reference[
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            ]
-        )
 
         # Obtain initial nodal power and voltage vectors, assuming no power conditions.
+        # TODO: Enable passing previous solution for fixed-point initialization.
         node_power_vector_wye_initial_no_source = np.zeros(node_power_vector_wye_no_source.shape, dtype=complex)
         node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
-        node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
+        node_voltage_vector_initial_no_source = electric_grid_model.node_voltage_vector_reference_no_source.copy()
 
         # Define nodal power vector candidate to the desired nodal power vector.
         node_power_vector_wye_candidate_no_source = node_power_vector_wye_no_source.copy()
@@ -1503,13 +1503,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 # Check solution conditions for nodal power vector candidate.
                 is_final = (
                     PowerFlowSolutionFixedPoint.check_solution_conditions(
-                        node_admittance_matrix_no_source,
-                        node_transformation_matrix_no_source,
+                        electric_grid_model,
                         node_power_vector_wye_initial_no_source,
                         node_power_vector_delta_initial_no_source,
                         node_power_vector_wye_candidate_no_source,
                         node_power_vector_delta_candidate_no_source,
-                        node_voltage_vector_no_load_no_source,
                         node_voltage_vector_initial_no_source
                     )
                 )
@@ -1543,13 +1541,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
                     is_valid = (
                         PowerFlowSolutionFixedPoint.check_solution_conditions(
-                            node_admittance_matrix_no_source,
-                            node_transformation_matrix_no_source,
+                            electric_grid_model,
                             node_power_vector_wye_initial_no_source,
                             node_power_vector_delta_initial_no_source,
                             node_power_vector_wye_candidate_no_source,
                             node_power_vector_delta_candidate_no_source,
-                            node_voltage_vector_no_load_no_source,
                             node_voltage_vector_initial_no_source,
                         )
                     )
@@ -1571,8 +1567,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source.copy()
                 )
 
-           
-            
             #####################################################################################################################################################################
             #####################################################################################################################################################################
             # “Can, Can, Lah!” (literal meaning, can accomplish) | Source: https://www.financialexpress.com/opinion/singapore-turns-50-the-remarkable-nation-that-can-lah/115775/
@@ -1583,7 +1577,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             
             # Convert Delta loads into wye injection currents
             node_apparent_power_delta = electric_grid_model.der_incidence_delta_matrix.toarray() @ np.transpose([der_power_vector.ravel()])
-            node_current_injection_delta = (electric_grid_model.node_transformation_matrix.toarray() @ electric_grid_model.node_voltage_vector_no_load)
+            node_current_injection_delta = (electric_grid_model.node_transformation_matrix.toarray() @ electric_grid_model.node_voltage_vector_reference)
             node_current_injection_delta = node_current_injection_delta.reshape(len(node_current_injection_delta))
             node_current_injection_delta = np.diag(node_current_injection_delta)
             node_current_injection_delta = np.linalg.inv(node_current_injection_delta) @ node_apparent_power_delta
@@ -1592,22 +1586,18 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             
             # Calculate wye injection currents
             node_apparent_power_wye = electric_grid_model.der_incidence_wye_matrix.toarray() @ np.transpose([der_power_vector.ravel()])
-            node_current_injection_wye = np.conj(node_apparent_power_wye)/np.conj(electric_grid_model.node_voltage_vector_no_load)
+            node_current_injection_wye = np.conj(node_apparent_power_wye)/np.conj(np.transpose([electric_grid_model.node_voltage_vector_reference]))
             
-            # Total injection current at nodes 
+            # Total injection current at nodes
             node_current_injection = node_current_injection_wye + node_current_injection_delta2wye
-            
-            
+
             # Considering no source
-            node_power_vector_delta_candidate_no_source
-            node_power_vector_wye_candidate_no_source
- 
-            node_current_injection_delta_no_source = node_transformation_matrix_no_source.toarray() @ node_voltage_vector_initial_no_source
+            node_current_injection_delta_no_source = electric_grid_model.node_transformation_matrix_no_source.toarray() @ node_voltage_vector_initial_no_source
             node_current_injection_delta_no_source = node_current_injection_delta_no_source.reshape(len(node_current_injection_delta_no_source))
             node_current_injection_delta_no_source = np.diag(node_current_injection_delta_no_source)
             node_current_injection_delta_no_source = np.linalg.inv(node_current_injection_delta_no_source) @ node_power_vector_delta_candidate_no_source
             node_current_injection_delta_no_source = np.conj(node_current_injection_delta_no_source)
-            node_current_injection_delta2wye_no_source = node_transformation_matrix_no_source.toarray().T @ node_current_injection_delta_no_source
+            node_current_injection_delta2wye_no_source = electric_grid_model.node_transformation_matrix_no_source.toarray().T @ node_current_injection_delta_no_source
 
             node_current_injection_wye_no_source = np.conj(node_power_vector_wye_candidate_no_source)/np.conj(node_voltage_vector_initial_no_source)
             node_current_injection_no_source = node_current_injection_delta2wye_no_source + node_current_injection_wye_no_source
@@ -1618,9 +1608,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             
             admittance_matrix_source_row_removed_split_A = np.delete(admittance_matrix_source_row_removed, slice(3, None), 1)
             admittance_matrix_source_row_removed_split_B = np.delete(admittance_matrix_source_row_removed, slice(0, 3), 1)
+            # admittance_matrix_source_row_removed_split_B = electric_grid_model.node_admittance_matrix_no_source
             admittance_matrix_split_B_inverted = np.linalg.inv(admittance_matrix_source_row_removed_split_B)
-            
-            
 
             # Instantiate Implicit Z-Bus powerflow iteration variables.
             voltage_iteration = 0
@@ -1634,7 +1623,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 
                 # Perform a single-step iterative solution
                 node_voltage_estimate_no_source = admittance_matrix_split_B_inverted @ (-admittance_matrix_source_row_removed_split_A @ node_voltage_vector_initial_no_source + node_current_injection_no_source )
-                node_voltage_estimate = np.vstack((node_voltage_vector_initial_no_source,node_voltage_estimate_no_source))
+                node_voltage_estimate = np.vstack((node_voltage_vector_initial_no_source,node_voltage_estimate_no_source)).ravel()
                 
                 node_current_injection_delta = electric_grid_model.node_transformation_matrix.toarray() @ node_voltage_estimate
                 node_current_injection_delta = node_current_injection_delta.reshape(len(node_current_injection_delta))
@@ -1645,19 +1634,18 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             
                 # Calculate wye injection currents
                 node_apparent_power_wye = electric_grid_model.der_incidence_wye_matrix.toarray() @ np.transpose([der_power_vector.ravel()])
-                node_current_injection_wye = np.conj(node_apparent_power_wye)/np.conj(node_voltage_estimate)
+                node_current_injection_wye = np.conj(node_apparent_power_wye)/np.conj(np.transpose([node_voltage_estimate]))
             
                 # Total injection current at nodes 
                 node_current_injection = node_current_injection_wye + node_current_injection_delta2wye
      
-                node_current_injection_no_source = np.delete(node_current_injection, slice(0,3),0)
+                node_current_injection_no_source = np.delete(node_current_injection, slice(0,3),0).ravel()
                 
                 # Calculate voltage change from previous iteration.
                 voltage_change = np.max(abs(node_voltage_estimate_no_source - node_voltage_estimate_initial_no_source))
 
                 # Increment voltage iteration counter.
                 voltage_iteration += 1
-                
 
             #Just checking result | Not an important step
             print(f"Iterations Implicit Z-Bus =",voltage_iteration)
@@ -1673,14 +1661,12 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     & (voltage_change > voltage_tolerance)
             ):
 
-
-
                 # Calculate fixed point equation.
                 node_voltage_vector_solution_no_source = (
-                    np.transpose([node_voltage_vector_no_load_no_source])
+                    np.transpose([electric_grid_model.node_voltage_vector_reference_no_source])
                     + np.transpose([
                         scipy.sparse.linalg.spsolve(
-                            node_admittance_matrix_no_source,
+                            electric_grid_model.node_admittance_matrix_no_source,
                             (
                                 (
                                     (
@@ -1689,11 +1675,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                                     * np.conj(np.transpose([node_power_vector_wye_candidate_no_source]))
                                 )
                                 + (
-                                    np.transpose(node_transformation_matrix_no_source)
+                                    np.transpose(electric_grid_model.node_transformation_matrix_no_source)
                                     @ (
                                         (
                                             (
-                                                node_transformation_matrix_no_source
+                                                electric_grid_model.node_transformation_matrix_no_source
                                                 @ np.conj(np.transpose([node_voltage_vector_initial_no_source]))
                                             ) ** -1
                                         )
@@ -1734,7 +1720,9 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor
 
                     # Reset initial nodal voltage vector.
-                    node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source.copy()
+                    node_voltage_vector_initial_no_source = (
+                        electric_grid_model.node_voltage_vector_reference_no_source.copy()
+                    )
 
                 # Otherwise, if power has previously been reduced, raise back power and re-try voltage solution.
                 else:
@@ -2947,13 +2935,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.electric_grid_model = electric_grid_model
 
         # Obtain shorthands for no-source matrices and vectors.
-        node_admittance_matrix_no_source = (
+        electric_grid_model.node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
-        node_transformation_matrix_no_source = (
+        electric_grid_model.node_transformation_matrix_no_source = (
             electric_grid_model.node_transformation_matrix[np.ix_(
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
@@ -2998,7 +2986,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                node_admittance_matrix_no_source.tocsc(),
+                electric_grid_model.node_admittance_matrix_no_source.tocsc(),
                 scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
@@ -3007,7 +2995,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                1.0j * node_admittance_matrix_no_source.tocsc(),
+                1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
                 scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
@@ -3016,13 +3004,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                node_admittance_matrix_no_source.tocsc(),
-                np.transpose(node_transformation_matrix_no_source)
+                electric_grid_model.node_admittance_matrix_no_source.tocsc(),
+                np.transpose(electric_grid_model.node_transformation_matrix_no_source)
             )
             @ scipy.sparse.diags(
                 (
                     (
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         @ np.conj(node_voltage_no_source)
                     ) ** -1
                 ).ravel()
@@ -3033,13 +3021,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                1.0j * node_admittance_matrix_no_source.tocsc(),
-                np.transpose(node_transformation_matrix_no_source)
+                1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
+                np.transpose(electric_grid_model.node_transformation_matrix_no_source)
             )
             @ scipy.sparse.diags(
                 (
                     (
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         * np.conj(node_voltage_no_source)
                     ) ** -1
                 ).ravel()

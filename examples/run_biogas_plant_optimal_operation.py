@@ -2,44 +2,105 @@
 """
 
 import matplotlib.pyplot as plt
+import pyomo.environ as pyo
+import pandas as pd
 
 import fledge.data_interface
 import fledge.der_models
-import fledge.problems
+import fledge.config
+import fledge.utils
 
 
 # Settings.
 scenario_name = 'cigre_mv_network_with_all_ders'
 plots = True  # If True, script may produce plots.
 
-# Recreate / overwrite database, to incorporate changes in the CSV files.
-fledge.data_interface.recreate_database()
-
-# Obtain price timeseries.
-price_data = fledge.data_interface.PriceData(scenario_name)
-price_type = 'EPEX SPOT Power DE Day Ahead'
-price_timeseries = price_data.price_timeseries_dict[price_type]
-
-# obtain der models
-der_model_set = fledge.der_models.DERModelSet(scenario_name)
-
-# Instantiate optimization problem.
-problem = fledge.problems.OptimalOperationProblem(scenario_name)
-problem.solve()
-in_per_unit = True
-results = problem.get_results(in_per_unit=in_per_unit)
-optimization_problem = problem.optimization_problem
-
-results.update(
-    der_model_set.get_optimization_results(
-    problem.optimization_problem
-    )
+# Obtain results path.
+results_path = (
+    fledge.utils.get_results_path(f'paper_2020_dlmp_biogas_rural_germany_scenario', scenario_name)
 )
 
-# Print results (DLMPs, etc.)
-print(results)
+# Recreate / overwrite database, to incorporate changes in the CSV files.
+fledge.data_interface.recreate_database()
+# Obtain scenario data and price timeseries.
+scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+price_data = fledge.data_interface.PriceData(scenario_name)
+price_type = 'biogas'
+price_timeseries = price_data.price_timeseries_dict[price_type]
 
-flexible_biogas_plant_model = der_model_set.flexible_der_models['Biogas 9']
+run_milp = False
+chp_schedule: pd.DataFrame
+
+for i in range(2):
+    if not run_milp:
+        if i == 0:
+            is_milp = True
+        else:
+            is_milp = False
+    else:
+        i = 3  # will stop from iterating again
+
+    # Get the biogas plant model and set the switches flag accordingly
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    flexible_biogas_plant_model = der_model_set.flexible_der_models['Biogas Plant 9']
+    if not is_milp:
+        # set the chp_schedule resulting from the milp optimization
+        flexible_biogas_plant_model.chp_schedule = chp_schedule
+    der_model_set.flexible_der_models[flexible_biogas_plant_model.der_name] = flexible_biogas_plant_model
+
+    # Instantiate optimization problem.
+    optimization_problem = pyo.ConcreteModel()
+
+    flexible_biogas_plant_model.define_optimization_variables(optimization_problem)
+    flexible_biogas_plant_model.define_optimization_constraints(optimization_problem)
+
+    if is_milp:
+        # define binary variables for MILP solution
+        optimization_problem.binary_variables = pyo.Var(flexible_biogas_plant_model.timesteps,
+                                                        [flexible_biogas_plant_model.der_name],
+                                                        flexible_biogas_plant_model.switches,
+                                                        domain=pyo.Binary)
+
+        for timestep in flexible_biogas_plant_model.timesteps:
+            for output in flexible_biogas_plant_model.outputs:
+                if 'active_power_Wel' in output:
+                    for chp in flexible_biogas_plant_model.CHP_list:
+                        if chp in output and any(flexible_biogas_plant_model.switches.str.contains(chp)):
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output]
+                                >=
+                                flexible_biogas_plant_model.output_minimum_timeseries.at[timestep, output]
+                                * optimization_problem.binary_variables[timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
+                            )
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output]
+                                <=
+                                flexible_biogas_plant_model.output_maximum_timeseries.at[timestep, output]
+                                * optimization_problem.binary_variables[timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
+                            )
+
+    flexible_biogas_plant_model.define_optimization_objective(optimization_problem)
+
+    # Solve optimization problem.
+    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
+    try:
+        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
+    except AssertionError:
+        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+
+    if is_milp:
+        # get the MILP solution for the biogas plant schedule
+        binaries = optimization_problem.binary_variables
+        timesteps = flexible_biogas_plant_model.timesteps
+        chp_schedule = flexible_biogas_plant_model.chp_schedule
+        for timestep in timesteps:
+            for chp in flexible_biogas_plant_model.CHP_list:
+                chp_schedule.loc[timestep, chp+'_switch'] = \
+                    binaries[timestep, flexible_biogas_plant_model.der_name, chp+'_switch'].value
+
+
 results = (
     flexible_biogas_plant_model.get_optimization_results(
         optimization_problem, price_timeseries

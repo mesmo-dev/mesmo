@@ -28,7 +28,6 @@ class DERModel(object):
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
-    switches: pd.Index
 
     # TODO: Define method templates.
 
@@ -129,7 +128,7 @@ class FixedDERModel(DERModel):
             if type(self) is FixedGeneratorModel:
                 optimization_problem.objective.expr += (
                     sum(
-                        self.levelized_cost_of_energy
+                        self.marginal_cost
                         * self.active_power_nominal_timeseries.at[timestep]
                         * timestep_interval_hours  # In Wh.
                         for timestep in self.timesteps
@@ -243,7 +242,7 @@ class FixedEVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
-    levelized_cost_of_energy: np.float
+    marginal_cost: np.float
 
     def __init__(
             self,
@@ -265,8 +264,8 @@ class FixedGeneratorModel(FixedDERModel):
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
-        # Obtain levelized cost of energy.
-        self.levelized_cost_of_energy = fixed_generator.at['levelized_cost_of_energy']
+        # Obtain marginal cost of energy.
+        self.marginal_cost = fixed_generator.at['levelized_cost_of_energy']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -391,20 +390,20 @@ class FlexibleDERModel(DERModel):
 
             # Output limits.
             for output in self.outputs:
-                if type(self) is FlexibleBiogasPlantModel and 'active_power' in output:
+                if type(self) is FlexibleBiogasPlantModel and self.chp_schedule is not None and 'active_power_Wel' in output:
                     for chp in self.CHP_list:
-                        if output.__contains__(chp) and any(self.switches.str.contains(chp)):
+                        if chp in output and any(self.switches.str.contains(chp)):
                             optimization_problem.der_model_constraints.add(
                                 optimization_problem.output_vector[timestep, self.der_name, output]
                                 >=
                                 self.output_minimum_timeseries.at[timestep, output]
-                                * optimization_problem.binary_variable[timestep, self.der_name, chp+'_switch']
+                                * self.chp_schedule.loc[timestep, chp+'_switch']
                             )
                             optimization_problem.der_model_constraints.add(
                                 optimization_problem.output_vector[timestep, self.der_name, output]
                                 <=
                                 self.output_maximum_timeseries.at[timestep, output]
-                                * optimization_problem.binary_variable[timestep, self.der_name, chp+'_switch']
+                                * self.chp_schedule.loc[timestep, chp+'_switch']
                             )
                 else:
                     optimization_problem.der_model_constraints.add(
@@ -444,30 +443,6 @@ class FlexibleDERModel(DERModel):
                             power_flow_solution.der_power_vector[der_index]
                         )
                     )
-            elif type(self) is FlexibleBiogasPlantModel:
-                for timestep in self.timesteps:
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_active_power_vector_change[timestep, der]
-                        ==
-                        sum(
-                            optimization_problem.output_vector[timestep, self.der_name, output]
-                            for output in self.outputs if 'active' in output
-                        )
-                        - np.real(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
-                    )
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_reactive_power_vector_change[timestep, der]
-                        ==
-                        sum(
-                            optimization_problem.output_vector[timestep, self.der_name, output]
-                            for output in self.outputs if 'react' in output
-                        )
-                        - np.imag(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
-                    )
             else:
                 for timestep in self.timesteps:
                     optimization_problem.der_model_constraints.add(
@@ -498,7 +473,7 @@ class FlexibleDERModel(DERModel):
                         ==
                         -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
                     )
-            elif type(self) is CoolingPlantModel:
+            elif type(self) is CoolingPlantModel or FlexibleBiogasPlantModel:
                 for timestep in self.timesteps:
                     optimization_problem.der_model_constraints.add(
                         optimization_problem.der_thermal_power_vector[timestep, der]
@@ -559,10 +534,10 @@ class FlexibleDERModel(DERModel):
         # Define objective for electric generators.
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
-            if type(self) is FlexibleGeneratorModel:
+            if issubclass(type(self), FlexibleGeneratorModel):
                 optimization_problem.objective.expr += (
                     sum(
-                        self.levelized_cost_of_energy
+                        self.marginal_cost
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
                         for timestep in self.timesteps
@@ -740,7 +715,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
-    levelized_cost_of_energy: np.float
+    marginal_cost: np.float
 
     def __init__(
             self,
@@ -762,8 +737,8 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
-        # Obtain levelized cost of energy.
-        self.levelized_cost_of_energy = flexible_generator.at['levelized_cost_of_energy']
+        # Obtain marginal cost of energy.
+        self.marginal_cost = flexible_generator.at['levelized_cost_of_energy']
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -945,10 +920,12 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
 
 
-class FlexibleBiogasPlantModel(FlexibleDERModel):
+class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
     """Flexible Biogas plant model object."""
 
     power_factor_nominal: np.float
+    switches: pd.Index = []
+    chp_schedule: pd.DataFrame
 
     def __init__(
             self,
@@ -958,6 +935,8 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
 
         # Store DER name.
         self.der_name = der_name
+
+        self.is_thermal_grid_connected = False
 
         # Obtain biogas data by `der_name`.
         biogas_plant = der_data.biogas_plants.loc[der_name, :]
@@ -1010,6 +989,13 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
         # Obtain switches to turn on/off CHPs
         self.switches = flexible_biogas_plant_model.switches
 
+        # construct default chp schedule
+        self.chp_schedule = pd.DataFrame(
+            +1.0,
+            self.timesteps,
+            self.switches
+        )
+
         # Obtain ramp information
         self.CHP_list = flexible_biogas_plant_model.CHP_list
         self.elec_cap_list = flexible_biogas_plant_model.elec_cap_list
@@ -1017,7 +1003,7 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
 
         # Obtain digester information
         self.time_constant = flexible_biogas_plant_model.a1
-        self.feedstock_cost = flexible_biogas_plant_model.plant_feedstock.loc[
+        self.marginal_cost = flexible_biogas_plant_model.plant_feedstock.loc[
             self.scenario_name, 'cost_feedstock_euro_Wh']
         self.feedstock_limit_type = flexible_biogas_plant_model.plant_scenarios.loc[
             self.scenario_name, 'availability_limit_type']
@@ -1115,40 +1101,7 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
                 == self.state_vector_initial[self.scenario_name + '_storage_content_m3']
             )
 
-    def define_optimization_objective(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-    ):
 
-        # Define objective.
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
-        # Obtain timestep interval in hours, for conversion of power to energy.
-        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
-
-        # feedstock_cost is equivalent to marginal costs of energy production from biogas plant
-        optimization_problem.objective.expr += (
-            sum(
-                self.feedstock_cost
-                * sum(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    for output in self.outputs if 'active_power' in output
-                )
-                * timestep_interval_hours  # In Wh.
-                for timestep in self.timesteps
-            )
-        )
-
-    def define_optimization_variables(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-    ):
-        super().define_optimization_variables(optimization_problem)
-        optimization_problem.binary_variable = pyo.Var(self.timesteps, [self.der_name], self.switches, domain=pyo.Binary)
 
     def get_optimization_results(
             self,
@@ -1183,7 +1136,7 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
                     # Income from selling power
                     sum(
                         output_vector.at[timestep, output]
-                        for output in self.outputs if 'active_power' in output
+                        for output in self.outputs if output is 'active_power'
                         ) * self.timestep_interval.seconds / 3600
                     -
                     # Power requirements
@@ -1194,10 +1147,10 @@ class FlexibleBiogasPlantModel(FlexibleDERModel):
                 )
                 -
                 # Substrate costs
-                self.feedstock_cost
+                self.marginal_cost
                 * sum(
                     output_vector.at[timestep, output]
-                    for output in self.outputs if 'active_power' in output
+                    for output in self.outputs if output is 'active_power'
                     ) * self.timestep_interval.seconds / 3600
             )
 
@@ -1394,7 +1347,6 @@ class DERModelSet(object):
     states: pd.Index
     controls: pd.Index
     outputs: pd.Index
-    switches: pd.Index
 
     def __init__(
             self,
@@ -1495,14 +1447,6 @@ class DERModelSet(object):
             ])
             if len(self.flexible_der_names) > 0 else pd.Index([])
         )
-        self.switches = (
-            pd.MultiIndex.from_tuples([
-                (der_name, switches)
-                for der_name in self.flexible_der_names
-                for switches in self.flexible_der_models[der_name].switches
-            ])
-            if len(self.flexible_der_names) > 0 else pd.Index([])
-        )
 
     def define_optimization_variables(
             self,
@@ -1513,7 +1457,6 @@ class DERModelSet(object):
         optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
         optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
         optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
-        optimization_problem.binary_variable = pyo.Var(self.timesteps, self.switches.tolist(), domain=pyo.Binary)
 
     def define_optimization_constraints(
             self,

@@ -18,7 +18,7 @@ except Exception:
     optimization_solver_available = False
 
 # Run tests, if optimization solver is available.
-if optimization_solver_available:
+if optimization_solver_available and fledge.config.config['tests']['test_examples']:
 
     # Obtain example scripts.
     examples_path = os.path.join(fledge.config.base_path, 'examples')

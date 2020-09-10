@@ -27,7 +27,7 @@ class ThermalGridModel(object):
     ders = pd.Index
     branch_node_incidence_matrix: scipy.sparse.spmatrix
     der_node_incidence_matrix: scipy.sparse.spmatrix
-    der_thermal_power_vector_nominal: np.ndarray
+    der_thermal_power_vector_reference: np.ndarray
 
     def __init__(
             self,
@@ -82,7 +82,7 @@ class ThermalGridModel(object):
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
 
         # Obtain DER nominal thermal power vector.
-        self.der_thermal_power_vector_nominal = (
+        self.der_thermal_power_vector_reference = (
             thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
         )
 
@@ -207,7 +207,7 @@ class ThermalPowerFlowSolution(object):
     ):
 
         # Obtain DER thermal power vector.
-        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_nominal
+        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
 
         self.__init__(
             thermal_grid_model,
@@ -222,7 +222,7 @@ class ThermalPowerFlowSolution(object):
     ):
 
         # Obtain DER thermal power vector.
-        self.der_thermal_power_vector = der_thermal_power_vector
+        self.der_thermal_power_vector = der_thermal_power_vector.ravel()
 
         # Obtain DER / source volume flow vector.
         self.der_flow_vector = (
@@ -247,7 +247,7 @@ class ThermalPowerFlowSolution(object):
                 ]
                 @ np.transpose([self.der_flow_vector])
             )
-        )
+        ).ravel()
 
         # Obtain branch velocity vector.
         self.branch_velocity_vector = (
@@ -431,7 +431,7 @@ class LinearThermalGridModel(object):
         self.sensitivity_node_head_by_node_power = (
             branch_node_incidence_matrix_transpose_inverse
             @ scipy.sparse.diags(
-                thermal_power_flow_solution.branch_flow_vector
+                np.abs(thermal_power_flow_solution.branch_flow_vector)
                 * thermal_power_flow_solution.branch_friction_factor_vector
                 * 8.0 * self.thermal_grid_model.line_length_vector
                 / (
@@ -447,12 +447,21 @@ class LinearThermalGridModel(object):
             @ self.sensitivity_node_power_by_der_power
         )
         self.sensitivity_pump_power_by_node_power = (
-            (-1.0 * thermal_power_flow_solution.der_flow_vector)
-            @ (-2.0 * der_node_incidence_matrix_transpose)
-            @ self.sensitivity_node_head_by_node_power
-            * fledge.config.water_density
-            * fledge.config.gravitational_acceleration
-            / self.thermal_grid_model.distribution_pump_efficiency
+            (
+                (-1.0 * thermal_power_flow_solution.der_flow_vector)
+                @ (-2.0 * der_node_incidence_matrix_transpose)
+                @ self.sensitivity_node_head_by_node_power
+                * fledge.config.water_density
+                * fledge.config.gravitational_acceleration
+                / self.thermal_grid_model.distribution_pump_efficiency
+            )
+            + (
+                -1.0
+                * self.thermal_grid_model.energy_transfer_station_head_loss
+                * fledge.config.gravitational_acceleration
+                / self.thermal_grid_model.enthalpy_difference_distribution_water
+                / self.thermal_grid_model.distribution_pump_efficiency
+            )
         )
         self.sensitivity_pump_power_by_der_power = (
             self.sensitivity_pump_power_by_node_power
@@ -522,21 +531,13 @@ class LinearThermalGridModel(object):
                     * optimization_problem.der_thermal_power_vector[timestep, der]
                     for der_index, der in enumerate(self.thermal_grid_model.ders)
                 )
-                + sum(
-                    -1.0 * self.thermal_power_flow_solution.der_flow_vector[der_index]
-                    * self.thermal_grid_model.energy_transfer_station_head_loss
-                    * fledge.config.water_density
-                    * fledge.config.gravitational_acceleration
-                    / self.thermal_grid_model.distribution_pump_efficiency
-                    for der_index, der in enumerate(self.thermal_grid_model.ders)
-                )
             )
 
         # Node head.
         if node_head_vector_minimum is not None:
             # node_head_vector = (  # Define shorthand.
             #     lambda node:
-            #     self.thermal_power_flow_solution.node_head_vector.ravel()[
+            #     self.thermal_power_flow_solution.node_head_vector[
             #         self.thermal_grid_model.nodes.get_loc(node)
             #     ]
             # )
@@ -555,7 +556,7 @@ class LinearThermalGridModel(object):
         if branch_flow_vector_maximum is not None:
             # branch_flow_vector = (  # Define shorthand.
             #     lambda branch:
-            #     self.thermal_power_flow_solution.branch_flow_vector.ravel()[
+            #     self.thermal_power_flow_solution.branch_flow_vector[
             #         self.thermal_grid_model.branches.get_loc(branch)
             #     ]
             # )
@@ -567,6 +568,17 @@ class LinearThermalGridModel(object):
                     # + branch_flow_vector(branch)
                     <=
                     branch_flow_vector_maximum.ravel()[self.thermal_grid_model.branches.get_loc(branch)]
+                )
+            )
+            optimization_problem.branch_flow_vector_minimum_constraint = pyo.Constraint(
+                timesteps.to_list(),
+                self.thermal_grid_model.branches.to_list(),
+                rule=lambda optimization_problem, timestep, branch: (  # Will not work if `branches` becomes MultiIndex.
+                    optimization_problem.branch_flow_vector[timestep, branch]
+                    # + branch_flow_vector(branch)
+                    >=
+                    -1.0
+                    * branch_flow_vector_maximum.ravel()[self.thermal_grid_model.branches.get_loc(branch)]
                 )
             )
 
@@ -611,6 +623,9 @@ class LinearThermalGridModel(object):
         branch_flow_vector_maximum_dual = (
             pd.DataFrame(0.0, columns=self.thermal_grid_model.branches, index=timesteps, dtype=np.float)
         )
+        branch_flow_vector_minimum_dual = (
+            pd.DataFrame(0.0, columns=self.thermal_grid_model.branches, index=timesteps, dtype=np.float)
+        )
 
         # Obtain duals.
         for timestep in timesteps:
@@ -630,12 +645,20 @@ class LinearThermalGridModel(object):
                             optimization_problem.branch_flow_vector_maximum_constraint[timestep, branch]
                         ]
                     )
+                    branch_flow_vector_minimum_dual.at[timestep, branch] = (
+                        optimization_problem.dual[
+                            optimization_problem.branch_flow_vector_minimum_constraint[timestep, branch]
+                        ]
+                    )
 
         # Instantiate DLMP variables.
         node_head_vector_minimum_dlmp = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         branch_flow_vector_maximum_dlmp = (
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+        branch_flow_vector_minimum_dlmp = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
         )
         pump_power_dlmp = (
@@ -671,6 +694,13 @@ class LinearThermalGridModel(object):
                 ).ravel()
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
+            branch_flow_vector_minimum_dlmp.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_flow_by_node_power.transpose()
+                    @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                / self.thermal_grid_model.cooling_plant_efficiency
+            )
             pump_power_dlmp.loc[timestep, :] = (
                 -1.0
                 * self.sensitivity_pump_power_by_node_power.ravel()
@@ -686,6 +716,7 @@ class LinearThermalGridModel(object):
         )
         thermal_grid_congestion_dlmp = (
             branch_flow_vector_maximum_dlmp
+            + branch_flow_vector_minimum_dlmp
         )
         thermal_grid_pump_dlmp = (
             pump_power_dlmp
@@ -694,6 +725,7 @@ class LinearThermalGridModel(object):
         return fledge.data_interface.ResultsDict(
             node_head_vector_minimum_dlmp=node_head_vector_minimum_dlmp,
             branch_flow_vector_maximum_dlmp=branch_flow_vector_maximum_dlmp,
+            branch_flow_vector_minimum_dlmp=branch_flow_vector_minimum_dlmp,
             pump_power_dlmp=pump_power_dlmp,
             thermal_grid_energy_dlmp=thermal_grid_energy_dlmp,
             thermal_grid_head_dlmp=thermal_grid_head_dlmp,
@@ -750,15 +782,15 @@ class LinearThermalGridModel(object):
         if in_per_unit:
             der_thermal_power_vector = (
                 der_thermal_power_vector
-                / self.thermal_grid_model.der_thermal_power_vector_nominal.ravel()
+                / self.thermal_grid_model.der_thermal_power_vector_reference
             )
             branch_flow_vector = (
                 branch_flow_vector
-                / self.thermal_power_flow_solution.branch_flow_vector.ravel()
+                / self.thermal_power_flow_solution.branch_flow_vector
             )
             node_head_vector = (
                 node_head_vector
-                / self.thermal_power_flow_solution.node_head_vector.ravel()
+                / self.thermal_power_flow_solution.node_head_vector
             )
             node_head_vector.iloc[
                 :,

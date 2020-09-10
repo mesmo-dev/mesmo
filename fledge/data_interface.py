@@ -2,6 +2,7 @@
 
 import glob
 from multimethod import multimethod
+import natsort
 import numpy as np
 import os
 import pandas as pd
@@ -216,6 +217,10 @@ class ScenarioData(object):
         for column in selected_columns:
             dataframe[column] = self.parse_parameters_column(dataframe[column].values)
 
+        # If dataframe contains `in_service` column, remove all not-in-service elements.
+        if 'in_service' in dataframe.columns:
+            dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
+
         return dataframe
 
 
@@ -263,13 +268,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY node_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
+        self.electric_grid_nodes = (
+            self.electric_grid_nodes.reindex(index=natsort.natsorted(self.electric_grid_nodes.index))
+        )
         self.electric_grid_ders = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -278,13 +285,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY der_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_ders.index = self.electric_grid_ders['der_name']
+        self.electric_grid_ders = (
+            self.electric_grid_ders.reindex(index=natsort.natsorted(self.electric_grid_ders.index))
+        )
         self.electric_grid_lines = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -294,13 +303,15 @@ class ElectricGridData(object):
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY line_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_lines.index = self.electric_grid_lines['line_name']
+        self.electric_grid_lines = (
+            self.electric_grid_lines.reindex(index=natsort.natsorted(self.electric_grid_lines.index))
+        )
         self.electric_grid_line_types = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -312,7 +323,6 @@ class ElectricGridData(object):
                         WHERE scenario_name = ?
                     )
                 )
-                ORDER BY line_type ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
@@ -340,18 +350,20 @@ class ElectricGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_transformers
-                JOIN electric_grid_transformer_types USING (transformer_type)
+                LEFT JOIN electric_grid_transformer_types USING (transformer_type)
                 WHERE electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
                 )
-                ORDER BY transformer_name ASC
                 """,
                 con=database_connection,
                 params=[scenario_name]
             ))
         )
         self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
+        self.electric_grid_transformers = (
+            self.electric_grid_transformers.reindex(index=natsort.natsorted(self.electric_grid_transformers.index))
+        )
 
 
 class ThermalGridData(object):
@@ -401,6 +413,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
+        self.thermal_grid_nodes = (
+            self.thermal_grid_nodes.reindex(index=natsort.natsorted(self.thermal_grid_nodes.index))
+        )
         self.thermal_grid_ders = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -415,6 +430,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
+        self.thermal_grid_ders = (
+            self.thermal_grid_ders.reindex(index=natsort.natsorted(self.thermal_grid_ders.index))
+        )
         self.thermal_grid_lines = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
@@ -430,6 +448,9 @@ class ThermalGridData(object):
             ))
         )
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
+        self.thermal_grid_lines = (
+            self.thermal_grid_lines.reindex(index=natsort.natsorted(self.thermal_grid_lines.index))
+        )
 
 
 class DERData(object):
@@ -438,12 +459,14 @@ class DERData(object):
     scenario_data: ScenarioData
     fixed_loads: pd.DataFrame
     fixed_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    ev_chargers: pd.DataFrame
-    ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    fixed_ev_chargers: pd.DataFrame
+    fixed_ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
     flexible_loads: pd.DataFrame
     flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
     fixed_generators: pd.DataFrame
     fixed_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
+    flexible_generators: pd.DataFrame
+    flexible_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
     cooling_plants: pd.DataFrame
     flexible_buildings: pd.DataFrame
 
@@ -470,7 +493,13 @@ class DERData(object):
 
             # Check validity of DER type.
             try:
-                assert der_type in ['fixed_load', 'ev_charger', 'flexible_load', 'fixed_generator']
+                assert der_type in [
+                    'fixed_load',
+                    'fixed_ev_charger',
+                    'flexible_load',
+                    'fixed_generator',
+                    'flexible_generator'
+                ]
             except AssertionError:
                 logger.error(f"Invalid DER type: {der_type}")
                 raise
@@ -495,6 +524,9 @@ class DERData(object):
                 ))
             )
             der_models.index = der_models['der_name']
+            der_models = (
+                der_models.reindex(index=natsort.natsorted(der_models.index))
+            )
 
             # Instantiate dictionary for unique `model_name`.
             der_models_unique = der_models.loc[:, ['model_name', 'definition_type']].drop_duplicates()
@@ -530,6 +562,21 @@ class DERData(object):
                             limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
                         )
                     )
+
+                    # If any NaN values, display warning and fill missing values.
+                    if der_model_timeseries_dict[model_name].isnull().any().any():
+                        logger.warning(
+                            f"Missing values in timeseries definition for {der_type} '{model_name}'."
+                            f" Please check if appropriate timestep_start/timestep_end are defined."
+                            f" Missing values are filled with 0."
+                        )
+                        # Fill model_name in corresponding column and 0.0 otherwise.
+                        der_model_timeseries_dict[model_name].loc[:, 'model_name'] = (
+                            der_model_timeseries_dict[model_name].loc[:, 'model_name'].fillna(model_name)
+                        )
+                        der_model_timeseries_dict[model_name] = (
+                            der_model_timeseries_dict[model_name].fillna(0.0)
+                        )
 
                 if 'schedule' in der_models_unique.at[model_name, 'definition_type']:
                     der_model_schedule = (
@@ -570,7 +617,7 @@ class DERData(object):
                         ).fillna(method='ffill')
                     )
 
-                    # Reindex / fill internal gain schedule for given timesteps.
+                    # Reindex / fill schedule for given timesteps.
                     der_model_schedule_complete.index = (
                         pd.MultiIndex.from_arrays([
                             der_model_schedule_complete.index.day - 1,
@@ -604,9 +651,10 @@ class DERData(object):
         # Obtain fixed load / EV charger / flexible load data.
         # TODO: Enable thermal grid connection for appropriate types.
         self.fixed_loads, self.fixed_load_timeseries_dict = get_der_type_data('fixed_load')
-        self.ev_chargers, self.ev_charger_timeseries_dict = get_der_type_data('ev_charger')
+        self.fixed_ev_chargers, self.fixed_ev_charger_timeseries_dict = get_der_type_data('fixed_ev_charger')
         self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
         self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
+        self.flexible_generators, self.flexible_generator_timeseries_dict = get_der_type_data('flexible_generator')
 
         # Obtain cooling plant data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
@@ -645,6 +693,9 @@ class DERData(object):
             )
         )
         self.cooling_plants.index = self.cooling_plants['der_name']
+        self.cooling_plants = (
+            self.cooling_plants.reindex(index=natsort.natsorted(self.cooling_plants.index))
+        )
 
         # Obtain flexible building data.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
@@ -681,6 +732,9 @@ class DERData(object):
             )
         )
         self.flexible_buildings.index = self.flexible_buildings['der_name']
+        self.flexible_buildings = (
+            self.flexible_buildings.reindex(index=natsort.natsorted(self.flexible_buildings.index))
+        )
 
 
 class PriceData(object):

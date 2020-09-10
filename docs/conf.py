@@ -1,14 +1,6 @@
 # Configuration file for the Sphinx documentation builder.
 # - Documentation: <http://www.sphinx-doc.org/en/master/config>
 
-# Path settings.
-# - If extensions (or modules to document with autodoc) are in another directory,
-#   add these directories to sys.path here. If the directory is relative to the
-#   documentation root, use os.path.abspath to make it absolute, like shown here.
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-
 # Project information.
 project = 'FLEDGE'
 copyright = '2018-2020, TUMCREATE'
@@ -36,10 +28,13 @@ autodoc_default_options = {
 }
 autodoc_typehints = 'description'
 autodoc_mock_imports = [
+    # Please note: Do not remove deprecated dependencies, because these are still needed for docs of previous versions.
     'cobmo',
     'cv2',
+    'diskcache',
     'matplotlib',
     'multimethod',
+    'multiprocess',
     'networkx',
     'natsort',
     'numpy',

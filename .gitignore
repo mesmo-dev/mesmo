@@ -13,6 +13,8 @@
 
 .pytest_cache
 
+cache/
+
 *.sqlite
 
 *.sqlite-journal

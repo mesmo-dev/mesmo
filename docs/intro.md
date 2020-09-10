@@ -12,6 +12,8 @@
     1. `pip install -e path_to_repository`
     2. `pip install -e path_to_repository/cobmo`
 
+Note that the `fledge.plots` module optionally allows adding contextual basemaps to grid plots for orientation. This requires installation of `contextily`, which is an optional dependency, because it needs to be installed through `conda` on Windows. If you need it, please follow the reccomended installation procedure below.
+
 ### Recommended installation
 
 The following installation procedure contains additional steps and requirements which can improve the numerical performance when running FLEDGE.
@@ -23,9 +25,10 @@ The following installation procedure contains additional steps and requirements 
 3. In Anaconda Prompt, run:
     1. `conda create -n fledge python=3.7`
     2. `conda activate fledge`
-    3. `conda install pandas`
-    4. `pip install -e path_to_repository`.
-    5. `pip install -e path_to_repository/cobmo`
+    3. `conda install -c conda-forge contextily`
+    4. `conda install pandas`
+    5. `pip install -e path_to_repository`.
+    6. `pip install -e path_to_repository/cobmo`
 4. Create or modify `config.yml` in the repository base directory and define `optimization: ↵ solver_name:` as `gurobi` or `cplex`, depending on the installed solver.
 
 ### Alternative installation

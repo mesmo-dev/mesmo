@@ -27,6 +27,7 @@ CREATE TABLE electric_grid_ders (
     connection TEXT,
     active_power_nominal TEXT,
     reactive_power_nominal TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (
@@ -54,6 +55,7 @@ CREATE TABLE electric_grid_lines (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     length TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
@@ -65,6 +67,7 @@ CREATE TABLE electric_grid_nodes (
     voltage TEXT,
     latitude TEXT,
     longitude TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
@@ -93,29 +96,31 @@ CREATE TABLE electric_grid_transformers (
     is_phase_3_connected TEXT,
     connection TEXT,
     apparent_power TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,transformer_name)
 );
 CREATE TABLE electric_grids (
     electric_grid_name TEXT,
     source_node_name TEXT,
     base_frequency TEXT,
+    is_single_phase_equivalent TEXT DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
 );
-CREATE TABLE ev_charger_schedules (
+CREATE TABLE fixed_ev_charger_schedules (
     model_name TEXT,
     time_period TEXT,
     active_power REAL,
     reactive_power REAL,
     PRIMARY KEY(model_name,time_period)
 );
-CREATE TABLE ev_charger_timeseries (
+CREATE TABLE fixed_ev_charger_timeseries (
     model_name TEXT,
     time TEXT,
     active_power REAL,
     reactive_power REAL,
     PRIMARY KEY(model_name,time)
 );
-CREATE TABLE ev_chargers (
+CREATE TABLE fixed_ev_chargers (
     model_name TEXT,
     definition_type TEXT,
     PRIMARY KEY(model_name)
@@ -157,6 +162,26 @@ CREATE TABLE fixed_load_timeseries (
 CREATE TABLE fixed_loads (
      model_name TEXT,
      definition_type TEXT,
+     PRIMARY KEY(model_name)
+);
+CREATE TABLE flexible_generator_schedules (
+    model_name TEXT,
+    time_period TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time_period)
+);
+CREATE TABLE flexible_generator_timeseries (
+    model_name TEXT,
+    time TEXT,
+    active_power REAL,
+    reactive_power REAL,
+    PRIMARY KEY(model_name,time)
+);
+CREATE TABLE flexible_generators (
+     model_name TEXT,
+     definition_type TEXT,
+     levelized_cost_of_energy TEXT,
      PRIMARY KEY(model_name)
 );
 CREATE TABLE flexible_load_schedules (
@@ -213,6 +238,7 @@ CREATE TABLE thermal_grid_ders (
     der_type TEXT,
     model_name TEXT,
     thermal_power_nominal TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)
 );
 CREATE TABLE thermal_grid_line_types (
@@ -229,6 +255,7 @@ CREATE TABLE thermal_grid_lines (
     node_1_name TEXT,
     node_2_name TEXT,
     length TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,line_name)
 );
 CREATE TABLE thermal_grid_nodes (
@@ -237,6 +264,7 @@ CREATE TABLE thermal_grid_nodes (
     node_type TEXT,
     latitude TEXT,
     longitude TEXT,
+    in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,node_name)
 );
 CREATE TABLE thermal_grid_operation_limit_types (

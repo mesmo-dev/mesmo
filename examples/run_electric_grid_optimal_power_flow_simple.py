@@ -46,13 +46,13 @@ def main():
         optimization_problem.der_constraints.add(
             optimization_problem.der_active_power_vector_change[0, der]
             <=
-            0.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+            0.5 * np.real(electric_grid_model.der_power_vector_reference[der_index])
             - np.real(power_flow_solution.der_power_vector[der_index])
         )
         optimization_problem.der_constraints.add(
             optimization_problem.der_active_power_vector_change[0, der]
             >=
-            1.5 * np.real(electric_grid_model.der_power_vector_nominal[der_index])
+            1.5 * np.real(electric_grid_model.der_power_vector_reference[der_index])
             - np.real(power_flow_solution.der_power_vector[der_index])
         )
         # Fixed power factor for reactive power based on nominal power factor.
@@ -60,8 +60,8 @@ def main():
             optimization_problem.der_reactive_power_vector_change[0, der]
             ==
             optimization_problem.der_active_power_vector_change[0, der]
-            * np.imag(electric_grid_model.der_power_vector_nominal[der_index])
-            / np.real(electric_grid_model.der_power_vector_nominal[der_index])
+            * np.imag(electric_grid_model.der_power_vector_reference[der_index])
+            / np.real(electric_grid_model.der_power_vector_reference[der_index])
         )
 
     # Define objective.

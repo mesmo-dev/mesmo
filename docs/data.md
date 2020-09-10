@@ -43,7 +43,7 @@ Price timeseries.
 | --- |:---:| --- |
 | `price_type` | | Unique type identifier.|
 | `time` | | Timestamp according to ISO 8601. |
-| `price_value` | S$/kWh | Price value. Currently, prices are assumed to be in SGD. |
+| `price_value` | $/kWh | Price value. *Currently, prices / costs are assumed to be in SGD.* |
 
 ## Electric grid data
 
@@ -56,6 +56,9 @@ Electric grid definition.
 | `electric_grid_name` | | Unique electric grid identifier. |
 | `source_node_name` | | Source node name as defined in `electric_grid_nodes` |
 | `base_frequency` | Hz | Nominal grid frequency. |
+| `is_single_phase_equivalent` | | Single-phase-equivalent modelling flag¹. If `0`, electric grid is modelled as multi-phase system. If `1`, electric grid is modelled as single-phase-equivalent of a three-phase balanced system. Optional column, which defaults to `0` if not explicitly defined. |
+
+¹ If single-phase-equivalent modelling is used, all nodes, lines, transformers and DERs must be defined as single-phase elements, i.e., these elements should be connected only to phase 1. However, all power values (DER active / reactive power, transformer apparent power) must be defined as total three-phase power.
 
 ### `electric_grid_ders`
 
@@ -65,8 +68,8 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `ev_charger`, `flexible_building`, `fixed_generator`, `cooling_plant`. |
-| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `ev_chargers` or in CoBMo, for flexible buildings. Currently not defined for `fixed_generator` |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_loads`, `flexible_loads`, `fixed_ev_chargers`, `fixed_generators`, `flexible_generators` or in CoBMo, for flexible buildings. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
@@ -74,6 +77,7 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
 | `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
 | `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_line_types`
 
@@ -113,6 +117,7 @@ Electric grid lines.
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `length` | km | Line length. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_nodes`
 
@@ -128,6 +133,7 @@ Electric grid nodes.
 | `voltage` | V | Nominal voltage. |
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_operation_limit_types`
 
@@ -168,6 +174,7 @@ Electric grid transformers, which are limited to transformers with two windings,
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. Note that Wye-connected windings are assumed to be grounded. |
 | `apparent_power` | VA | Nominal apparent power loading. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ## Thermal grid data
 
@@ -196,9 +203,10 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `thermal_grid_name` | | Thermal grid identifier as defined in `thermal_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
-| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `cooling_plant`.  |
-| `model_name` | | DER model identifier depending on the DER type, defined in CoBMo for flexible buildings. Currently not defined for `fixed_generator`. |
+| `der_type` | | DER type, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
+| `model_name` | | DER model identifier depending on the DER type, defined in `fixed_generators`, `flexible_generators` or CoBMo for flexible buildings. |
 | `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_line_types`
 
@@ -223,6 +231,7 @@ Thermal grid line (pipe) definitions. The definition only includes the supply si
 | `node_1_name` | | Start node identifier as defined in `thermal_grid_nodes` |
 | `node_2_name` | | End node identifier as defined in `thermal_grid_nodes`. |
 | `length` | km | Line length. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_nodes`
 
@@ -234,6 +243,7 @@ Thermal grid nodes.
 | `node_name` | | Unique node identifier (must only be unique within the associated thermal grid). |
 | `latitude` | | Latitude. |
 | `longitude` | | Longitude. |
+| `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_operation_limit_types`
 
@@ -273,7 +283,7 @@ Cooling plants for modelling distributed generation facilities / heat pumps in t
 | `cooling_tower_set_reference_temperature_slope` | °C | Cooling tower reference temperature slope, used to model the cooling tower efficiency. |
 | `cooling_tower_set_ventilation_factor` | - | Cooling tower set ventilation factor, used to model the ventilation requirements depending on the condenser water flow. |
 
-### `ev_chargers`
+### `fixed_ev_chargers`
 
 EV charger model definition.
 
@@ -282,7 +292,7 @@ EV charger model definition.
 | `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
 | `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
 
-### `ev_charger_schedules`
+### `fixed_ev_charger_schedules`
 
 EV charger schedules definition.
 
@@ -293,7 +303,7 @@ EV charger schedules definition.
 | `active_power` | W | Active power value. |
 | `reactive_power` | VAr | Reactive power value. |
 
-### `ev_charger_timeseries`
+### `fixed_ev_charger_timeseries`
 
 EV charger timeseries definition.
 
@@ -335,6 +345,38 @@ Fixed load timeseries definition.
 | `active_power` | W | Active power value. |
 | `reactive_power` | VAr | Reactive power value. |
 
+### `fixed_generators`
+
+Fixed load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+
+### `fixed_generator_schedules`
+
+Fixed load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `fixed_generator_timeseries`
+
+Fixed load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
 ### `flexible_loads`
 
 Flexible load model definition.
@@ -361,6 +403,38 @@ Flexible load schedules definition.
 ### `flexible_load_timeseries`
 
 Flexible load timeseries definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time` | | Timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `flexible_generators`
+
+Fixed load model definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier (corresponding to `electric_grid_ders`). |
+| `definition_type` | | DER definition type selector. Choices: `timeseries` (Defined as timeseries.) `schedule` (Defined as schedule.), `timeseries_per_unit` (Defined as timeseries in per unit values.), `schedule_per_unit` (Defined as schedule in per unit values.) |
+| `levelized_cost_of_energy` | $/kWh | Leveled cost of energy. *Currently, prices / costs are assumed to be in SGD.* |
+
+### `flexible_generator_schedules`
+
+Fixed load schedules definition.
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `model_name` | | DER model identifier. |
+| `time_period` | | Time period in `ddTHH:MM` format. `dd` is the weekday (`01` - Monday ... `07` - Sunday). `T` is the divider for date and time information according to ISO 8601. `HH:MM` is the daytime. |
+| `active_power` | W | Active power value. |
+| `reactive_power` | VAr | Reactive power value. |
+
+### `flexible_generator_timeseries`
+
+Fixed load timeseries definition.
 
 | Column | Unit | Description |
 | --- |:---:| --- |

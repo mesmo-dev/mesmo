@@ -898,6 +898,11 @@ class ElectricGridModelDefault(ElectricGridModel):
                 fledge.utils.get_index(self.nodes, node_type='no_source')
             ]
         )
+        self.node_voltage_vector_reference_source = (
+            self.node_voltage_vector_reference_no_source[
+                fledge.utils.get_index(self.nodes, node_type='source')
+            ]
+        )
 
 
 class ElectricGridModelOpenDSS(ElectricGridModel):
@@ -1581,11 +1586,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
                 )]
             )
-            node_voltage_vector_reference_source = (
-                electric_grid_model.node_voltage_vector_reference_no_source[
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-                ]
-            )
             node_voltage_vector_initial_no_source = (
                 electric_grid_model.node_voltage_vector_reference_no_source.copy()
             )
@@ -1622,7 +1622,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 # Calculate voltage.
                 node_voltage_vector_estimate_no_source = (
                     node_admittance_matrix_no_source_inverse @ (
-                        -node_admittance_matrix_source_to_no_source @ node_voltage_vector_reference_source
+                        - node_admittance_matrix_source_to_no_source
+                        @ electric_grid_model.node_voltage_vector_reference_source
                         + node_current_injection_no_source
                     )
                 )
@@ -1643,7 +1644,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 node_voltage_vector_initial_no_source = node_voltage_vector_estimate_no_source.copy()
                 node_voltage_estimate = (
                     np.concatenate([
-                        electric_grid_model.node_voltage_vector_reference[:3].copy(),
+                        electric_grid_model.node_voltage_vector_reference_source.copy(),
                         node_voltage_vector_estimate_no_source.copy()
                     ])
                 )

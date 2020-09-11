@@ -79,9 +79,9 @@ for i in range(2):
         if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
         else None
     )
-    # branch_power_vector_squared_maximum[
-    #     fledge.utils.get_index(electric_grid_model.branches, branch_name='Line_2_3')
-    # ] *= 0.25
+    branch_power_vector_squared_maximum[
+        fledge.utils.get_index(electric_grid_model.branches, branch_name='Line_2_3')
+    ] *= 0.14
 
     # Get the biogas plant model and set the switches flag accordingly
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
@@ -250,6 +250,8 @@ if plots:
             names=['dlmp_type']
         )
     )
+    electric_grid_dlmp *= 1000  # get DLMPs kWh
+
     colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
     for der in electric_grid_model.ders:
 
@@ -288,7 +290,7 @@ if plots:
         )
         ax1.grid(True)
         ax1.set_xlabel('Time')
-        ax1.set_ylabel('Price [€/Wh]')
+        ax1.set_ylabel('Price [€/kWh]')
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         if der in electric_grid_model.ders:
@@ -361,7 +363,7 @@ if plots:
                 )
             )
             cb = plt.colorbar(sm, shrink=0.9)
-            cb.set_label('Price [€/Wh]')
+            cb.set_label('Price [€/kWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
             # plt.show()

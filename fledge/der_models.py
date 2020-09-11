@@ -1109,7 +1109,6 @@ class FlexibleBuildingModel(FlexibleDERModel):
 class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
     """Flexible Biogas plant model object."""
 
-    power_factor_nominal: np.float
     switches: pd.Index = []
     chp_schedule: pd.DataFrame
 
@@ -1124,19 +1123,19 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
 
         self.is_thermal_grid_connected = False
 
-        # Obtain biogas data by `der_name`.
-        biogas_plant = der_data.biogas_plants.loc[der_name, :]
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
 
         # Store biogas scenario name
-        self.scenario_name = biogas_plant['model_name']
+        self.scenario_name = der['der_model_name']
 
         # Obtain grid connection flags.
-        self.is_electric_grid_connected = pd.notnull(biogas_plant.at['electric_grid_name'])
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
 
         # Obtain bipmo biogas plant model.
         flexible_biogas_plant_model = (
             bipmo.bipmo.biogas_plant_model.BiogasModel(
-                biogas_plant.at['model_name'],
+                der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
                 timestep_interval=der_data.scenario_data.scenario.at['timestep_interval'],
@@ -1152,16 +1151,16 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
         self.active_power_nominal_timeseries = (
                 pd.Series(1.0, index=self.timesteps, name='active_power')
                 * (
-                    biogas_plant.at['active_power_nominal']
-                    if pd.notnull(biogas_plant.at['active_power_nominal'])
+                    der.at['active_power_nominal']
+                    if pd.notnull(der.at['active_power_nominal'])
                     else 0.0
                 )
         )
         self.reactive_power_nominal_timeseries = (
                 pd.Series(1.0, index=self.timesteps, name='reactive_power')
                 * (
-                    biogas_plant.at['reactive_power_nominal']
-                    if pd.notnull(biogas_plant.at['reactive_power_nominal'])
+                    der.at['reactive_power_nominal']
+                    if pd.notnull(der.at['reactive_power_nominal'])
                     else 0.0
                 )
         )

@@ -9,3 +9,11 @@ flexible_generator,thermal,schedule_per_unit,thermal,0.0,1.0,,,,,,0.1
 fixed_ev_charger,fixed_ev_charger_generic,schedule_per_unit,fixed_ev_charger_generic,,,,,,,,
 cooling_plant,cooling_plant_singapore,cooling_plant,cooling_plant_singapore,,,,,,,,
 storage,default_battery_storage,,,0.0,1.0,,,12,0.99,0.01,
+fixed_generator,cigre_wind_NUTS2_DE21,timeseries_per_unit,cigre_wind_NUTS2_DE21,,,,,,,,0.0
+flexible_generator,cigre_wind_NUTS2_DE21,timeseries_per_unit,cigre_wind_NUTS2_DE21,0.0,1.0,,,,,,0.0
+fixed_generator,cigre_pv_NUTS2_DE21,timeseries_per_unit,cigre_pv_NUTS2_DE21,,,,,,,,0.0
+flexible_generator,cigre_pv_NUTS2_DE21,timeseries_per_unit,cigre_pv_NUTS2_DE21,0.0,1.0,,,,,,0.0
+fixed_load,cigre_residential,schedule_per_unit,cigre_residential,,,,,,,,
+fixed_load,cigre_commercial,schedule_per_unit,cigre_commercial,,,,,,,,
+flexible_load,cigre_residential,schedule_per_unit,cigre_residential,0.8,1.2,,,4.0,,,
+flexible_load,cigre_commercial,schedule_per_unit,cigre_commercial,0.8,1.2,,,4.0,,,

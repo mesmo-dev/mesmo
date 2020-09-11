@@ -1101,66 +1101,70 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
                 == self.state_vector_initial[self.scenario_name + '_storage_content_m3']
             )
 
-
-
-    def get_optimization_results(
+    def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame
-    ) -> fledge.data_interface.ResultsDict:
+            price_timeseries: pd.DataFrame,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+    ):
 
-        # Instantiate results variables.
-        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
-        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
-        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
-        profit_vector = pd.DataFrame(0.0, index=self.timesteps, columns=pd.Index(['profit_value']))
+        # FlexibleBiogasPlantModel has a custom function define_optimization_objective as it also requires a certain
+        # amount of energy from the grid. The 'active power' (net power production) is multiplied with the power price
+        # while the marginal cost of production is multiplied with the CHPs' active power output
 
-        # Obtain results.
-        for timestep in self.timesteps:
-            for state in self.states:
-                state_vector.at[timestep, state] = (
-                    optimization_problem.state_vector[timestep, self.der_name, state].value
-                )
-            for control in self.controls:
-                control_vector.at[timestep, control] = (
-                    optimization_problem.control_vector[timestep, self.der_name, control].value
-                )
-            for output in self.outputs:
-                output_vector.at[timestep, output] = (
-                    optimization_problem.output_vector[timestep, self.der_name, output].value
-                )
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
-            profit_vector.at[timestep, 'profit_value'] = (
-                price_timeseries.at[timestep, 'price_value']/1000000
-                * (
-                    # Income from selling power
-                    sum(
-                        output_vector.at[timestep, output]
-                        for output in self.outputs if output is 'active_power'
-                        ) * self.timestep_interval.seconds / 3600
-                    -
-                    # Power requirements
-                    sum(
-                        output_vector.at[timestep, output]
-                        for output in self.outputs if 'act_power_own_consumption' in output
-                        ) * self.timestep_interval.seconds / 3600
+        # Define objective.
+        # TODO: Consider timestep interval.
+        if optimization_problem.find_component('objective') is None:
+            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
+
+        # Define objective for electric loads.
+        # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
+        # - Otherwise, defined as cost of electric supply at electric grid source node
+        #   in `LinearElectricGridModel.define_optimization_objective`.
+        # - This enables proper calculation of the DLMPs.
+        if (electric_grid_model is None) and self.is_electric_grid_connected:
+            optimization_problem.objective.expr += (
+                sum(
+                    -1.0
+                    * price_timeseries.at[timestep, 'price_value']
+                    * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                    * timestep_interval_hours  # In Wh.
+                    for timestep in self.timesteps
                 )
-                -
-                # Substrate costs
-                self.marginal_cost
-                * sum(
-                    output_vector.at[timestep, output]
-                    for output in self.outputs if output is 'active_power'
-                    ) * self.timestep_interval.seconds / 3600
             )
 
-        return fledge.data_interface.ResultsDict(
-            state_vector=state_vector,
-            control_vector=control_vector,
-            output_vector=output_vector,
-            profit_vector=profit_vector
-        )
+        # TODO: Define objective for thermal loads.
+        # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
+        # - Otherwise, defined as cost of thermal supply at thermal grid source node
+        #   in `LinearThermalGridModel.define_optimization_objective`.
+        # - This enables proper calculation of the DLMPs.
+        if (thermal_grid_model is None) and self.is_thermal_grid_connected:
+            pass
 
+        # Define objective for electric generators.
+        # - Always defined here as the cost of electric power generation at the DER node.
+        if self.is_electric_grid_connected:
+            optimization_problem.objective.expr += (
+                sum(
+                    self.marginal_cost
+                    * sum(
+                        optimization_problem.output_vector[timestep, self.der_name, output]
+                        for output in self.outputs if 'active_power' in output and 'CHP' in output
+                    )
+                    * timestep_interval_hours  # In Wh.
+                    for timestep in self.timesteps
+
+                )
+            )
+
+        # TODO: Define objective for thermal generators.
+        # - Always defined here as the cost of thermal power generation at the DER node.
+        if self.is_thermal_grid_connected:
+            pass
 
 
 class CoolingPlantModel(FlexibleDERModel):

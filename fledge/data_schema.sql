@@ -1,5 +1,5 @@
-CREATE TABLE cooling_plants (
-    model_name TEXT,
+CREATE TABLE der_cooling_plants (
+    definition_name TEXT,
     plant_pump_efficiency TEXT,
     condenser_pump_head TEXT,
     evaporator_pump_head TEXT,
@@ -13,13 +13,40 @@ CREATE TABLE cooling_plants (
     cooling_tower_set_reference_temperature_wet_bulb TEXT,
     cooling_tower_set_reference_temperature_slope TEXT,
     cooling_tower_set_ventilation_factor TEXT,
-    PRIMARY KEY(model_name)
+    PRIMARY KEY(definition_name)
+);
+CREATE TABLE der_models (
+    der_type TEXT,
+    der_model_name TEXT,
+    definition_type TEXT,
+    definition_name TEXT,
+    power_per_unit_minimum TEXT,
+    power_per_unit_maximum TEXT,
+    power_factor_minimum TEXT,
+    power_factor_maximum TEXT,
+    energy_storage_capacity_per_unit TEXT,
+    charging_efficiency TEXT,
+    self_discharge_rate TEXT,
+    marginal_cost TEXT,
+    PRIMARY KEY(der_type,der_model_name)
+);
+CREATE TABLE der_schedules (
+    definition_name TEXT,
+    time_period TEXT,
+    value REAL,
+    PRIMARY KEY(definition_name,time_period)
+);
+CREATE TABLE der_timeseries (
+    definition_name TEXT,
+    time TEXT,
+    value REAL,
+    PRIMARY KEY(definition_name,time)
 );
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,
     der_type TEXT,
-    model_name TEXT,
+    der_model_name TEXT,
     node_name TEXT,
     is_phase_1_connected TEXT,
     is_phase_2_connected TEXT,
@@ -106,106 +133,6 @@ CREATE TABLE electric_grids (
     is_single_phase_equivalent TEXT DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
 );
-CREATE TABLE fixed_ev_charger_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_ev_charger_timeseries (
-    model_name TEXT,
-    time TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_ev_chargers (
-    model_name TEXT,
-    definition_type TEXT,
-    PRIMARY KEY(model_name)
-);
-CREATE TABLE fixed_generator_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_generator_timeseries (
-    model_name TEXT,
-    time TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_generators (
-     model_name TEXT,
-     definition_type TEXT,
-     levelized_cost_of_energy TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE fixed_load_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE fixed_load_timeseries (
-    model_name TEXT,
-    time TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE fixed_loads (
-     model_name TEXT,
-     definition_type TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE flexible_generator_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE flexible_generator_timeseries (
-    model_name TEXT,
-    time TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE flexible_generators (
-     model_name TEXT,
-     definition_type TEXT,
-     levelized_cost_of_energy TEXT,
-     PRIMARY KEY(model_name)
-);
-CREATE TABLE flexible_load_schedules (
-    model_name TEXT,
-    time_period TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time_period)
-);
-CREATE TABLE flexible_load_timeseries (
-    model_name TEXT,
-    time TEXT,
-    active_power REAL,
-    reactive_power REAL,
-    PRIMARY KEY(model_name,time)
-);
-CREATE TABLE flexible_loads (
-    model_name TEXT,
-    definition_type TEXT,
-    power_increase_percentage_maximum TEXT,
-    power_decrease_percentage_maximum TEXT,
-    time_period_power_shift_maximum TEXT,
-    PRIMARY KEY(model_name)
-);
 CREATE TABLE parameters (
     parameter_set TEXT,
     parameter_name TEXT,
@@ -236,7 +163,7 @@ CREATE TABLE thermal_grid_ders (
     der_name TEXT,
     node_name TEXT,
     der_type TEXT,
-    model_name TEXT,
+    der_model_name TEXT,
     thermal_power_nominal TEXT,
     in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)

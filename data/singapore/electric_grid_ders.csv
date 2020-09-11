@@ -1,4 +1,4 @@
-electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+electric_grid_name,der_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
 singapore_district1,1,fixed_load,mixed_commercial_residential,6,1,0,0,wye,-4250000.0,-1396907.4470101665
 singapore_district1,2,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-4250000.0,-1396907.4470101665
 singapore_district1,3,fixed_load,mixed_commercial_residential,8,1,0,0,wye,-4318161.070794167,-1419310.9075721833

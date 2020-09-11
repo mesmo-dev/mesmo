@@ -104,9 +104,9 @@ def main(
         der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 0.8
     # PV plant.
     if scenario_number in [11, 12]:
-        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.1
+        der_model_set.flexible_der_models['24'].marginal_cost = 0.1
     if scenario_number in [15]:
-        der_model_set.flexible_der_models['24'].levelized_cost_of_energy = 0.04
+        der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
     optimization_problem = pyo.ConcreteModel()
@@ -502,7 +502,7 @@ def main(
                 f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
                 f" at {timestep.strftime('%H:%M:%S')}"
             )
-            nx.draw_networkx_nodes(
+            nx.draw(
                 thermal_grid_graph,
                 pos=thermal_grid_graph.node_positions,
                 nodelist=(
@@ -510,11 +510,11 @@ def main(
                         fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
+                edgelist=[],
                 node_size=150.0,
-                node_color='red',
-                with_labels=False
+                node_color='red'
             )
-            nx.draw_networkx(
+            nx.draw(
                 thermal_grid_graph,
                 pos=thermal_grid_graph.node_positions,
                 arrows=False,
@@ -535,7 +535,7 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            # plt.show()
+            plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.
@@ -555,7 +555,7 @@ def main(
                 f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
                 f" at {timestep.strftime('%H:%M:%S')}"
             )
-            nx.draw_networkx_nodes(
+            nx.draw(
                 electric_grid_graph,
                 pos=electric_grid_graph.node_positions,
                 nodelist=(
@@ -563,11 +563,11 @@ def main(
                         fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
+                edgelist=[],
                 node_size=150.0,
-                node_color='red',
-                with_labels=False
+                node_color='red'
             )
-            nx.draw_networkx(
+            nx.draw(
                 electric_grid_graph,
                 pos=electric_grid_graph.node_positions,
                 arrows=False,
@@ -608,7 +608,7 @@ def main(
     )
 
     # Plot electric grid nodes voltage drop.
-    fledge.plots.plot_electric_grid_node_voltage_drop(
+    fledge.plots.plot_grid_node_utilization(
         electric_grid_model,
         electric_grid_graph,
         node_voltage_vector_magnitude_per_unit,

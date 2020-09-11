@@ -200,9 +200,8 @@ class ScenarioData(object):
         # Define excluded columns. By default, all columns containing the following strings are excluded:
         # `_name`, `_type`, `connection`
         if excluded_columns is None:
-            excluded_columns = []
+            excluded_columns = ['parameter_set']
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
-        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('parameter_set')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
@@ -389,7 +388,7 @@ class ThermalGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grids
-                JOIN cooling_plants ON cooling_plants.model_name = thermal_grids.plant_model_name
+                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.plant_model_name
                 WHERE thermal_grid_name = (
                     SELECT thermal_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -457,19 +456,8 @@ class DERData(object):
     """DER data object."""
 
     scenario_data: ScenarioData
-    fixed_loads: pd.DataFrame
-    fixed_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    fixed_ev_chargers: pd.DataFrame
-    fixed_ev_charger_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    flexible_loads: pd.DataFrame
-    flexible_load_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    fixed_generators: pd.DataFrame
-    fixed_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    flexible_generators: pd.DataFrame
-    flexible_generators_timeseries_dict: typing.Dict[str, pd.DataFrame]
-    cooling_plants: pd.DataFrame
-    flexible_buildings: pd.DataFrame
-    biogas_plants: pd.DataFrame
+    ders: pd.DataFrame
+    der_definitions: typing.Dict[str, pd.DataFrame]
 
     @multimethod
     def __init__(
@@ -477,7 +465,6 @@ class DERData(object):
             scenario_name: str,
             database_connection=connect_database()
     ):
-        """Load fixed load data from database for given `scenario_name`."""
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -486,295 +473,214 @@ class DERData(object):
         timestep_start_string = self.scenario_data.scenario.at['timestep_start'].strftime('%Y-%m-%dT%H:%M:%S')
         timestep_end_string = self.scenario_data.scenario.at['timestep_end'].strftime('%Y-%m-%dT%H:%M:%S')
 
-        # Define utility function for DER data.
-        # TODO: Move to method?
-        # TODO: Add thermal grid DER type support.
-        def get_der_type_data(der_type: str) -> typing.Tuple[pd.DataFrame, typing.Dict[str, pd.DataFrame]]:
-            """Obtain DER data for given DER type."""
-
-            # Check validity of DER type.
-            try:
-                assert der_type in [
-                    'fixed_load',
-                    'fixed_ev_charger',
-                    'flexible_load',
-                    'fixed_generator',
-                    'flexible_generator'
-                ]
-            except AssertionError:
-                logger.error(f"Invalid DER type: {der_type}")
-                raise
-
-            # Obtain fixed load data.
-            der_models = (
+        # Obtain DERs.
+        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
+        #   due to SQLITE missing full outer join syntax.
+        self.ders = (
+            pd.merge(
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    f"""
-                    SELECT * FROM {der_type}s
-                    JOIN electric_grid_ders USING (model_name)
-                    WHERE der_type = ?
-                    AND electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
+                    """
+                    SELECT * FROM der_models
+                    WHERE (der_type, der_model_name) IN (
+                        SELECT der_type, der_model_name
+                        FROM electric_grid_ders
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                    )
+                    OR (der_type, der_model_name) IN (
+                        SELECT der_type, der_model_name
+                        FROM thermal_grid_ders
+                        WHERE thermal_grid_name = (
+                            SELECT thermal_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
                     )
                     """,
                     con=database_connection,
                     params=[
-                        der_type,
+                        scenario_name,
                         scenario_name
                     ]
-                ))
-            )
-            der_models.index = der_models['der_name']
-            der_models = (
-                der_models.reindex(index=natsort.natsorted(der_models.index))
-            )
-
-            # Instantiate dictionary for unique `model_name`.
-            der_models_unique = der_models.loc[:, ['model_name', 'definition_type']].drop_duplicates()
-            der_models_unique.index = der_models_unique.loc[:, 'model_name']
-            der_model_timeseries_dict = dict.fromkeys(der_models_unique.loc[:, 'model_name'])
-
-            # Load timeseries for each `model_name`.
-            for model_name in der_model_timeseries_dict:
-
-                if 'timeseries' in der_models_unique.at[model_name, 'definition_type']:
-                    der_model_timeseries_dict[model_name] = (
-                        pd.read_sql(
-                            f"""
-                            SELECT * FROM {der_type}_timeseries
-                            WHERE model_name = ?
-                            AND time between ? AND ?
-                            """,
-                            con=database_connection,
-                            params=[
-                                model_name,
-                                timestep_start_string,
-                                timestep_end_string
-                            ],
-                            parse_dates=['time'],
-                            index_col=['time']
-                        ).reindex(
-                            self.scenario_data.timesteps
-                        ).interpolate(
-                            'quadratic'
-                        ).bfill(  # Backward fill to handle edge definition gaps.
-                            limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
-                        ).ffill(  # Forward fill to handle edge definition gaps.
-                            limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                )),
+                pd.merge(
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM electric_grid_ders
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
                         )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM thermal_grid_ders
+                        WHERE thermal_grid_name = (
+                            SELECT thermal_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    how='outer',
+                    on=['der_name', 'der_type', 'der_model_name', 'in_service'],
+                    suffixes=('_electric_grid', '_thermal_grid')
+                ),
+                how='outer',
+                on=['der_type', 'der_model_name'],
+            )
+        )
+        self.ders.index = self.ders['der_name']
+        self.ders = self.ders.reindex(index=natsort.natsorted(self.ders.index))
+
+        # Instantiate DER definitions dictionary for unique `definition_type` / `definition_name`.
+        der_definitions_unique = self.ders.loc[:, ['definition_type', 'definition_name']].drop_duplicates()
+        der_definitions_unique = der_definitions_unique.dropna(subset=['definition_type'])
+        self.der_definitions = dict.fromkeys(pd.MultiIndex.from_frame(der_definitions_unique))
+
+        # Append `definition_index` column to DERs, for more convenient indexing into DER definitions.
+        self.ders.loc[:, 'definition_index'] = (
+            pd.MultiIndex.from_frame(self.ders.loc[:, ['definition_type', 'definition_name']])
+        )
+
+        # Load DER definitions, e.g. timeseries definitions, for each `definition_name`.
+        for definition_index in self.der_definitions:
+
+            if 'timeseries' in definition_index[0]:
+                self.der_definitions[definition_index] = (
+                    pd.read_sql(
+                        """
+                        SELECT * FROM der_timeseries
+                        WHERE definition_name = ?
+                        AND time between ? AND ?
+                        """,
+                        con=database_connection,
+                        params=[
+                            definition_index[1],
+                            timestep_start_string,
+                            timestep_end_string
+                        ],
+                        parse_dates=['time'],
+                        index_col=['time']
+                    ).reindex(
+                        self.scenario_data.timesteps
+                    ).interpolate(
+                        'quadratic'
+                    ).bfill(  # Backward fill to handle edge definition gaps.
+                        limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    ).ffill(  # Forward fill to handle edge definition gaps.
+                        limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    )
+                )
+
+                # If any NaN values, display warning and fill missing values.
+                if self.der_definitions[definition_index].isnull().any().any():
+                    logger.warning(
+                        f"Missing values in DER timeseries definition for '{definition_index[1]}'."
+                        f" Please check if appropriate timestep_start/timestep_end are defined."
+                        f" Missing values are filled with 0."
+                    )
+                    # Fill definition_name in corresponding column and 0.0 otherwise.
+                    self.der_definitions[definition_index].loc[:, 'definition_name'] = (
+                        self.der_definitions[definition_index].loc[:, 'definition_name'].fillna(definition_index[1])
+                    )
+                    self.der_definitions[definition_index] = (
+                        self.der_definitions[definition_index].fillna(0.0)
                     )
 
-                    # If any NaN values, display warning and fill missing values.
-                    if der_model_timeseries_dict[model_name].isnull().any().any():
-                        logger.warning(
-                            f"Missing values in timeseries definition for {der_type} '{model_name}'."
-                            f" Please check if appropriate timestep_start/timestep_end are defined."
-                            f" Missing values are filled with 0."
-                        )
-                        # Fill model_name in corresponding column and 0.0 otherwise.
-                        der_model_timeseries_dict[model_name].loc[:, 'model_name'] = (
-                            der_model_timeseries_dict[model_name].loc[:, 'model_name'].fillna(model_name)
-                        )
-                        der_model_timeseries_dict[model_name] = (
-                            der_model_timeseries_dict[model_name].fillna(0.0)
-                        )
-
-                if 'schedule' in der_models_unique.at[model_name, 'definition_type']:
-                    der_model_schedule = (
-                        pd.read_sql(
-                            f"""
-                            SELECT * FROM {der_type}_schedules
-                            WHERE model_name = ?
-                            """,
-                            con=database_connection,
-                            params=[
-                                model_name
-                            ],
-                            index_col='time_period'
-                        )
+            elif 'schedule' in definition_index[0]:
+                der_schedule = (
+                    pd.read_sql(
+                        """
+                        SELECT * FROM der_schedules
+                        WHERE definition_name = ?
+                        """,
+                        con=database_connection,
+                        params=[definition_index[1]],
+                        index_col=['time_period']
                     )
+                )
 
-                    # Parse time period index.
-                    der_model_schedule.index = np.vectorize(pd.Period)(der_model_schedule.index)
+                # Parse time period index.
+                der_schedule.index = np.vectorize(pd.Period)(der_schedule.index)
 
-                    # Obtain complete schedule for all weekdays.
-                    # TODO: Check if '01T00:00:00' is defined for each schedule.
-                    der_model_schedule_complete = []
-                    for day in range(1, 8):
-                        if day in der_model_schedule.index.day.unique():
-                            der_model_schedule_complete.append(
-                                der_model_schedule.loc[der_model_schedule.index.day == day, :]
+                # Obtain complete schedule for all weekdays.
+                # TODO: Check if '01T00:00:00' is defined for each schedule.
+                der_schedule_complete = []
+                for day in range(1, 8):
+                    if day in der_schedule.index.day.unique():
+                        der_schedule_complete.append(
+                            der_schedule.loc[der_schedule.index.day == day, :]
+                        )
+                    else:
+                        der_schedule_previous = der_schedule_complete[-1].copy()
+                        der_schedule_previous.index += pd.Timedelta('1 day')
+                        der_schedule_complete.append(der_schedule_previous)
+                der_schedule_complete = pd.concat(der_schedule_complete)
+
+                # Obtain complete schedule for each minute of the week.
+                der_schedule_complete = (
+                    der_schedule_complete.reindex(
+                        pd.period_range(start='01T00:00', end='07T23:59', freq='T')
+                    ).fillna(method='ffill')
+                )
+
+                # Reindex / fill schedule for given timesteps.
+                der_schedule_complete.index = (
+                    pd.MultiIndex.from_arrays([
+                        der_schedule_complete.index.day - 1,
+                        der_schedule_complete.index.hour,
+                        der_schedule_complete.index.minute
+                    ])
+                )
+                der_schedule = (
+                    pd.DataFrame(
+                        index=pd.MultiIndex.from_arrays([
+                            self.scenario_data.timesteps.weekday,
+                            self.scenario_data.timesteps.hour,
+                            self.scenario_data.timesteps.minute
+                        ]),
+                        columns=der_schedule_complete.columns
+                    )
+                )
+                for column in der_schedule.columns:
+                    der_schedule[column] = (
+                        der_schedule[column].fillna(der_schedule_complete[column])
+                    )
+                der_schedule.index = self.scenario_data.timesteps
+
+                self.der_definitions[definition_index] = der_schedule
+
+            elif definition_index[0] == 'cooling_plant':
+
+                self.der_definitions[definition_index] = (
+                    pd.concat([
+                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                            """
+                            SELECT * FROM thermal_grids
+                            WHERE thermal_grid_name = (
+                                SELECT thermal_grid_name FROM main.scenarios
+                                WHERE scenario_name = ?
                             )
-                        else:
-                            der_model_schedule_previous = der_model_schedule_complete[-1].copy()
-                            der_model_schedule_previous.index += pd.Timedelta('1 day')
-                            der_model_schedule_complete.append(der_model_schedule_previous)
-                    der_model_schedule_complete = pd.concat(der_model_schedule_complete)
-
-                    # Obtain complete schedule for each minute of the week.
-                    der_model_schedule_complete = (
-                        der_model_schedule_complete.reindex(
-                            pd.period_range(start='01T00:00', end='07T23:59', freq='T')
-                        ).fillna(method='ffill')
-                    )
-
-                    # Reindex / fill schedule for given timesteps.
-                    der_model_schedule_complete.index = (
-                        pd.MultiIndex.from_arrays([
-                            der_model_schedule_complete.index.day - 1,
-                            der_model_schedule_complete.index.hour,
-                            der_model_schedule_complete.index.minute
-                        ])
-                    )
-                    der_model_schedule = (
-                        pd.DataFrame(
-                            index=pd.MultiIndex.from_arrays([
-                                self.scenario_data.timesteps.weekday,
-                                self.scenario_data.timesteps.hour,
-                                self.scenario_data.timesteps.minute
-                            ]),
-                            columns=der_model_schedule_complete.columns
-                        )
-                    )
-                    for column in der_model_schedule.columns:
-                        der_model_schedule[column] = (
-                            der_model_schedule[column].fillna(der_model_schedule_complete[column])
-                        )
-                    der_model_schedule.index = self.scenario_data.timesteps
-
-                    der_model_timeseries_dict[model_name] = der_model_schedule
-
-            return (
-                der_models,
-                der_model_timeseries_dict
-            )
-
-        # Obtain fixed load / EV charger / flexible load data.
-        # TODO: Enable thermal grid connection for appropriate types.
-        self.fixed_loads, self.fixed_load_timeseries_dict = get_der_type_data('fixed_load')
-        self.fixed_ev_chargers, self.fixed_ev_charger_timeseries_dict = get_der_type_data('fixed_ev_charger')
-        self.flexible_loads, self.flexible_load_timeseries_dict = get_der_type_data('flexible_load')
-        self.fixed_generators, self.fixed_generator_timeseries_dict = get_der_type_data('fixed_generator')
-        self.flexible_generators, self.flexible_generator_timeseries_dict = get_der_type_data('flexible_generator')
-
-        # Obtain cooling plant data.
-        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
-        #   due to SQLITE missing full outer join syntax.
-        self.cooling_plants = (
-            pd.merge(
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM electric_grid_ders
-                    WHERE der_type = 'cooling_plant'
-                    AND electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM thermal_grid_ders
-                    JOIN cooling_plants USING (model_name)
-                    JOIN thermal_grids USING (thermal_grid_name)
-                    WHERE der_type = 'cooling_plant'
-                    AND thermal_grid_name = (
-                        SELECT thermal_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                how='outer',
-                on=['der_name', 'der_type', 'model_name'],
-                suffixes=('_electric_grid', '_thermal_grid')
-            )
-        )
-        self.cooling_plants.index = self.cooling_plants['der_name']
-        self.cooling_plants = (
-            self.cooling_plants.reindex(index=natsort.natsorted(self.cooling_plants.index))
-        )
-
-        # Obtain flexible building data.
-        # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
-        #   due to SQLITE missing full outer join syntax.
-        self.flexible_buildings = (
-            pd.merge(
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM electric_grid_ders
-                    WHERE der_type = 'flexible_building'
-                    AND electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM thermal_grid_ders
-                    WHERE der_type = 'flexible_building'
-                    AND thermal_grid_name = (
-                        SELECT thermal_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                how='outer',
-                on=['der_name', 'der_type', 'model_name'],
-                suffixes=('_electric_grid', '_thermal_grid')
-            )
-        )
-        self.flexible_buildings.index = self.flexible_buildings['der_name']
-        self.flexible_buildings = (
-            self.flexible_buildings.reindex(index=natsort.natsorted(self.flexible_buildings.index))
-        )
-
-        # Obtain biogas plant data.
-        # - Obtain DERs in the same manner as above
-        self.biogas_plants = (
-            pd.merge(
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM electric_grid_ders
-                    WHERE der_type = 'biogas_plant'
-                    AND electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                    """
-                    SELECT * FROM thermal_grid_ders
-                    WHERE der_type = 'biogas_plant'
-                    AND thermal_grid_name = (
-                        SELECT thermal_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[scenario_name]
-                )),
-                how='outer',
-                on=['der_name', 'der_type', 'model_name'],
-                suffixes=('_electric_grid', '_thermal_grid')
-            )
-        )
-        self.biogas_plants.index = self.biogas_plants['der_name']
-        self.biogas_plants = (
-            self.biogas_plants.reindex(index=natsort.natsorted(self.biogas_plants.index))
-        )
-
+                            """,
+                            con=database_connection,
+                            params=[scenario_name]
+                        )).iloc[0],
+                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                            """
+                            SELECT * FROM der_cooling_plants
+                            WHERE definition_name = ?
+                            """,
+                            con=database_connection,
+                            params=[definition_index[1]]
+                        )).iloc[0]
+                    ]).drop('thermal_grid_name')  # Remove `thermal_grid_name` to avoid duplicate index in `der_models`.
+                )
 
 
 class PriceData(object):

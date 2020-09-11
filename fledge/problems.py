@@ -285,7 +285,7 @@ class OptimalOperationProblem(object):
             )
             branch_power_vector_squared_maximum = (
                 scenario_data.scenario['branch_flow_per_unit_maximum']
-                * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+                * np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )
@@ -341,9 +341,17 @@ class OptimalOperationProblem(object):
                 self.price_timeseries,
                 self.timesteps
             )
+        if self.electric_grid_model is not None:
+            self.linear_electric_grid_model.define_optimization_objective(
+                self.optimization_problem,
+                self.price_timeseries,
+                self.timesteps
+            )
         self.der_model_set.define_optimization_objective(
             self.optimization_problem,
-            self.price_timeseries
+            self.price_timeseries,
+            electric_grid_model=self.electric_grid_model,
+            thermal_grid_model=self.thermal_grid_model
         )
 
     def solve(self):

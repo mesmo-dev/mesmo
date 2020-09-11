@@ -35,6 +35,13 @@ class TestElectricGridModels(unittest.TestCase):
         time_duration = time.time() - time_start
         logger.info(f"Test PowerFlowSolutionFixedPoint: Completed in {time_duration:.6f} seconds.")
 
+    def test_power_flow_solution_z_bus(self):
+        # Get result.
+        time_start = time.time()
+        fledge.electric_grid_models.PowerFlowSolutionZBus(fledge.config.config['tests']['scenario_name'])
+        time_duration = time.time() - time_start
+        logger.info(f"Test PowerFlowSolutionZBus: Completed in {time_duration:.6f} seconds.")
+
     def test_power_flow_solution_opendss(self):
         # Get result.
         time_start = time.time()

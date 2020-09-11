@@ -899,7 +899,7 @@ class ElectricGridModelDefault(ElectricGridModel):
             ]
         )
         self.node_voltage_vector_reference_source = (
-            self.node_voltage_vector_reference_no_source[
+            self.node_voltage_vector_reference[
                 fledge.utils.get_index(self.nodes, node_type='source')
             ]
         )

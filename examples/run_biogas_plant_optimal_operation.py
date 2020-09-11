@@ -9,11 +9,13 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.config
 import fledge.utils
+import bipmo.bipmo.plots
 
 
 # Settings.
 scenario_name = 'cigre_mv_network_with_all_ders'
 plots = True  # If True, script may produce plots.
+run_milp = False  # if True, script will formulate a MILP and then use the results as integers in a second run
 
 # Obtain results path.
 results_path = (
@@ -25,10 +27,9 @@ fledge.data_interface.recreate_database()
 # Obtain scenario data and price timeseries.
 scenario_data = fledge.data_interface.ScenarioData(scenario_name)
 price_data = fledge.data_interface.PriceData(scenario_name)
-price_type = 'biogas'
+price_type = 'EPEX SPOT Power DE Day Ahead'
 price_timeseries = price_data.price_timeseries_dict[price_type]
 
-run_milp = False
 chp_schedule: pd.DataFrame
 
 for i in range(2):
@@ -79,7 +80,7 @@ for i in range(2):
                                 * optimization_problem.binary_variables[timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
                             )
 
-    flexible_biogas_plant_model.define_optimization_objective(optimization_problem)
+    flexible_biogas_plant_model.define_optimization_objective(optimization_problem, price_timeseries)
 
     # Solve optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
@@ -103,59 +104,10 @@ for i in range(2):
 
 results = (
     flexible_biogas_plant_model.get_optimization_results(
-        optimization_problem, price_timeseries
+        optimization_problem
     )
 )
-# Plot results.
+print(results)
+
 if plots:
-
-    for output in flexible_biogas_plant_model.outputs:
-        plt.plot(flexible_biogas_plant_model.output_maximum_timeseries[output], label="Maximum", drawstyle='steps-post')
-        plt.plot(flexible_biogas_plant_model.output_minimum_timeseries[output], label="Minimum", drawstyle='steps-post')
-        plt.plot(results['output_vector'][output], label="Optimal", drawstyle='steps-post')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"Output: {output}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
-
-    for control in flexible_biogas_plant_model.controls:
-        plt.plot(results['control_vector'][control], label="Optimal", drawstyle='steps-post', color='#D55E00')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"Control: {control}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
-
-    for state in flexible_biogas_plant_model.states:
-        plt.plot(results['state_vector'][state], label="Optimal", drawstyle='steps-post', color='#D55E00')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"State: {state}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
-
-    plt.plot(results['profit_vector']['profit_value'], label="Optimal", drawstyle='steps-post', color='#D55E00')
-    plt.legend()
-    plt.title('Profit per time interval (euros)')
-    plt.setp(plt.gca().xaxis.get_majorticklabels(),
-             'rotation', 45)
-    plt.xlabel('Timesteps (day and hour)')
-    plt.ylabel('Profit (euros)')
-    plt.show()
-    plt.close()
-
-    plt.plot(price_timeseries['price_value'], drawstyle='steps-post')
-    plt.title(f"Price in euros per MWh: {price_type}")
-    plt.setp(plt.gca().xaxis.get_majorticklabels(),
-             'rotation', 45)
-    plt.show()
-    plt.close()
-
-    print("Total profit in euros:", sum(results['profit_vector']['profit_value']))
+    bipmo.bipmo.plots.generate_biogas_plant_plots(results, flexible_biogas_plant_model, price_timeseries)

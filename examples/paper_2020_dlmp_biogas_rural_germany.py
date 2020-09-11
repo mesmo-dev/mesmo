@@ -16,6 +16,7 @@ import fledge.electric_grid_models
 import fledge.plots
 import fledge.utils
 import fledge.problems
+import bipmo.bipmo.plots
 
 
 # Settings.
@@ -234,206 +235,158 @@ print(dlmps)
 # Store DLMPs as CSV.
 dlmps.to_csv(results_path)
 
-# Plot electric grid DLMPs.
-electric_grid_dlmp = (
-    pd.concat(
-        [
-            dlmps['electric_grid_energy_dlmp'],
-            dlmps['electric_grid_loss_dlmp'],
-            dlmps['electric_grid_voltage_dlmp'],
-            dlmps['electric_grid_congestion_dlmp']
-        ],
-        axis='columns',
-        keys=['energy', 'loss', 'voltage', 'congestion'],
-        names=['dlmp_type']
-    )
-)
-colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
-for der in electric_grid_model.ders:
-
-    # Obtain corresponding node.
-    # TODO: Consider delta connected DERs.
-    node = (
-        electric_grid_model.nodes[
-            electric_grid_model.der_incidence_wye_matrix[
-                :, electric_grid_model.ders.get_loc(der)
-            ].toarray().ravel() > 0
-        ]
-    )
-
-    # Create plot.
-    fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
-    ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
-    ax1.stackplot(
-        scenario_data.timesteps,
-        (
-            electric_grid_dlmp.loc[:, (slice(None), *zip(*node))].groupby('dlmp_type', axis='columns').mean().T
-        ),
-        labels=['Energy', 'Loss', 'Voltage', 'Congest.'],
-        colors=[colors[0], colors[1], colors[2], colors[3]],
-        step='post'
-    )
-    ax1.plot(
-        (
-            electric_grid_dlmp.loc[
-                :, (slice(None), *zip(*node))
-            ].groupby('dlmp_type', axis='columns').mean().sum(axis='columns')
-        ),
-        label='Total DLMP',
-        drawstyle='steps-post',
-        color='red',
-        linewidth=1.0
-    )
-    ax1.grid(True)
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('Price [€/MWh]')
-    # ax1.set_ylim((0.0, 10.0))
-    ax2 = plt.twinx(ax1)
-    if der in electric_grid_model.ders:
-        ax2.plot(
-            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-            label='Active pw.',
-            drawstyle='steps-post',
-            color='black',
-            linewidth=1.5
+if plots:
+    # Plot electric grid DLMPs.
+    electric_grid_dlmp = (
+        pd.concat(
+            [
+                dlmps['electric_grid_energy_dlmp'],
+                dlmps['electric_grid_loss_dlmp'],
+                dlmps['electric_grid_voltage_dlmp'],
+                dlmps['electric_grid_congestion_dlmp']
+            ],
+            axis='columns',
+            keys=['energy', 'loss', 'voltage', 'congestion'],
+            names=['dlmp_type']
         )
-    ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-    ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
-    ax2.set_xlabel('Time')
-    ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
-    # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
-    h1, l1 = ax1.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
-    lax.axis("off")
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
-    # plt.show()
-    plt.close()
+    )
+    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    for der in electric_grid_model.ders:
 
-# Obtain graphs.
-electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
-
-
-# Plot electric grid DLMPs in grid.
-dlmp_types = [
-    'electric_grid_energy_dlmp',
-    'electric_grid_voltage_dlmp',
-    'electric_grid_congestion_dlmp',
-    'electric_grid_loss_dlmp'
-]
-for timestep in scenario_data.timesteps:
-    for dlmp_type in dlmp_types:
-        node_color = (
-            dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(electric_grid_graph.nodes).values
+        # Obtain corresponding node.
+        # TODO: Consider delta connected DERs.
+        node = (
+            electric_grid_model.nodes[
+                electric_grid_model.der_incidence_wye_matrix[
+                    :, electric_grid_model.ders.get_loc(der)
+                ].toarray().ravel() > 0
+            ]
         )
-        plt.title(
-            f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
-            f" at {timestep.strftime('%H:%M:%S')}"
-        )
-        nx.draw_networkx_nodes(
-            electric_grid_graph,
-            pos=electric_grid_graph.node_positions,
-            nodelist=(
-                electric_grid_model.nodes[
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-                ].get_level_values('node_name')[:1].to_list()
+
+        # Create plot.
+        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
+        ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
+        ax1.stackplot(
+            scenario_data.timesteps,
+            (
+                electric_grid_dlmp.loc[:, (slice(None), *zip(*node))].groupby('dlmp_type', axis='columns').mean().T
             ),
-            node_size=150.0,
-            node_color='red',
+            labels=['Energy', 'Loss', 'Voltage', 'Congest.'],
+            colors=[colors[0], colors[1], colors[2], colors[3]],
+            step='post'
         )
-        nx.draw_networkx(
-            electric_grid_graph,
-            pos=electric_grid_graph.node_positions,
-            arrows=False,
-            node_size=100.0,
-            node_color=node_color,
-            edgecolors='black',  # Make node border visible.
-#                with_labels=False
+        ax1.plot(
+            (
+                electric_grid_dlmp.loc[
+                    :, (slice(None), *zip(*node))
+                ].groupby('dlmp_type', axis='columns').mean().sum(axis='columns')
+            ),
+            label='Total DLMP',
+            drawstyle='steps-post',
+            color='red',
+            linewidth=1.0
         )
-        sm = (
-            plt.cm.ScalarMappable(
-                norm=plt.Normalize(
-                    vmin=np.min(node_color),
-                    vmax=np.max(node_color)
-                )
+        ax1.grid(True)
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Price [€/MWh]')
+        # ax1.set_ylim((0.0, 10.0))
+        ax2 = plt.twinx(ax1)
+        if der in electric_grid_model.ders:
+            ax2.plot(
+                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                label='Active pw.',
+                drawstyle='steps-post',
+                color='black',
+                linewidth=1.5
             )
-        )
-        cb = plt.colorbar(sm, shrink=0.9)
-        cb.set_label('Price [€/MWh]')
+        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
+        ax2.set_xlabel('Time')
+        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
+        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
+        lax.axis("off")
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+        plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
         # plt.show()
         plt.close()
 
-# Plot electric grid line utilization.
-fledge.plots.plot_grid_line_utilization(
-    electric_grid_model,
-    electric_grid_graph,
-    branch_power_vector_magnitude_per_unit * 100.0,
-    results_path,
-    value_unit='%',
-)
+    # Obtain graphs.
+    electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
 
-# Print results path.
-fledge.utils.launch(results_path)
-print(f"Results are stored in: {results_path}")
 
-results = (
-    flexible_biogas_plant_model.get_optimization_results(
-        optimization_problem, price_timeseries
+    # Plot electric grid DLMPs in grid.
+    dlmp_types = [
+        'electric_grid_energy_dlmp',
+        'electric_grid_voltage_dlmp',
+        'electric_grid_congestion_dlmp',
+        'electric_grid_loss_dlmp'
+    ]
+    for timestep in scenario_data.timesteps:
+        for dlmp_type in dlmp_types:
+            node_color = (
+                dlmps[dlmp_type].loc[timestep, :].groupby('node_name').mean().reindex(electric_grid_graph.nodes).values
+            )
+            plt.title(
+                f"{dlmp_type.replace('_', ' ').capitalize().replace('dlmp', 'DLMP')}"
+                f" at {timestep.strftime('%H:%M:%S')}"
+            )
+            nx.draw_networkx_nodes(
+                electric_grid_graph,
+                pos=electric_grid_graph.node_positions,
+                nodelist=(
+                    electric_grid_model.nodes[
+                        fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+                    ].get_level_values('node_name')[:1].to_list()
+                ),
+                node_size=150.0,
+                node_color='red',
+            )
+            nx.draw_networkx(
+                electric_grid_graph,
+                pos=electric_grid_graph.node_positions,
+                arrows=False,
+                node_size=100.0,
+                node_color=node_color,
+                edgecolors='black',  # Make node border visible.
+            )
+            sm = (
+                plt.cm.ScalarMappable(
+                    norm=plt.Normalize(
+                        vmin=np.min(node_color),
+                        vmax=np.max(node_color)
+                    )
+                )
+            )
+            cb = plt.colorbar(sm, shrink=0.9)
+            cb.set_label('Price [€/MWh]')
+            plt.tight_layout()
+            plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+            # plt.show()
+            plt.close()
+
+    # Plot electric grid line utilization.
+    fledge.plots.plot_grid_line_utilization(
+        electric_grid_model,
+        electric_grid_graph,
+        branch_power_vector_magnitude_per_unit * 100.0,
+        results_path,
+        value_unit='%',
     )
-)
-# Plot results.
-if plots:
 
-    for output in flexible_biogas_plant_model.outputs:
-        plt.plot(flexible_biogas_plant_model.output_maximum_timeseries[output], label="Maximum", drawstyle='steps-post')
-        plt.plot(flexible_biogas_plant_model.output_minimum_timeseries[output], label="Minimum", drawstyle='steps-post')
-        plt.plot(results['output_vector'][output], label="Optimal", drawstyle='steps-post')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"Output: {output}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
+    # Print results path.
+    fledge.utils.launch(results_path)
+    print(f"Results are stored in: {results_path}")
 
-    for control in flexible_biogas_plant_model.controls:
-        plt.plot(results['control_vector'][control], label="Optimal", drawstyle='steps-post', color='#D55E00')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"Control: {control}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
+    results = (
+        flexible_biogas_plant_model.get_optimization_results(
+            optimization_problem, price_timeseries
+        )
+    )
 
-    for state in flexible_biogas_plant_model.states:
-        plt.plot(results['state_vector'][state], label="Optimal", drawstyle='steps-post', color='#D55E00')
-        plt.legend()
-        plt.xlabel('Timesteps (day and hour)')
-        plt.title(f"State: {state}")
-        plt.setp(plt.gca().xaxis.get_majorticklabels(),
-                 'rotation', 45)
-        plt.show()
-        plt.close()
+    print(results)
 
-    plt.plot(results['profit_vector']['profit_value'], label="Optimal", drawstyle='steps-post', color='#D55E00')
-    plt.legend()
-    plt.title('Profit per time interval (euros)')
-    plt.setp(plt.gca().xaxis.get_majorticklabels(),
-             'rotation', 45)
-    plt.xlabel('Timesteps (day and hour)')
-    plt.ylabel('Profit (euros)')
-    plt.show()
-    plt.close()
-
-    plt.plot(price_timeseries['price_value'], drawstyle='steps-post')
-    plt.title(f"Price in euros per MWh: {price_type}")
-    plt.setp(plt.gca().xaxis.get_majorticklabels(),
-             'rotation', 45)
-    plt.show()
-    plt.close()
-
-    print("Total profit in euros:", sum(results['profit_vector']['profit_value']))
+    if plots:
+        bipmo.bipmo.plots.generate_biogas_plant_plots(results, flexible_biogas_plant_model, price_timeseries)

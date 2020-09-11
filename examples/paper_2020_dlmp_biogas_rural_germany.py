@@ -79,9 +79,9 @@ for i in range(2):
         if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
         else None
     )
-    branch_power_vector_squared_maximum[
-        fledge.utils.get_index(electric_grid_model.branches, branch_name='Line_2_3')
-    ] *= 0.25
+    # branch_power_vector_squared_maximum[
+    #     fledge.utils.get_index(electric_grid_model.branches, branch_name='Line_2_3')
+    # ] *= 0.25
 
     # Get the biogas plant model and set the switches flag accordingly
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
@@ -288,7 +288,7 @@ if plots:
         )
         ax1.grid(True)
         ax1.set_xlabel('Time')
-        ax1.set_ylabel('Price [€/MWh]')
+        ax1.set_ylabel('Price [€/Wh]')
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         if der in electric_grid_model.ders:
@@ -302,7 +302,7 @@ if plots:
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
         ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
         ax2.set_xlabel('Time')
-        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
+        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [W]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
@@ -361,7 +361,7 @@ if plots:
                 )
             )
             cb = plt.colorbar(sm, shrink=0.9)
-            cb.set_label('Price [€/MWh]')
+            cb.set_label('Price [€/Wh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
             # plt.show()
@@ -382,7 +382,7 @@ if plots:
 
     results = (
         flexible_biogas_plant_model.get_optimization_results(
-            optimization_problem, price_timeseries
+            optimization_problem
         )
     )
 

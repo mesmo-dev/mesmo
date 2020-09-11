@@ -61,7 +61,34 @@ CREATE TABLE electric_grid_line_types (
     line_type TEXT,
     n_phases TEXT,
     maximum_current TEXT,
+    definition_type TEXT,
     PRIMARY KEY(line_type)
+);
+CREATE TABLE electric_grid_line_types_assembly (
+    line_type TEXT,
+    phase_1_conductor_type TEXT,
+    phase_2_conductor_type TEXT,
+    phase_3_conductor_type TEXT,
+    neutral_conductor_type TEXT,
+    soil_resistivity TEXT,
+    phasing TEXT,
+    spacing_id TEXT,
+    phase_1_x REAL,
+    phase_1_y REAL,
+    phase_2_x REAL,
+    phase_2_y REAL,
+    phase_3_x REAL,
+    phase_3_y REAL,
+    neutral_x REAL,
+    neutral_y REAL,
+    PRIMARY KEY(line_type)
+);
+CREATE TABLE electric_grid_line_types_conductors (
+    conductor_type TEXT,
+    resistance TEXT,
+    capacitance TEXT,
+    geometric_mean_radius TEXT,
+    PRIMARY KEY(conductor_type)
 );
 CREATE TABLE electric_grid_line_types_matrices (
     line_type TEXT,

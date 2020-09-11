@@ -232,6 +232,8 @@ class ElectricGridData(object):
     electric_grid_ders: pd.DataFrame
     electric_grid_lines: pd.DataFrame
     electric_grid_line_types: pd.DataFrame
+    electric_grid_line_types_assembly: pd.DataFrame
+    electric_grid_line_types_conductors: pd.DataFrame
     electric_grid_line_types_matrices: pd.DataFrame
     electric_grid_transformers: pd.DataFrame
 
@@ -328,6 +330,32 @@ class ElectricGridData(object):
             ))
         )
         self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
+        self.electric_grid_line_types_assembly = (
+            pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_assembly
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )
+        )
+        self.electric_grid_line_types_assembly.index = self.electric_grid_line_types_assembly['line_type']
+        self.electric_grid_line_types_conductors = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_conductors
+                """,
+                con=database_connection
+            ))
+        )
+        self.electric_grid_line_types_conductors.index = self.electric_grid_line_types_conductors['conductor_type']
         self.electric_grid_line_types_matrices = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """

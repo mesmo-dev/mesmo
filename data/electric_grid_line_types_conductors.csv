@@ -1,0 +1,3 @@
+conductor_type,resistance,capacitance,geometric_mean_radius
+test_conductor_1,3.0,2.0,1.0
+test_conductor_2,1.0,2.0,3.0

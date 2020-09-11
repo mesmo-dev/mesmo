@@ -336,6 +336,42 @@ class ElectricGridModel(object):
         if self.is_single_phase_equivalent:
             self.branch_power_vector_magnitude_reference[fledge.utils.get_index(self.branches, branch_type='line')] *= 3
 
+        ################################################################################################################
+        # Arif: New line type definitions below.
+        ################################################################################################################
+
+        for line_type in electric_grid_data.electric_grid_line_types_assembly.index:
+
+            print(f"line_type = {line_type}")
+
+            # Notes for selecting data:
+            # - The `electric_grid_data` object contains all electric grid data tables as `pandas.DataFrame` objects.
+            # - Selection / indexing from `pandas.DataFrame` is documented here: <https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#selection>
+
+            # Print data tables for reference.
+            print(f"electric_grid_line_types_assembly = \n{electric_grid_data.electric_grid_line_types_assembly}")
+            print(f"electric_grid_line_types_conductors = \n{electric_grid_data.electric_grid_line_types_conductors}")
+
+            # Selecting rows from tables using `.loc`.
+            assembly_data_row = electric_grid_data.electric_grid_line_types_assembly.loc[line_type, :]
+            phase_1_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_1_conductor_type'], :]
+            phase_2_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_2_conductor_type'], :]
+            phase_3_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_3_conductor_type'], :]
+            neutral_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['neutral_conductor_type'], :]
+
+            # Selecting elements from rows using `.at`.
+            frequency = electric_grid_data.electric_grid.at['base_frequency']
+            phase_2_conductor_resistance = phase_2_conductor_data_row.at['resistance']
+
+            # Selecting elements from tables using `.at`.
+            phase_3_conductor_resistance = electric_grid_data.electric_grid_line_types_conductors.at[assembly_data_row.at['phase_3_conductor_type'], 'resistance']
+
+            breakpoint()
+
+        ################################################################################################################
+        # Arif: New line type definitions above.
+        ################################################################################################################
+
 
 class ElectricGridModelDefault(ElectricGridModel):
     """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /

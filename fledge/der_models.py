@@ -683,19 +683,13 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['state_of_charge', 'active_power'] = (
-            1.0
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            -1.0
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         )
         self.disturbance_matrix.at['state_of_charge', 'active_power'] = (
-            -1.0
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            1.0
         )
         self.state_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.states)
@@ -722,7 +716,11 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.concat([
-                pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
+                pd.Series((
+                    np.abs(der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
+                    * der['energy_storage_capacity_per_unit']
+                    * (pd.Timedelta('1h') / der_data.scenario_data.scenario.at['timestep_interval'])
+                ), index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
                     der['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.active_power_nominal_timeseries

@@ -179,11 +179,6 @@ class FixedLoadModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -191,7 +186,14 @@ class FixedLoadModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -229,11 +231,6 @@ class FixedEVChargerModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -241,7 +238,14 @@ class FixedEVChargerModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -283,11 +287,6 @@ class FixedGeneratorModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -295,7 +294,14 @@ class FixedGeneratorModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -634,11 +640,6 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -646,7 +647,14 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -773,11 +781,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -785,7 +788,14 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (

@@ -311,6 +311,7 @@ class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 
     states: pd.Index
+    storage_states: pd.Index = pd.Index([])
     controls: pd.Index
     disturbances: pd.Index
     outputs: pd.Index
@@ -353,9 +354,9 @@ class FlexibleDERModel(DERModel):
             optimization_problem.der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
-        if type(self) is StorageModel:
-            for state in self.states:
-                # For storage model, initial state of charge is final state of charge.
+        for state in self.states:
+            if state in self.storage_states:
+                # For states which represent storage state of charge, initial state of charge is final state of charge.
                 optimization_problem.der_model_constraints.add(
                     optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
                     ==
@@ -375,8 +376,8 @@ class FlexibleDERModel(DERModel):
                         for disturbance in self.disturbances
                     )
                 )
-        else:
-            for state in self.states:
+            else:
+                # For other states, set initial state according to the initial state vector.
                 optimization_problem.der_model_constraints.add(
                     optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
                     ==
@@ -661,11 +662,13 @@ class FlexibleLoadModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
+        self.storage_states = pd.Index(['state_of_charge'])
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index(['active_power'])
         self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power'])
 
         # Instantiate initial state.
+        # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
         self.state_vector_initial = (
             pd.Series(0.0, index=self.states)
         )
@@ -895,6 +898,7 @@ class StorageModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
+        self.storage_states = pd.Index(['state_of_charge'])
         self.controls = pd.Index(['active_power_charge', 'active_power_discharge'])
         self.disturbances = pd.Index([])
         self.outputs = (
@@ -905,6 +909,7 @@ class StorageModel(FlexibleDERModel):
         )
 
         # Instantiate initial state.
+        # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
         self.state_vector_initial = (
             pd.Series(0.0, index=self.states)
         )

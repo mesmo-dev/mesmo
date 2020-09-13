@@ -1326,10 +1326,11 @@ class DERModelSet(object):
         self.der_names = der_data.ders.index
 
         # Obtain DER models.
+        # TODO: Fix cobmo error when running as parallel starmap.
         self.der_models = (
             dict(zip(
                 self.der_names,
-                fledge.utils.starmap(
+                itertools.starmap(
                     make_der_model,
                     zip(itertools.repeat(der_data), self.der_names.to_list())
                 )

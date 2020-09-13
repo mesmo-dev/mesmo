@@ -1,6 +1,7 @@
 """Distributed energy resource (DER) models."""
 
 import inspect
+import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
@@ -1323,61 +1324,38 @@ class DERModelSet(object):
 
         # Obtain DER names.
         self.der_names = der_data.ders.index
-        self.fixed_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['fixed_load', 'fixed_generator', 'fixed_ev_charger']
+
+        # Obtain DER models.
+        self.der_models = (
+            dict(zip(
+                self.der_names,
+                fledge.utils.starmap(
+                    make_der_model,
+                    zip(itertools.repeat(der_data), self.der_names.to_list())
                 )
-            ]
-        )
-        self.flexible_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['flexible_load', 'flexible_generator', 'storage', 'flexible_building', 'cooling_plant']
-                )
-            ]
+            ))
         )
 
-        # Obtain models.
-        self.der_models = dict.fromkeys(self.der_names)
-        self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
-        self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
+        # Obtain fixed / flexible DER name / models.
+        self.fixed_der_names = list()
+        self.flexible_der_names = list()
+        self.fixed_der_models = dict()
+        self.flexible_der_models = dict()
         for der_name in self.der_names:
-            if der_data.ders.at[der_name, 'der_type'] == 'fixed_load':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_ev_charger':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedEVChargerModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_generator':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_load':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_generator':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'storage':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.StorageModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_building':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleBuildingModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'cooling_plant':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.CoolingPlantModel(der_data, der_name)
-                )
+            if isinstance(self.der_models[der_name], FixedDERModel):
+                self.fixed_der_names.append(der_name)
+                self.fixed_der_models[der_name] = self.der_models[der_name]
+            elif isinstance(self.der_models[der_name], FlexibleDERModel):
+                self.flexible_der_names.append(der_name)
+                self.flexible_der_models[der_name] = self.der_models[der_name]
             else:
-                logger.error(f"Cannot determine type of DER: {der_name}")
-                raise ValueError
+                # Raise error, if DER model object is neither fixed nor flexible DER model.
+                logger.error(
+                    f"DER model class `{type(self.der_models[der_name])}` for DER '{der_name}' "
+                    f"is not a subclass of `FixedDERModel` or `FlexibleDERModel`."
+                )
+        self.fixed_der_names = pd.Index(self.fixed_der_names)
+        self.flexible_der_names = pd.Index(self.flexible_der_names)
 
         # Obtain flexible DER state space indexes.
         self.states = (

@@ -1502,6 +1502,9 @@ def make_der_model(
         if der_type == der_model_class.der_type:
             return der_model_class(der_data, der_name)
 
-    # Raise error, if no DER model found for given `der_type`.
-    logger.error(f"Can't find DER model for DER '{der_name}' of type '{der_type}'.")
+    # Raise error, if no DER model class found for given `der_type`.
+    logger.error(
+        f"Can't find DER model class for DER '{der_name}' of type '{der_type}'. "
+        f"Please check if valid `der_type` is defined."
+    )
     raise ValueError

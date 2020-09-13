@@ -1,10 +1,13 @@
 """Distributed energy resource (DER) models."""
 
+import inspect
+import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
 import scipy.constants
+import sys
 import typing
 
 import fledge.config
@@ -15,12 +18,11 @@ import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
-# TODO: Validate model behavior for active / reactive nominal power defined as zero.
-
 
 class DERModel(object):
     """DER model object."""
 
+    der_type: str = None
     der_name: str
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
@@ -152,6 +154,8 @@ class FixedDERModel(DERModel):
 class FixedLoadModel(FixedDERModel):
     """Fixed load model object."""
 
+    der_type = 'fixed_load'
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -179,11 +183,6 @@ class FixedLoadModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -191,7 +190,14 @@ class FixedLoadModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -201,6 +207,8 @@ class FixedLoadModel(FixedDERModel):
 
 class FixedEVChargerModel(FixedDERModel):
     """EV charger model object."""
+
+    der_type = 'fixed_ev_charger'
 
     def __init__(
             self,
@@ -229,11 +237,6 @@ class FixedEVChargerModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -241,7 +244,14 @@ class FixedEVChargerModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -252,6 +262,7 @@ class FixedEVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    der_type = 'fixed_generator'
     marginal_cost: np.float
 
     def __init__(
@@ -283,11 +294,6 @@ class FixedGeneratorModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -295,7 +301,14 @@ class FixedGeneratorModel(FixedDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -307,6 +320,7 @@ class FlexibleDERModel(DERModel):
     """Flexible DER model, e.g., flexible load, object."""
 
     states: pd.Index
+    storage_states: pd.Index = pd.Index([])
     controls: pd.Index
     disturbances: pd.Index
     outputs: pd.Index
@@ -349,9 +363,9 @@ class FlexibleDERModel(DERModel):
             optimization_problem.der_model_constraints = pyo.ConstraintList()
 
         # Initial state.
-        if type(self) is StorageModel:
-            for state in self.states:
-                # For storage model, initial state of charge is final state of charge.
+        for state in self.states:
+            if state in self.storage_states:
+                # For states which represent storage state of charge, initial state of charge is final state of charge.
                 optimization_problem.der_model_constraints.add(
                     optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
                     ==
@@ -371,8 +385,8 @@ class FlexibleDERModel(DERModel):
                         for disturbance in self.disturbances
                     )
                 )
-        else:
-            for state in self.states:
+            else:
+                # For other states, set initial state according to the initial state vector.
                 optimization_problem.der_model_constraints.add(
                     optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
                     ==
@@ -607,6 +621,8 @@ class FlexibleDERModel(DERModel):
 class FlexibleLoadModel(FlexibleDERModel):
     """Flexible load model object."""
 
+    der_type = 'flexible_load'
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -634,11 +650,6 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -646,7 +657,14 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -655,11 +673,13 @@ class FlexibleLoadModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
+        self.storage_states = pd.Index(['state_of_charge'])
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index(['active_power'])
         self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power'])
 
         # Instantiate initial state.
+        # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
         self.state_vector_initial = (
             pd.Series(0.0, index=self.states)
         )
@@ -674,19 +694,13 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['state_of_charge', 'active_power'] = (
-            1.0
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            -1.0
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         )
         self.disturbance_matrix.at['state_of_charge', 'active_power'] = (
-            -1.0
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+            1.0
         )
         self.state_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.states)
@@ -713,7 +727,11 @@ class FlexibleLoadModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.concat([
-                pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
+                pd.Series((
+                    np.abs(der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
+                    * der['energy_storage_capacity_per_unit']
+                    * (pd.Timedelta('1h') / der_data.scenario_data.scenario.at['timestep_interval'])
+                ), index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
                     der['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.active_power_nominal_timeseries
@@ -742,6 +760,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    der_type = 'flexible_generator'
     marginal_cost: np.float
 
     def __init__(
@@ -773,11 +792,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
-                else 1.0
-            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -785,7 +799,14 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
         else:
             self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
-            self.reactive_power_nominal_timeseries *= np.sign(der.at['reactive_power_nominal'])
+            self.reactive_power_nominal_timeseries *= (
+                np.sign(der.at['reactive_power_nominal'])
+                * (
+                    der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                    if der.at['active_power_nominal'] != 0.0
+                    else 1.0
+                )
+            )
 
         # Construct nominal thermal power timeseries.
         self.thermal_power_nominal_timeseries = (
@@ -852,6 +873,8 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 class StorageModel(FlexibleDERModel):
     """Energy storage model object."""
 
+    der_type = 'storage'
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -887,6 +910,7 @@ class StorageModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
+        self.storage_states = pd.Index(['state_of_charge'])
         self.controls = pd.Index(['active_power_charge', 'active_power_discharge'])
         self.disturbances = pd.Index([])
         self.outputs = (
@@ -897,6 +921,7 @@ class StorageModel(FlexibleDERModel):
         )
 
         # Instantiate initial state.
+        # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
         self.state_vector_initial = (
             pd.Series(0.0, index=self.states)
         )
@@ -992,6 +1017,8 @@ class StorageModel(FlexibleDERModel):
 
 class FlexibleBuildingModel(FlexibleDERModel):
     """Flexible load model object."""
+
+    der_type = 'flexible_building'
 
     power_factor_nominal: np.float
     is_electric_grid_connected: np.bool
@@ -1098,6 +1125,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 class CoolingPlantModel(FlexibleDERModel):
     """Cooling plant model object."""
 
+    der_type = 'cooling_plant'
     cooling_plant_efficiency: np.float
 
     def __init__(
@@ -1296,61 +1324,39 @@ class DERModelSet(object):
 
         # Obtain DER names.
         self.der_names = der_data.ders.index
-        self.fixed_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['fixed_load', 'fixed_generator', 'fixed_ev_charger']
+
+        # Obtain DER models.
+        # TODO: Fix cobmo error when running as parallel starmap.
+        self.der_models = (
+            dict(zip(
+                self.der_names,
+                itertools.starmap(
+                    make_der_model,
+                    zip(itertools.repeat(der_data), self.der_names.to_list())
                 )
-            ]
-        )
-        self.flexible_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['flexible_load', 'flexible_generator', 'storage', 'flexible_building', 'cooling_plant']
-                )
-            ]
+            ))
         )
 
-        # Obtain models.
-        self.der_models = dict.fromkeys(self.der_names)
-        self.fixed_der_models = dict.fromkeys(self.fixed_der_names)
-        self.flexible_der_models = dict.fromkeys(self.flexible_der_names)
+        # Obtain fixed / flexible DER name / models.
+        self.fixed_der_names = list()
+        self.flexible_der_names = list()
+        self.fixed_der_models = dict()
+        self.flexible_der_models = dict()
         for der_name in self.der_names:
-            if der_data.ders.at[der_name, 'der_type'] == 'fixed_load':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_ev_charger':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedEVChargerModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_generator':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_load':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_generator':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'storage':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.StorageModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_building':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleBuildingModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'cooling_plant':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.CoolingPlantModel(der_data, der_name)
-                )
+            if isinstance(self.der_models[der_name], FixedDERModel):
+                self.fixed_der_names.append(der_name)
+                self.fixed_der_models[der_name] = self.der_models[der_name]
+            elif isinstance(self.der_models[der_name], FlexibleDERModel):
+                self.flexible_der_names.append(der_name)
+                self.flexible_der_models[der_name] = self.der_models[der_name]
             else:
-                logger.error(f"Cannot determine type of DER: {der_name}")
-                raise ValueError
+                # Raise error, if DER model object is neither fixed nor flexible DER model.
+                logger.error(
+                    f"DER model class `{type(self.der_models[der_name])}` for DER '{der_name}' "
+                    f"is not a subclass of `FixedDERModel` or `FlexibleDERModel`."
+                )
+        self.fixed_der_names = pd.Index(self.fixed_der_names)
+        self.flexible_der_names = pd.Index(self.flexible_der_names)
 
         # Obtain flexible DER state space indexes.
         self.states = (
@@ -1454,3 +1460,30 @@ class DERModelSet(object):
             control_vector=control_vector,
             output_vector=output_vector
         )
+
+
+def make_der_model(
+    der_data: fledge.data_interface.DERData,
+    der_name: str
+) -> DERModel:
+    """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
+
+    # Obtain DER type.
+    der_type = der_data.ders.loc[der_name, 'der_type']
+
+    # Obtain DER model classes.
+    der_model_classes = (
+        inspect.getmembers(sys.modules[__name__], lambda cls: inspect.isclass(cls) and issubclass(cls, DERModel))
+    )
+
+    # Obtain DER model for given `der_type`.
+    for der_model_class_name, der_model_class in der_model_classes:
+        if der_type == der_model_class.der_type:
+            return der_model_class(der_data, der_name)
+
+    # Raise error, if no DER model class found for given `der_type`.
+    logger.error(
+        f"Can't find DER model class for DER '{der_name}' of type '{der_type}'. "
+        f"Please check if valid `der_type` is defined."
+    )
+    raise ValueError

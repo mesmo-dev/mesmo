@@ -872,6 +872,14 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
+        # Calculate inverse of node admittance matrix.
+        self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
+        # Raise error if inverse contains NaN values.
+        try:
+            assert not np.isnan(self.node_admittance_matrix_inverse.data).any()
+        except AssertionError:
+            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
+
         # Define shorthands for no-source variables.
         # TODO: Add in class documentation.
         # TODO: Validate behavior if source node not first node.

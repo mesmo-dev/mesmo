@@ -15,8 +15,6 @@ import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
 
-# TODO: Validate model behavior for active / reactive nominal power defined as zero.
-
 
 class DERModel(object):
     """DER model object."""

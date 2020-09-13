@@ -179,7 +179,11 @@ class FixedLoadModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            * (
+                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                if der.at['active_power_nominal'] != 0.0
+                else 1.0
+            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -225,7 +229,11 @@ class FixedEVChargerModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            * (
+                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                if der.at['active_power_nominal'] != 0.0
+                else 1.0
+            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -275,7 +283,11 @@ class FixedGeneratorModel(FixedDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            * (
+                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                if der.at['active_power_nominal'] != 0.0
+                else 1.0
+            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -622,7 +634,11 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            * (
+                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                if der.at['active_power_nominal'] != 0.0
+                else 1.0
+            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -639,9 +655,9 @@ class FlexibleLoadModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
-        self.controls = pd.Index(['active_power', 'reactive_power'])
+        self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index(['active_power'])
-        self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power', 'power_factor_constant'])
+        self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power'])
 
         # Instantiate initial state.
         self.state_vector_initial = (
@@ -660,7 +676,7 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.control_matrix.at['state_of_charge', 'active_power'] = (
             1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / der['active_power_nominal']
+            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
             / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
@@ -669,7 +685,7 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.disturbance_matrix.at['state_of_charge', 'active_power'] = (
             -1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / der['active_power_nominal']
+            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
             / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.state_output_matrix = (
@@ -680,12 +696,10 @@ class FlexibleLoadModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
-        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power'] = (
-            -1.0 / der['active_power_nominal']
-        )
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
-            1.0 / der['reactive_power_nominal']
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -707,8 +721,7 @@ class FlexibleLoadModel(FlexibleDERModel):
                 (
                     der['power_per_unit_minimum']  # Take minimum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
-                ),
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                )
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
@@ -721,8 +734,7 @@ class FlexibleLoadModel(FlexibleDERModel):
                 (
                     der['power_per_unit_maximum']  # Take maximum, because load is negative power.
                     * self.reactive_power_nominal_timeseries
-                ),
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                )
             ], axis='columns')
         )
 
@@ -761,7 +773,11 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
         self.reactive_power_nominal_timeseries = (
             der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
-            * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            * (
+                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                if der.at['active_power_nominal'] != 0.0
+                else 1.0
+            )
         )
         if 'per_unit' in der.at['definition_type']:
             # If per unit definition, multiply nominal active / reactive power.
@@ -778,9 +794,9 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index([])
-        self.controls = pd.Index(['active_power', 'reactive_power'])
+        self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index([])
-        self.outputs = pd.Index(['active_power', 'reactive_power', 'power_factor_constant'])
+        self.outputs = pd.Index(['active_power', 'reactive_power'])
 
         # Instantiate initial state.
         self.state_vector_initial = (
@@ -804,12 +820,10 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
-        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power'] = (
-            -1.0 / der['active_power_nominal']
-        )
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
-            1.0 / der['reactive_power_nominal']
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -824,15 +838,13 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         self.output_maximum_timeseries = (
             pd.concat([
                 self.active_power_nominal_timeseries,
-                self.reactive_power_nominal_timeseries,
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                self.reactive_power_nominal_timeseries
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
             pd.concat([
                 0.0 * self.active_power_nominal_timeseries,
-                0.0 * self.reactive_power_nominal_timeseries,
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                0.0 * self.reactive_power_nominal_timeseries
             ], axis='columns')
         )
 
@@ -875,12 +887,12 @@ class StorageModel(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(['state_of_charge'])
-        self.controls = pd.Index(['active_power_charge', 'active_power_discharge', 'reactive_power'])
+        self.controls = pd.Index(['active_power_charge', 'active_power_discharge'])
         self.disturbances = pd.Index([])
         self.outputs = (
             pd.Index([
                 'state_of_charge', 'active_power_charge', 'active_power_discharge',
-                'active_power', 'reactive_power', 'power_factor_constant'
+                'active_power', 'reactive_power'
             ])
         )
 
@@ -904,13 +916,13 @@ class StorageModel(FlexibleDERModel):
         self.control_matrix.at['state_of_charge', 'active_power_charge'] = (
             der['charging_efficiency']
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / der['active_power_nominal']
+            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
             / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.control_matrix.at['state_of_charge', 'active_power_discharge'] = (
             -1.0
             * der_data.scenario_data.scenario.at['timestep_interval']
-            / der['active_power_nominal']
+            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
             / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
@@ -927,15 +939,10 @@ class StorageModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power_discharge', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
-        self.control_output_matrix.at['reactive_power', 'reactive_power'] = 1.0
-        self.control_output_matrix.at['power_factor_constant', 'active_power_charge'] = (
-            1.0 / der['active_power_nominal']
-        )
-        self.control_output_matrix.at['power_factor_constant', 'active_power_discharge'] = (
-            -1.0 / der['active_power_nominal']
-        )
-        self.control_output_matrix.at['power_factor_constant', 'reactive_power'] = (
-            1.0 / der['reactive_power_nominal']
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -961,8 +968,7 @@ class StorageModel(FlexibleDERModel):
                     der['power_per_unit_maximum']
                     * der['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
-                ),
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                )
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
@@ -979,8 +985,7 @@ class StorageModel(FlexibleDERModel):
                     der['power_per_unit_minimum']
                     * der['reactive_power_nominal']
                     * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
-                ),
-                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='power_factor_constant')
+                )
             ], axis='columns')
         )
 
@@ -1031,6 +1036,8 @@ class FlexibleBuildingModel(FlexibleDERModel):
                     der.at['reactive_power_nominal']
                     / der.at['active_power_nominal']
                 ))
+                if ((der.at['active_power_nominal'] != 0.0) and (der.at['reactive_power_nominal'] != 0.0))
+                else 1.0
             )
 
         # TODO: Obtain proper nominal timseries for CoBMo models.
@@ -1230,8 +1237,9 @@ class CoolingPlantModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal']
-            / der.at['active_power_nominal']
+            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.cooling_plant_efficiency
         self.disturbance_output_matrix = (

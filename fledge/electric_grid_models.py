@@ -591,6 +591,16 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Add transformers to admittance matrix.
         for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
+            # Raise error if transformer nominal power is not valid.
+            try:
+                assert transformer.at['apparent_power'] > 0
+            except AssertionError:
+                logger.error(
+                    f"At transformer {transformer.at['transformer_name']}, "
+                    f"got invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
+                )
+                raise
+
             # Calculate transformer admittance.
             admittance = (
                 (

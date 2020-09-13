@@ -596,8 +596,8 @@ class ElectricGridModelDefault(ElectricGridModel):
                 assert transformer.at['apparent_power'] > 0
             except AssertionError:
                 logger.error(
-                    f"At transformer {transformer.at['transformer_name']}, "
-                    f"got invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
+                    f"At transformer '{transformer.at['transformer_name']}', "
+                    f"found invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
                 )
                 raise
 
@@ -873,12 +873,13 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
         # Calculate inverse of node admittance matrix.
-        self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
-        # Raise error if inverse contains NaN values.
+        # - Raise error if not invertible.
         try:
+            self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
             assert not np.isnan(self.node_admittance_matrix_inverse.data).any()
-        except AssertionError:
+        except (RuntimeError, AssertionError):
             logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
+            raise
 
         # Define shorthands for no-source variables.
         # TODO: Add in class documentation.

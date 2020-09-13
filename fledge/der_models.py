@@ -1,10 +1,12 @@
 """Distributed energy resource (DER) models."""
 
+import inspect
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
 import scipy.constants
+import sys
 import typing
 
 import fledge.config
@@ -19,6 +21,7 @@ logger = fledge.config.get_logger(__name__)
 class DERModel(object):
     """DER model object."""
 
+    der_type: str = None
     der_name: str
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
@@ -150,6 +153,8 @@ class FixedDERModel(DERModel):
 class FixedLoadModel(FixedDERModel):
     """Fixed load model object."""
 
+    der_type = 'fixed_load'
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -201,6 +206,8 @@ class FixedLoadModel(FixedDERModel):
 
 class FixedEVChargerModel(FixedDERModel):
     """EV charger model object."""
+
+    der_type = 'fixed_ev_charger'
 
     def __init__(
             self,
@@ -254,6 +261,7 @@ class FixedEVChargerModel(FixedDERModel):
 class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    der_type = 'fixed_generator'
     marginal_cost: np.float
 
     def __init__(
@@ -612,6 +620,8 @@ class FlexibleDERModel(DERModel):
 class FlexibleLoadModel(FlexibleDERModel):
     """Flexible load model object."""
 
+    der_type = 'flexible_load'
+
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
@@ -749,6 +759,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
+    der_type = 'flexible_generator'
     marginal_cost: np.float
 
     def __init__(
@@ -860,6 +871,8 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 
 class StorageModel(FlexibleDERModel):
     """Energy storage model object."""
+
+    der_type = 'storage'
 
     def __init__(
             self,
@@ -1004,6 +1017,8 @@ class StorageModel(FlexibleDERModel):
 class FlexibleBuildingModel(FlexibleDERModel):
     """Flexible load model object."""
 
+    der_type = 'flexible_building'
+
     power_factor_nominal: np.float
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
@@ -1109,6 +1124,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 class CoolingPlantModel(FlexibleDERModel):
     """Cooling plant model object."""
 
+    der_type = 'cooling_plant'
     cooling_plant_efficiency: np.float
 
     def __init__(
@@ -1465,3 +1481,27 @@ class DERModelSet(object):
             control_vector=control_vector,
             output_vector=output_vector
         )
+
+
+def make_der_model(
+    der_data: fledge.data_interface.DERData,
+    der_name: str
+) -> DERModel:
+    """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
+
+    # Obtain DER type.
+    der_type = der_data.ders.loc[der_name, 'der_type']
+
+    # Obtain DER model classes.
+    der_model_classes = (
+        inspect.getmembers(sys.modules[__name__], lambda cls: inspect.isclass(cls) and issubclass(cls, DERModel))
+    )
+
+    # Obtain DER model for given `der_type`.
+    for der_model_class_name, der_model_class in der_model_classes:
+        if der_type == der_model_class.der_type:
+            return der_model_class(der_data, der_name)
+
+    # Raise error, if no DER model found for given `der_type`.
+    logger.error(f"Can't find DER model for DER '{der_name}' of type '{der_type}'.")
+    raise ValueError

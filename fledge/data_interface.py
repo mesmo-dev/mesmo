@@ -606,6 +606,16 @@ class DERData(object):
                     )
                 )
 
+                # Show warning, if `time_period` does not start with '01T00:00'.
+                try:
+                    assert der_schedule.index[0] == '01T00:00'
+                except AssertionError:
+                    logger.warning(
+                        f"First time period is '{der_schedule.index[0]}' in DER schedule with definition name "
+                        f"'{definition_index[1]}'. Schedules should start with time period '01T00:00'. "
+                        f"Please also check if using correct time period format: 'ddTHH:MM'"
+                    )
+
                 # Parse time period index.
                 der_schedule.index = np.vectorize(pd.Period)(der_schedule.index)
 

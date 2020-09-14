@@ -27,7 +27,7 @@ fledge.data_interface.recreate_database()
 # Obtain scenario data and price timeseries.
 scenario_data = fledge.data_interface.ScenarioData(scenario_name)
 price_data = fledge.data_interface.PriceData(scenario_name)
-price_type = 'dlmp'
+price_type = 'EPEX SPOT Power DE Day Ahead'
 price_timeseries = price_data.price_timeseries_dict[price_type]
 
 chp_schedule: pd.DataFrame

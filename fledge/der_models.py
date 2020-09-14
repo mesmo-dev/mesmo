@@ -1143,6 +1143,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
     """Flexible Biogas plant model object."""
 
+    der_type = 'biogas_plant'
     switches: pd.Index = []
     chp_schedule: pd.DataFrame
 
@@ -1168,7 +1169,7 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
 
         # Obtain bipmo biogas plant model.
         flexible_biogas_plant_model = (
-            bipmo.bipmo.biogas_plant_models.SimpleBiogasPlantModel(
+            bipmo.bipmo.biogas_plant_models.BiogasPlantModel(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
@@ -1588,24 +1589,6 @@ class DERModelSet(object):
 
         # Obtain DER names.
         self.der_names = der_data.ders.index
-<<<<<<< HEAD
-        self.fixed_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['fixed_load', 'fixed_generator', 'fixed_ev_charger']
-                )
-            ]
-        )
-        self.flexible_der_names = (
-            der_data.ders.index[
-                der_data.ders.loc[:, 'der_type'].isin(
-                    ['flexible_load',
-                     'flexible_generator',
-                     'storage',
-                     'flexible_building',
-                     'cooling_plant',
-                     'biogas_plant']
-=======
 
         # Obtain DER models.
         # TODO: Fix cobmo error when running as parallel starmap.
@@ -1615,7 +1598,6 @@ class DERModelSet(object):
                 itertools.starmap(
                     make_der_model,
                     zip(itertools.repeat(der_data), self.der_names.to_list())
->>>>>>> 71d78ad9d87d9e609235103fdc6d5a48f09ec21b
                 )
             ))
         )
@@ -1626,51 +1608,12 @@ class DERModelSet(object):
         self.fixed_der_models = dict()
         self.flexible_der_models = dict()
         for der_name in self.der_names:
-<<<<<<< HEAD
-            if der_data.ders.at[der_name, 'der_type'] == 'fixed_load':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_ev_charger':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedEVChargerModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'fixed_generator':
-                self.der_models[der_name] = self.fixed_der_models[der_name] = (
-                    fledge.der_models.FixedGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_load':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleLoadModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_generator':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleGeneratorModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'storage':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.StorageModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'flexible_building':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleBuildingModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'cooling_plant':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.CoolingPlantModel(der_data, der_name)
-                )
-            elif der_data.ders.at[der_name, 'der_type'] == 'biogas_plant':
-                self.der_models[der_name] = self.flexible_der_models[der_name] = (
-                    fledge.der_models.FlexibleBiogasPlantModel(der_data, der_name)
-                )
-=======
             if isinstance(self.der_models[der_name], FixedDERModel):
                 self.fixed_der_names.append(der_name)
                 self.fixed_der_models[der_name] = self.der_models[der_name]
             elif isinstance(self.der_models[der_name], FlexibleDERModel):
                 self.flexible_der_names.append(der_name)
                 self.flexible_der_models[der_name] = self.der_models[der_name]
->>>>>>> 71d78ad9d87d9e609235103fdc6d5a48f09ec21b
             else:
                 # Raise error, if DER model object is neither fixed nor flexible DER model.
                 logger.error(

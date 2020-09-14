@@ -591,16 +591,6 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Add transformers to admittance matrix.
         for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
-            # Raise error if transformer nominal power is not valid.
-            try:
-                assert transformer.at['apparent_power'] > 0
-            except AssertionError:
-                logger.error(
-                    f"At transformer '{transformer.at['transformer_name']}', "
-                    f"found invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
-                )
-                raise
-
             # Calculate transformer admittance.
             admittance = (
                 (
@@ -871,15 +861,6 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
-
-        # Calculate inverse of node admittance matrix.
-        # - Raise error if not invertible.
-        try:
-            self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
-            assert not np.isnan(self.node_admittance_matrix_inverse.data).any()
-        except (RuntimeError, AssertionError):
-            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
-            raise
 
         # Define shorthands for no-source variables.
         # TODO: Add in class documentation.

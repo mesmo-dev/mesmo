@@ -1,2 +1,3 @@
 scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,electric_grid_operation_limit_type,timestep_start,timestep_end,timestep_interval
 cigre_mv_network_with_all_ders,cigre_mv_network_with_all_ders,,,EPEX SPOT Power DE Day Ahead,default_limits,2018-07-05T00:00:00,2018-07-06T00:00:00,01:00:00
+cigre_mv_network_with_all_ders_dlmps,cigre_mv_network_with_all_ders,,,DLMPs,default_limits,2018-07-05T00:00:00,2018-07-06T00:00:00,01:00:00

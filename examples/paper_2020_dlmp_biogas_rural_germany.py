@@ -41,13 +41,13 @@ chp_schedule: pd.DataFrame
 run_milp = False
 
 for i in range(2):
-    if not run_milp:
+    if run_milp:
         if i == 0:
             is_milp = True
         else:
             is_milp = False
     else:
-        i = 3  # will stop from iterating again
+        is_milp = False
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -86,7 +86,7 @@ for i in range(2):
     # Get the biogas plant model and set the switches flag accordingly
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
     flexible_biogas_plant_model = der_model_set.flexible_der_models['Biogas Plant 9']
-    if not is_milp:
+    if not is_milp and run_milp:
         # set the chp_schedule resulting from the milp optimization
         flexible_biogas_plant_model.chp_schedule = chp_schedule
     der_model_set.flexible_der_models[flexible_biogas_plant_model.der_name] = flexible_biogas_plant_model
@@ -165,6 +165,10 @@ for i in range(2):
         assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
     except AssertionError:
         raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+
+    if not run_milp:
+        # do not run a second iteration
+        break
 
     if is_milp:
         # get the MILP solution for the biogas plant schedule

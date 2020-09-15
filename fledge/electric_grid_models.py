@@ -2268,6 +2268,7 @@ class LinearElectricGridModel(object):
     sensitivity_loss_reactive_by_power_delta_reactive: scipy.sparse.spmatrix
     sensitivity_loss_reactive_by_der_power_active: scipy.sparse.spmatrix
     sensitivity_loss_reactive_by_der_power_reactive: scipy.sparse.spmatrix
+    price_sensitivity_coefficient: float = 1e-14
 
     def define_optimization_variables(
             self,
@@ -2491,32 +2492,44 @@ class LinearElectricGridModel(object):
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
 
         # Define objective related to electric power supply at source node.
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
-                * -1.0
-                * (
-                    np.real(self.power_flow_solution.der_power_vector[der_index])
-                    + optimization_problem.der_active_power_vector_change[timestep, der]
+        for timestep in timesteps:
+            for der_index, der in enumerate(self.electric_grid_model.ders):
+                optimization_problem.objective.expr += (
+                    -1.0
+                    * (
+                        price_timeseries.at[timestep, 'price_value']
+                        + self.price_sensitivity_coefficient
+                        * (
+                            np.real(self.power_flow_solution.der_power_vector[der_index])
+                            + optimization_problem.der_active_power_vector_change[timestep, der]
+                        )
+                        * timestep_interval_hours  # In Wh.
+                    )
+                    * (
+                        np.real(self.power_flow_solution.der_power_vector[der_index])
+                        + optimization_problem.der_active_power_vector_change[timestep, der]
+                    )
+                    * timestep_interval_hours  # In Wh.
                 )
-                * timestep_interval_hours  # In Wh.
-                for der_index, der in enumerate(self.electric_grid_model.ders)
-                for timestep in timesteps
-            )
-        )
 
         # Define objective related to electric losses.
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
+        for timestep in timesteps:
+            optimization_problem.objective.expr += (
+                (
+                    price_timeseries.at[timestep, 'price_value']
+                    + self.price_sensitivity_coefficient
+                    * (
+                        np.real(np.sum(self.power_flow_solution.loss))
+                        + optimization_problem.loss_active_change[timestep]
+                    )
+                    * timestep_interval_hours
+                )
                 * (
                     np.real(np.sum(self.power_flow_solution.loss))
                     + optimization_problem.loss_active_change[timestep]
                 )
-                * timestep_interval_hours  # In Wh.
-                for timestep in timesteps
+                * timestep_interval_hours
             )
-        )
 
     def get_optimization_dlmps(
             self,

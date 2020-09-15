@@ -32,6 +32,7 @@ class DERModel(object):
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
+    price_sensitivity_coefficient: float = 1e-14
 
     # TODO: Define method templates.
 
@@ -108,15 +109,19 @@ class FixedDERModel(DERModel):
         #   in `LinearElectricGridModel.define_optimization_objective`.
         # - This enables proper calculation of the DLMPs.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
-            optimization_problem.objective.expr += (
-                sum(
+            for timestep in self.timesteps:
+                optimization_problem.objective.expr += (
                     -1.0
-                    * price_timeseries.at[timestep, 'price_value']
+                    *
+                    (
+                        price_timeseries.at[timestep, 'price_value']
+                        + self.price_sensitivity_coefficient
+                        * self.active_power_nominal_timeseries.at[timestep]
+                        * timestep_interval_hours  # In Wh.
+                    )
                     * self.active_power_nominal_timeseries.at[timestep]
                     * timestep_interval_hours  # In Wh.
-                    for timestep in self.timesteps
                 )
-            )
 
         # TODO: Define objective for thermal loads.
         # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
@@ -130,14 +135,17 @@ class FixedDERModel(DERModel):
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
             if type(self) is FixedGeneratorModel:
-                optimization_problem.objective.expr += (
-                    sum(
-                        self.marginal_cost
+                for timestep in self.timesteps:
+                    optimization_problem.objective.expr += (
+                        (
+                            self.marginal_cost
+                            + self.price_sensitivity_coefficient
+                            * self.active_power_nominal_timeseries.at[timestep]
+                            * timestep_interval_hours  # In Wh.
+                        )
                         * self.active_power_nominal_timeseries.at[timestep]
-                        * timestep_interval_hours  # In Wh.
-                        for timestep in self.timesteps
+                        * timestep_interval_hours
                     )
-                )
 
         # TODO: Define objective for thermal generators.
         # - Always defined here as the cost of thermal power generation at the DER node.
@@ -559,24 +567,31 @@ class FlexibleDERModel(DERModel):
         # - This enables proper calculation of the DLMPs.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
             if type(self) is FlexibleBuildingModel:
-                optimization_problem.objective.expr += (
-                    sum(
-                        price_timeseries.at[timestep, 'price_value']
-                        * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                        * timestep_interval_hours  # In Wh.
-                        for timestep in self.timesteps
+                for timestep in self.timesteps:
+                    optimization_problem.objective.expr += (
+                        sum(
+                            (price_timeseries.at[timestep, 'price_value']
+                                + self.price_sensitivity_coefficient
+                                * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                                * timestep_interval_hours  # In Wh.
+                             )
+                            * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                            * timestep_interval_hours  # In Wh.
+                        )
                     )
-                )
             else:
-                optimization_problem.objective.expr += (
-                    sum(
+                for timestep in self.timesteps:
+                    optimization_problem.objective.expr += (
                         -1.0
-                        * price_timeseries.at[timestep, 'price_value']
+                        *
+                        (price_timeseries.at[timestep, 'price_value']
+                            + self.price_sensitivity_coefficient
+                            * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                            * timestep_interval_hours  # In Wh.
+                        )
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
-                        for timestep in self.timesteps
                     )
-                )
 
         # TODO: Define objective for thermal loads.
         # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
@@ -590,14 +605,16 @@ class FlexibleDERModel(DERModel):
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
             if issubclass(type(self), FlexibleGeneratorModel):
-                optimization_problem.objective.expr += (
-                    sum(
-                        self.marginal_cost
+                for timestep in self.timesteps:
+                    optimization_problem.objective.expr += (
+                        (self.marginal_cost
+                            + self.price_sensitivity_coefficient
+                            * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                            * timestep_interval_hours  # In Wh.
+                        )
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
-                        for timestep in self.timesteps
                     )
-                )
 
         # TODO: Define objective for thermal generators.
         # - Always defined here as the cost of thermal power generation at the DER node.

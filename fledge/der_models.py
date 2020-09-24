@@ -137,14 +137,9 @@ class FixedDERModel(DERModel):
             if type(self) is FixedGeneratorModel:
                 for timestep in self.timesteps:
                     optimization_problem.objective.expr += (
-                        (
-                            self.marginal_cost
-                            + self.price_sensitivity_coefficient
-                            * self.active_power_nominal_timeseries.at[timestep]
-                            * timestep_interval_hours  # In Wh.
-                        )
+                        self.marginal_cost
                         * self.active_power_nominal_timeseries.at[timestep]
-                        * timestep_interval_hours
+                        * timestep_interval_hours  # In Wh.
                     )
 
         # TODO: Define objective for thermal generators.
@@ -607,11 +602,7 @@ class FlexibleDERModel(DERModel):
             if issubclass(type(self), FlexibleGeneratorModel):
                 for timestep in self.timesteps:
                     optimization_problem.objective.expr += (
-                        (self.marginal_cost
-                            + self.price_sensitivity_coefficient
-                            * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                            * timestep_interval_hours  # In Wh.
-                        )
+                        self.marginal_cost
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
                     )

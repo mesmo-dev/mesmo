@@ -5,8 +5,12 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
 import re
 
+import fledge.config
 import fledge.data_interface
 import fledge.der_models
 import fledge.plots
@@ -175,6 +179,15 @@ def main():
     # More plots.
     histogram_bins = 100
 
+    # Define Plotly default options.
+    pio.templates.default = go.layout.Template(pio.templates['simple_white'])
+    pio.templates.default.layout.update(
+        font_family=fledge.config.config['plots']['font_family'][0],
+        legend=dict(borderwidth=1),
+        xaxis=dict(showgrid=True),
+        yaxis=dict(showgrid=True)
+    )
+
     # Plot load timeseries.
     values = results['der_power_vector'].sum(axis='columns') / 1e6
     values.loc[:] = np.abs(np.real(values))
@@ -187,46 +200,51 @@ def main():
     y_label = 'Active power'
     value_unit = 'MW'
 
-    plt.figure()
-    plt.title(title)
-    plt.fill_between(
-        range(len(values.index)),
-        values_2,
-        label='Baseload',
-        step='post'
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
+        name='Baseload',
+        fill='tozeroy',
+        line=dict(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
+        name='Baseload + private EV',
+        fill='tonexty',
+        line=dict(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values.index,
+        y=values.values,
+        name='Baseload + private EV + bus charging',
+        fill='tonexty',
+        line=dict(shape='hv')
+    ))
+    figure.update_layout(
+        title=title,
+        yaxis_title=f'{y_label} [{value_unit}]',
+        xaxis=dict(tickformat='%H:%M'),
+        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    plt.fill_between(
-        range(len(values.index)),
-        values_1,
-        values_2,
-        label='Baseload + private EV',
-        step='post'
-    )
-    plt.fill_between(
-        range(len(values.index)),
-        values,
-        values_1,
-        label='Baseload + private EV + bus charging',
-        step='post'
-    )
-    plt.xticks(
-        range(len(values.index)),
-        values.index.strftime('%H:%M:%S'),
-        rotation=45,
-        ha='right'
-    )
-    plt.ylabel(f'{y_label} [{value_unit}]')
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization timeseries.
     values = (
         branch_power_vector_magnitude_per_unit.loc[
-        :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
+            :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
+        ].mean(axis='columns').drop('maximum')
+    )
+    values_1 = (
+        branch_power_vector_magnitude_per_unit_1.loc[
+            :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
+        ].mean(axis='columns').drop('maximum')
+    )
+    values_2 = (
+        branch_power_vector_magnitude_per_unit_2.loc[
+            :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
         ].mean(axis='columns').drop('maximum')
     )
     title = 'Average line utilization'
@@ -234,24 +252,36 @@ def main():
     y_label = 'Utilization'
     value_unit = 'p.u.'
 
-    plt.figure()
-    plt.title(title)
-    plt.bar(
-        range(len(values.index)),
-        values,
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
+        name='Baseload',
+        fill='tozeroy',
+        line=dict(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
+        name='Baseload + private EV',
+        fill='tonexty',
+        line=dict(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values.index,
+        y=values.values,
+        name='Baseload + private EV + bus charging',
+        fill='tonexty',
+        line=dict(shape='hv')
+    ))
+    figure.update_layout(
+        title=title,
+        yaxis_title=f'{y_label} [{value_unit}]',
+        xaxis=dict(tickformat='%H:%M'),
+        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    plt.xticks(
-        range(len(values.index)),
-        pd.to_datetime(values.index).strftime('%H:%M:%S'),
-        rotation=45,
-        ha='right'
-    )
-    plt.ylabel(f'{y_label} [{value_unit}]')
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization histogram.
     values = (
@@ -277,25 +307,33 @@ def main():
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
-    plt.figure()
-    plt.title(title)
-    # plt.hist(values, histogram_bins, density=True)
-    values_2 = np.histogram(values_2, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values_2[1], np.append(values_2[0], 0.0) / np.sum(values_2[0]), where='post', label='Baseload', linewidth=3.5)
-    values_1 = np.histogram(values_1, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values_1[1], np.append(values_1[0], 0.0) / np.sum(values_1[0]), where='post', label='Baseload + private EV', linewidth=2.5)
-    values = np.histogram(values, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values[1], np.append(values[0], 0.0) / np.sum(values[0]), where='post', label='Baseload + private EV + bus charging', linewidth=1.5)
-    plt.ylim(0, 1.05 * np.max(values_2[0] / np.sum(values[0])))
-    plt.ylabel('Frequency')
-    plt.xlim([-0.01, 1.0])
-    plt.xlabel(f'{y_label} [{value_unit}]')
-    plt.grid()
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure = go.Figure()
+    figure.add_trace(go.Histogram(
+        x=values_2.values,
+        name='Baseload',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.add_trace(go.Histogram(
+        x=values_1.values,
+        name='Baseload + private EV',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.add_trace(go.Histogram(
+        x=values.values,
+        name='Baseload + private EV + bus charging',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=dict(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+    )
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization cumulative.
     values = (
@@ -321,21 +359,36 @@ def main():
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
-    plt.figure()
-    plt.title(title)
-    plt.hist(values_2, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload')
-    plt.hist(values_1, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV')
-    plt.hist(values, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV + bus charging')
-    plt.axhline(0.9, color='black', linewidth=1)
-    plt.ylabel('Cumulative proportion')
-    plt.xlim([-0.01, 1.0])
-    plt.xlabel(f'{y_label} [{value_unit}]')
-    plt.grid()
-    plt.legend(loc='lower right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure = go.Figure()
+    figure.add_trace(go.Histogram(
+        x=values_2.values,
+        name='Baseload',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.add_trace(go.Histogram(
+        x=values_1.values,
+        name='Baseload + private EV',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.add_trace(go.Histogram(
+        x=values.values,
+        name='Baseload + private EV + bus charging',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot transformer utilization histogram.
     values = (
@@ -373,25 +426,33 @@ def main():
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
-    plt.figure()
-    plt.title(title)
-    # plt.hist(values, histogram_bins, density=True)
-    values_2 = np.histogram(values_2, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values_2[1], np.append(values_2[0], 0.0) / np.sum(values_2[0]), where='post', label='Baseload', linewidth=3.5)
-    values_1 = np.histogram(values_1, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values_1[1], np.append(values_1[0], 0.0) / np.sum(values_1[0]), where='post', label='Baseload + private EV', linewidth=2.5)
-    values = np.histogram(values, bins=histogram_bins, range=(0.0, 1.0))
-    plt.step(values[1], np.append(values[0], 0.0) / np.sum(values[0]), where='post', label='Baseload + private EV + bus charging', linewidth=1.5)
-    plt.ylim(0, 1.05 * np.max(values_2[0] / np.sum(values[0])))
-    plt.ylabel('Frequency')
-    plt.xlim([-0.01, 1.0])
-    plt.xlabel(f'{y_label} [{value_unit}]')
-    plt.grid()
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure = go.Figure()
+    figure.add_trace(go.Histogram(
+        x=values_2.values,
+        name='Baseload',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.add_trace(go.Histogram(
+        x=values_1.values,
+        name='Baseload + private EV',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.add_trace(go.Histogram(
+        x=values.values,
+        name='Baseload + private EV + bus charging',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=dict(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+    )
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot transformer utilization cumulative.
     values = (
@@ -429,21 +490,36 @@ def main():
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
-    plt.figure()
-    plt.title(title)
-    plt.hist(values_2, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload')
-    plt.hist(values_1, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV')
-    plt.hist(values, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV + bus charging')
-    plt.axhline(0.9, color='black', linewidth=1)
-    plt.ylabel('Cumulative proportion')
-    plt.xlim([-0.01, 1.0])
-    plt.xlabel(f'{y_label} [{value_unit}]')
-    plt.grid()
-    plt.legend(loc='lower right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
-    plt.show()
-    plt.close()
+    figure = go.Figure()
+    figure.add_trace(go.Histogram(
+        x=values_2.values,
+        name='Baseload',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.add_trace(go.Histogram(
+        x=values_1.values,
+        name='Baseload + private EV',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.add_trace(go.Histogram(
+        x=values.values,
+        name='Baseload + private EV + bus charging',
+        histnorm='probability',
+        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
+        cumulative_enabled=True
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Print results path.
     fledge.utils.launch(results_path)

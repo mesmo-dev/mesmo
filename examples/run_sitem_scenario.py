@@ -172,6 +172,279 @@ def main():
             make_video=True
         )
 
+    # More plots.
+    histogram_bins = 100
+
+    # Plot load timeseries.
+    values = results['der_power_vector'].sum(axis='columns') / 1e6
+    values.loc[:] = np.abs(np.real(values))
+    values_1 = results_1['der_power_vector'].sum(axis='columns') / 1e6
+    values_1.loc[:] = np.abs(np.real(values_1))
+    values_2 = results_2['der_power_vector'].sum(axis='columns') / 1e6
+    values_2.loc[:] = np.abs(np.real(values_2))
+    title = 'Total demand'
+    filename = 'demand_timeseries'
+    y_label = 'Active power'
+    value_unit = 'MW'
+
+    plt.figure()
+    plt.title(title)
+    plt.fill_between(
+        range(len(values.index)),
+        values_2,
+        label='Baseload',
+        step='post'
+    )
+    plt.fill_between(
+        range(len(values.index)),
+        values_1,
+        values_2,
+        label='Baseload + private EV',
+        step='post'
+    )
+    plt.fill_between(
+        range(len(values.index)),
+        values,
+        values_1,
+        label='Baseload + private EV + bus charging',
+        step='post'
+    )
+    plt.xticks(
+        range(len(values.index)),
+        values.index.strftime('%H:%M:%S'),
+        rotation=45,
+        ha='right'
+    )
+    plt.ylabel(f'{y_label} [{value_unit}]')
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
+    # Plot line utilization timeseries.
+    values = (
+        branch_power_vector_magnitude_per_unit.loc[
+        :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
+        ].mean(axis='columns').drop('maximum')
+    )
+    title = 'Average line utilization'
+    filename = 'line_utilization_timeseries'
+    y_label = 'Utilization'
+    value_unit = 'p.u.'
+
+    plt.figure()
+    plt.title(title)
+    plt.bar(
+        range(len(values.index)),
+        values,
+    )
+    plt.xticks(
+        range(len(values.index)),
+        pd.to_datetime(values.index).strftime('%H:%M:%S'),
+        rotation=45,
+        ha='right'
+    )
+    plt.ylabel(f'{y_label} [{value_unit}]')
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
+    # Plot line utilization histogram.
+    values = (
+        branch_power_vector_magnitude_per_unit.loc[
+            :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values_1 = (
+        branch_power_vector_magnitude_per_unit_1.loc[
+            :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values_2 = (
+        branch_power_vector_magnitude_per_unit_2.loc[
+            :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values.loc[values > 1] = 1.0
+    values_1.loc[values_1 > 1] = 1.0
+    values_2.loc[values_2 > 1] = 1.0
+    title = 'Lines'
+    filename = 'line_utilization_histogram'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    plt.figure()
+    plt.title(title)
+    # plt.hist(values, histogram_bins, density=True)
+    values_2 = np.histogram(values_2, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values_2[1], np.append(values_2[0], 0.0) / np.sum(values_2[0]), where='post', label='Baseload', linewidth=3.5)
+    values_1 = np.histogram(values_1, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values_1[1], np.append(values_1[0], 0.0) / np.sum(values_1[0]), where='post', label='Baseload + private EV', linewidth=2.5)
+    values = np.histogram(values, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values[1], np.append(values[0], 0.0) / np.sum(values[0]), where='post', label='Baseload + private EV + bus charging', linewidth=1.5)
+    plt.ylim(0, 1.05 * np.max(values_2[0] / np.sum(values[0])))
+    plt.ylabel('Frequency')
+    plt.xlim([-0.01, 1.0])
+    plt.xlabel(f'{y_label} [{value_unit}]')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
+    # Plot line utilization cumulative.
+    values = (
+        branch_power_vector_magnitude_per_unit.loc[
+            :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values_1 = (
+        branch_power_vector_magnitude_per_unit_1.loc[
+        :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values_2 = (
+        branch_power_vector_magnitude_per_unit_2.loc[
+        :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
+        ].max()
+    )
+    values.loc[values > 1] = 1.0
+    values_1.loc[values_1 > 1] = 1.0
+    values_2.loc[values_2 > 1] = 1.0
+    title = 'Lines'
+    filename = 'line_utilization_cumulative'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    plt.figure()
+    plt.title(title)
+    plt.hist(values_2, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload')
+    plt.hist(values_1, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV')
+    plt.hist(values, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV + bus charging')
+    plt.axhline(0.9, color='black', linewidth=1)
+    plt.ylabel('Cumulative proportion')
+    plt.xlim([-0.01, 1.0])
+    plt.xlabel(f'{y_label} [{value_unit}]')
+    plt.grid()
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
+    # Plot transformer utilization histogram.
+    values = (
+        branch_power_vector_magnitude_per_unit.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values_1 = (
+        branch_power_vector_magnitude_per_unit_1.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values_2 = (
+        branch_power_vector_magnitude_per_unit_2.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values.loc[values > 1] = 1.0
+    values_1.loc[values_1 > 1] = 1.0
+    values_2.loc[values_2 > 1] = 1.0
+    title = '1MVA Transformers'
+    filename = 'transformer_utilization_histogram'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    plt.figure()
+    plt.title(title)
+    # plt.hist(values, histogram_bins, density=True)
+    values_2 = np.histogram(values_2, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values_2[1], np.append(values_2[0], 0.0) / np.sum(values_2[0]), where='post', label='Baseload', linewidth=3.5)
+    values_1 = np.histogram(values_1, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values_1[1], np.append(values_1[0], 0.0) / np.sum(values_1[0]), where='post', label='Baseload + private EV', linewidth=2.5)
+    values = np.histogram(values, bins=histogram_bins, range=(0.0, 1.0))
+    plt.step(values[1], np.append(values[0], 0.0) / np.sum(values[0]), where='post', label='Baseload + private EV + bus charging', linewidth=1.5)
+    plt.ylim(0, 1.05 * np.max(values_2[0] / np.sum(values[0])))
+    plt.ylabel('Frequency')
+    plt.xlim([-0.01, 1.0])
+    plt.xlabel(f'{y_label} [{value_unit}]')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
+    # Plot transformer utilization cumulative.
+    values = (
+        branch_power_vector_magnitude_per_unit.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values_1 = (
+        branch_power_vector_magnitude_per_unit_1.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values_2 = (
+        branch_power_vector_magnitude_per_unit_2.loc[
+            :,
+            (
+                (branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'transformer')
+                & branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_name').str.contains('22kV')
+            )
+        ].max()
+    )
+    values.loc[values > 1] = 1.0
+    values_1.loc[values_1 > 1] = 1.0
+    values_2.loc[values_2 > 1] = 1.0
+    title = '1MVA Transformers'
+    filename = 'transformer_utilization_cumulative'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    plt.figure()
+    plt.title(title)
+    plt.hist(values_2, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload')
+    plt.hist(values_1, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV')
+    plt.hist(values, histogram_bins, range=(0.0, 1.01), density=True, cumulative=True, histtype='step', label='Baseload + private EV + bus charging')
+    plt.axhline(0.9, color='black', linewidth=1)
+    plt.ylabel('Cumulative proportion')
+    plt.xlim([-0.01, 1.0])
+    plt.xlabel(f'{y_label} [{value_unit}]')
+    plt.grid()
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path, filename))
+    plt.show()
+    plt.close()
+
     # Print results path.
     fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")

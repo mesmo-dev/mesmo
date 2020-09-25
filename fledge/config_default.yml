@@ -25,6 +25,7 @@ logs:
 plots:
   matplotlib_style: seaborn-colorblind
   colormap: viridis_r
+  figure_size: [7.0, 4.0]
   font_family: ['Arial', 'Helvetica']
   add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
   show_basemap_attribution: false # If True, show copyright notice for basemap.

@@ -156,6 +156,7 @@ matplotlib.rc('font', family=config['plots']['font_family'])
 matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
 matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
 matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
+matplotlib.rc('figure', figsize=config['plots']['figure_size'])
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.

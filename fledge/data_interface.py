@@ -46,6 +46,9 @@ def recreate_database(
         if additional_data_paths is not None
         else [fledge.config.config['paths']['data']]
     )
+    valid_table_names = (
+        pd.read_sql("SELECT name FROM sqlite_master WHERE type='table'", database_connection).iloc[:, 0].tolist()
+    )
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
@@ -55,13 +58,23 @@ def recreate_database(
                     and (os.path.join('data', 'cobmo_data') not in csv_file)
             ):
 
+                # Debug message.
+                logger.debug(f"Loading {csv_file} into database.")
+
                 # Obtain table name.
                 table_name = os.path.splitext(os.path.basename(csv_file))[0]
-
-                # Write new table content.
-                logger.debug(f"Loading {csv_file} into database.")
+                # Raise exception, if table doesn't exist.
                 try:
-                    table = pd.read_csv(csv_file)
+                    assert table_name in valid_table_names
+                except AssertionError:
+                    logger.exception(
+                        f"Error loading '{csv_file}' into database, because there is no table named '{table_name}'."
+                    )
+                    raise
+
+                # Load table and write to database.
+                try:
+                    table = pd.read_csv(csv_file, dtype=np.str)
                     table.to_sql(
                         table_name,
                         con=database_connection,

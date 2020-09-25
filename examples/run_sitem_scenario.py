@@ -8,6 +8,7 @@ import pandas as pd
 import re
 
 import fledge.data_interface
+import fledge.der_models
 import fledge.plots
 import fledge.problems
 import fledge.utils
@@ -39,12 +40,66 @@ def main():
         np.abs(results['node_voltage_vector'])
         / np.abs(problem.electric_grid_model.node_voltage_vector_reference)
     )
+    new_columns = []
+    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
+        if branch[0] == 'transformer':
+            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
+                new_columns.extend(
+                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
+                    * [branch_power_vector_magnitude_per_unit.loc[:, branch]]
+                )
+    branch_power_vector_magnitude_per_unit = pd.concat([branch_power_vector_magnitude_per_unit, *new_columns], axis='columns')
     node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
     node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
     results.update({
         'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
         'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
     })
+
+    # Remove bus chargers and re-run simulation.
+    for der_name in problem.der_model_set.der_models:
+        if type(problem.der_model_set.der_models[der_name]) is fledge.der_models.FixedEVChargerModel:
+            if 'bus_charger' in der_name:
+                problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+                problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+    problem.solve()
+    results_1 = problem.get_results()
+    branch_power_vector_magnitude_per_unit_1 = (
+        (np.abs(results_1['branch_power_vector_1']) + np.abs(results_1['branch_power_vector_2'])) / 2
+        / problem.electric_grid_model.branch_power_vector_magnitude_reference
+    )
+    branch_power_vector_magnitude_per_unit_1.loc['maximum', :] = branch_power_vector_magnitude_per_unit_1.max(axis='rows')
+    new_columns = []
+    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
+        if branch[0] == 'transformer':
+            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
+                new_columns.extend(
+                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
+                    * [branch_power_vector_magnitude_per_unit_1.loc[:, branch]]
+                )
+    branch_power_vector_magnitude_per_unit_1 = pd.concat([branch_power_vector_magnitude_per_unit_1, *new_columns], axis='columns')
+
+    # Remove private EV chargers and re-run simulation.
+    for der_name in problem.der_model_set.der_models:
+        if type(problem.der_model_set.der_models[der_name]) is fledge.der_models.FixedEVChargerModel:
+            problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+            problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+    problem.solve()
+    results_2 = problem.get_results()
+    branch_power_vector_magnitude_per_unit_2 = (
+        (np.abs(results_2['branch_power_vector_1']) + np.abs(results_2['branch_power_vector_2'])) / 2
+        / problem.electric_grid_model.branch_power_vector_magnitude_reference
+    )
+    branch_power_vector_magnitude_per_unit_2.loc['maximum', :] = branch_power_vector_magnitude_per_unit_2.max(axis='rows')
+    new_columns = []
+    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
+        if branch[0] == 'transformer':
+            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
+                new_columns.extend(
+                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
+                    * [branch_power_vector_magnitude_per_unit_2.loc[:, branch]]
+                )
+    branch_power_vector_magnitude_per_unit_2 = pd.concat([branch_power_vector_magnitude_per_unit_2, *new_columns], axis='columns')
 
     # Print results.
     print(results)

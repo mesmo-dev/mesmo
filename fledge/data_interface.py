@@ -136,7 +136,7 @@ class ScenarioData(object):
         )
 
         # Obtain scenario data.
-        self.scenario = (
+        scenario = (
             self.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM scenarios
@@ -146,8 +146,16 @@ class ScenarioData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )).iloc[0]
+            ))
         )
+        # Raise error, if scenario not found.
+        try:
+            assert len(scenario) > 0
+        except AssertionError:
+            logger.exception(f"No scenario found for scenario name '{scenario_name}'.")
+            raise
+        # Convert to Series for shorter indexing.
+        self.scenario = scenario.iloc[0].copy()
 
         # Parse time definitions.
         self.scenario['timestep_start'] = (

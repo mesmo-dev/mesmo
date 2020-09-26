@@ -177,15 +177,15 @@ def main():
         )
 
     # More plots.
-    histogram_bins = 100
+    histogram_bins = np.arange(0, 1.01, 0.01)
 
     # Define Plotly default options.
     pio.templates.default = go.layout.Template(pio.templates['simple_white'])
     pio.templates.default.layout.update(
         font_family=fledge.config.config['plots']['font_family'][0],
-        legend=dict(borderwidth=1),
-        xaxis=dict(showgrid=True),
-        yaxis=dict(showgrid=True)
+        legend=go.layout.Legend(borderwidth=1),
+        xaxis=go.layout.XAxis(showgrid=True),
+        yaxis=go.layout.YAxis(showgrid=True)
     )
 
     # Plot load timeseries.
@@ -206,29 +206,29 @@ def main():
         y=values_2.values,
         name='Baseload',
         fill='tozeroy',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.add_trace(go.Scatter(
         x=values_1.index,
         y=values_1.values,
         name='Baseload + private EV',
         fill='tonexty',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.add_trace(go.Scatter(
         x=values.index,
         y=values.values,
         name='Baseload + private EV + bus charging',
         fill='tonexty',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.update_layout(
         title=title,
         yaxis_title=f'{y_label} [{value_unit}]',
-        xaxis=dict(tickformat='%H:%M'),
-        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        xaxis=go.layout.XAxis(tickformat='%H:%M'),
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization timeseries.
@@ -258,29 +258,29 @@ def main():
         y=values_2.values,
         name='Baseload',
         fill='tozeroy',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.add_trace(go.Scatter(
         x=values_1.index,
         y=values_1.values,
         name='Baseload + private EV',
         fill='tonexty',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.add_trace(go.Scatter(
         x=values.index,
         y=values.values,
         name='Baseload + private EV + bus charging',
         fill='tonexty',
-        line=dict(shape='hv')
+        line=go.scatter.Line(shape='hv')
     ))
     figure.update_layout(
         title=title,
         yaxis_title=f'{y_label} [{value_unit}]',
-        xaxis=dict(tickformat='%H:%M'),
-        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        xaxis=go.layout.XAxis(tickformat='%H:%M'),
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization histogram.
@@ -289,15 +289,27 @@ def main():
             :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
         ].max()
     )
+    values.loc[values > 1] = 1.0
+    values = (
+        pd.Series([*np.histogram(values, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values)
+    )
     values_1 = (
         branch_power_vector_magnitude_per_unit_1.loc[
             :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
         ].max()
     )
+    values_1.loc[values_1 > 1] = 1.0
+    values_1 = (
+        pd.Series([*np.histogram(values_1, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values_1)
+    )
     values_2 = (
         branch_power_vector_magnitude_per_unit_2.loc[
             :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
         ].max()
+    )
+    values_2.loc[values_2 > 1] = 1.0
+    values_2 = (
+        pd.Series([*np.histogram(values_2, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values_2)
     )
     values.loc[values > 1] = 1.0
     values_1.loc[values_1 > 1] = 1.0
@@ -308,31 +320,28 @@ def main():
     value_unit = 'p.u.'
 
     figure = go.Figure()
-    figure.add_trace(go.Histogram(
-        x=values_2.values,
-        name='Baseload',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values_2.index,
+        y=values_2.values,
+        name='Baseload'
     ))
-    figure.add_trace(go.Histogram(
-        x=values_1.values,
-        name='Baseload + private EV',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values_1.index,
+        y=values_1.values,
+        name='Baseload + private EV'
     ))
-    figure.add_trace(go.Histogram(
-        x=values.values,
-        name='Baseload + private EV + bus charging',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values.index,
+        y=values.values,
+        name='Baseload + private EV + bus charging'
     ))
     figure.update_layout(
         title=title,
         xaxis_title=f'{y_label} [{value_unit}]',
         yaxis_title='Frequency',
-        legend=dict(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot line utilization cumulative.
@@ -341,53 +350,69 @@ def main():
             :, branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_type') == 'line'
         ].max()
     )
+    values.loc[values > 1] = 1.0
+    values = (
+        pd.Series([*np.histogram(values, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values)
+    )
     values_1 = (
         branch_power_vector_magnitude_per_unit_1.loc[
-        :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
+            :, branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_type') == 'line'
         ].max()
+    )
+    values_1.loc[values_1 > 1] = 1.0
+    values_1 = (
+        pd.Series([*np.histogram(values_1, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values_1)
     )
     values_2 = (
         branch_power_vector_magnitude_per_unit_2.loc[
-        :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
+            :, branch_power_vector_magnitude_per_unit_2.columns.get_level_values('branch_type') == 'line'
         ].max()
     )
-    values.loc[values > 1] = 1.0
-    values_1.loc[values_1 > 1] = 1.0
     values_2.loc[values_2 > 1] = 1.0
+    values_2 = (
+        pd.Series([*np.histogram(values_2, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values_2)
+    )
     title = 'Lines'
     filename = 'line_utilization_cumulative'
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
     figure = go.Figure()
-    figure.add_trace(go.Histogram(
-        x=values_2.values,
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
         name='Baseload',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
     ))
-    figure.add_trace(go.Histogram(
-        x=values_1.values,
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
         name='Baseload + private EV',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
     ))
-    figure.add_trace(go.Histogram(
-        x=values.values,
+    figure.add_trace(go.Scatter(
+        x=values.index,
+        y=values.values,
         name='Baseload + private EV + bus charging',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.add_shape(go.layout.Shape(
+        x0=0,
+        x1=1,
+        xref='paper',
+        y0=0.9,
+        y1=0.9,
+        yref='y',
+        type='line',
+        line=go.layout.shape.Line(width=2)
     ))
     figure.update_layout(
         title=title,
         xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Frequency',
-        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        yaxis_title='Cumulative proportion',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot transformer utilization histogram.
@@ -400,6 +425,10 @@ def main():
             )
         ].max()
     )
+    values.loc[values > 1] = 1.0
+    values = (
+        pd.Series([*np.histogram(values, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values)
+    )
     values_1 = (
         branch_power_vector_magnitude_per_unit_1.loc[
             :,
@@ -408,6 +437,10 @@ def main():
                 & branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_name').str.contains('22kV')
             )
         ].max()
+    )
+    values_1.loc[values_1 > 1] = 1.0
+    values_1 = (
+        pd.Series([*np.histogram(values_1, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values_1)
     )
     values_2 = (
         branch_power_vector_magnitude_per_unit_2.loc[
@@ -418,40 +451,38 @@ def main():
             )
         ].max()
     )
-    values.loc[values > 1] = 1.0
-    values_1.loc[values_1 > 1] = 1.0
     values_2.loc[values_2 > 1] = 1.0
+    values_2 = (
+        pd.Series([*np.histogram(values_2, bins=histogram_bins)[0], 0], index=histogram_bins) / len(values_2)
+    )
     title = '1MVA Transformers'
     filename = 'transformer_utilization_histogram'
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
     figure = go.Figure()
-    figure.add_trace(go.Histogram(
-        x=values_2.values,
-        name='Baseload',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values_2.index,
+        y=values_2.values,
+        name='Baseload'
     ))
-    figure.add_trace(go.Histogram(
-        x=values_1.values,
-        name='Baseload + private EV',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values_1.index,
+        y=values_1.values,
+        name='Baseload + private EV'
     ))
-    figure.add_trace(go.Histogram(
-        x=values.values,
-        name='Baseload + private EV + bus charging',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins)
+    figure.add_trace(go.Bar(
+        x=values.index,
+        y=values.values,
+        name='Baseload + private EV + bus charging'
     ))
     figure.update_layout(
         title=title,
         xaxis_title=f'{y_label} [{value_unit}]',
         yaxis_title='Frequency',
-        legend=dict(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Plot transformer utilization cumulative.
@@ -464,6 +495,10 @@ def main():
             )
         ].max()
     )
+    values.loc[values > 1] = 1.0
+    values = (
+        pd.Series([*np.histogram(values, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values)
+    )
     values_1 = (
         branch_power_vector_magnitude_per_unit_1.loc[
             :,
@@ -472,6 +507,10 @@ def main():
                 & branch_power_vector_magnitude_per_unit_1.columns.get_level_values('branch_name').str.contains('22kV')
             )
         ].max()
+    )
+    values_1.loc[values_1 > 1] = 1.0
+    values_1 = (
+        pd.Series([*np.histogram(values_1, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values_1)
     )
     values_2 = (
         branch_power_vector_magnitude_per_unit_2.loc[
@@ -482,43 +521,51 @@ def main():
             )
         ].max()
     )
-    values.loc[values > 1] = 1.0
-    values_1.loc[values_1 > 1] = 1.0
     values_2.loc[values_2 > 1] = 1.0
+    values_2 = (
+        pd.Series([*np.histogram(values_2, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum() / len(values_2)
+    )
     title = '1MVA Transformers'
     filename = 'transformer_utilization_cumulative'
     y_label = 'Peak utilization'
     value_unit = 'p.u.'
 
     figure = go.Figure()
-    figure.add_trace(go.Histogram(
-        x=values_2.values,
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
         name='Baseload',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
     ))
-    figure.add_trace(go.Histogram(
-        x=values_1.values,
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
         name='Baseload + private EV',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
     ))
-    figure.add_trace(go.Histogram(
-        x=values.values,
+    figure.add_trace(go.Scatter(
+        x=values.index,
+        y=values.values,
         name='Baseload + private EV + bus charging',
-        histnorm='probability',
-        xbins=dict(start=0, end=1.0, size=1.0 / histogram_bins),
-        cumulative_enabled=True
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.add_shape(go.layout.Shape(
+        x0=0,
+        x1=1,
+        xref='paper',
+        y0=0.9,
+        y1=0.9,
+        yref='y',
+        type='line',
+        line=go.layout.shape.Line(width=2)
     ))
     figure.update_layout(
         title=title,
         xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Frequency',
-        legend=dict(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        yaxis_title='Cumulative proportion',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    figure.show()
+    # figure.show()
     figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Print results path.

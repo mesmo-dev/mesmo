@@ -18,10 +18,25 @@ import fledge.utils
 import fledge.problems
 import bipmo.bipmo.plots
 
+# Settings.
 
 # Settings.
-scenario_name = 'cigre_mv_network_with_all_ders'
+scenario_number = 2
+# Choices:
+# 1 - unconstrained operation,
+# 2 - constrained line
+if scenario_number in [1]:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+elif scenario_number in [2]:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+else:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+
+constrained_lines = ['Line_3_8']
+constrain_multiplier = 0.05
+
 plots = True  # If True, script may produce plots.
+run_milp = False  # If True, script first runs a MILP and then fixes the integers from the result and runs a LP
 
 # Obtain results path.
 results_path = (
@@ -38,8 +53,6 @@ price_timeseries = price_data.price_timeseries_dict[price_type]
 
 chp_schedule: pd.DataFrame
 
-run_milp = False
-
 for i in range(2):
     if run_milp:
         if i == 0:
@@ -48,6 +61,7 @@ for i in range(2):
             is_milp = False
     else:
         is_milp = False
+        i = 3  # will stop from iterating again
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -79,14 +93,18 @@ for i in range(2):
         if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
         else None
     )
-    branch_power_vector_squared_maximum[
-        fledge.utils.get_index(electric_grid_model.branches, branch_name='Line_2_3')
-    ] *= 0.14
+
+    if scenario_number in [2]:
+        # constrain lines
+        for line_names in constrained_lines:
+            branch_power_vector_squared_maximum[
+                fledge.utils.get_index(electric_grid_model.branches, branch_name=line_names)
+            ] *= constrain_multiplier
 
     # Get the biogas plant model and set the switches flag accordingly
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
     flexible_biogas_plant_model = der_model_set.flexible_der_models['Biogas Plant 9']
-    if not is_milp and run_milp:
+    if (not is_milp) and run_milp:
         # set the chp_schedule resulting from the milp optimization
         flexible_biogas_plant_model.chp_schedule = chp_schedule
     der_model_set.flexible_der_models[flexible_biogas_plant_model.der_name] = flexible_biogas_plant_model
@@ -142,6 +160,25 @@ for i in range(2):
                                 <=
                                 flexible_biogas_plant_model.output_maximum_timeseries.at[timestep, output]
                                 * optimization_problem.binary_variables[timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
+                            )
+
+    else:  # define the constraints without the binary variables
+        for timestep in flexible_biogas_plant_model.timesteps:
+            for output in flexible_biogas_plant_model.outputs:
+                if flexible_biogas_plant_model.chp_schedule is not None and 'active_power_Wel' in output:
+                    for chp in flexible_biogas_plant_model.CHP_list:
+                        if chp in output and any(flexible_biogas_plant_model.switches.str.contains(chp)):
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output]
+                                >=
+                                flexible_biogas_plant_model.output_minimum_timeseries.at[timestep, output]
+                                * flexible_biogas_plant_model.chp_schedule.loc[timestep, chp+'_switch']
+                            )
+                            optimization_problem.der_model_constraints.add(
+                                optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output]
+                                <=
+                                flexible_biogas_plant_model.output_maximum_timeseries.at[timestep, output]
+                                * flexible_biogas_plant_model.chp_schedule.loc[timestep, chp+'_switch']
                             )
 
     # Define electric grid objective.

@@ -451,18 +451,19 @@ class FlexibleDERModel(DERModel):
                 if type(self) is FlexibleBiogasPlantModel and self.chp_schedule is not None and 'active_power_Wel' in output:
                     for chp in self.CHP_list:
                         if chp in output and any(self.switches.str.contains(chp)):
-                            optimization_problem.der_model_constraints.add(
-                                optimization_problem.output_vector[timestep, self.der_name, output]
-                                >=
-                                self.output_minimum_timeseries.at[timestep, output]
-                                * self.chp_schedule.loc[timestep, chp+'_switch']
-                            )
-                            optimization_problem.der_model_constraints.add(
-                                optimization_problem.output_vector[timestep, self.der_name, output]
-                                <=
-                                self.output_maximum_timeseries.at[timestep, output]
-                                * self.chp_schedule.loc[timestep, chp+'_switch']
-                            )
+                            pass  # must be done in the script currently
+                            # optimization_problem.der_model_constraints.add(
+                            #     optimization_problem.output_vector[timestep, self.der_name, output]
+                            #     >=
+                            #     self.output_minimum_timeseries.at[timestep, output]
+                            #     * self.chp_schedule.loc[timestep, chp+'_switch']
+                            # )
+                            # optimization_problem.der_model_constraints.add(
+                            #     optimization_problem.output_vector[timestep, self.der_name, output]
+                            #     <=
+                            #     self.output_maximum_timeseries.at[timestep, output]
+                            #     * self.chp_schedule.loc[timestep, chp+'_switch']
+                            # )
                 else:
                     optimization_problem.der_model_constraints.add(
                         optimization_problem.output_vector[timestep, self.der_name, output]
@@ -579,11 +580,7 @@ class FlexibleDERModel(DERModel):
                     optimization_problem.objective.expr += (
                         -1.0
                         *
-                        (price_timeseries.at[timestep, 'price_value']
-                            + self.price_sensitivity_coefficient
-                            * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                            * timestep_interval_hours  # In Wh.
-                        )
+                        price_timeseries.at[timestep, 'price_value']
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
                     )
@@ -602,7 +599,11 @@ class FlexibleDERModel(DERModel):
             if issubclass(type(self), FlexibleGeneratorModel):
                 for timestep in self.timesteps:
                     optimization_problem.objective.expr += (
-                        self.marginal_cost
+                        (self.marginal_cost
+                         + self.price_sensitivity_coefficient
+                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                         * timestep_interval_hours  # In Wh.
+                         )
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
                         * timestep_interval_hours  # In Wh.
                     )
@@ -1276,7 +1277,7 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
             thermal_grid_model,
             thermal_power_flow_solution
         )
-        # Output limits.
+        # Control limits.
         for timestep in self.timesteps:
             # Feedstock input limits (maximum daily or hourly feed-in depending on available feedstock).
             for control in self.controls:

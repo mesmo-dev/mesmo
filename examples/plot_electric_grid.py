@@ -143,14 +143,18 @@ def main():
         width=width, height=height,
         showlegend=False,
         hovermode='closest',
-        # margin=dict(b=0, l=0, r=0, t=0),
-        xaxis=go.layout.XAxis(showgrid=False, zeroline=False, showticklabels=False, ticks=''),
+        margin=dict(b=0, l=0, r=0, t=0),
+        xaxis=go.layout.XAxis(
+            showgrid=False, zeroline=False, showticklabels=False, ticks='',
+            range=(image_bounds[0], image_bounds[2])
+        ),
         yaxis=dict(
             showgrid=False, zeroline=False, showticklabels=False, ticks='',
-            scaleanchor='x', scaleratio=1
+            scaleanchor='x', scaleratio=1,
+            range=(image_bounds[1], image_bounds[3])
         )
     ))
-    figure.write_image(os.path.join(results_path, 'electric_grid.pdf'), width=width, height=height, scale=1)
+    figure.write_image(os.path.join(results_path, 'electric_grid.pdf'))
     fledge.utils.launch(os.path.join(results_path, 'electric_grid.pdf'))
 
     # Create interactive plot.

@@ -566,11 +566,7 @@ class FlexibleDERModel(DERModel):
                 for timestep in self.timesteps:
                     optimization_problem.objective.expr += (
                         sum(
-                            (price_timeseries.at[timestep, 'price_value']
-                                + self.price_sensitivity_coefficient
-                                * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                                * timestep_interval_hours  # In Wh.
-                             )
+                            price_timeseries.at[timestep, 'price_value']
                             * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                             * timestep_interval_hours  # In Wh.
                         )

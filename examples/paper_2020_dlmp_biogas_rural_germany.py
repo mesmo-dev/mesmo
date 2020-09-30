@@ -21,7 +21,7 @@ import bipmo.bipmo.plots
 # Settings.
 
 # Settings.
-scenario_number = 2
+scenario_number = 1
 # Choices:
 # 1 - unconstrained operation,
 # 2 - constrained line
@@ -36,6 +36,7 @@ constrained_lines = ['Line_3_8']
 constrain_multiplier = 0.05
 
 plots = True  # If True, script may produce plots.
+network_plots = False
 run_milp = False  # If True, script first runs a MILP and then fixes the integers from the result and runs a LP
 
 # Obtain results path.
@@ -276,7 +277,31 @@ print(dlmps)
 # Store DLMPs as CSV.
 dlmps.to_csv(results_path)
 
+bg_results = (
+    flexible_biogas_plant_model.get_optimization_results(
+        optimization_problem
+    )
+)
+print(bg_results)
+
 if plots:
+    # Plot settings
+    figsize = [7.8, 2.6 * 3]
+    linewidth = 1.5
+    legend_font_size = 14
+    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    show_grid = True
+    if len(flexible_biogas_plant_model.timesteps) > 25:
+        x_label_date_format = '%m/%d'
+    else:
+        x_label_date_format = '%H:%M'
+
+    # Use Latex Font
+    plt.rcParams.update({
+        "text.usetex": True,
+        # "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"]})
+
     # Plot electric grid DLMPs.
     electric_grid_dlmp = (
         pd.concat(
@@ -293,11 +318,22 @@ if plots:
     )
     electric_grid_dlmp *= 1000  # get DLMPs kWh
 
-    colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
+    # Print biogas plant plots
+
+    # bipmo.bipmo.plots.generate_biogas_plant_plots(bg_results, flexible_biogas_plant_model, results_path, price_timeseries)
+    # create custom plots for paper
+
+    bg = flexible_biogas_plant_model
+    der_name = bg.der_name
+    x_gas = bg.scenario_name + '_prod_biogas_m3_s-1'
+    x_storage = bg.scenario_name + '_storage_content_m3'
+    u_feed = 'mass_flow_kg_s-1_corn_silage'
+
     for der in electric_grid_model.ders:
+        if der_name not in der[1]:
+            continue
 
         # Obtain corresponding node.
-        # TODO: Consider delta connected DERs.
         node = (
             electric_grid_model.nodes[
                 electric_grid_model.der_incidence_wye_matrix[
@@ -307,8 +343,10 @@ if plots:
         )
 
         # Create plot.
-        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
-        ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
+        fig, axs = plt.subplots(sharex=True, ncols=2, nrows=3, figsize=figsize, gridspec_kw={"width_ratios": [100, 1]})
+        #  DLMPs and net active power output
+        ax1 = axs[0, 0]
+        # ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
         ax1.stackplot(
             scenario_data.timesteps,
             (
@@ -330,35 +368,111 @@ if plots:
             linewidth=1.0
         )
         ax1.grid(True)
-        ax1.set_xlabel('Time')
-        ax1.set_ylabel('Price [€/kWh]')
+        # ax1.set_xlabel('Time')
+        ax1.set_ylabel('Price (EUR/kWh)')
         # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         if der in electric_grid_model.ders:
             ax2.plot(
-                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
-                label='Active pw.',
+                results['der_active_power_vector'].loc[:, der] / (1 if in_per_unit else 1e6),
+                label='$y_{p,t}$',
                 drawstyle='steps-post',
                 color='black',
                 linewidth=1.5
             )
-        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+        ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
         ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
-        ax2.set_xlabel('Time')
-        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [W]')
+        # ax2.set_xlabel('Time')
+        ax2.set_ylabel('Power [p.u.]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
-        lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
-        lax.axis("off")
+        lax1 = axs[0, 1]
+        lax1.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
+        lax1.axis("off")
+
+        # Gas storage and CHP output
+        ax5 = axs[1, 0]
+        ax5.plot(
+            bg.timesteps,
+            bg_results['output_vector'][x_storage],
+            label='$x_{storage,t}$',
+            drawstyle='steps-post',
+            color='black',
+            linewidth=linewidth)
+        ax5.grid(show_grid)
+        # ax5.set_xlabel('Time')
+        ax5.set_ylabel('Storage content ($m^3$)')
+        ax6 = plt.twinx(ax5)
+        color_ind = 1
+        for chp in bg.CHP_list:
+            chp_p = chp + '_active_power_Wel'
+            ax6.plot(
+                bg_results['output_vector'][chp_p] / bg.output_maximum_timeseries[chp_p],
+                label="$y^{chp%s}_{p,t}$" % (chp[4]),
+                drawstyle='steps-post',
+                color=colors[color_ind],
+                linewidth=linewidth)
+            color_ind += 1
+        ax5.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        ax5.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        # ax5.set_xlabel('Time')
+        ax6.set_ylabel('Power [p.u.]')
+        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
+        h5, l5 = ax5.get_legend_handles_labels()
+        h6, l6 = ax6.get_legend_handles_labels()
+        lax3 = axs[1, 1]
+        lax3.legend((*h5, *h6), (*l5, *l6), borderaxespad=0, prop={'size': legend_font_size})
+        lax3.axis("off")
+
+        # Gas production rate x_gas and feedstock input u_feed
+        ax3 = axs[2, 0]
+        ax3.plot(
+            bg.timesteps,
+            bg_results['output_vector'][x_gas] * 3600,
+            label='$x_{gas,t}$',
+            drawstyle='steps-post',
+            color='black',
+            linewidth=linewidth)
+        ax3.grid(show_grid)
+        ax3.set_xlabel('Time')
+        ax3.set_ylabel('Gas production rate ($m^3/h$)')
+        ax4 = plt.twinx(ax3)
+        ax4.plot(
+            bg_results['control_vector'][u_feed] * 3600,
+            label='$u_{feed,t}$',
+            drawstyle='steps-post',
+            color='grey',
+            linewidth=linewidth)
+        ax3.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        ax3.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        ax3.set_xlabel('Time')
+        ax4.set_ylabel('Feedstock mass flow ($kg/h$)')
+        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
+        h3, l3 = ax3.get_legend_handles_labels()
+        h4, l4 = ax4.get_legend_handles_labels()
+        lax2 = axs[2, 1]
+        lax2.legend((*h3, *h4), (*l3, *l4), borderaxespad=0, prop={'size': legend_font_size})
+        lax2.axis("off")
+
+        #align all labels
+        fig.align_labels()
+        #fig.align_ylabels(axs[:, 0])
+
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
-        # plt.show()
+        # plt.savefig(os.path.join(results_path, f'{der_name}_Profit-and-Energy-Price.png'))
+        plt.show()
         plt.close()
 
+        # Print results path.
+        fledge.utils.launch(results_path)
+        print(f"Plots are stored in: {results_path}")
+
+
+# Produce network plots
+if network_plots:
     # Obtain graphs.
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
-
 
     # Plot electric grid DLMPs in grid.
     dlmp_types = [
@@ -404,7 +518,7 @@ if plots:
                 )
             )
             cb = plt.colorbar(sm, shrink=0.9)
-            cb.set_label('Price [€/kWh]')
+            cb.set_label('Price [EUR/kWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
             # plt.show()
@@ -421,15 +535,4 @@ if plots:
 
     # Print results path.
     fledge.utils.launch(results_path)
-    print(f"Results are stored in: {results_path}")
-
-    results = (
-        flexible_biogas_plant_model.get_optimization_results(
-            optimization_problem
-        )
-    )
-
-    print(results)
-
-    if plots:
-        bipmo.bipmo.plots.generate_biogas_plant_plots(results, flexible_biogas_plant_model, price_timeseries)
+    print(f"Network graphs are stored in: {results_path}")

@@ -1,14 +1,4 @@
 der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
-PV 3,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,3,1,0,0,wye,20000.0,0
-PV 4,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,4,1,0,0,wye,20000.0,0
-PV 5,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,5,1,0,0,wye,30000.0,0
-PV 6,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,6,1,0,0,wye,30000.0,0
-PV 7,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,7,1,0,0,wye,50000.0,0
-PV 8,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,8,1,0,0,wye,90000.0,0
-PV 9,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,9,1,0,0,wye,20000.0,0
-PV 10,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,10,1,0,0,wye,20000.0,0
-PV 11,cigre_mv_network_with_all_ders,fixed_generator,cigre_pv_NUTS2_DE21,11,1,0,0,wye,40000.0,0
-WKA 7,cigre_mv_network_with_all_ders,fixed_generator,cigre_wind_NUTS2_DE21,7,1,0,0,wye,1500000.0,0
 Biogas Plant 9,cigre_mv_network_with_all_ders,biogas_plant,biogas_plant_1,9,1,0,0,wye,1000000,950000
 Load R1,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,1,1,0,0,wye,-14994000.0,-3044661.5575462645
 Load R3,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,3,1,0,0,wye,-276450.0,-69284.90095251643
@@ -20,11 +10,11 @@ Load R10,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,10,1,0,0,wy
 Load R11,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,11,1,0,0,wye,-329800.00000000006,-82655.67131177387
 Load R12,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,12,1,0,0,wye,-14994000.0,-3044661.5575462645
 Load R14,cigre_mv_network_with_all_ders,fixed_load,cigre_residential,14,1,0,0,wye,-208549.99999999997,-52267.55685891588
-Load CI1,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,1,1,0,0,wye,-4845000.0,-1592474.4895915918
-Load CI3,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,3,1,0,0,wye,-225250.0,-139597.41222529885
-Load CI7,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,7,1,0,0,wye,-76500.0,-47410.441887837325
-Load CI9,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,9,1,0,0,wye,-573750.0,-355578.31415878003
-Load CI10,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,10,1,0,0,wye,-68000.0,-42142.61501141095
-Load CI12,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,12,1,0,0,wye,-5016000.0,-1648679.4715771778
-Load CI13,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,13,1,0,0,wye,-34000.0,-21071.307505705474
-Load CI14,cigre_mv_network_with_all_ders,flexible_load,cigre_commercial,14,1,0,0,wye,-331500.0,-205445.24818062843
+Load CI1,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,1,1,0,0,wye,-4845000.0,-1592474.4895915918
+Load CI3,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,3,1,0,0,wye,-225250.0,-139597.41222529885
+Load CI7,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,7,1,0,0,wye,-76500.0,-47410.441887837325
+Load CI9,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,9,1,0,0,wye,-573750.0,-355578.31415878003
+Load CI10,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,10,1,0,0,wye,-68000.0,-42142.61501141095
+Load CI12,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,12,1,0,0,wye,-5016000.0,-1648679.4715771778
+Load CI13,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,13,1,0,0,wye,-34000.0,-21071.307505705474
+Load CI14,cigre_mv_network_with_all_ders,fixed_load,cigre_commercial,14,1,0,0,wye,-331500.0,-205445.24818062843

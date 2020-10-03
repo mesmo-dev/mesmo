@@ -1300,22 +1300,22 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
                         )
 
         # CHP Ramp rate constraints.
-        for timestep in self.timesteps[:-1]:
-            for output in self.outputs:
-                for i in self.CHP_list:
-                    if ('active_power' in output) and (i in output):
-                        optimization_problem.der_model_constraints.add(
-                            optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
-                            - optimization_problem.output_vector[timestep, self.der_name, output]
-                            <=
-                            self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
-                        )
-                        optimization_problem.der_model_constraints.add(
-                            optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
-                            - optimization_problem.output_vector[timestep, self.der_name, output]
-                            >=
-                            - self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
-                        )
+        # for timestep in self.timesteps[:-1]:
+        #     for output in self.outputs:
+        #         for i in self.CHP_list:
+        #             if ('active_power' in output) and (i in output):
+        #                 optimization_problem.der_model_constraints.add(
+        #                     optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
+        #                     - optimization_problem.output_vector[timestep, self.der_name, output]
+        #                     <=
+        #                     self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
+        #                 )
+        #                 optimization_problem.der_model_constraints.add(
+        #                     optimization_problem.output_vector[timestep + self.timestep_interval, self.der_name, output]
+        #                     - optimization_problem.output_vector[timestep, self.der_name, output]
+        #                     >=
+        #                     - self.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * self.timestep_interval.seconds/60
+        #                 )
 
         # Final SOC storage
         if self.SOC_end == 'init':
@@ -1325,6 +1325,14 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
                                                    + '_storage_content_m3']
                 == self.state_vector_initial[self.scenario_name + '_storage_content_m3']
             )
+
+        # Final gas production should equal initial gas production
+        # Final SOC greater or equal to initial SOC
+        # optimization_problem.der_model_constraints.add(
+        #     optimization_problem.output_vector[self.timesteps[-1], self.der_name, self.scenario_name
+        #                                        + '_prod_biogas_m3_s-1']
+        #     == self.state_vector_initial[self.scenario_name + '_prod_biogas_m3_s-1']
+        # )
 
     def define_optimization_objective(
             self,

@@ -21,7 +21,7 @@ import bipmo.bipmo.plots
 # Settings.
 
 # Settings.
-scenario_number = 1
+scenario_number = 2
 # Choices:
 # 1 - unconstrained operation,
 # 2 - constrained line
@@ -37,7 +37,7 @@ constrain_multiplier = 0.05
 
 plots = True  # If True, script may produce plots.
 network_plots = False
-run_milp = False  # If True, script first runs a MILP and then fixes the integers from the result and runs a LP
+run_milp = True  # If True, script first runs a MILP and then fixes the integers from the result and runs a LP
 
 # Obtain results path.
 results_path = (
@@ -284,23 +284,39 @@ bg_results = (
 )
 print(bg_results)
 
+
+def make_patch_spines_invisible(ax):
+    ax.set_frame_on(True)
+    ax.patch.set_visible(False)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+
 if plots:
     # Plot settings
-    figsize = [7.8, 2.6 * 3]
+    figsize = [7.8, 2.6 * 2]
     linewidth = 1.5
     legend_font_size = 14
+
     colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
     show_grid = True
     if len(flexible_biogas_plant_model.timesteps) > 25:
         x_label_date_format = '%m/%d'
+        x_axis_label = 'Day'
     else:
         x_label_date_format = '%H:%M'
+        x_axis_label = 'Time'
 
-    # Use Latex Font
+    # Use Latex Font and export for latex usage
+    # matplotlib.use("pgf")
     plt.rcParams.update({
         "text.usetex": True,
         # "font.family": "serif",
-        "font.serif": ["Computer Modern Roman"]})
+        # "font.serif": ["Computer Modern Roman"]
+        # "pgf.texsystem": "pdflatex",
+        'font.family': 'serif',
+        # 'pgf.rcfonts': False,
+    })
 
     # Plot electric grid DLMPs.
     electric_grid_dlmp = (
@@ -319,8 +335,6 @@ if plots:
     electric_grid_dlmp *= 1000  # get DLMPs kWh
 
     # Print biogas plant plots
-
-    # bipmo.bipmo.plots.generate_biogas_plant_plots(bg_results, flexible_biogas_plant_model, results_path, price_timeseries)
     # create custom plots for paper
 
     bg = flexible_biogas_plant_model
@@ -331,7 +345,7 @@ if plots:
 
     for der in electric_grid_model.ders:
         if der_name not in der[1]:
-            continue
+            continue  # only create plots for biogas plan
 
         # Obtain corresponding node.
         node = (
@@ -343,7 +357,8 @@ if plots:
         )
 
         # Create plot.
-        fig, axs = plt.subplots(sharex=True, ncols=2, nrows=3, figsize=figsize, gridspec_kw={"width_ratios": [100, 1]})
+        fig, axs = plt.subplots(sharex=True, ncols=2, nrows=2, figsize=figsize, gridspec_kw={"width_ratios": [100, 1]})
+
         #  DLMPs and net active power output
         ax1 = axs[0, 0]
         # ax1.set_title(f"DER {der[1]} ({der[0].replace('_', ' ').capitalize()})")
@@ -391,76 +406,163 @@ if plots:
         lax1.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
         lax1.axis("off")
 
-        # Gas storage and CHP output
-        ax5 = axs[1, 0]
-        ax5.plot(
-            bg.timesteps,
-            bg_results['output_vector'][x_storage],
-            label='$x_{storage,t}$',
-            drawstyle='steps-post',
-            color='black',
-            linewidth=linewidth)
-        ax5.grid(show_grid)
-        # ax5.set_xlabel('Time')
-        ax5.set_ylabel('Storage content ($m^3$)')
-        ax6 = plt.twinx(ax5)
-        color_ind = 1
-        for chp in bg.CHP_list:
-            chp_p = chp + '_active_power_Wel'
-            ax6.plot(
-                bg_results['output_vector'][chp_p] / bg.output_maximum_timeseries[chp_p],
-                label="$y^{chp%s}_{p,t}$" % (chp[4]),
-                drawstyle='steps-post',
-                color=colors[color_ind],
-                linewidth=linewidth)
-            color_ind += 1
-        ax5.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
-        ax5.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
-        # ax5.set_xlabel('Time')
-        ax6.set_ylabel('Power [p.u.]')
-        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
-        h5, l5 = ax5.get_legend_handles_labels()
-        h6, l6 = ax6.get_legend_handles_labels()
-        lax3 = axs[1, 1]
-        lax3.legend((*h5, *h6), (*l5, *l6), borderaxespad=0, prop={'size': legend_font_size})
-        lax3.axis("off")
-
-        # Gas production rate x_gas and feedstock input u_feed
-        ax3 = axs[2, 0]
+        # Gas production rate x_gas, storage and feedstock input u_feed
+        ax3 = axs[1, 0]
         ax3.plot(
             bg.timesteps,
             bg_results['output_vector'][x_gas] * 3600,
             label='$x_{gas,t}$',
-            drawstyle='steps-post',
+            #drawstyle='steps-post',
             color='black',
             linewidth=linewidth)
         ax3.grid(show_grid)
-        ax3.set_xlabel('Time')
+        ax3.set_xlabel(x_axis_label)
         ax3.set_ylabel('Gas production rate ($m^3/h$)')
         ax4 = plt.twinx(ax3)
         ax4.plot(
             bg_results['control_vector'][u_feed] * 3600,
             label='$u_{feed,t}$',
-            drawstyle='steps-post',
-            color='grey',
+            #drawstyle='steps-post',
+            color=colors[1],
             linewidth=linewidth)
         ax3.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
         ax3.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
-        ax3.set_xlabel('Time')
+        ax3.set_xlabel(x_axis_label)
         ax4.set_ylabel('Feedstock mass flow ($kg/h$)')
+        ax5 = plt.twinx(ax3)
+
+        # Offset the right spine of par2.  The ticks and label have already been
+        # placed on the right by twinx above.
+        ax5.spines["right"].set_position(("axes", 1.2))
+        # Having been created by twinx, par2 has its frame off, so the line of its
+        # detached spine is invisible.  First, activate the frame but make the patch
+        # and spines invisible.
+        make_patch_spines_invisible(ax5)
+        # Second, show the right spine.
+        ax5.spines["right"].set_visible(True)
+        ax5.plot(
+            bg.timesteps,
+            bg_results['output_vector'][x_storage],
+            label='$x_{storage,t}$',
+            #drawstyle='steps-post',
+            color=colors[0],
+            linewidth=linewidth)
+        ax5.grid(False)
+        # ax5.set_xlabel('Time')
+        ax5.set_ylabel('Storage content ($m^3$)')
+        ax5.set_ylim((0.0, bg.output_maximum_timeseries[x_storage].max()))
+        ax5.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        ax5.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        ax5.set_xlabel(x_axis_label)
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
         h3, l3 = ax3.get_legend_handles_labels()
         h4, l4 = ax4.get_legend_handles_labels()
-        lax2 = axs[2, 1]
-        lax2.legend((*h3, *h4), (*l3, *l4), borderaxespad=0, prop={'size': legend_font_size})
+        h5, l5 = ax5.get_legend_handles_labels()
+        lax2 = axs[1, 1]
+        lax2.legend((*h3, *h4, *h5), (*l3, *l4, *l5), borderaxespad=0, prop={'size': legend_font_size})
         lax2.axis("off")
 
+        # # Gas storage and CHP output
+        # ax5 = axs[1, 0]
+        # ax5.plot(
+        #     bg.timesteps,
+        #     bg_results['output_vector'][x_storage],
+        #     label='$x_{storage,t}$',
+        #     drawstyle='steps-post',
+        #     color='black',
+        #     linewidth=linewidth)
+        # ax5.grid(show_grid)
+        # # ax5.set_xlabel('Time')
+        # ax5.set_ylabel('Storage content ($m^3$)')
+        # ax6 = plt.twinx(ax5)
+        # color_ind = 1
+        # for chp in bg.CHP_list:
+        #     chp_p = chp + '_active_power_Wel'
+        #     ax6.plot(
+        #         bg_results['output_vector'][chp_p] / bg.output_maximum_timeseries[chp_p],
+        #         label="$y^{chp%s}_{p,t}$" % (chp[4]),
+        #         drawstyle='steps-post',
+        #         color=colors[color_ind],
+        #         linewidth=linewidth)
+        #     color_ind += 1
+        # ax5.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        # ax5.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        # # ax5.set_xlabel('Time')
+        # ax6.set_ylabel('Power [p.u.]')
+        # # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
+        # h5, l5 = ax5.get_legend_handles_labels()
+        # h6, l6 = ax6.get_legend_handles_labels()
+        # lax3 = axs[1, 1]
+        # lax3.legend((*h5, *h6), (*l5, *l6), borderaxespad=0, prop={'size': legend_font_size})
+        # lax3.axis("off")
+        #
+        # # Gas production rate x_gas and feedstock input u_feed
+        # ax3 = axs[2, 0]
+        # ax3.plot(
+        #     bg.timesteps,
+        #     bg_results['output_vector'][x_gas] * 3600,
+        #     label='$x_{gas,t}$',
+        #     drawstyle='steps-post',
+        #     color='black',
+        #     linewidth=linewidth)
+        # ax3.grid(show_grid)
+        # ax3.set_xlabel(x_axis_label)
+        # ax3.set_ylabel('Gas production rate ($m^3/h$)')
+        # ax4 = plt.twinx(ax3)
+        # ax4.plot(
+        #     bg_results['control_vector'][u_feed] * 3600,
+        #     label='$u_{feed,t}$',
+        #     drawstyle='steps-post',
+        #     color='grey',
+        #     linewidth=linewidth)
+        # ax3.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        # ax3.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        # ax3.set_xlabel(x_axis_label)
+        # ax4.set_ylabel('Feedstock mass flow ($kg/h$)')
+        # # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
+        # h3, l3 = ax3.get_legend_handles_labels()
+        # h4, l4 = ax4.get_legend_handles_labels()
+        # lax2 = axs[2, 1]
+        # lax2.legend((*h3, *h4), (*l3, *l4), borderaxespad=0, prop={'size': legend_font_size})
+        # lax2.axis("off")
+
         #align all labels
-        fig.align_labels()
-        #fig.align_ylabels(axs[:, 0])
+        # fig.align_labels()
+        fig.align_ylabels(axs[:, 0])
 
         plt.tight_layout()
-        # plt.savefig(os.path.join(results_path, f'{der_name}_Profit-and-Energy-Price.png'))
+        plt.savefig(os.path.join(results_path, f'{der_name}.pdf'))
+        plt.show()
+        plt.close()
+
+        #  Plot the energy price
+        # Create plot.
+        figsize = [7.8, 2.6]
+        fig, (ax1, lax) = plt.subplots(ncols=2, figsize=figsize, gridspec_kw={"width_ratios": [100, 1]})
+        ax1.set_title(f'{price_type}')
+        ax1.plot(
+            bg.timesteps,
+            price_timeseries['price_value'] * 1000,
+            label='Market Price (EUR/kWh)',
+            drawstyle='steps-post',
+            color=colors[1],
+            linewidth=linewidth)
+        ax1.hlines(
+            y=bg.marginal_cost * 1000,
+            xmin=bg.timesteps[0],
+            xmax=bg.timesteps[-1],
+            label='Market Price (EUR/kWh)',
+            color=colors[0],
+            linewidth=linewidth)
+        ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
+        ax1.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel(f'EUR/kWh')
+        h1, l1 = ax1.get_legend_handles_labels()
+        # lax.legend(*h1, *l1, borderaxespad=0)
+        lax.axis("off")
+        plt.tight_layout()
+        # plt.savefig(os.path.join(results_path, f'{der_name}_Energy-Price.png'))
         plt.show()
         plt.close()
 

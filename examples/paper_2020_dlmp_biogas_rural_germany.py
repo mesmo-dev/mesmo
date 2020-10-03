@@ -16,28 +16,40 @@ import fledge.electric_grid_models
 import fledge.plots
 import fledge.utils
 import fledge.problems
-import bipmo.bipmo.plots
-
-# Settings.
 
 # Settings.
 scenario_number = 2
 # Choices:
 # 1 - unconstrained operation,
 # 2 - constrained line
-if scenario_number in [1]:
-    scenario_name = 'cigre_mv_network_with_all_ders'
-elif scenario_number in [2]:
-    scenario_name = 'cigre_mv_network_with_all_ders'
-else:
-    scenario_name = 'cigre_mv_network_with_all_ders'
-
-constrained_lines = ['Line_3_8']
-constrain_multiplier = 0.05
 
 plots = True  # If True, script may produce plots.
 network_plots = False
 run_milp = True  # If True, script first runs a MILP and then fixes the integers from the result and runs a LP
+
+if scenario_number in [1]:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+    if run_milp:
+        filename = 'biogas_plant_milp_unconstrained'
+    else:
+        filename = 'biogas_plant_lp_unconstrained'
+elif scenario_number in [2]:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+    if run_milp:
+        filename = 'biogas_plant_milp_constrained'
+    else:
+        filename = 'biogas_plant_lp_constrained'
+else:
+    scenario_name = 'cigre_mv_network_with_all_ders'
+    if run_milp:
+        filename = 'biogas_plant_milp'
+    else:
+        filename = 'biogas_plant_lp'
+
+constrained_lines = ['Line_3_8']
+constrain_multiplier = 0.06
+
+
 
 # Obtain results path.
 results_path = (
@@ -163,6 +175,29 @@ for i in range(2):
                                 * optimization_problem.binary_variables[timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
                             )
 
+        # CHP Ramp rate constraints.
+        # for timestep in flexible_biogas_plant_model.timesteps[:-1]:
+        #     for output in flexible_biogas_plant_model.outputs:
+        #         for i in flexible_biogas_plant_model.CHP_list:
+        #             if ('active_power_Wel' in output) and (i in output):
+        #                 optimization_problem.der_model_constraints.add(
+        #                     (optimization_problem.output_vector[timestep + flexible_biogas_plant_model.timestep_interval, flexible_biogas_plant_model.der_name, output]
+        #                     - optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output])
+        #                     * optimization_problem.binary_variables[
+        #                         timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
+        #                     <=
+        #                     flexible_biogas_plant_model.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * flexible_biogas_plant_model.timestep_interval.seconds / 60
+        #                 )
+        #                 optimization_problem.der_model_constraints.add(
+        #                     (optimization_problem.output_vector[timestep + flexible_biogas_plant_model.timestep_interval, flexible_biogas_plant_model.der_name, output]
+        #                     - optimization_problem.output_vector[timestep, flexible_biogas_plant_model.der_name, output])
+        #                     * optimization_problem.binary_variables[
+        #                         timestep, flexible_biogas_plant_model.der_name, chp + '_switch']
+        #                     >=
+        #                     - flexible_biogas_plant_model.ramp_rate_list.loc[i, 'ramp_rate_W_min'] * flexible_biogas_plant_model.timestep_interval.seconds / 60
+        #                 )
+
+
     else:  # define the constraints without the binary variables
         for timestep in flexible_biogas_plant_model.timesteps:
             for output in flexible_biogas_plant_model.outputs:
@@ -181,6 +216,29 @@ for i in range(2):
                                 flexible_biogas_plant_model.output_maximum_timeseries.at[timestep, output]
                                 * flexible_biogas_plant_model.chp_schedule.loc[timestep, chp+'_switch']
                             )
+        # CHP Ramp rate constraints.
+        # for timestep in flexible_biogas_plant_model.timesteps[:-1]:
+        #     for output in flexible_biogas_plant_model.outputs:
+        #         for i in flexible_biogas_plant_model.CHP_list:
+        #             if ('active_power_Wel' in output) and (i in output):
+        #                 optimization_problem.der_model_constraints.add(
+        #                     (optimization_problem.output_vector[
+        #                          timestep + flexible_biogas_plant_model.timestep_interval, flexible_biogas_plant_model.der_name, output]
+        #                      - optimization_problem.output_vector[
+        #                          timestep, flexible_biogas_plant_model.der_name, output])
+        #                     <=
+        #                     flexible_biogas_plant_model.ramp_rate_list.loc[
+        #                         i, 'ramp_rate_W_min'] * flexible_biogas_plant_model.timestep_interval.seconds / 60
+        #                 )
+        #                 optimization_problem.der_model_constraints.add(
+        #                     (optimization_problem.output_vector[
+        #                          timestep + flexible_biogas_plant_model.timestep_interval, flexible_biogas_plant_model.der_name, output]
+        #                      - optimization_problem.output_vector[
+        #                          timestep, flexible_biogas_plant_model.der_name, output])
+        #                     >=
+        #                     - flexible_biogas_plant_model.ramp_rate_list.loc[
+        #                         i, 'ramp_rate_W_min'] * flexible_biogas_plant_model.timestep_interval.seconds / 60
+        #                 )
 
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
@@ -284,25 +342,17 @@ bg_results = (
 )
 print(bg_results)
 
-
-def make_patch_spines_invisible(ax):
-    ax.set_frame_on(True)
-    ax.patch.set_visible(False)
-    for sp in ax.spines.values():
-        sp.set_visible(False)
-
-
 if plots:
     # Plot settings
     figsize = [7.8, 2.6 * 2]
     linewidth = 1.5
-    legend_font_size = 14
+    legend_font_size = 12
 
     colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
     show_grid = True
     if len(flexible_biogas_plant_model.timesteps) > 25:
         x_label_date_format = '%m/%d'
-        x_axis_label = 'Day'
+        x_axis_label = 'Date'
     else:
         x_label_date_format = '%H:%M'
         x_axis_label = 'Time'
@@ -384,8 +434,8 @@ if plots:
         )
         ax1.grid(True)
         # ax1.set_xlabel('Time')
-        ax1.set_ylabel('Price (EUR/kWh)')
-        # ax1.set_ylim((0.0, 10.0))
+        ax1.set_ylabel('Price (€/kWh)')
+        ax1.set_ylim((0.0, 0.36))
         ax2 = plt.twinx(ax1)
         if der in electric_grid_model.ders:
             ax2.plot(
@@ -393,13 +443,19 @@ if plots:
                 label='$y_{p,t}$',
                 drawstyle='steps-post',
                 color='black',
-                linewidth=1.5
+                linewidth=linewidth
             )
+            ax2.plot(
+                bg_results['output_vector'][x_storage] / bg.output_maximum_timeseries[x_storage],
+                label='$x_{storage,t}$',
+                # drawstyle='steps-post',
+                color='fuchsia',
+                linewidth=linewidth)
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
         ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
         # ax2.set_xlabel('Time')
-        ax2.set_ylabel('Power [p.u.]')
-        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
+        ax2.set_ylabel('Power / Storage content (p.u.)')
+        ax2.set_ylim((0.0, 1.05))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax1 = axs[0, 1]
@@ -418,48 +474,24 @@ if plots:
         ax3.grid(show_grid)
         ax3.set_xlabel(x_axis_label)
         ax3.set_ylabel('Gas production rate ($m^3/h$)')
+        #ax3.set_ylim((0.0, bg_results['output_vector'][x_gas].max() * 3600 * 1.05))
+        ax3.set_ylim((0.0, 220))
         ax4 = plt.twinx(ax3)
         ax4.plot(
             bg_results['control_vector'][u_feed] * 3600,
             label='$u_{feed,t}$',
-            #drawstyle='steps-post',
+            drawstyle='steps-post',
             color=colors[1],
             linewidth=linewidth)
         ax3.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
         ax3.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
         ax3.set_xlabel(x_axis_label)
         ax4.set_ylabel('Feedstock mass flow ($kg/h$)')
-        ax5 = plt.twinx(ax3)
-
-        # Offset the right spine of par2.  The ticks and label have already been
-        # placed on the right by twinx above.
-        ax5.spines["right"].set_position(("axes", 1.2))
-        # Having been created by twinx, par2 has its frame off, so the line of its
-        # detached spine is invisible.  First, activate the frame but make the patch
-        # and spines invisible.
-        make_patch_spines_invisible(ax5)
-        # Second, show the right spine.
-        ax5.spines["right"].set_visible(True)
-        ax5.plot(
-            bg.timesteps,
-            bg_results['output_vector'][x_storage],
-            label='$x_{storage,t}$',
-            #drawstyle='steps-post',
-            color=colors[0],
-            linewidth=linewidth)
-        ax5.grid(False)
-        # ax5.set_xlabel('Time')
-        ax5.set_ylabel('Storage content ($m^3$)')
-        ax5.set_ylim((0.0, bg.output_maximum_timeseries[x_storage].max()))
-        ax5.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
-        ax5.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
-        ax5.set_xlabel(x_axis_label)
-        # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0)
+        ax4.set_ylim((0.0, bg_results['control_vector'][u_feed].max() * 3600 * 1.05))
         h3, l3 = ax3.get_legend_handles_labels()
         h4, l4 = ax4.get_legend_handles_labels()
-        h5, l5 = ax5.get_legend_handles_labels()
         lax2 = axs[1, 1]
-        lax2.legend((*h3, *h4, *h5), (*l3, *l4, *l5), borderaxespad=0, prop={'size': legend_font_size})
+        lax2.legend((*h3, *h4), (*l3, *l4), borderaxespad=0, prop={'size': legend_font_size})
         lax2.axis("off")
 
         # # Gas storage and CHP output
@@ -527,11 +559,10 @@ if plots:
         # lax2.axis("off")
 
         #align all labels
-        # fig.align_labels()
-        fig.align_ylabels(axs[:, 0])
+        fig.align_labels()
 
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'{der_name}.pdf'))
+        plt.savefig(os.path.join(results_path, f'{filename}.pdf'))
         plt.show()
         plt.close()
 
@@ -541,23 +572,23 @@ if plots:
         fig, (ax1, lax) = plt.subplots(ncols=2, figsize=figsize, gridspec_kw={"width_ratios": [100, 1]})
         ax1.set_title(f'{price_type}')
         ax1.plot(
-            bg.timesteps,
+            scenario_data.timesteps,
             price_timeseries['price_value'] * 1000,
-            label='Market Price (EUR/kWh)',
+            label='Market Price (€/kWh)',
             drawstyle='steps-post',
             color=colors[1],
             linewidth=linewidth)
         ax1.hlines(
             y=bg.marginal_cost * 1000,
-            xmin=bg.timesteps[0],
-            xmax=bg.timesteps[-1],
-            label='Market Price (EUR/kWh)',
+            xmin=scenario_data.timesteps[0],
+            xmax=scenario_data.timesteps[-1],
+            label='Marginal Cost (€/kWh)',
             color=colors[0],
             linewidth=linewidth)
         ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter(x_label_date_format))
-        ax1.set_xlim((bg.timesteps[0].toordinal(), bg.timesteps[-1].toordinal()))
+        ax1.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
         ax1.set_xlabel('Time')
-        ax1.set_ylabel(f'EUR/kWh')
+        ax1.set_ylabel(f'€/kWh')
         h1, l1 = ax1.get_legend_handles_labels()
         # lax.legend(*h1, *l1, borderaxespad=0)
         lax.axis("off")
@@ -620,7 +651,7 @@ if network_plots:
                 )
             )
             cb = plt.colorbar(sm, shrink=0.9)
-            cb.set_label('Price [EUR/kWh]')
+            cb.set_label('Price [€/kWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
             # plt.show()

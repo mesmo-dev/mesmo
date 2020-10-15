@@ -16,7 +16,7 @@ import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.thermal_grid_models
 import fledge.utils
-import bipmo.bipmo.biogas_plant_models
+import bipmo.biogas_plant_models
 
 logger = fledge.config.get_logger(__name__)
 
@@ -1174,7 +1174,7 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
 
         flexible_biogas_plant_model = (
-            bipmo.bipmo.biogas_plant_models.make_biogas_plant_model(
+            bipmo.biogas_plant_models.make_biogas_plant_model(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],

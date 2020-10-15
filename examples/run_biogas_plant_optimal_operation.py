@@ -9,11 +9,11 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.config
 import fledge.utils
-import bipmo.bipmo.plots
+import bipmo.plots
 
 
 # Settings.
-scenario_name = 'cigre_mv_network_with_all_ders_dlmps'
+scenario_name = 'cigre_mv_network_with_all_ders'
 plots = True  # If True, script may produce plots.
 run_milp = False  # if True, script will formulate a MILP and then use the results as integers in a second run
 

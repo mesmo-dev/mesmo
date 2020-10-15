@@ -1150,6 +1150,7 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
 
     der_type = 'biogas_plant'
     switches: pd.Index = []
+    model_type: str
     chp_schedule: pd.DataFrame
 
     def __init__(
@@ -1172,9 +1173,8 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
         # Obtain grid connection flags.
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
 
-        # Obtain bipmo biogas plant model.
         flexible_biogas_plant_model = (
-            bipmo.bipmo.biogas_plant_models.BiogasPlantModel(
+            bipmo.bipmo.biogas_plant_models.make_biogas_plant_model(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
@@ -1227,7 +1227,7 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
         self.ramp_rate_list = flexible_biogas_plant_model.ramp_rate_list
 
         # Obtain digester information
-        self.time_constant = flexible_biogas_plant_model.a1
+        # self.time_constant = flexible_biogas_plant_model.a1
         self.marginal_cost = flexible_biogas_plant_model.plant_feedstock.loc[
             self.scenario_name, 'cost_feedstock_euro_Wh']
         self.feedstock_limit_type = flexible_biogas_plant_model.plant_scenarios.loc[

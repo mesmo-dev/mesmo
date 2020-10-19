@@ -1228,12 +1228,9 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
 
         # Obtain digester information
         # self.time_constant = flexible_biogas_plant_model.a1
-        self.marginal_cost = flexible_biogas_plant_model.plant_feedstock.loc[
-            self.scenario_name, 'cost_feedstock_euro_Wh']
-        self.feedstock_limit_type = flexible_biogas_plant_model.plant_scenarios.loc[
-            self.scenario_name, 'availability_limit_type']
-        self.available_feedstock = flexible_biogas_plant_model.plant_scenarios.loc[
-            self.scenario_name, 'availability_substrate_ton_per_year']
+        self.marginal_cost = flexible_biogas_plant_model.marginal_cost
+        self.feedstock_limit_type = flexible_biogas_plant_model.feedstock_limit_type
+        self.available_feedstock = flexible_biogas_plant_model.available_feedstock
 
         # Obtain storage information
         self.SOC_end = flexible_biogas_plant_model.plant_storage.loc[self.scenario_name, 'SOC_end']
@@ -1254,8 +1251,8 @@ class FlexibleBiogasPlantModel(FlexibleGeneratorModel):
         self.disturbance_timeseries = flexible_biogas_plant_model.disturbance_timeseries
 
         # Obtain output constraint timeseries.
-        self.output_maximum_timeseries = flexible_biogas_plant_model.output_constraint_timeseries_maximum
-        self.output_minimum_timeseries = flexible_biogas_plant_model.output_constraint_timeseries_minimum
+        self.output_maximum_timeseries = flexible_biogas_plant_model.output_maximum_timeseries
+        self.output_minimum_timeseries = flexible_biogas_plant_model.output_minimum_timeseries
 
     def define_optimization_constraints(
         self,

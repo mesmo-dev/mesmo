@@ -129,4 +129,4 @@ results = (
 print(results)
 
 if plots:
-    bipmo.bipmo.plots.generate_biogas_plant_plots(results, flexible_biogas_plant_model, results_path, price_timeseries)
+    bipmo.plots.generate_biogas_plant_plots(results, flexible_biogas_plant_model, results_path, price_timeseries)

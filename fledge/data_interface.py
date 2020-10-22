@@ -478,6 +478,33 @@ class DERData(object):
         #   due to SQLITE missing full outer join syntax.
         self.ders = (
             pd.merge(
+                pd.merge(
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM electric_grid_ders
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM thermal_grid_ders
+                        WHERE thermal_grid_name = (
+                            SELECT thermal_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    how='outer',
+                    on=['der_name', 'der_type', 'der_model_name'],
+                    suffixes=('_electric_grid', '_thermal_grid')
+                ),
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
                     SELECT * FROM der_models
@@ -504,34 +531,7 @@ class DERData(object):
                         scenario_name
                     ]
                 )),
-                pd.merge(
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    how='outer',
-                    on=['der_name', 'der_type', 'der_model_name', 'in_service'],
-                    suffixes=('_electric_grid', '_thermal_grid')
-                ),
-                how='outer',
+                how='left',
                 on=['der_type', 'der_model_name'],
             )
         )

@@ -697,6 +697,7 @@ class PriceData(object):
     """Price data object."""
 
     scenario_data: ScenarioData
+    price_sensitivity_coefficient: np.float
     price_timeseries_dict: dict
 
     @multimethod
@@ -708,6 +709,9 @@ class PriceData(object):
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
+
+        # Obtain price sensitivity coefficient.
+        self.price_sensitivity_coefficient = scenario_data.scenario.at['price_sensitivity_coefficient']
 
         # Instantiate dictionary for unique `price_type`.
         price_types = (

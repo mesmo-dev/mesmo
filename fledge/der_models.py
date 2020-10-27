@@ -102,11 +102,12 @@ class FixedDERModel(DERModel):
         # Define objective for electric loads.
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
-        #   in `LinearElectricGridModel.define_optimization_objective`.
-        # - This enables proper calculation of the DLMPs.
-        # if (electric_grid_model is None) and self.is_electric_grid_connected:
-        if self.is_electric_grid_connected:
+        #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
+        if (electric_grid_model is None) and self.is_electric_grid_connected:
             for timestep in self.timesteps:
+
+                # Active power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
                 optimization_problem.objective.expr += (
                     (
                         price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
@@ -115,6 +116,20 @@ class FixedDERModel(DERModel):
                         * timestep_interval_hours  # In Wh.
                     )
                     * -1.0 * self.active_power_nominal_timeseries.at[timestep]
+                    * timestep_interval_hours  # In Wh.
+                )
+
+                # Reactive power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective.expr += (
+                    (
+                        price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
+                        # TODO: Check if sensitivity needed for reactive power cost.
+                        + price_data.price_sensitivity_coefficient
+                        * -1.0 * self.reactive_power_nominal_timeseries.at[timestep]
+                        * timestep_interval_hours  # In Wh.
+                    )
+                    * -1.0 * self.reactive_power_nominal_timeseries.at[timestep]
                     * timestep_interval_hours  # In Wh.
                 )
 
@@ -129,8 +144,10 @@ class FixedDERModel(DERModel):
         # Define objective for electric generators.
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
-            if type(self) is FixedGeneratorModel:
+            if issubclass(type(self), FlexibleGeneratorModel):
                 for timestep in self.timesteps:
+
+                    # Active power generation cost.
                     optimization_problem.objective.expr += (
                         self.marginal_cost
                         * self.active_power_nominal_timeseries.at[timestep]
@@ -537,11 +554,12 @@ class FlexibleDERModel(DERModel):
         # Define objective for electric loads.
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
-        #   in `LinearElectricGridModel.define_optimization_objective`.
-        # - This enables proper calculation of the DLMPs.
+        #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
             if type(self) is FlexibleBuildingModel:
                 for timestep in self.timesteps:
+
+                    # Active power cost.
                     optimization_problem.objective.expr += (
                         (
                             price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
@@ -552,8 +570,32 @@ class FlexibleDERModel(DERModel):
                         * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
                         * timestep_interval_hours  # In Wh.
                     )
+
+                    # Reactive power cost.
+                    optimization_problem.objective.expr += (
+                        (
+                            price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
+                            + price_data.price_sensitivity_coefficient
+                            * (
+                                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                                * np.tan(np.arccos(self.power_factor_nominal))
+                            )
+                            * timestep_interval_hours  # In Wh.
+                        )
+                        * (
+                            optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                            * np.tan(np.arccos(self.power_factor_nominal))
+                        )
+                        * timestep_interval_hours  # In Wh.
+                    )
+
             else:
                 for timestep in self.timesteps:
+
+                    print()
+
+                    # Active power cost / revenue.
+                    # - Cost for load / demand, revenue for generation / supply.
                     optimization_problem.objective.expr += (
                         (
                             price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
@@ -562,6 +604,20 @@ class FlexibleDERModel(DERModel):
                             * timestep_interval_hours  # In Wh.
                         )
                         * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
+                        * timestep_interval_hours  # In Wh.
+                    )
+
+                    # Reactive power cost / revenue.
+                    # - Cost for load / demand, revenue for generation / supply.
+                    optimization_problem.objective.expr += (
+                        (
+                            price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
+                            # TODO: Check if sensitivity needed for reactive power cost.
+                            + price_data.price_sensitivity_coefficient
+                            * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
+                            * timestep_interval_hours  # In Wh.
+                        )
+                        * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
                         * timestep_interval_hours  # In Wh.
                     )
 
@@ -578,6 +634,8 @@ class FlexibleDERModel(DERModel):
         if self.is_electric_grid_connected:
             if issubclass(type(self), FlexibleGeneratorModel):
                 for timestep in self.timesteps:
+
+                    # Active power generation cost.
                     optimization_problem.objective.expr += (
                         self.marginal_cost
                         * optimization_problem.output_vector[timestep, self.der_name, 'active_power']

@@ -2492,7 +2492,10 @@ class LinearElectricGridModel(object):
 
         for timestep in timesteps:
 
-            # Define objective related to electric power supply at source node.
+            # TODO: Add source node price in price timeseries.
+
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
             for der_index, der in enumerate(self.electric_grid_model.ders):
                 optimization_problem.objective.expr += (
                     (
@@ -2511,10 +2514,29 @@ class LinearElectricGridModel(object):
                     * timestep_interval_hours  # In Wh.
                 )
 
-            # Define objective related to electric losses.
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            for der_index, der in enumerate(self.electric_grid_model.ders):
+                optimization_problem.objective.expr += (
+                    (
+                        price_data.price_timeseries.at[timestep, ('reactive_power', *der)]
+                        + price_data.price_sensitivity_coefficient
+                        * -1.0 * (
+                            np.imag(self.power_flow_solution.der_power_vector[der_index])
+                            + optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        )
+                        * timestep_interval_hours  # In Wh.
+                    )
+                    * -1.0 * (
+                        np.imag(self.power_flow_solution.der_power_vector[der_index])
+                        + optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    )
+                    * timestep_interval_hours  # In Wh.
+                )
+
+            # Active loss cost.
             optimization_problem.objective.expr += (
                 (
-                    # TODO: Add dedicated price for loss term.
                     price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
                     # TODO: Validate if sensitivity term appropriate for loss component.
                     + price_data.price_sensitivity_coefficient

@@ -592,8 +592,6 @@ class FlexibleDERModel(DERModel):
             else:
                 for timestep in self.timesteps:
 
-                    print()
-
                     # Active power cost / revenue.
                     # - Cost for load / demand, revenue for generation / supply.
                     optimization_problem.objective.expr += (

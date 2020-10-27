@@ -1,5 +1,6 @@
 """Database interface."""
 
+import copy
 import glob
 from multimethod import multimethod
 import natsort
@@ -842,6 +843,10 @@ class PriceData(object):
             )
             # TODO: Fix price unit conversion.
             # self.price_timeseries_dict[price_type].loc[:, 'price_value'] *= 1.0e-3  # 1/kWh in 1/Wh.
+
+    def copy(self):
+
+        return copy.deepcopy(self)
 
 
 class ResultsDict(typing.Dict[str, pd.DataFrame]):

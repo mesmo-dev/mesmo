@@ -696,22 +696,103 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
-    scenario_data: ScenarioData
     price_sensitivity_coefficient: np.float
+    price_timeseries: pd.DataFrame
     price_timeseries_dict: dict
 
     @multimethod
     def __init__(
             self,
             scenario_name: str,
+            price_type='',
             database_connection=connect_database()
     ):
 
         # Obtain scenario data.
-        self.scenario_data = ScenarioData(scenario_name)
+        scenario_data = ScenarioData(scenario_name)
+
+        # Obtain DER data.
+        der_data = DERData(scenario_name)
+
+        # Obtain price type.
+        price_type = scenario_data.scenario.at['price_type'] if price_type == '' else price_type
 
         # Obtain price sensitivity coefficient.
         self.price_sensitivity_coefficient = scenario_data.scenario.at['price_sensitivity_coefficient']
+
+        # Obtain price timeseries.
+        if price_type is None:
+            price_timeseries = (
+                pd.Series(
+                    1.0,
+                    index=scenario_data.timesteps,
+                    name='price_value'
+                )
+            )
+        else:
+            price_timeseries = (
+                pd.read_sql(
+                    """
+                    SELECT * FROM price_timeseries
+                    WHERE price_type = ?
+                    AND time >= (
+                        SELECT timestep_start FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    AND time <= (
+                        SELECT timestep_end FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[
+                        price_type,
+                        scenario_name,
+                        scenario_name
+                    ],
+                    parse_dates=['time'],
+                    index_col=['time']
+                ).reindex(
+                    scenario_data.timesteps
+                ).interpolate(
+                    'ffill'
+                ).bfill(  # Backward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                ).ffill(  # Forward fill to handle edge definition gaps.
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
+                )
+            ).loc[:, 'price_value']
+            # TODO: Fix price unit conversion.
+            # price_timeseries *= 1.0e-3  # 1/kWh in 1/Wh.
+
+        # Obtain price timeseries for each DER.
+        prices = (
+            pd.MultiIndex.from_frame(pd.concat([
+                pd.DataFrame({
+                    'commodity_type': 'active_power',
+                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_type'],
+                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_name']
+                }),
+                pd.DataFrame({
+                    'commodity_type': 'reactive_power',
+                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_type'],
+                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_name']
+                }),
+                pd.DataFrame({
+                    'commodity_type': 'thermal_power',
+                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), 'der_type'],
+                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), 'der_name']
+                })
+            ]))
+        )
+        self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
+        self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
+            price_timeseries.values[:, None]
+        )
+        # TODO: Proper thermal power price definition.
+        self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (
+            price_timeseries.values[:, None]
+        )
 
         # Instantiate dictionary for unique `price_type`.
         price_types = (
@@ -725,7 +806,7 @@ class PriceData(object):
         self.price_timeseries_dict = dict.fromkeys(price_types.values.flatten())
 
         # Load timeseries for each `price_type`.
-        # TODO: Resample / interpolate timeseries depending on timestep interval.
+        # TODO: Remove price timeseries dict in favor of price timeseries above.
         for price_type in self.price_timeseries_dict:
             self.price_timeseries_dict[price_type] = (
                 pd.read_sql(
@@ -750,13 +831,13 @@ class PriceData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    self.scenario_data.timesteps
+                    scenario_data.timesteps
                 ).interpolate(
                     'quadratic'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             )
             # TODO: Fix price unit conversion.

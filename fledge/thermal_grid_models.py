@@ -585,34 +585,37 @@ class LinearThermalGridModel(object):
     def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
-            price_timeseries=pd.DataFrame(1.0, columns=['price_value'], index=[0]),
+            price_data: fledge.data_interface.PriceData,
             timesteps=pd.Index([0], name='timestep')
     ):
 
         # Define objective.
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
-                * -1.0 * optimization_problem.der_thermal_power_vector[timestep, der]
-                / self.thermal_grid_model.cooling_plant_efficiency
-                for der_index, der in enumerate(self.thermal_grid_model.ders)
-                for timestep in timesteps
-            )
-        )
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
+
+        for timestep in timesteps:
+
+            for der_index, der in enumerate(self.thermal_grid_model.ders):
+                optimization_problem.objective.expr += (
+                    (
+                        price_data.price_timeseries.at[timestep, ('thermal_power', *der)]
+                        + price_data.price_sensitivity_coefficient
+                        * -1.0 * optimization_problem.der_thermal_power_vector[timestep, der]
+                        / self.thermal_grid_model.cooling_plant_efficiency
+                    )
+                    * -1.0 * optimization_problem.der_thermal_power_vector[timestep, der]
+                    / self.thermal_grid_model.cooling_plant_efficiency
+                )
+
+            optimization_problem.objective.expr += (
+                price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
                 * optimization_problem.pump_power[timestep]
-                for timestep in timesteps
             )
-        )
 
     def get_optimization_dlmps(
             self,
             optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
+            price_data: fledge.data_interface.PriceData,
             timesteps=pd.Index([0], name='timestep')
     ) -> fledge.data_interface.ResultsDict:
 
@@ -704,11 +707,11 @@ class LinearThermalGridModel(object):
             pump_power_dlmp.loc[timestep, :] = (
                 -1.0
                 * self.sensitivity_pump_power_by_node_power.ravel()
-                * price_timeseries.at[timestep, 'price_value']
+                * price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
             )
 
             thermal_grid_energy_dlmp.loc[timestep, :] = (
-                price_timeseries.at[timestep, 'price_value']
+                price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
         thermal_grid_head_dlmp = (

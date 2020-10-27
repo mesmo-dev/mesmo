@@ -2834,51 +2834,53 @@ class LinearElectricGridModel(object):
             )
 
         electric_grid_total_dlmp_node_active_power = (
-            electric_grid_voltage_dlmp_node_active_power
+            electric_grid_energy_dlmp_node_active_power
+            + electric_grid_voltage_dlmp_node_active_power
             + electric_grid_congestion_dlmp_node_active_power
             + electric_grid_loss_dlmp_node_active_power
-            + electric_grid_energy_dlmp_node_active_power
         )
         electric_grid_total_dlmp_node_reactive_power = (
-            electric_grid_voltage_dlmp_node_reactive_power
+            electric_grid_energy_dlmp_node_reactive_power
+            + electric_grid_voltage_dlmp_node_reactive_power
             + electric_grid_congestion_dlmp_node_reactive_power
             + electric_grid_loss_dlmp_node_reactive_power
-            + electric_grid_energy_dlmp_node_reactive_power
         )
         electric_grid_total_dlmp_der_active_power = (
-            electric_grid_voltage_dlmp_der_active_power
+            electric_grid_energy_dlmp_der_active_power
+            + electric_grid_voltage_dlmp_der_active_power
             + electric_grid_congestion_dlmp_der_active_power
             + electric_grid_loss_dlmp_der_active_power
-            + electric_grid_energy_dlmp_der_active_power
         )
         electric_grid_total_dlmp_der_reactive_power = (
-            electric_grid_voltage_dlmp_der_reactive_power
+            electric_grid_energy_dlmp_der_reactive_power
+            + electric_grid_voltage_dlmp_der_reactive_power
             + electric_grid_congestion_dlmp_der_reactive_power
             + electric_grid_loss_dlmp_der_reactive_power
-            + electric_grid_energy_dlmp_der_reactive_power
         )
 
-        electric_grid_total_dlmp_node_power = (
+        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        electric_grid_total_dlmp_price_timeseries = (
             pd.concat(
                 [
-                    electric_grid_total_dlmp_node_active_power,
-                    electric_grid_total_dlmp_node_reactive_power
-                ],
-                axis='columns',
-                keys=['active_power', 'reactive_power'],
-                names=['commodity_type']
-            )
-        )
-        electric_grid_total_dlmp_der_power = (
-            pd.concat(
-                [
+                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
                     electric_grid_total_dlmp_der_active_power,
+                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
                     electric_grid_total_dlmp_der_reactive_power
                 ],
                 axis='columns',
-                keys=['active_power', 'reactive_power'],
+                keys=['active_power', 'active_power', 'reactive_power', 'reactive_power'],
                 names=['commodity_type']
             )
+        )
+        # Redefine columns to avoid slicing issues.
+        electric_grid_total_dlmp_price_timeseries.columns = (
+            price_data.price_timeseries.columns[
+                price_data.price_timeseries.columns.isin(electric_grid_total_dlmp_price_timeseries.columns)
+            ]
         )
 
         return fledge.data_interface.ResultsDict(
@@ -2898,7 +2900,6 @@ class LinearElectricGridModel(object):
             electric_grid_loss_dlmp_node_reactive_power=electric_grid_loss_dlmp_node_reactive_power,
             electric_grid_energy_dlmp_node_reactive_power=electric_grid_energy_dlmp_node_reactive_power,
             electric_grid_total_dlmp_node_reactive_power=electric_grid_total_dlmp_node_reactive_power,
-            electric_grid_total_dlmp_node_power=electric_grid_total_dlmp_node_power,
             electric_grid_energy_dlmp_der_active_power=electric_grid_energy_dlmp_der_active_power,
             electric_grid_voltage_dlmp_der_active_power=electric_grid_voltage_dlmp_der_active_power,
             electric_grid_congestion_dlmp_der_active_power=electric_grid_congestion_dlmp_der_active_power,
@@ -2909,7 +2910,7 @@ class LinearElectricGridModel(object):
             electric_grid_loss_dlmp_der_reactive_power=electric_grid_loss_dlmp_der_reactive_power,
             electric_grid_energy_dlmp_der_reactive_power=electric_grid_energy_dlmp_der_reactive_power,
             electric_grid_total_dlmp_der_reactive_power=electric_grid_total_dlmp_der_reactive_power,
-            electric_grid_total_dlmp_der_power=electric_grid_total_dlmp_der_power
+            electric_grid_total_dlmp_price_timeseries=electric_grid_total_dlmp_price_timeseries
         )
 
     def get_optimization_results(

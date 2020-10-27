@@ -771,18 +771,33 @@ class PriceData(object):
             pd.MultiIndex.from_frame(pd.concat([
                 pd.DataFrame({
                     'commodity_type': 'active_power',
-                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_type'],
-                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_name']
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['electric_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'active_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_name']
                 }),
                 pd.DataFrame({
                     'commodity_type': 'reactive_power',
-                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_type'],
-                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), 'der_name']
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['electric_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'reactive_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_name']
                 }),
                 pd.DataFrame({
                     'commodity_type': 'thermal_power',
-                    'der_type': der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), 'der_type'],
-                    'der_name': der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), 'der_name']
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['thermal_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'thermal_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name']), 'der_name']
                 })
             ]))
         )

@@ -598,7 +598,7 @@ class LinearThermalGridModel(object):
             for der_index, der in enumerate(self.thermal_grid_model.ders):
                 optimization_problem.objective.expr += (
                     (
-                        price_data.price_timeseries.at[timestep, ('thermal_power', *der)]
+                        price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
                         + price_data.price_sensitivity_coefficient
                         * -1.0 * optimization_problem.der_thermal_power_vector[timestep, der]
                         / self.thermal_grid_model.cooling_plant_efficiency
@@ -608,7 +608,7 @@ class LinearThermalGridModel(object):
                 )
 
             optimization_problem.objective.expr += (
-                price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
+                price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
                 * optimization_problem.pump_power[timestep]
             )
 
@@ -707,11 +707,11 @@ class LinearThermalGridModel(object):
             pump_power_dlmp.loc[timestep, :] = (
                 -1.0
                 * self.sensitivity_pump_power_by_node_power.ravel()
-                * price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
 
             thermal_grid_energy_dlmp.loc[timestep, :] = (
-                price_data.price_timeseries.loc[timestep, ('thermal_power', slice(None), slice(None))].mean()
+                price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
                 / self.thermal_grid_model.cooling_plant_efficiency
             )
         thermal_grid_head_dlmp = (

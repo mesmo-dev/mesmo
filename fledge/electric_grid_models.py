@@ -2499,7 +2499,7 @@ class LinearElectricGridModel(object):
             for der_index, der in enumerate(self.electric_grid_model.ders):
                 optimization_problem.objective.expr += (
                     (
-                        price_data.price_timeseries.at[timestep, ('active_power', *der)]
+                        price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                         + price_data.price_sensitivity_coefficient
                         * -1.0 * (
                             np.real(self.power_flow_solution.der_power_vector[der_index])
@@ -2519,7 +2519,7 @@ class LinearElectricGridModel(object):
             for der_index, der in enumerate(self.electric_grid_model.ders):
                 optimization_problem.objective.expr += (
                     (
-                        price_data.price_timeseries.at[timestep, ('reactive_power', *der)]
+                        price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
                         + price_data.price_sensitivity_coefficient
                         * -1.0 * (
                             np.imag(self.power_flow_solution.der_power_vector[der_index])
@@ -2537,7 +2537,7 @@ class LinearElectricGridModel(object):
             # Active loss cost.
             optimization_problem.objective.expr += (
                 (
-                    price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                    price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                     # TODO: Validate if sensitivity term appropriate for loss component.
                     + price_data.price_sensitivity_coefficient
                     * (
@@ -2682,7 +2682,7 @@ class LinearElectricGridModel(object):
         # Obtain DLMPs.
         for timestep in timesteps:
             electric_grid_energy_dlmp_node_active_power.loc[timestep, :] = (
-                price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
             )
             electric_grid_voltage_dlmp_node_active_power.loc[timestep, :] = (
                 (
@@ -2714,13 +2714,13 @@ class LinearElectricGridModel(object):
             )
             electric_grid_loss_dlmp_node_active_power.loc[timestep, :] = (
                 -1.0 * self.sensitivity_loss_active_by_power_wye_active.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                 - self.sensitivity_loss_reactive_by_power_wye_active.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
 
             electric_grid_energy_dlmp_node_reactive_power.loc[timestep, :] = (
-                price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), slice(None))].mean()
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
             electric_grid_voltage_dlmp_node_reactive_power.loc[timestep, :] = (
                 (
@@ -2752,13 +2752,13 @@ class LinearElectricGridModel(object):
             )
             electric_grid_loss_dlmp_node_reactive_power.loc[timestep, :] = (
                 -1.0 * self.sensitivity_loss_active_by_power_wye_reactive.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                 - self.sensitivity_loss_reactive_by_power_wye_reactive.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
 
             electric_grid_energy_dlmp_der_active_power.loc[timestep, :] = (
-                price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].values
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
             )
             electric_grid_voltage_dlmp_der_active_power.loc[timestep, :] = (
                 (
@@ -2790,13 +2790,13 @@ class LinearElectricGridModel(object):
             )
             electric_grid_loss_dlmp_der_active_power.loc[timestep, :] = (
                 -1.0 * self.sensitivity_loss_active_by_der_power_active.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                 - self.sensitivity_loss_reactive_by_der_power_active.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
 
             electric_grid_energy_dlmp_der_reactive_power.loc[timestep, :] = (
-                price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].values
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
             electric_grid_voltage_dlmp_der_reactive_power.loc[timestep, :] = (
                 (
@@ -2828,9 +2828,9 @@ class LinearElectricGridModel(object):
             )
             electric_grid_loss_dlmp_der_reactive_power.loc[timestep, :] = (
                 -1.0 * self.sensitivity_loss_active_by_der_power_reactive.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('active_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
                 - self.sensitivity_loss_reactive_by_der_power_reactive.toarray().ravel()
-                * price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), slice(None))].mean()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
 
         electric_grid_total_dlmp_node_active_power = (

@@ -45,7 +45,7 @@ def main():
     # Define Plotly default options.
     pio.templates.default = go.layout.Template(pio.templates['simple_white'])
     pio.templates.default.layout.update(
-        font_family=fledge.config.config['plots']['font_family'][0],
+        font_family=fledge.config.config['plots']['matplotlib_font_family'][0],
         legend=go.layout.Legend(borderwidth=1),
         xaxis=go.layout.XAxis(showgrid=True),
         yaxis=go.layout.YAxis(showgrid=True)

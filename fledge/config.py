@@ -152,9 +152,9 @@ if config['caching']['enable']:
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
 matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
-matplotlib.rc('figure', figsize=config['plots']['figure_size'])
-matplotlib.rc('font', family=config['plots']['font_family'])
-matplotlib.rc('image', cmap=config['plots']['colormap'])
+matplotlib.rc('figure', figsize=config['plots']['matplotlib_figure_size'])
+matplotlib.rc('font', family=config['plots']['matplotlib_font_family'])
+matplotlib.rc('image', cmap=config['plots']['matplotlib_colormap'])
 matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
 matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
 matplotlib.rc('savefig', format=config['plots']['file_format'])

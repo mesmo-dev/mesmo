@@ -24,9 +24,9 @@ logs:
   format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
 plots:
   matplotlib_style: seaborn-colorblind
-  colormap: viridis_r
-  font_family: ['Arial', 'Helvetica']
-  figure_size: [7.0, 4.0]
+  matplotlib_colormap: viridis_r
+  matplotlib_font_family: ['Arial', 'Helvetica']
+  matplotlib_figure_size: [7.0, 4.0]
   file_format: 'png'
   add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
   show_basemap_attribution: false # If True, show copyright notice for basemap.

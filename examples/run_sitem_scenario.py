@@ -23,7 +23,6 @@ def main():
     scenario_name = 'singapore_district25'
     results_path = fledge.utils.get_results_path('run_sitem_baseline', scenario_name)
     plot_grid = False
-    plot_detailed_grid = True
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -152,7 +151,6 @@ def main():
             value_unit='%',
             make_video=True
         )
-    if plot_grid and plot_detailed_grid:
         fledge.plots.plot_grid_line_utilization(
             problem.electric_grid_model,
             electric_grid_graph,

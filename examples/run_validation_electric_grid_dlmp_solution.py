@@ -92,7 +92,7 @@ def main():
         electric_grid_model=electric_grid_model
     )
 
-    # Solve optimization problem.
+    # Solve centralized optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
     optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
@@ -143,7 +143,7 @@ def main():
     price_data_dlmps = price_data.copy()
     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
 
-    # Instantiate optimization problem.
+    # Instantiate decentralized DER optimization problem.
     optimization_problem = pyo.ConcreteModel()
 
     # Define DER variables.

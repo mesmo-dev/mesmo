@@ -7,7 +7,6 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
 import re
 
 import fledge.config
@@ -178,15 +177,6 @@ def main():
 
     # More plots.
     histogram_bins = np.arange(0, 1.01, 0.01)
-
-    # Define Plotly default options.
-    pio.templates.default = go.layout.Template(pio.templates['simple_white'])
-    pio.templates.default.layout.update(
-        font_family=fledge.config.config['plots']['matplotlib_font_family'][0],
-        legend=go.layout.Legend(borderwidth=1),
-        xaxis=go.layout.XAxis(showgrid=True),
-        yaxis=go.layout.YAxis(showgrid=True)
-    )
 
     # Plot load timeseries.
     values = results['der_power_vector'].sum(axis='columns') / 1e6

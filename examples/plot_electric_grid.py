@@ -11,7 +11,6 @@ import pandas as pd
 import PIL.Image
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
 import rasterio.warp
 
 import fledge.data_interface
@@ -40,15 +39,6 @@ def main():
             electric_grid_data.electric_grid_transformers.loc[:, 'transformer_name'].str.contains('66kV'),
             'node_2_name'
         ].values
-    )
-
-    # Define Plotly default options.
-    pio.templates.default = go.layout.Template(pio.templates['simple_white'])
-    pio.templates.default.layout.update(
-        font_family=fledge.config.config['plots']['matplotlib_font_family'][0],
-        legend=go.layout.Legend(borderwidth=1),
-        xaxis=go.layout.XAxis(showgrid=True),
-        yaxis=go.layout.YAxis(showgrid=True)
     )
 
     # Obtain values.

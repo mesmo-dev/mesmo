@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import multiprocess
 import os
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
 import typing
 import yaml
 
@@ -170,3 +172,12 @@ try:
 except ValueError:
     # For compatibility with older versions of pandas.
     pd.set_option('display.max_colwidth', 0)
+
+# Modify plotly default settings.
+pio.templates.default = go.layout.Template(pio.templates['simple_white'])
+pio.templates.default.layout.update(
+    font_family=config['plots']['plotly_font_family'],
+    legend=go.layout.Legend(borderwidth=1),
+    xaxis=go.layout.XAxis(showgrid=True),
+    yaxis=go.layout.YAxis(showgrid=True)
+)

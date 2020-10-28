@@ -181,33 +181,6 @@ def main():
     # Print results.
     print(results_validation)
 
-    # Compare results.
-    der_active_power_vector_comparison = (
-        pd.concat(
-            [
-                -1.0 * results['output_vector'].loc[:, (der_name, 'active_power')].rename('centralized'),
-                -1.0 * results_validation['output_vector'].loc[:, 'active_power'].rename('decentralized')
-            ],
-            axis='columns'
-        )
-    )
-    price_timeseries_comparison = (
-        pd.concat(
-            [
-                price_data.price_timeseries.loc[
-                    :, ('active_power', slice(None), der_name)
-                ].iloc[:, 0].rename('energy price'),
-                price_data_dlmps.price_timeseries.loc[
-                    :, ('active_power', slice(None), der_name)
-                ].iloc[:, 0].rename('dlmp, active'),
-                price_data_dlmps.price_timeseries.loc[
-                    :, ('reactive_power', slice(None), der_name)
-                ].iloc[:, 0].rename('dlmp, reactive')
-            ],
-            axis='columns'
-        )
-    )
-
     # Define Plotly default options.
     pio.templates.default = go.layout.Template(pio.templates['simple_white'])
     pio.templates.default.layout.update(
@@ -217,16 +190,79 @@ def main():
         yaxis=go.layout.YAxis(showgrid=True)
     )
 
-    # Plots.
-    figure = px.line(der_active_power_vector_comparison, title='Active power', line_shape='hv')
-    figure.update_traces(fill='tozeroy')
-    # figure.show()
-    figure.write_image(os.path.join(results_path, 'der_active_power_vector_comparison.png'))
+    # Plot: Price comparison.
+    values_1 = price_data.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+    values_2 = price_data_dlmps.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+    values_3 = price_data_dlmps.price_timeseries.loc[:, ('reactive_power', slice(None), der_name)].iloc[:, 0]
 
-    figure = px.line(price_timeseries_comparison, title='Price', line_shape='hv')
-    figure.update_traces(fill='tozeroy')
+    title = 'Price comparison'
+    filename = 'price_timeseries_comparison'
+    y_label = 'Price'
+    value_unit = 'S$/kWh'
+
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
+        name='Wholesale price',
+        fill='tozeroy',
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
+        name='DLMP (active power)',
+        fill='tozeroy',
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values_3.index,
+        y=values_3.values,
+        name='DLMP (reactive power)',
+        fill='tozeroy',
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.update_layout(
+        title=title,
+        yaxis_title=f'{y_label} [{value_unit}]',
+        xaxis=go.layout.XAxis(tickformat='%H:%M'),
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.5, yanchor='auto')
+    )
     # figure.show()
-    figure.write_image(os.path.join(results_path, 'price_timeseries_comparison.png'))
+    figure.write_image(os.path.join(results_path, filename + '.png'))
+
+    # Plot: Active power comparison.
+    values_1 = -1e-6 * results['output_vector'].loc[:, (der_name, 'active_power')]
+    values_2 = -1e-6 * results_validation['output_vector'].loc[:, 'active_power']
+
+    title = 'Active power comparison'
+    filename = 'active_power_comparison'
+    y_label = 'Active power'
+    value_unit = 'MW'
+
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=values_1.index,
+        y=values_1.values,
+        name='Centralized solution',
+        fill='tozeroy',
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.add_trace(go.Scatter(
+        x=values_2.index,
+        y=values_2.values,
+        name='DER (decentralized) solution',
+        fill='tozeroy',
+        line=go.scatter.Line(shape='hv')
+    ))
+    figure.update_layout(
+        title=title,
+        yaxis_title=f'{y_label} [{value_unit}]',
+        xaxis=go.layout.XAxis(tickformat='%H:%M'),
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + '.png'))
 
     # Print results path.
     fledge.utils.launch(results_path)

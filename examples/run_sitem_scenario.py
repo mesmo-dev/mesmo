@@ -42,15 +42,6 @@ def main():
         np.abs(results['node_voltage_vector'])
         / np.abs(problem.electric_grid_model.node_voltage_vector_reference)
     )
-    new_columns = []
-    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
-        if branch[0] == 'transformer':
-            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
-                new_columns.extend(
-                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
-                    * [branch_power_vector_magnitude_per_unit.loc[:, branch]]
-                )
-    branch_power_vector_magnitude_per_unit = pd.concat([branch_power_vector_magnitude_per_unit, *new_columns], axis='columns')
     node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
     node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
     results.update({
@@ -71,15 +62,6 @@ def main():
         / problem.electric_grid_model.branch_power_vector_magnitude_reference
     )
     branch_power_vector_magnitude_per_unit_1.loc['maximum', :] = branch_power_vector_magnitude_per_unit_1.max(axis='rows')
-    new_columns = []
-    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
-        if branch[0] == 'transformer':
-            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
-                new_columns.extend(
-                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
-                    * [branch_power_vector_magnitude_per_unit_1.loc[:, branch]]
-                )
-    branch_power_vector_magnitude_per_unit_1 = pd.concat([branch_power_vector_magnitude_per_unit_1, *new_columns], axis='columns')
 
     # Remove private EV chargers and re-run simulation.
     for der_name in problem.der_model_set.der_models:
@@ -93,15 +75,6 @@ def main():
         / problem.electric_grid_model.branch_power_vector_magnitude_reference
     )
     branch_power_vector_magnitude_per_unit_2.loc['maximum', :] = branch_power_vector_magnitude_per_unit_2.max(axis='rows')
-    new_columns = []
-    for branch_index, branch in enumerate(problem.electric_grid_model.branches):
-        if branch[0] == 'transformer':
-            if problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] > 1e6:
-                new_columns.extend(
-                    int(np.ceil(problem.electric_grid_model.branch_power_vector_magnitude_reference[branch_index] / 1e6) - 1)
-                    * [branch_power_vector_magnitude_per_unit_2.loc[:, branch]]
-                )
-    branch_power_vector_magnitude_per_unit_2 = pd.concat([branch_power_vector_magnitude_per_unit_2, *new_columns], axis='columns')
 
     # Print results.
     print(results)

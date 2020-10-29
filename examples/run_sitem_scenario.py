@@ -1,13 +1,11 @@
 """Project SITEM scenario evaluation script."""
 
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import re
 
 import fledge.config
 import fledge.data_interface

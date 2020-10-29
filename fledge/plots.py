@@ -9,7 +9,6 @@ import numpy as np
 import os
 import pandas as pd
 import plotly.graph_objects as go
-import re
 import typing
 
 import fledge.config

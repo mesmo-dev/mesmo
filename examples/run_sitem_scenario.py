@@ -173,259 +173,65 @@ def main():
             make_video=True
         )
 
-    # More plots.
-    histogram_bins = np.arange(0, 1.01, 0.01)
-
     # Plot demand timeseries.
-    values_dict = {
-        'Baseload + private EV + bus charging': results['der_power_vector'],
-        'Baseload + private EV': results_1['der_power_vector'],
-        'Baseload': results_2['der_power_vector']
-    }
-
-    # Pre-process values.
-    for key in values_dict:
-        values_dict[key] = values_dict[key].sum(axis='columns') / 1e6
-        values_dict[key].loc[:] = np.abs(np.real(values_dict[key]))
-
-    # Obtain plot title / labels / filename.
-    title = 'Total demand'
-    filename = 'total_demand_timeseries'
-    y_label = 'Active power'
-    value_unit = 'MW'
-
-    # Create plot.
-    figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Scatter(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key,
-            fill='tozeroy',
-            line=go.scatter.Line(shape='hv')
-        ))
-    figure.update_layout(
-        title=title,
-        yaxis_title=f'{y_label} [{value_unit}]',
-        xaxis=go.layout.XAxis(tickformat='%H:%M'),
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    fledge.plots.plot_total_active_power(
+        {
+            'Baseload + private EV + bus charging': results['der_power_vector'],
+            'Baseload + private EV': results_1['der_power_vector'],
+            'Baseload': results_2['der_power_vector']
+        },
+        results_path
     )
-    # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
     # Plot line utilization histogram.
-    values_dict = {
-        'Baseload': branch_power_vector_magnitude_per_unit_2,
-        'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-        'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
-    }
-
-    # Pre-process values.
-    for key in values_dict:
-        # Obtain maximum utilization for all lines.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'line'].max()
-        )
-        # Set over-utilized lines to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > 1] = 1.0
-        # Obtain histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
-            / len(values_dict[key])
-        )
-
-    # Obtain plot title / labels / filename.
-    title = 'Lines'
-    filename = 'line_utilization_histogram'
-    y_label = 'Peak utilization'
-    value_unit = 'p.u.'
-
-    # Create plot.
-    figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Bar(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key
-        ))
-    figure.update_layout(
-        title=title,
-        xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Frequency',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+    fledge.plots.plot_line_utilization_histogram(
+        {
+            'Baseload': branch_power_vector_magnitude_per_unit_2,
+            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
+            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+        },
+        results_path
     )
-    # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
     # Plot line utilization cumulative.
-    values_dict = {
-        'Baseload': branch_power_vector_magnitude_per_unit_2,
-        'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-        'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
-    }
-
-    # Pre-process values.
-    for key in values_dict:
-        # Obtain maximum utilization for all lines.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'line'].max()
-        )
-        # Set over-utilized lines to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > 1] = 1.0
-        # Obtain cumulative histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
-            / len(values_dict[key])
-        )
-
-    # Obtain plot title / labels / filename.
-    title = 'Lines'
-    filename = 'line_utilization_cumulative'
-    y_label = 'Peak utilization'
-    value_unit = 'p.u.'
-
-    # Create plot.
-    figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Scatter(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key,
-            line=go.scatter.Line(shape='hv')
-        ))
-    # Add horizontal line at 90%.
-    figure.add_shape(go.layout.Shape(
-        x0=0,
-        x1=1,
-        xref='paper',
-        y0=0.9,
-        y1=0.9,
-        yref='y',
-        type='line',
-        line=go.layout.shape.Line(width=2)
-    ))
-    figure.update_layout(
-        title=title,
-        xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Cumulative proportion',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    fledge.plots.plot_line_utilization_histogram_cumulative(
+        {
+            'Baseload': branch_power_vector_magnitude_per_unit_2,
+            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
+            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+        },
+        results_path
     )
-    # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
     # Plot transformer utilization histogram.
-    values_dict = {
-        'Baseload': branch_power_vector_magnitude_per_unit_2,
-        'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-        'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
-    }
-    selected_columns = (
-        branch_power_vector_magnitude_per_unit.columns[
-            branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
-        ]
-    )
-
-    # Pre-process values.
-    for key in values_dict:
-        # Only use selected columns.
-        values_dict[key] = values_dict[key].loc[:, selected_columns]
-        # Obtain maximum utilization for all transformers.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+    fledge.plots.plot_transformer_utilization_histogram(
+        {
+            'Baseload': branch_power_vector_magnitude_per_unit_2,
+            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
+            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+        },
+        results_path,
+        selected_columns=(
+            branch_power_vector_magnitude_per_unit.columns[
+                branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            ]
         )
-        # Set over-utilized transformers to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > 1] = 1.0
-        # Obtain histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
-            / len(values_dict[key])
-        )
-
-    # Obtain plot title / labels / filename.
-    title = '1MVA Transformers'
-    filename = 'transformer_utilization_histogram'
-    y_label = 'Peak utilization'
-    value_unit = 'p.u.'
-
-    # Create plot.
-    figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Bar(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key
-        ))
-    figure.update_layout(
-        title=title,
-        xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Frequency',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     )
-    # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
     # Plot transformer utilization cumulative.
-    values_dict = {
-        'Baseload': branch_power_vector_magnitude_per_unit_2,
-        'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-        'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
-    }
-    selected_columns = (
-        branch_power_vector_magnitude_per_unit.columns[
-            branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
-        ]
-    )
-
-    # Pre-process values.
-    for key in values_dict:
-        # Only use selected columns.
-        values_dict[key] = values_dict[key].loc[:, selected_columns]
-        # Obtain maximum utilization for all transformers.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+    fledge.plots.plot_transformer_utilization_histogram_cumulative(
+        {
+            'Baseload': branch_power_vector_magnitude_per_unit_2,
+            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
+            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+        },
+        results_path,
+        selected_columns=(
+            branch_power_vector_magnitude_per_unit.columns[
+                branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            ]
         )
-        # Set over-utilized transformers to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > 1] = 1.0
-        # Obtain histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
-            / len(values_dict[key])
-        )
-
-    # Obtain plot title / labels / filename.
-    title = '1MVA Transformers'
-    filename = 'transformer_utilization_histogram'
-    y_label = 'Peak utilization'
-    value_unit = 'p.u.'
-
-    # Create plot.
-    figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Scatter(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key,
-            line=go.scatter.Line(shape='hv')
-        ))
-    # Add horizontal line at 90%.
-    figure.add_shape(go.layout.Shape(
-        x0=0,
-        x1=1,
-        xref='paper',
-        y0=0.9,
-        y1=0.9,
-        yref='y',
-        type='line',
-        line=go.layout.shape.Line(width=2)
-    ))
-    figure.update_layout(
-        title=title,
-        xaxis_title=f'{y_label} [{value_unit}]',
-        yaxis_title='Cumulative proportion',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
     # Print results path.
     fledge.utils.launch(results_path)

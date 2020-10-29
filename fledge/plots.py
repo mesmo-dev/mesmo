@@ -8,6 +8,7 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import plotly.graph_objects as go
 import re
 import typing
 
@@ -1009,3 +1010,273 @@ def plot_grid_node_utilization(
 def wrapper_plot_grid_node_utilization(*args, **kwargs):
 
     plot_grid_node_utilization(*args, **kwargs)
+
+
+def plot_total_active_power(
+        values_dict: dict,
+        results_path: str
+):
+
+    # Pre-process values.
+    for key in values_dict:
+        values_dict[key] = values_dict[key].sum(axis='columns') / 1e6
+        values_dict[key].loc[:] = np.abs(np.real(values_dict[key]))
+
+    # Obtain plot title / labels / filename.
+    title = 'Total active power'
+    filename = 'total_active_power_timeseries'
+    y_label = 'Active power'
+    value_unit = 'MW'
+
+    # Create plot.
+    figure = go.Figure()
+    for key in values_dict:
+        figure.add_trace(go.Scatter(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key,
+            fill='tozeroy',
+            line=go.scatter.Line(shape='hv')
+        ))
+    figure.update_layout(
+        title=title,
+        yaxis_title=f'{y_label} [{value_unit}]',
+        xaxis=go.layout.XAxis(tickformat='%H:%M'),
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+def plot_line_utilization_histogram(
+    values_dict: dict,
+    results_path: str,
+    histogram_minimum=0.0,
+    histogram_maximum=1.0,
+    histogram_bin_count=100
+):
+
+    # Obtain histogram bins.
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+    # Pre-process values.
+    for key in values_dict:
+        # Obtain maximum utilization for all lines.
+        values_dict[key] = (
+            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'line'].max()
+        )
+        # Set over-utilized lines to 1 p.u. for better visualization.
+        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+        # Obtain histogram values.
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
+            / len(values_dict[key])
+        )
+
+    # Obtain plot title / labels / filename.
+    title = 'Lines'
+    filename = 'line_utilization_histogram'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = go.Figure()
+    for key in values_dict:
+        figure.add_trace(go.Bar(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key
+        ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+def plot_line_utilization_histogram_cumulative(
+        values_dict: dict,
+        results_path: str,
+        histogram_minimum=0.0,
+        histogram_maximum=1.0,
+        histogram_bin_count=100
+):
+
+    # Obtain histogram bins.
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+    # Pre-process values.
+    for key in values_dict:
+        # Obtain maximum utilization for all lines.
+        values_dict[key] = (
+            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'line'].max()
+        )
+        # Set over-utilized lines to 1 p.u. for better visualization.
+        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+        # Obtain cumulative histogram values.
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
+            / len(values_dict[key])
+        )
+
+    # Obtain plot title / labels / filename.
+    title = 'Lines'
+    filename = 'line_utilization_histogram_cumulative'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = go.Figure()
+    for key in values_dict:
+        figure.add_trace(go.Scatter(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key,
+            line=go.scatter.Line(shape='hv')
+        ))
+    # Add horizontal line at 90%.
+    figure.add_shape(go.layout.Shape(
+        x0=0,
+        x1=1,
+        xref='paper',
+        y0=0.9,
+        y1=0.9,
+        yref='y',
+        type='line',
+        line=go.layout.shape.Line(width=2)
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Cumulative proportion',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+def plot_transformer_utilization_histogram(
+        values_dict: dict,
+        results_path: str,
+        selected_columns=None,
+        histogram_minimum=0.0,
+        histogram_maximum=1.0,
+        histogram_bin_count=100
+):
+
+    # Obtain histogram bins.
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+    # Pre-process values.
+    for key in values_dict:
+        # Only use selected columns.
+        values_dict[key] = (
+            values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
+        )
+        # Obtain maximum utilization for all transformers.
+        values_dict[key] = (
+            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+        )
+        # Set over-utilized transformers to 1 p.u. for better visualization.
+        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+        # Obtain histogram values.
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
+            / len(values_dict[key])
+        )
+
+    # Obtain plot title / labels / filename.
+    title = '1MVA Transformers'
+    filename = 'transformer_utilization_histogram'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = go.Figure()
+    for key in values_dict:
+        figure.add_trace(go.Bar(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key
+        ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Frequency',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+def plot_transformer_utilization_histogram_cumulative(
+        values_dict: dict,
+        results_path: str,
+        selected_columns=None,
+        histogram_minimum=0.0,
+        histogram_maximum=1.0,
+        histogram_bin_count=100
+):
+
+    # Obtain histogram bins.
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+    # Pre-process values.
+    for key in values_dict:
+        # Only use selected columns.
+        values_dict[key] = (
+            values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
+        )
+        # Obtain maximum utilization for all transformers.
+        values_dict[key] = (
+            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+        )
+        # Set over-utilized transformers to 1 p.u. for better visualization.
+        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+        # Obtain histogram values.
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
+            / len(values_dict[key])
+        )
+
+    # Obtain plot title / labels / filename.
+    title = '1MVA Transformers'
+    filename = 'transformer_utilization_histogram_cumulative'
+    y_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = go.Figure()
+    for key in values_dict:
+        figure.add_trace(go.Scatter(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key,
+            line=go.scatter.Line(shape='hv')
+        ))
+    # Add horizontal line at 90%.
+    figure.add_shape(go.layout.Shape(
+        x0=0,
+        x1=1,
+        xref='paper',
+        y0=0.9,
+        y1=0.9,
+        yref='y',
+        type='line',
+        line=go.layout.shape.Line(width=2)
+    ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{y_label} [{value_unit}]',
+        yaxis_title='Cumulative proportion',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+    )
+    # figure.show()
+    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))

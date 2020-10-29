@@ -27,27 +27,10 @@ def main():
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
 
-    # Obtain nominal operation problem & solution.
+    # Obtain nominal operation problem & run simulation.
     problem = fledge.problems.NominalOperationProblem(scenario_name)
     problem.solve()
-    results = problem.get_results()
-
-    # Obtain additional results.
-    branch_power_vector_magnitude_per_unit = (
-        (np.abs(results['branch_power_vector_1']) + np.abs(results['branch_power_vector_2'])) / 2
-        / problem.electric_grid_model.branch_power_vector_magnitude_reference
-    )
-    branch_power_vector_magnitude_per_unit.loc['maximum', :] = branch_power_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit = (
-        np.abs(results['node_voltage_vector'])
-        / np.abs(problem.electric_grid_model.node_voltage_vector_reference)
-    )
-    node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
-    results.update({
-        'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
-        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
-    })
+    results_private_ev_bus = problem.get_results()
 
     # Remove bus chargers and re-run simulation.
     for der_name in problem.der_model_set.der_models:
@@ -56,12 +39,7 @@ def main():
                 problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
                 problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
     problem.solve()
-    results_1 = problem.get_results()
-    branch_power_vector_magnitude_per_unit_1 = (
-        (np.abs(results_1['branch_power_vector_1']) + np.abs(results_1['branch_power_vector_2'])) / 2
-        / problem.electric_grid_model.branch_power_vector_magnitude_reference
-    )
-    branch_power_vector_magnitude_per_unit_1.loc['maximum', :] = branch_power_vector_magnitude_per_unit_1.max(axis='rows')
+    results_private_ev = problem.get_results()
 
     # Remove private EV chargers and re-run simulation.
     for der_name in problem.der_model_set.der_models:
@@ -69,18 +47,10 @@ def main():
             problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
             problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
     problem.solve()
-    results_2 = problem.get_results()
-    branch_power_vector_magnitude_per_unit_2 = (
-        (np.abs(results_2['branch_power_vector_1']) + np.abs(results_2['branch_power_vector_2'])) / 2
-        / problem.electric_grid_model.branch_power_vector_magnitude_reference
-    )
-    branch_power_vector_magnitude_per_unit_2.loc['maximum', :] = branch_power_vector_magnitude_per_unit_2.max(axis='rows')
-
-    # Print results.
-    print(results)
+    results_baseline = problem.get_results()
 
     # Store results to CSV.
-    results.to_csv(results_path)
+    results_private_ev_bus.to_csv(results_path)
 
     # Obtain electric grid graph.
     electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
@@ -89,24 +59,27 @@ def main():
     fledge.plots.plot_line_utilization(
         problem.electric_grid_model,
         electric_grid_graph,
-        branch_power_vector_magnitude_per_unit.loc['maximum', :] * 100.0,
+        results_private_ev_bus['branch_power_1_magnitude_per_unit'].max() * 100.0,
         results_path,
+        label='Maximum',
         value_unit='%',
         horizontal_line_value=100.0
     )
     fledge.plots.plot_transformer_utilization(
         problem.electric_grid_model,
         electric_grid_graph,
-        branch_power_vector_magnitude_per_unit.loc['maximum', :] * 100.0,
+        results_private_ev_bus['branch_power_1_magnitude_per_unit'].max() * 100.0,
         results_path,
+        label='Maximum',
         value_unit='%',
         horizontal_line_value=100.0
     )
     fledge.plots.plot_node_utilization(
         problem.electric_grid_model,
         electric_grid_graph,
-        (node_voltage_vector_magnitude_per_unit.loc['maximum', :] - 1.0) * - 100.0,
+        (results_private_ev_bus['node_voltage_magnitude_per_unit'].min() - 1.0) * - 100.0,
         results_path,
+        label='Maximum',
         value_unit='%',
         suffix='drop',
         horizontal_line_value=5.0
@@ -117,7 +90,7 @@ def main():
         fledge.plots.plot_grid_transformer_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            branch_power_vector_magnitude_per_unit * 100.0,
+            results_private_ev_bus['branch_power_1_magnitude_per_unit'] * 100.0,
             results_path,
             vmin=20.0,
             vmax=120.0,
@@ -127,7 +100,7 @@ def main():
         fledge.plots.plot_grid_line_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            branch_power_vector_magnitude_per_unit * 100.0,
+            results_private_ev_bus['branch_power_1_magnitude_per_unit'] * 100.0,
             results_path,
             vmin=20.0,
             vmax=120.0,
@@ -137,7 +110,7 @@ def main():
         fledge.plots.plot_grid_node_utilization(
             problem.electric_grid_model,
             electric_grid_graph,
-            (node_voltage_vector_magnitude_per_unit - 1.0) * -100.0,
+            (results_private_ev_bus['node_voltage_magnitude_per_unit'] - 1.0) * -100.0,
             results_path,
             vmin=0.0,
             vmax=10.0,
@@ -149,9 +122,9 @@ def main():
     # Plot demand timeseries.
     fledge.plots.plot_total_active_power(
         {
-            'Baseload + private EV + bus charging': results['der_power_vector'],
-            'Baseload + private EV': results_1['der_power_vector'],
-            'Baseload': results_2['der_power_vector']
+            'Baseload + private EV + bus charging': results_private_ev_bus['der_power_vector'],
+            'Baseload + private EV': results_private_ev['der_power_vector'],
+            'Baseload': results_baseline['der_power_vector']
         },
         results_path
     )
@@ -159,9 +132,9 @@ def main():
     # Plot line utilization histogram.
     fledge.plots.plot_line_utilization_histogram(
         {
-            'Baseload': branch_power_vector_magnitude_per_unit_2,
-            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+            'Baseload': results_baseline['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV': results_private_ev['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV + bus charging': results_private_ev_bus['branch_power_1_magnitude_per_unit']
         },
         results_path
     )
@@ -169,9 +142,9 @@ def main():
     # Plot line utilization cumulative.
     fledge.plots.plot_line_utilization_histogram_cumulative(
         {
-            'Baseload': branch_power_vector_magnitude_per_unit_2,
-            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+            'Baseload': results_baseline['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV': results_private_ev['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV + bus charging': results_private_ev_bus['branch_power_1_magnitude_per_unit']
         },
         results_path
     )
@@ -179,14 +152,14 @@ def main():
     # Plot transformer utilization histogram.
     fledge.plots.plot_transformer_utilization_histogram(
         {
-            'Baseload': branch_power_vector_magnitude_per_unit_2,
-            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+            'Baseload': results_baseline['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV': results_private_ev['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV + bus charging': results_private_ev_bus['branch_power_1_magnitude_per_unit']
         },
         results_path,
         selected_columns=(
-            branch_power_vector_magnitude_per_unit.columns[
-                branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            problem.electric_grid_model.branches[
+                problem.electric_grid_model.branches.get_level_values('branch_name').str.contains('22kV')
             ]
         )
     )
@@ -194,14 +167,14 @@ def main():
     # Plot transformer utilization cumulative.
     fledge.plots.plot_transformer_utilization_histogram_cumulative(
         {
-            'Baseload': branch_power_vector_magnitude_per_unit_2,
-            'Baseload + private EV': branch_power_vector_magnitude_per_unit_1,
-            'Baseload + private EV + bus charging': branch_power_vector_magnitude_per_unit
+            'Baseload': results_baseline['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV': results_private_ev['branch_power_1_magnitude_per_unit'],
+            'Baseload + private EV + bus charging': results_private_ev_bus['branch_power_1_magnitude_per_unit']
         },
         results_path,
         selected_columns=(
-            branch_power_vector_magnitude_per_unit.columns[
-                branch_power_vector_magnitude_per_unit.columns.get_level_values('branch_name').str.contains('22kV')
+            problem.electric_grid_model.branches[
+                problem.electric_grid_model.branches.get_level_values('branch_name').str.contains('22kV')
             ]
         )
     )

@@ -720,7 +720,6 @@ class PriceData(object):
 
     price_sensitivity_coefficient: np.float
     price_timeseries: pd.DataFrame
-    price_timeseries_dict: dict
 
     @multimethod
     def __init__(
@@ -830,55 +829,6 @@ class PriceData(object):
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (
             price_timeseries.values[:, None]
         )
-
-        # Instantiate dictionary for unique `price_type`.
-        price_types = (
-            pd.read_sql(
-                """
-                SELECT DISTINCT price_type FROM price_timeseries
-                """,
-                con=database_connection,
-            )
-        )
-        self.price_timeseries_dict = dict.fromkeys(price_types.values.flatten())
-
-        # Load timeseries for each `price_type`.
-        # TODO: Remove price timeseries dict in favor of price timeseries above.
-        for price_type in self.price_timeseries_dict:
-            self.price_timeseries_dict[price_type] = (
-                pd.read_sql(
-                    """
-                    SELECT * FROM price_timeseries
-                    WHERE price_type = ?
-                    AND time >= (
-                        SELECT timestep_start FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    AND time <= (
-                        SELECT timestep_end FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                    """,
-                    con=database_connection,
-                    params=[
-                        price_type,
-                        scenario_name,
-                        scenario_name
-                    ],
-                    parse_dates=['time'],
-                    index_col=['time']
-                ).reindex(
-                    scenario_data.timesteps
-                ).interpolate(
-                    'quadratic'
-                ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
-                ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
-                )
-            )
-            # TODO: Fix price unit conversion.
-            # self.price_timeseries_dict[price_type].loc[:, 'price_value'] *= 1.0e-3  # 1/kWh in 1/Wh.
 
     def copy(self):
 

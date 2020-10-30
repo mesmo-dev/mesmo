@@ -24,10 +24,6 @@ def main():
     der_data = fledge.data_interface.DERData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain model.
     flexible_der_model = fledge.der_models.make_der_model(der_data, der_name)
 
@@ -35,13 +31,20 @@ def main():
     optimization_problem = pyo.ConcreteModel()
 
     # Define variables.
-    flexible_der_model.define_optimization_variables(optimization_problem)
+    flexible_der_model.define_optimization_variables(
+        optimization_problem
+    )
 
     # Define constraints.
-    flexible_der_model.define_optimization_constraints(optimization_problem)
+    flexible_der_model.define_optimization_constraints(
+        optimization_problem
+    )
 
     # Define objective.
-    flexible_der_model.define_optimization_objective(optimization_problem, price_timeseries)
+    flexible_der_model.define_optimization_objective(
+        optimization_problem,
+        price_data
+    )
 
     # Solve optimization problem.
     optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
@@ -74,8 +77,8 @@ def main():
             plt.show()
             plt.close()
 
-        plt.plot(price_timeseries['price_value'], drawstyle='steps-post')
-        plt.title(f"Price: {price_type}")
+        plt.plot(price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')], drawstyle='steps-post')
+        plt.title(f"Price")
         plt.show()
         plt.close()
 

@@ -9,6 +9,7 @@ setuptools.setup(
     install_requires=[
         # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
         'diskcache',
+        'kaleido',  # For static plot output with plotly.
         'matplotlib',
         'multimethod',
         'multiprocess',
@@ -19,6 +20,7 @@ setuptools.setup(
         'OpenDSSDirect.py',
         'pandas',
         'parameterized',  # For tests.
+        'plotly',
         'pyomo',
         'pyyaml',
         'scipy',

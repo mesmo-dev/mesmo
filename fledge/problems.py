@@ -156,6 +156,36 @@ class NominalOperationProblem(object):
                 branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector
                 node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector
 
+        # Obtain magnitude values.
+        if self.electric_grid_model is not None:
+            der_power_magnitude = np.abs(der_power_vector)
+            node_voltage_magnitude = np.abs(node_voltage_vector)
+            branch_power_1_magnitude = np.abs(branch_power_vector_1)
+            branch_power_2_magnitude = np.abs(branch_power_vector_2)
+            loss_magnitude = np.abs(loss)
+
+        # Obtain per-unit values.
+        if self.electric_grid_model is not None:
+            der_power_magnitude_per_unit = (
+                der_power_magnitude
+                / np.abs(self.electric_grid_model.der_power_vector_reference)
+            )
+            node_voltage_magnitude_per_unit = (
+                node_voltage_magnitude
+                / np.abs(self.electric_grid_model.node_voltage_vector_reference)
+            )
+            branch_power_1_magnitude_per_unit = (
+                branch_power_1_magnitude
+                / np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+            branch_power_2_magnitude_per_unit = (
+                branch_power_2_magnitude
+                / np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+        if self.thermal_grid_model is not None:
+            pass
+            # TODO: Define thermal grid reference properties.
+
         # Store results.
         self.results = fledge.data_interface.ResultsDict()
         if self.electric_grid_model is not None:
@@ -165,7 +195,16 @@ class NominalOperationProblem(object):
                     node_voltage_vector=node_voltage_vector,
                     branch_power_vector_1=branch_power_vector_1,
                     branch_power_vector_2=branch_power_vector_2,
-                    loss=loss
+                    loss=loss,
+                    der_power_magnitude=der_power_magnitude,
+                    node_voltage_magnitude=node_voltage_magnitude,
+                    branch_power_1_magnitude=branch_power_1_magnitude,
+                    branch_power_2_magnitude=branch_power_2_magnitude,
+                    loss_magnitude=loss_magnitude,
+                    der_power_magnitude_per_unit=der_power_magnitude_per_unit,
+                    node_voltage_magnitude_per_unit=node_voltage_magnitude_per_unit,
+                    branch_power_1_magnitude_per_unit=branch_power_1_magnitude_per_unit,
+                    branch_power_2_magnitude_per_unit=branch_power_2_magnitude_per_unit
                 )
             )
         if self.thermal_grid_model is not None:

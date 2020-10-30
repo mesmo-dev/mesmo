@@ -25,10 +25,6 @@ def main():
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
@@ -74,7 +70,10 @@ def main():
     )
 
     # Define objective (DER operation cost minimization).
-    der_model_set.define_optimization_objective(optimization_problem, price_timeseries)
+    der_model_set.define_optimization_objective(
+        optimization_problem,
+        price_data
+    )
 
     # Solve optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
@@ -112,7 +111,7 @@ def main():
     dlmps = (
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )

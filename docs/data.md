@@ -19,6 +19,7 @@ Scenario definition.
 | `thermal_grid_name` | | Thermal grid identifier as defined `thermal grids` |
 | `parameter_set` | | Parameter set identifier as defined in `parameters` |
 | `price_type` | | Type identifier as defined in `price_timeseries` |
+| `price_sensitivity_coefficient` | $/kWh² | Price sensitivity coefficient for the quadratic cost terms of DERs / grids. Optional column, which defaults to `0` if not explicitly defined. |
 | `electric_grid_operation_limit_type` | | Operation limit type as defined in `electric_grid_operation_limit_types` |
 | `thermal_grid_operation_limit_type` | | Type identifier as defined in `thermal_grid_operation_limit_types` |
 | `timestep_start` | | Start timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |

@@ -70,10 +70,6 @@ def main(
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
@@ -209,21 +205,21 @@ def main(
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
-        price_timeseries=price_timeseries,
-        timesteps=scenario_data.timesteps
+        price_data,
+        scenario_data.timesteps
     )
 
     # Define thermal grid objective.
     # linear_thermal_grid_model.define_optimization_objective(
     #     optimization_problem,
-    #     price_timeseries=price_timeseries,
-    #     timesteps=scenario_data.timesteps
+    #     price_data,
+    #     scenario_data.timesteps
     # )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_timeseries,
+        price_data,
         electric_grid_model=electric_grid_model,
         thermal_grid_model=thermal_grid_model
     )
@@ -291,14 +287,14 @@ def main(
     dlmps = (
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
     dlmps.update(
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
@@ -313,10 +309,10 @@ def main(
     thermal_grid_dlmp = (
         pd.concat(
             [
-                dlmps['thermal_grid_energy_dlmp'],
-                dlmps['thermal_grid_pump_dlmp'],
-                dlmps['thermal_grid_head_dlmp'],
-                dlmps['thermal_grid_congestion_dlmp']
+                dlmps['thermal_grid_energy_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_pump_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_head_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_congestion_dlmp_node_thermal_power']
             ],
             axis='columns',
             keys=['energy', 'pump', 'head', 'congestion'],
@@ -398,10 +394,10 @@ def main(
     electric_grid_dlmp = (
         pd.concat(
             [
-                dlmps['electric_grid_energy_dlmp'],
-                dlmps['electric_grid_loss_dlmp'],
-                dlmps['electric_grid_voltage_dlmp'],
-                dlmps['electric_grid_congestion_dlmp']
+                dlmps['electric_grid_energy_dlmp_node_active_power'],
+                dlmps['electric_grid_loss_dlmp_node_active_power'],
+                dlmps['electric_grid_voltage_dlmp_node_active_power'],
+                dlmps['electric_grid_congestion_dlmp_node_active_power']
             ],
             axis='columns',
             keys=['energy', 'loss', 'voltage', 'congestion'],
@@ -487,10 +483,10 @@ def main(
 
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
-        'thermal_grid_energy_dlmp',
-        'thermal_grid_pump_dlmp',
-        'thermal_grid_head_dlmp',
-        'thermal_grid_congestion_dlmp'
+        'thermal_grid_energy_dlmp_node_thermal_power',
+        'thermal_grid_pump_dlmp_node_thermal_power',
+        'thermal_grid_head_dlmp_node_thermal_power',
+        'thermal_grid_congestion_dlmp_node_thermal_power'
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:
@@ -540,10 +536,10 @@ def main(
 
     # Plot electric grid DLMPs in grid.
     dlmp_types = [
-        'electric_grid_energy_dlmp',
-        'electric_grid_voltage_dlmp',
-        'electric_grid_congestion_dlmp',
-        'electric_grid_loss_dlmp'
+        'electric_grid_energy_dlmp_node_active_power',
+        'electric_grid_voltage_dlmp_node_active_power',
+        'electric_grid_congestion_dlmp_node_active_power',
+        'electric_grid_loss_dlmp_node_active_power'
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:

@@ -1,5 +1,6 @@
 """Database interface."""
 
+import copy
 import glob
 from multimethod import multimethod
 import natsort
@@ -499,6 +500,33 @@ class DERData(object):
         #   due to SQLITE missing full outer join syntax.
         self.ders = (
             pd.merge(
+                pd.merge(
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM electric_grid_ders
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM thermal_grid_ders
+                        WHERE thermal_grid_name = (
+                            SELECT thermal_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                        """,
+                        con=database_connection,
+                        params=[scenario_name]
+                    )),
+                    how='outer',
+                    on=['der_name', 'der_type', 'der_model_name'],
+                    suffixes=('_electric_grid', '_thermal_grid')
+                ),
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
                     SELECT * FROM der_models
@@ -525,34 +553,7 @@ class DERData(object):
                         scenario_name
                     ]
                 )),
-                pd.merge(
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    how='outer',
-                    on=['der_name', 'der_type', 'der_model_name', 'in_service'],
-                    suffixes=('_electric_grid', '_thermal_grid')
-                ),
-                how='outer',
+                how='left',
                 on=['der_type', 'der_model_name'],
             )
         )
@@ -717,34 +718,40 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
-    scenario_data: ScenarioData
-    price_timeseries_dict: dict
+    price_sensitivity_coefficient: np.float
+    price_timeseries: pd.DataFrame
 
     @multimethod
     def __init__(
             self,
             scenario_name: str,
+            price_type='',
             database_connection=connect_database()
     ):
 
         # Obtain scenario data.
-        self.scenario_data = ScenarioData(scenario_name)
+        scenario_data = ScenarioData(scenario_name)
 
-        # Instantiate dictionary for unique `price_type`.
-        price_types = (
-            pd.read_sql(
-                """
-                SELECT DISTINCT price_type FROM price_timeseries
-                """,
-                con=database_connection,
+        # Obtain DER data.
+        der_data = DERData(scenario_name)
+
+        # Obtain price type.
+        price_type = scenario_data.scenario.at['price_type'] if price_type == '' else price_type
+
+        # Obtain price sensitivity coefficient.
+        self.price_sensitivity_coefficient = scenario_data.scenario.at['price_sensitivity_coefficient']
+
+        # Obtain price timeseries.
+        if price_type is None:
+            price_timeseries = (
+                pd.Series(
+                    1.0,
+                    index=scenario_data.timesteps,
+                    name='price_value'
+                )
             )
-        )
-        self.price_timeseries_dict = dict.fromkeys(price_types.values.flatten())
-
-        # Load timeseries for each `price_type`.
-        # TODO: Resample / interpolate timeseries depending on timestep interval.
-        for price_type in self.price_timeseries_dict:
-            self.price_timeseries_dict[price_type] = (
+        else:
+            price_timeseries = (
                 pd.read_sql(
                     """
                     SELECT * FROM price_timeseries
@@ -767,17 +774,65 @@ class PriceData(object):
                     parse_dates=['time'],
                     index_col=['time']
                 ).reindex(
-                    self.scenario_data.timesteps
+                    scenario_data.timesteps
                 ).interpolate(
-                    'quadratic'
+                    'ffill'
                 ).bfill(  # Backward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 ).ffill(  # Forward fill to handle edge definition gaps.
-                    limit=int(pd.to_timedelta('1h') / self.scenario_data.scenario['timestep_interval'])
+                    limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
-            )
+            ).loc[:, 'price_value']
             # TODO: Fix price unit conversion.
-            # self.price_timeseries_dict[price_type].loc[:, 'price_value'] *= 1.0e-3  # 1/kWh in 1/Wh.
+            # price_timeseries *= 1.0e-3  # 1/kWh in 1/Wh.
+
+        # Obtain price timeseries for each DER.
+        prices = (
+            pd.MultiIndex.from_frame(pd.concat([
+                pd.DataFrame({
+                    'commodity_type': 'active_power',
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['electric_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'active_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_name']
+                }),
+                pd.DataFrame({
+                    'commodity_type': 'reactive_power',
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['electric_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'reactive_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'electric_grid_name']), 'der_name']
+                }),
+                pd.DataFrame({
+                    'commodity_type': 'thermal_power',
+                    'der_type': ['source'],
+                    'der_name': ['source']
+                }) if pd.notnull(scenario_data.scenario.at['thermal_grid_name']) else None,
+                pd.DataFrame({
+                    'commodity_type': 'thermal_power',
+                    'der_type': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name']), 'der_type'],
+                    'der_name': der_data.ders.loc[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name']), 'der_name']
+                })
+            ]))
+        )
+        self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
+        self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
+            price_timeseries.values[:, None]
+        )
+        # TODO: Proper thermal power price definition.
+        self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (
+            price_timeseries.values[:, None]
+        )
+
+    def copy(self):
+
+        return copy.deepcopy(self)
 
 
 class ResultsDict(typing.Dict[str, pd.DataFrame]):

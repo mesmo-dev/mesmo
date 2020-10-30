@@ -235,7 +235,7 @@ class OptimalOperationProblem(object):
 
     scenario_name: str
     timesteps: pd.Index
-    price_timeseries: pd.DataFrame
+    price_data: fledge.data_interface.PriceData
     electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
     power_flow_solution_reference: fledge.electric_grid_models.PowerFlowSolution = None
     linear_electric_grid_model: fledge.electric_grid_models.LinearElectricGridModel = None
@@ -253,22 +253,10 @@ class OptimalOperationProblem(object):
 
         # Obtain data.
         scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-        price_data = fledge.data_interface.PriceData(scenario_name)
+        self.price_data = fledge.data_interface.PriceData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
-
-        # Store price timeseries.
-        if pd.notnull(scenario_data.scenario.at['price_type']):
-            self.price_timeseries = price_data.price_timeseries_dict[scenario_data.scenario.at['price_type']]
-        else:
-            self.price_timeseries = (
-                pd.DataFrame(
-                    1.0,
-                    index=self.timesteps,
-                    columns=['price_value']
-                )
-            )
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
@@ -377,18 +365,18 @@ class OptimalOperationProblem(object):
         if self.thermal_grid_model is not None:
             self.linear_thermal_grid_model.define_optimization_objective(
                 self.optimization_problem,
-                self.price_timeseries,
+                self.price_data,
                 self.timesteps
             )
         if self.electric_grid_model is not None:
             self.linear_electric_grid_model.define_optimization_objective(
                 self.optimization_problem,
-                self.price_timeseries,
+                self.price_data,
                 self.timesteps
             )
         self.der_model_set.define_optimization_objective(
             self.optimization_problem,
-            self.price_timeseries,
+            self.price_data,
             electric_grid_model=self.electric_grid_model,
             thermal_grid_model=self.thermal_grid_model
         )
@@ -459,7 +447,7 @@ class OptimalOperationProblem(object):
                 results.update(
                     self.linear_electric_grid_model.get_optimization_dlmps(
                         self.optimization_problem,
-                        self.price_timeseries,
+                        self.price_data,
                         self.timesteps
                     )
                 )
@@ -469,7 +457,7 @@ class OptimalOperationProblem(object):
                 results.update(
                     self.linear_thermal_grid_model.get_optimization_dlmps(
                         self.optimization_problem,
-                        self.price_timeseries,
+                        self.price_data,
                         self.timesteps
                     )
                 )

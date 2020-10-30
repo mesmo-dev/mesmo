@@ -1,4 +1,5 @@
 line_type,n_phases,maximum_current
+ieee_123node_line_type1,3,530
 mtx601,3,1000000000.0
 mtx602,2,1000000000.0
 hougang_linetype_66,3,585.0

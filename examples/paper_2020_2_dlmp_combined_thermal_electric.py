@@ -398,10 +398,10 @@ def main(
     electric_grid_dlmp = (
         pd.concat(
             [
-                dlmps['electric_grid_energy_dlmp'],
-                dlmps['electric_grid_loss_dlmp'],
-                dlmps['electric_grid_voltage_dlmp'],
-                dlmps['electric_grid_congestion_dlmp']
+                dlmps['electric_grid_energy_dlmp_node_active_power'],
+                dlmps['electric_grid_loss_dlmp_node_active_power'],
+                dlmps['electric_grid_voltage_dlmp_node_active_power'],
+                dlmps['electric_grid_congestion_dlmp_node_active_power']
             ],
             axis='columns',
             keys=['energy', 'loss', 'voltage', 'congestion'],
@@ -540,10 +540,10 @@ def main(
 
     # Plot electric grid DLMPs in grid.
     dlmp_types = [
-        'electric_grid_energy_dlmp',
-        'electric_grid_voltage_dlmp',
-        'electric_grid_congestion_dlmp',
-        'electric_grid_loss_dlmp'
+        'electric_grid_energy_dlmp_node_active_power',
+        'electric_grid_voltage_dlmp_node_active_power',
+        'electric_grid_congestion_dlmp_node_active_power',
+        'electric_grid_loss_dlmp_node_active_power'
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:

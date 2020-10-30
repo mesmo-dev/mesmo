@@ -2884,12 +2884,6 @@ class LinearElectricGridModel(object):
         )
 
         return fledge.data_interface.ResultsDict(
-            # TODO: Rename DLMPs everywhere.
-            electric_grid_energy_dlmp=electric_grid_energy_dlmp_node_active_power,
-            electric_grid_voltage_dlmp=electric_grid_voltage_dlmp_node_active_power,
-            electric_grid_congestion_dlmp=electric_grid_congestion_dlmp_node_active_power,
-            electric_grid_loss_dlmp=electric_grid_loss_dlmp_node_active_power,
-            # Old DLMPs above.
             electric_grid_energy_dlmp_node_active_power=electric_grid_energy_dlmp_node_active_power,
             electric_grid_voltage_dlmp_node_active_power=electric_grid_voltage_dlmp_node_active_power,
             electric_grid_congestion_dlmp_node_active_power=electric_grid_congestion_dlmp_node_active_power,

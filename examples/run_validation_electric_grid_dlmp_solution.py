@@ -3,9 +3,7 @@
 import numpy as np
 import os
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
 import pyomo.environ as pyo
 
 import fledge.config
@@ -180,15 +178,6 @@ def main():
 
     # Print results.
     print(results_validation)
-
-    # Define Plotly default options.
-    pio.templates.default = go.layout.Template(pio.templates['simple_white'])
-    pio.templates.default.layout.update(
-        font_family=fledge.config.config['plots']['font_family'][0],
-        legend=go.layout.Legend(borderwidth=1),
-        xaxis=go.layout.XAxis(showgrid=True),
-        yaxis=go.layout.YAxis(showgrid=True)
-    )
 
     # Plot: Price comparison.
     values_1 = price_data.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]

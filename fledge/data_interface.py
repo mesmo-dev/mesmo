@@ -732,14 +732,8 @@ class PriceData(object):
         # Obtain scenario data.
         scenario_data = ScenarioData(scenario_name)
 
-        # Obtain DER data.
-        der_data = DERData(scenario_name)
-
         # Obtain price type.
         price_type = scenario_data.scenario.at['price_type'] if price_type == '' else price_type
-
-        # Obtain price sensitivity coefficient.
-        self.price_sensitivity_coefficient = scenario_data.scenario.at['price_sensitivity_coefficient']
 
         # Obtain price timeseries.
         if price_type is None:
@@ -785,6 +779,29 @@ class PriceData(object):
             ).loc[:, 'price_value']
             # TODO: Fix price unit conversion.
             # price_timeseries *= 1.0e-3  # 1/kWh in 1/Wh.
+
+        self.__init__(
+            price_timeseries,
+            scenario_name,
+            scenario_data=scenario_data
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            price_timeseries: pd.Series,
+            scenario_name: str,
+            scenario_data=None
+    ):
+
+        # Obtain scenario data.
+        scenario_data = ScenarioData(scenario_name) if scenario_data is None else scenario_data
+
+        # Obtain price sensitivity coefficient.
+        self.price_sensitivity_coefficient = scenario_data.scenario.at['price_sensitivity_coefficient']
+
+        # Obtain DER data.
+        der_data = DERData(scenario_name)
 
         # Obtain price timeseries for each DER.
         prices = (

@@ -35,7 +35,7 @@ def main():
         if type(problem.der_model_set.der_models[der_name]) is fledge.der_models.FixedEVChargerModel:
             if 'bus_charger' in der_name:
                 problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
-                problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+                problem.der_model_set.der_models[der_name].reactive_power_nominal_timeseries *= 0
     problem.solve()
     results_private_ev = problem.get_results()
 
@@ -43,7 +43,7 @@ def main():
     for der_name in problem.der_model_set.der_models:
         if type(problem.der_model_set.der_models[der_name]) is fledge.der_models.FixedEVChargerModel:
             problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
-            problem.der_model_set.der_models[der_name].active_power_nominal_timeseries *= 0
+            problem.der_model_set.der_models[der_name].reactive_power_nominal_timeseries *= 0
     problem.solve()
     results_baseline = problem.get_results()
 

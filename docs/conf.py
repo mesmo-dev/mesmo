@@ -32,6 +32,7 @@ autodoc_mock_imports = [
     'cobmo',
     'cv2',
     'diskcache',
+    'kaleido',
     'matplotlib',
     'multimethod',
     'multiprocess',
@@ -40,6 +41,7 @@ autodoc_mock_imports = [
     'numpy',
     'opendssdirect',
     'pandas',
+    'plotly',
     'pyomo',
     'scipy',
 ]

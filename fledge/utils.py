@@ -1,6 +1,7 @@
 """Utility functions module."""
 
 import datetime
+import functools
 import itertools
 import logging
 import numpy as np
@@ -9,30 +10,48 @@ import pandas as pd
 import re
 import time
 import typing
+import subprocess
+import sys
 
+import cobmo.building_model
 import fledge.config
 
 logger = fledge.config.get_logger(__name__)
 
+# Instantiate dictionary for execution time logging.
+log_times = dict()
+
 
 def starmap(
         function: typing.Callable,
-        argument_sequence: typing.List[tuple]
+        argument_sequence: typing.Iterable[tuple],
+        keyword_arguments: dict = None
 ) -> list:
     """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
 
     - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
-      of `multiprocessing.Pool`, hence running the function calls in parallel.
+      of `multiprocess.Pool`, hence running the function calls in parallel.
     - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
     """
 
-    if fledge.config.config['multiprocessing']['run_parallel']:
-        if fledge.config.parallel_pool is None:
-            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
-        results = fledge.config.parallel_pool.starmap(function, argument_sequence)
+    # Apply keyword arguments.
+    if keyword_arguments is not None:
+        function_partial = functools.partial(function, **keyword_arguments)
     else:
-        results = itertools.starmap(function, argument_sequence)
+        function_partial = function
+
+    if fledge.config.config['multiprocessing']['run_parallel']:
+        # If `run_parallel`, use starmap from `multiprocess.Pool` for parallel execution.
+        if fledge.config.parallel_pool is None:
+            # Setup parallel pool on first execution.
+            log_time('parallel pool setup')
+            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
+            log_time('parallel pool setup')
+        results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
+    else:
+        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
+        results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
 
@@ -60,11 +79,41 @@ def log_timing_end(
     return time.time()
 
 
+def log_time(
+        label: str,
+        logger_object: logging.Logger = logger
+):
+    """Log start message and return start time. Should be used together with `log_timing_end`."""
+
+    time_now = time.time()
+
+    if label in log_times.keys():
+        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+    else:
+        log_times[label] = time_now
+        logger_object.debug(f"Starting {label}.")
+
+
 def get_index(
         index_set: pd.Index,
+        raise_empty_index_error: bool = True,
         **levels_values
 ):
-    """Utility function for obtaining the integer index array for given index set / level / value list combination."""
+    """Utility function for obtaining the integer index array for given index set / level / value list combination.
+
+    :syntax:
+        - ``get_index(electric_grid_model.nodes, node_type='source', phase=1)``: Get index array for entries in
+          index set `electric_grid_model.nodes` with given `node_type` and `phase`.
+
+    Arguments:
+        index_set (pd.Index): Index set, e.g., `electric_grid_model.nodes`.
+
+    Keyword Arguments:
+        raise_empty_index_error (bool): If true, raise an exception if obtained index array is empty. This is
+            the default behavior, because it is usually caused by an invalid level / value combination.
+        level (value): All other keyword arguments are interpreted as level / value combinations, where `level`
+            must correspond to a level name of the index set.
+    """
 
     # Obtain mask for each level / values combination keyword arguments.
     mask = np.ones(len(index_set), dtype=np.bool)
@@ -88,11 +137,12 @@ def get_index(
     index = np.flatnonzero(mask)
 
     # Assert that index is not empty.
-    try:
-        assert len(index) > 0
-    except AssertionError:
-        logger.error(f"Empty index returned for: {levels_values}")
-        raise
+    if raise_empty_index_error:
+        try:
+            assert len(index) > 0
+        except AssertionError:
+            logger.error(f"Empty index returned for: {levels_values}")
+            raise
 
     return index
 
@@ -162,3 +212,29 @@ def get_results_path(
     os.mkdir(results_path)
 
     return results_path
+
+
+def get_alphanumeric_string(
+        string: str
+):
+    """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
+
+    return re.sub(r'\W+', '_', string).strip('_').lower()
+
+
+def launch(path):
+    """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
+
+    if sys.platform == 'win32':
+        os.startfile(path)
+    elif sys.platform == 'darwin':
+        subprocess.call(['open', path])
+    else:
+        subprocess.call(['xdg-open', path])
+
+
+@fledge.config.memoize('get_building_model')
+def get_building_model(*args, **kwargs):
+    """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
+
+    return cobmo.building_model.BuildingModel(*args, **kwargs)

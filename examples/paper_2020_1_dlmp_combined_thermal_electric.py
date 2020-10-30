@@ -33,10 +33,6 @@ def main():
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
@@ -121,14 +117,14 @@ def main():
     # Define objective.
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        price_timeseries,
+        price_data,
         scenario_data.timesteps
     )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_timeseries
+        price_data
     )
 
     # Solve optimization problem.
@@ -176,14 +172,14 @@ def main():
     dlmps = (
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
     dlmps.update(
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
@@ -198,10 +194,10 @@ def main():
     thermal_grid_dlmp = (
         pd.concat(
             [
-                dlmps['thermal_grid_energy_dlmp'],
-                dlmps['thermal_grid_pump_dlmp'],
-                dlmps['thermal_grid_head_dlmp'],
-                dlmps['thermal_grid_congestion_dlmp']
+                dlmps['thermal_grid_energy_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_pump_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_head_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_congestion_dlmp_node_thermal_power']
             ],
             axis='columns',
             keys=['energy', 'pump', 'head', 'congestion'],
@@ -210,13 +206,29 @@ def main():
     )
     colors = list(color['color'] for color in matplotlib.rcParams['axes.prop_cycle'])
     for der in thermal_grid_model.ders:
+
+        # Obtain corresponding node.
+        node = (
+            thermal_grid_model.nodes[
+                thermal_grid_model.der_node_incidence_matrix[
+                :,
+                thermal_grid_model.ders.get_loc(der)
+                ].toarray().ravel() == 1
+                ][0]
+        )
+
+        # Create plot.
         fig, (ax1, lax) = plt.subplots(ncols=2, figsize=[7.8, 2.6], gridspec_kw={"width_ratios": [100, 1]})
-        ax1.set_title(f'Flexible building "{der[1]}"')
+        ax1.set_title(f'{der}')
         ax1.stackplot(
             scenario_data.timesteps,
-            thermal_grid_dlmp.loc[:, (slice(None), *der)].droplevel(['der_type', 'der_name'], axis='columns').T,
+            (
+                thermal_grid_dlmp.loc[:, (slice(None), *node)].droplevel(['node_type', 'node_name'], axis='columns').T
+                * 1.0e3
+            ),
             labels=['Energy', 'Pumping', 'Head', 'Congest.'],
-            colors=[colors[0], colors[1], colors[2], colors[3]]
+            colors=[colors[0], colors[1], colors[2], colors[3]],
+            step='post'
         )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
@@ -240,7 +252,7 @@ def main():
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
-        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 20.0))
+        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)

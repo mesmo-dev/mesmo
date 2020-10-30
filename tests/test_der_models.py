@@ -1,4 +1,4 @@
-"""Test electric grid models."""
+"""Test DER models."""
 
 import time
 import unittest
@@ -20,23 +20,25 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FixedLoadModel(
             der_data,
-            der_data.fixed_loads.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'fixed_load', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
         logger.info(f"Test FixedLoadModel: Completed in {time_duration:.6f} seconds.")
 
-    def test_ev_charger_model(self):
+    def test_fixed_ev_charger_model(self):
         # Obtain test data.
         der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
 
         # Get result.
         time_start = time.time()
-        fledge.der_models.EVChargerModel(
+        fledge.der_models.FixedEVChargerModel(
             der_data,
-            der_data.ev_chargers.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'fixed_ev_charger', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
-        logger.info(f"Test EVChargerModel: Completed in {time_duration:.6f} seconds.")
+        logger.info(f"Test FixedEVChargerModel: Completed in {time_duration:.6f} seconds.")
 
     def test_fixed_generator_model(self):
         # Obtain test data.
@@ -46,7 +48,8 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FixedGeneratorModel(
             der_data,
-            der_data.fixed_generators.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'fixed_generator', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleLoadModel: Completed in {time_duration:.6f} seconds.")
@@ -59,10 +62,39 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FlexibleLoadModel(
             der_data,
-            der_data.flexible_loads.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'flexible_load', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleLoadModel: Completed in {time_duration:.6f} seconds.")
+
+    def test_flexible_generator_model(self):
+        # Obtain test data.
+        der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.FlexibleGeneratorModel(
+            der_data,
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'flexible_generator', 'der_name'].iat[0]
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test FlexibleGeneratorModel: Completed in {time_duration:.6f} seconds.")
+
+    def test_storage_model(self):
+        # Obtain test data.
+        der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])
+
+        # Get result.
+        time_start = time.time()
+        fledge.der_models.StorageModel(
+            der_data,
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'storage', 'der_name'].iat[0]
+        )
+        time_duration = time.time() - time_start
+        logger.info(f"Test StorageModel: Completed in {time_duration:.6f} seconds.")
 
     def test_flexible_building_model(self):
         # Obtain test data.
@@ -72,7 +104,8 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.FlexibleBuildingModel(
             der_data,
-            der_data.flexible_buildings.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'flexible_building', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
         logger.info(f"Test FlexibleBuildingModel: Completed in {time_duration:.6f} seconds.")
@@ -85,7 +118,8 @@ class TestDERModels(unittest.TestCase):
         time_start = time.time()
         fledge.der_models.CoolingPlantModel(
             der_data,
-            der_data.cooling_plants.index[0]  # Take `der_name` of first row.
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'cooling_plant', 'der_name'].iat[0]
         )
         time_duration = time.time() - time_start
         logger.info(f"Test CoolingPlantModel: Completed in {time_duration:.6f} seconds.")

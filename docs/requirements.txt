@@ -2,5 +2,5 @@ pyyaml
 recommonmark
 sphinx
 sphinx_markdown_tables
-sphinx-multiversion==0.2.1
+sphinx-multiversion
 sphinx-rtd-theme

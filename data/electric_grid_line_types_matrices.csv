@@ -1,4 +1,10 @@
 line_type,row,col,resistance,reactance,capacitance
+ieee_123node_line_type1,1,1,0.284340164,0.66983981,9.356247846
+ieee_123node_line_type1,2,1,0.096934147,0.311742702,-3.019415208
+ieee_123node_line_type1,2,2,0.289932519,0.651322903,9.857972825
+ieee_123node_line_type1,3,1,0.095380715,0.239166366,-1.150802827
+ieee_123node_line_type1,3,2,0.098176892,0.263213491,-1.919378246
+ieee_123node_line_type1,3,3,0.286763518,0.661824102,8.895728926
 mtx601,1,1,0.4576,1.078,0.0
 mtx601,2,1,0.1559,0.5017,0.0
 mtx601,2,2,0.4666,1.04828,0.0
@@ -27,3 +33,14 @@ hougang_linetype_66,3,1,0.146581463,0.353622346,-1.549637123
 hougang_linetype_66,3,2,0.142169728,0.325474229,-0.980843491
 hougang_linetype_66,3,3,1.194213294,0.882906325,7.771919682
 singapore_cable_22_copper_300,1,1,0.077,0.108,312.0
+singapore_cable_22_copper_300,2,1,0.0,0.0,0.0
+singapore_cable_22_copper_300,2,2,0.077,0.108,312.0
+singapore_cable_22_copper_300,3,1,0.0,0.0,0.0
+singapore_cable_22_copper_300,3,2,0.0,0.0,0.0
+singapore_cable_22_copper_300,3,3,0.077,0.108,312.0
+singapore_cable_22_copper_300_400amp,1,1,0.077,0.108,312.0
+singapore_cable_22_copper_300_400amp,2,1,0.0,0.0,0.0
+singapore_cable_22_copper_300_400amp,2,2,0.077,0.108,312.0
+singapore_cable_22_copper_300_400amp,3,1,0.0,0.0,0.0
+singapore_cable_22_copper_300_400amp,3,2,0.0,0.0,0.0
+singapore_cable_22_copper_300_400amp,3,3,0.077,0.108,312.0

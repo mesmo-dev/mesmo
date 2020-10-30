@@ -13,7 +13,7 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'test_2node'
     results_path = fledge.utils.get_results_path('run_electric_grid_power_flow_single_step', scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -27,13 +27,16 @@ def main():
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
 
     # Obtain the nominal DER power vector.
-    der_power_vector_nominal = electric_grid_model.der_power_vector_nominal
+    der_power_vector_nominal = electric_grid_model.der_power_vector_reference
 
     # Obtain power flow solution.
-    # - The PowerFlowSolutionFixedPoint obtains the solution for nodal voltage vector / branch power vector
+    # - The power flow solution object obtains the solution for nodal voltage vector / branch power vector
     #   and total loss (all complex valued) for the given DER power vector.
+    # - There are different power flow solution objects depending on the solution algorithm / method:
+    #   `PowerFlowSolutionFixedPoint`, `PowerFlowSolutionZBus`.
+    #   (`PowerFlowSolutionOpenDSS` requires a `ElectricGridModelOpenDSS` instead of `ElectricGridModelDefault`.)
     power_flow_solution = (
-        fledge.electric_grid_models.PowerFlowSolutionFixedPoint(
+        fledge.electric_grid_models.PowerFlowSolutionZBus(
             electric_grid_model,
             der_power_vector_nominal
         )
@@ -42,6 +45,7 @@ def main():
     # Obtain results (as numpy arrays).
     der_power_vector = power_flow_solution.der_power_vector  # The DER power vector is also stored in the solution.
     node_voltage_vector = power_flow_solution.node_voltage_vector
+    node_voltage_vector_magnitude = np.abs(power_flow_solution.node_voltage_vector)
     branch_power_vector_1 = power_flow_solution.branch_power_vector_1
     branch_power_vector_2 = power_flow_solution.branch_power_vector_2
     loss = power_flow_solution.loss
@@ -49,6 +53,7 @@ def main():
     # Print results.
     print(f"der_power_vector = \n{der_power_vector}")
     print(f"node_voltage_vector = \n{node_voltage_vector}")
+    print(f"node_voltage_vector_magnitude = \n{node_voltage_vector_magnitude}")
     print(f"branch_power_vector_1 = \n{branch_power_vector_1}")
     print(f"branch_power_vector_2 = \n{branch_power_vector_2}")
     print(f"loss = {loss}")
@@ -56,6 +61,7 @@ def main():
     # Save results to CSV.
     np.savetxt(os.path.join(results_path, f'der_power_vector.csv'), der_power_vector, delimiter=',')
     np.savetxt(os.path.join(results_path, f'node_voltage_vector.csv'), node_voltage_vector, delimiter=',')
+    np.savetxt(os.path.join(results_path, f'node_voltage_vector_magnitude.csv'), node_voltage_vector_magnitude, delimiter=',')
     np.savetxt(os.path.join(results_path, f'branch_power_vector_1.csv'), branch_power_vector_1, delimiter=',')
     np.savetxt(os.path.join(results_path, f'branch_power_vector_2.csv'), branch_power_vector_2, delimiter=',')
     np.savetxt(os.path.join(results_path, f'loss.csv'), loss, delimiter=',')
@@ -74,7 +80,7 @@ def main():
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     plt.show()
     plt.title('Nodal voltage magnitude [kV]')
-    plt.bar(range(len(electric_grid_model.nodes)), np.abs(node_voltage_vector.ravel()) / 1e3)
+    plt.bar(range(len(electric_grid_model.nodes)), node_voltage_vector_magnitude / 1e3)
     plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
@@ -82,14 +88,14 @@ def main():
     plt.title('Nodal voltage magnitude [p.u.]')
     plt.bar(
         range(len(electric_grid_model.nodes)),
-        np.abs(node_voltage_vector.ravel()) / np.abs(electric_grid_model.node_voltage_vector_reference)
+        node_voltage_vector_magnitude / np.abs(electric_grid_model.node_voltage_vector_reference)
     )
     plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
     plt.show()
     plt.title('Branch apparent power flow (direction 1) [kVA]')
-    plt.bar(range(len(electric_grid_model.branches)), np.abs(branch_power_vector_1.ravel()) / 1e3)
+    plt.bar(range(len(electric_grid_model.branches)), np.abs(branch_power_vector_1) / 1e3)
     plt.xticks(range(len(electric_grid_model.branches)), electric_grid_model.branches, rotation=45, ha='right')
     plt.tight_layout()
     plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))

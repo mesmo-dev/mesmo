@@ -1,5 +1,6 @@
 """Problems module for mathematical optimization and simulation problem type definitions."""
 
+import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
@@ -122,7 +123,10 @@ class NominalOperationProblem(object):
             power_flow_solutions = (
                 fledge.utils.starmap(
                     fledge.electric_grid_models.PowerFlowSolutionFixedPoint,
-                    [(self.electric_grid_model, row) for row in der_power_vector.values]
+                    zip(
+                        itertools.repeat(self.electric_grid_model),
+                        der_power_vector.values
+                    )
                 )
             )
             power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
@@ -141,16 +145,46 @@ class NominalOperationProblem(object):
             for timestep in self.timesteps:
                 power_flow_solution = power_flow_solutions[timestep]
                 # TODO: Flatten power flow solution arrays.
-                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector.ravel()
-                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1.ravel()
-                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2.ravel()
-                loss.loc[timestep, :] = power_flow_solution.loss.ravel()
+                node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector
+                branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1
+                branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2
+                loss.loc[timestep, :] = power_flow_solution.loss
         if self.thermal_grid_model is not None:
             for timestep in self.timesteps:
                 thermal_power_flow_solution = thermal_power_flow_solutions[timestep]
-                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector.ravel()
-                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector.ravel()
-                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector.ravel()
+                der_flow_vector.loc[timestep, :] = thermal_power_flow_solution.der_flow_vector
+                branch_flow_vector.loc[timestep, :] = thermal_power_flow_solution.branch_flow_vector
+                node_head_vector.loc[timestep, :] = thermal_power_flow_solution.node_head_vector
+
+        # Obtain magnitude values.
+        if self.electric_grid_model is not None:
+            der_power_magnitude = np.abs(der_power_vector)
+            node_voltage_magnitude = np.abs(node_voltage_vector)
+            branch_power_1_magnitude = np.abs(branch_power_vector_1)
+            branch_power_2_magnitude = np.abs(branch_power_vector_2)
+            loss_magnitude = np.abs(loss)
+
+        # Obtain per-unit values.
+        if self.electric_grid_model is not None:
+            der_power_magnitude_per_unit = (
+                der_power_magnitude
+                / np.abs(self.electric_grid_model.der_power_vector_reference)
+            )
+            node_voltage_magnitude_per_unit = (
+                node_voltage_magnitude
+                / np.abs(self.electric_grid_model.node_voltage_vector_reference)
+            )
+            branch_power_1_magnitude_per_unit = (
+                branch_power_1_magnitude
+                / np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+            branch_power_2_magnitude_per_unit = (
+                branch_power_2_magnitude
+                / np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+        if self.thermal_grid_model is not None:
+            pass
+            # TODO: Define thermal grid reference properties.
 
         # Store results.
         self.results = fledge.data_interface.ResultsDict()
@@ -161,7 +195,16 @@ class NominalOperationProblem(object):
                     node_voltage_vector=node_voltage_vector,
                     branch_power_vector_1=branch_power_vector_1,
                     branch_power_vector_2=branch_power_vector_2,
-                    loss=loss
+                    loss=loss,
+                    der_power_magnitude=der_power_magnitude,
+                    node_voltage_magnitude=node_voltage_magnitude,
+                    branch_power_1_magnitude=branch_power_1_magnitude,
+                    branch_power_2_magnitude=branch_power_2_magnitude,
+                    loss_magnitude=loss_magnitude,
+                    der_power_magnitude_per_unit=der_power_magnitude_per_unit,
+                    node_voltage_magnitude_per_unit=node_voltage_magnitude_per_unit,
+                    branch_power_1_magnitude_per_unit=branch_power_1_magnitude_per_unit,
+                    branch_power_2_magnitude_per_unit=branch_power_2_magnitude_per_unit
                 )
             )
         if self.thermal_grid_model is not None:
@@ -192,7 +235,7 @@ class OptimalOperationProblem(object):
 
     scenario_name: str
     timesteps: pd.Index
-    price_timeseries: pd.DataFrame
+    price_data: fledge.data_interface.PriceData
     electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
     power_flow_solution_reference: fledge.electric_grid_models.PowerFlowSolution = None
     linear_electric_grid_model: fledge.electric_grid_models.LinearElectricGridModel = None
@@ -210,22 +253,10 @@ class OptimalOperationProblem(object):
 
         # Obtain data.
         scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-        price_data = fledge.data_interface.PriceData(scenario_name)
+        self.price_data = fledge.data_interface.PriceData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
-
-        # Store price timeseries.
-        if pd.notnull(scenario_data.scenario.at['price_type']):
-            self.price_timeseries = price_data.price_timeseries_dict[scenario_data.scenario.at['price_type']]
-        else:
-            self.price_timeseries = (
-                pd.DataFrame(
-                    1.0,
-                    index=self.timesteps,
-                    columns=['price_value']
-                )
-            )
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
@@ -269,19 +300,19 @@ class OptimalOperationProblem(object):
             )
             voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
-                * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+                * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
                 else None
             )
             voltage_magnitude_vector_maximum = (
                 scenario_data.scenario['voltage_per_unit_maximum']
-                * np.abs(self.power_flow_solution_reference.node_voltage_vector)
+                * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
                 else None
             )
             branch_power_vector_squared_maximum = (
                 scenario_data.scenario['branch_flow_per_unit_maximum']
-                * np.abs(self.power_flow_solution_reference.branch_power_vector_1 ** 2)
+                * np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )
@@ -334,12 +365,20 @@ class OptimalOperationProblem(object):
         if self.thermal_grid_model is not None:
             self.linear_thermal_grid_model.define_optimization_objective(
                 self.optimization_problem,
-                self.price_timeseries,
+                self.price_data,
+                self.timesteps
+            )
+        if self.electric_grid_model is not None:
+            self.linear_electric_grid_model.define_optimization_objective(
+                self.optimization_problem,
+                self.price_data,
                 self.timesteps
             )
         self.der_model_set.define_optimization_objective(
             self.optimization_problem,
-            self.price_timeseries
+            self.price_data,
+            electric_grid_model=self.electric_grid_model,
+            thermal_grid_model=self.thermal_grid_model
         )
 
     def solve(self):
@@ -408,7 +447,7 @@ class OptimalOperationProblem(object):
                 results.update(
                     self.linear_electric_grid_model.get_optimization_dlmps(
                         self.optimization_problem,
-                        self.price_timeseries,
+                        self.price_data,
                         self.timesteps
                     )
                 )
@@ -418,7 +457,7 @@ class OptimalOperationProblem(object):
                 results.update(
                     self.linear_thermal_grid_model.get_optimization_dlmps(
                         self.optimization_problem,
-                        self.price_timeseries,
+                        self.price_data,
                         self.timesteps
                     )
                 )

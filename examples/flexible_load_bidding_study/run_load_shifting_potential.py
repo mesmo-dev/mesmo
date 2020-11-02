@@ -87,8 +87,8 @@ def main():
                     os.path.join(
                         results_path,
                         fledge.utils.get_alphanumeric_string(
-                            f'output_load_shifting_{der_name}_{scenario}_{timestep}.csv'
-                        )
+                            f'output_load_shifting_{der_name}_{scenario}_{timestep}'
+                        ) + '.csv'
                     )
                 )
                 if scenario == 'lower':

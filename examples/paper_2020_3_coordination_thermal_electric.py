@@ -93,6 +93,37 @@ def main(
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
     fledge.utils.log_time(f"model setup")
 
+    # Define thermal grid limits.
+    node_head_vector_minimum = 100.0 * thermal_power_flow_solution.node_head_vector
+    branch_flow_vector_maximum = 100.0 * np.abs(thermal_power_flow_solution.branch_flow_vector)
+    # Modify limits for scenarios.
+    if scenario_number in [2, 8, 9, 15]:
+        branch_flow_vector_maximum[
+            fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
+        ] *= 0.2 / 100.0
+    elif scenario_number in [3]:
+        node_head_vector_minimum[
+            fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
+        ] *= 0.2 / 100.0
+    else:
+        pass
+
+    # Define electric grid limits.
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    # Modify limits for scenarios.
+    if scenario_number in [4, 12, 13, 14, 15]:
+        branch_power_vector_squared_maximum[
+            fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
+        ] *= 8.5 / 100.0
+    elif scenario_number in [5]:
+        voltage_magnitude_vector_minimum[
+            fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
+        ] *= 0.9985 / 0.5
+    else:
+        pass
+
     # Modify DER models depending on scenario.
     # Cooling plant.
     if scenario_number in [6, 9]:
@@ -133,10 +164,114 @@ def main(
 
     # Instantiate optimization problems.
     optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    optimization_problem_baseline = pyo.ConcreteModel()
+    optimization_problem_baseline.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_problem_electric = pyo.ConcreteModel()
     optimization_problem_electric.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_problem_thermal = pyo.ConcreteModel()
     optimization_problem_thermal.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+    # ADMM: Centralized / baseline problem.
+
+    # Log progress.
+    fledge.utils.log_time(f"baseline problem setup")
+
+    # Define linear electric grid model variables.
+    linear_electric_grid_model.define_optimization_variables(
+        optimization_problem_baseline,
+        scenario_data.timesteps
+    )
+
+    # Define linear electric grid model constraints.
+    linear_electric_grid_model.define_optimization_constraints(
+        optimization_problem_baseline,
+        scenario_data.timesteps,
+        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
+        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
+        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+    )
+
+    # Define thermal grid model variables.
+    linear_thermal_grid_model.define_optimization_variables(
+        optimization_problem_baseline,
+        scenario_data.timesteps
+    )
+
+    # Define thermal grid model constraints.
+    linear_thermal_grid_model.define_optimization_constraints(
+        optimization_problem_baseline,
+        scenario_data.timesteps,
+        node_head_vector_minimum=node_head_vector_minimum,
+        branch_flow_vector_maximum=branch_flow_vector_maximum
+    )
+
+    # Define DER variables.
+    der_model_set.define_optimization_variables(
+        optimization_problem_baseline
+    )
+
+    # Define DER constraints.
+    der_model_set.define_optimization_constraints(
+        optimization_problem_baseline,
+        electric_grid_model=electric_grid_model,
+        power_flow_solution=power_flow_solution,
+        thermal_grid_model=thermal_grid_model,
+        thermal_power_flow_solution=thermal_power_flow_solution
+    )
+
+    # Define electric grid objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem_baseline,
+        price_data,
+        timesteps=scenario_data.timesteps
+    )
+
+    # Define thermal grid objective.
+    linear_thermal_grid_model.define_optimization_objective(
+        optimization_problem_baseline,
+        price_data,
+        timesteps=scenario_data.timesteps
+    )
+
+    # Define DER objective.
+    der_model_set.define_optimization_objective(
+        optimization_problem_baseline,
+        price_data,
+        electric_grid_model=electric_grid_model,
+        thermal_grid_model=thermal_grid_model
+    )
+
+    # Log progress.
+    fledge.utils.log_time(f"baseline problem setup")
+
+    # Solve baseline problem.
+    fledge.utils.log_time(f"baseline problem solution")
+    optimization_result_baseline = optimization_solver.solve(optimization_problem_baseline, tee=fledge.config.config['optimization']['show_solver_output'])
+    try:
+        assert optimization_result_baseline.solver.termination_condition is pyo.TerminationCondition.optimal
+    except AssertionError:
+        raise AssertionError(f"Solver termination condition: {optimization_result_baseline.solver.termination_condition}")
+    fledge.utils.log_time(f"baseline problem solution")
+
+    # Get baseline results.
+    results_baseline = (
+        linear_electric_grid_model.get_optimization_results(
+            optimization_problem_baseline,
+            power_flow_solution,
+            scenario_data.timesteps
+        )
+    )
+    results_baseline.update(
+        linear_thermal_grid_model.get_optimization_results(
+            optimization_problem_baseline,
+            scenario_data.timesteps
+        )
+    )
+    results_baseline.update(
+        der_model_set.get_optimization_results(
+            optimization_problem_baseline
+        )
+    )
 
     # ADMM: Electric sub-problem.
 
@@ -150,20 +285,6 @@ def main(
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
-    # Modify limits for scenarios.
-    if scenario_number in [4, 12, 13, 14, 15]:
-        branch_power_vector_squared_maximum[
-            fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
-        ] *= 8.5 / 100.0
-    elif scenario_number in [5]:
-        voltage_magnitude_vector_minimum[
-            fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
-        ] *= 0.9985 / 0.5
-    else:
-        pass
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem_electric,
         scenario_data.timesteps,
@@ -187,21 +308,6 @@ def main(
     )
 
     # Define thermal grid model constraints.
-    # TODO: Rename branch_flow_vector_maximum to branch_flow_vector_magnitude_maximum.
-    # TODO: Revise node_head_vector constraint formulation.
-    node_head_vector_minimum = 100.0 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 100.0 * np.abs(thermal_power_flow_solution.branch_flow_vector)
-    # Modify limits for scenarios.
-    if scenario_number in [2, 8, 9, 15]:
-        branch_flow_vector_maximum[
-            fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
-        ] *= 0.2 / 100.0
-    elif scenario_number in [3]:
-        node_head_vector_minimum[
-            fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
-        ] *= 0.2 / 100.0
-    else:
-        pass
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem_thermal,
         scenario_data.timesteps,
@@ -230,29 +336,6 @@ def main(
         thermal_grid_model=thermal_grid_model,
         thermal_power_flow_solution=thermal_power_flow_solution
     )
-
-    # # Connect thermal grid source.
-    # # TODO: Incorporate this workaround in model definition.
-    # der_index = fledge.utils.get_index(electric_grid_model.ders, der_type='thermal_grid_source')[0]
-    # der = electric_grid_model.ders[der_index]
-    # for timestep in scenario_data.timesteps:
-    #     optimization_problem.der_model_constraints.add(
-    #         optimization_problem.der_active_power_vector_change[timestep, der]
-    #         ==
-    #         sum(
-    #             optimization_problem.der_thermal_power_vector[timestep, thermal_der]
-    #             for thermal_der in thermal_grid_model.ders
-    #         )
-    #         / thermal_grid_model.cooling_plant_efficiency
-    #         + optimization_problem.pump_power[timestep]
-    #         - np.real(power_flow_solution.der_power_vector[der_index])
-    #     )
-    #     optimization_problem.der_model_constraints.add(
-    #         optimization_problem.der_reactive_power_vector_change[timestep, der]
-    #         ==
-    #         0.5  # Constant power factor.
-    #         * optimization_problem.der_active_power_vector_change[timestep, der]
-    #     )
 
     # Log progress.
     fledge.utils.log_time(f"thermal sub-problem setup")
@@ -482,16 +565,28 @@ def main(
         )
 
         # Calculate residuals.
-        admm_residual_der_active_power = (
+        admm_residual_electric_der_active_power = (
             (
                 results_electric['der_active_power_vector']
-                - results_thermal['der_active_power_vector']
+                - results_baseline['der_active_power_vector']
             ).abs().sum().sum()
         )
-        admm_residual_der_reactive_power = (
+        admm_residual_electric_der_reactive_power = (
             (
                 results_electric['der_reactive_power_vector']
-                - results_thermal['der_reactive_power_vector']
+                - results_baseline['der_reactive_power_vector']
+            ).abs().sum().sum()
+        )
+        admm_residual_thermal_der_active_power = (
+            (
+                results_thermal['der_active_power_vector']
+                - results_baseline['der_active_power_vector']
+            ).abs().sum().sum()
+        )
+        admm_residual_thermal_der_reactive_power = (
+            (
+                results_thermal['der_reactive_power_vector']
+                - results_baseline['der_reactive_power_vector']
             ).abs().sum().sum()
         )
         admm_lambda_residual_der_active_power = (
@@ -508,8 +603,10 @@ def main(
         )
         admm_residuals = admm_residuals.append(
             dict(
-                admm_residual_der_active_power=admm_residual_der_active_power,
-                admm_residual_der_reactive_power=admm_residual_der_reactive_power,
+                admm_residual_electric_der_active_power=admm_residual_electric_der_active_power,
+                admm_residual_electric_der_reactive_power=admm_residual_electric_der_reactive_power,
+                admm_residual_thermal_der_active_power=admm_residual_thermal_der_active_power,
+                admm_residual_thermal_der_reactive_power=admm_residual_thermal_der_reactive_power,
                 admm_lambda_residual_der_active_power=admm_lambda_residual_der_active_power,
                 admm_lambda_residual_der_reactive_power=admm_lambda_residual_der_reactive_power
             ),

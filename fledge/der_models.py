@@ -655,10 +655,6 @@ class FlexibleDERModel(DERModel):
         control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
 
-        # Solve optimization problem
-        solver = pyo.SolverFactory('gurobi')
-        solver.solve(optimization_problem)
-
         # Obtain results.
         for timestep in self.timesteps:
             for state in self.states:
@@ -1627,10 +1623,6 @@ class DERModelSet(object):
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
         control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
-
-        # Solve optimization problem
-        solver = pyo.SolverFactory('gurobi')
-        solver.solve(optimization_problem)
 
         # Obtain results.
         for timestep in self.timesteps:

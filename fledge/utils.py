@@ -58,21 +58,20 @@ def starmap(
 
 
 def solve_optimization(
-        optimization_problem: pyo.ConcreteModel
+        optimization_problem: pyo.ConcreteModel,
+        enable_duals=False
 ):
     """Utility function for solving a Pyomo optimization problem. Automatically instantiates the solver as given in
     config. Raises error if no feasible solution is found.
     """
 
-    # Obtain solver.
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-
     # Enable duals.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+    if enable_duals:
+        optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
     # Solve optimization problem.
     optimization_result = (
-        optimization_solver.solve(
+        fledge.config.optimization_solver.solve(
             optimization_problem,
             tee=fledge.config.config['optimization']['show_solver_output']
         )

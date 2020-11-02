@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+import pyomo.environ as pyo
 import typing
 import yaml
 
@@ -150,6 +151,9 @@ if config['caching']['enable']:
     cache = diskcache.Cache(os.path.join(base_path, 'cache'))
     if config['caching']['reset_cache']:
         cache.clear()
+
+# Instantiate Pyomo optimization solver.
+optimization_solver = pyo.SolverFactory(config['optimization']['solver_name'])
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

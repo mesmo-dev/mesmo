@@ -151,6 +151,7 @@ CREATE TABLE scenarios (
     thermal_grid_name TEXT,
     parameter_set TEXT,
     price_type TEXT,
+    price_sensitivity_coefficient REAL DEFAULT 0,
     electric_grid_operation_limit_type TEXT,
     thermal_grid_operation_limit_type TEXT,
     timestep_start TEXT,

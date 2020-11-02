@@ -591,6 +591,16 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Add transformers to admittance matrix.
         for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
+            # Raise error if transformer nominal power is not valid.
+            try:
+                assert transformer.at['apparent_power'] > 0
+            except AssertionError:
+                logger.error(
+                    f"At transformer '{transformer.at['transformer_name']}', "
+                    f"found invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
+                )
+                raise
+
             # Calculate transformer admittance.
             admittance = (
                 (
@@ -826,11 +836,11 @@ class ElectricGridModelDefault(ElectricGridModel):
                 phases_list = fledge.utils.get_element_phases_array(der).tolist()
 
                 # Select connection node based on phase arrangement of delta der.
-                # - Delta ders must be single-phase.
+                # - Delta DERs must be single-phase.
                 if phases_list in ([1, 2], [2, 3]):
-                    node_index = [node_index[1]]
+                    node_index = [node_index[0]]
                 elif phases_list == [1, 3]:
-                    node_index = [node_index[2]]
+                    node_index = [node_index[1]]
                 else:
                     logger.error(f"Unknown delta phase arrangement: {phases_list}")
                     raise ValueError
@@ -861,6 +871,57 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
+
+        # Calculate inverse of node admittance matrix.
+        # - Raise error if not invertible.
+        try:
+            self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
+            assert not np.isnan(self.node_admittance_matrix_inverse.data).any()
+        except (RuntimeError, AssertionError):
+            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
+            raise
+
+        # Define shorthands for no-source variables.
+        # TODO: Add in class documentation.
+        # TODO: Validate behavior if source node not first node.
+        self.node_admittance_matrix_no_source = (
+            self.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(self.nodes, node_type='no_source'),
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            )]
+        )
+        self.node_transformation_matrix_no_source = (
+            self.node_transformation_matrix[np.ix_(
+                fledge.utils.get_index(self.nodes, node_type='no_source'),
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            )]
+        )
+        self.der_incidence_wye_matrix_no_source = (
+            self.der_incidence_wye_matrix[
+                np.ix_(
+                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    range(len(self.ders))
+                )
+            ]
+        )
+        self.der_incidence_delta_matrix_no_source = (
+            self.der_incidence_delta_matrix[
+                np.ix_(
+                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    range(len(self.ders))
+                )
+            ]
+        )
+        self.node_voltage_vector_reference_no_source = (
+            self.node_voltage_vector_reference[
+                fledge.utils.get_index(self.nodes, node_type='no_source')
+            ]
+        )
+        self.node_voltage_vector_reference_source = (
+            self.node_voltage_vector_reference[
+                fledge.utils.get_index(self.nodes, node_type='source')
+            ]
+        )
 
 
 class ElectricGridModelOpenDSS(ElectricGridModel):
@@ -1264,13 +1325,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def check_solution_conditions(
-        node_admittance_matrix_no_source: scipy.sparse.spmatrix,
-        node_transformation_matrix_no_source: scipy.sparse.spmatrix,
+        electric_grid_model: ElectricGridModelDefault,
         node_power_vector_wye_initial_no_source: np.ndarray,
         node_power_vector_delta_initial_no_source: np.ndarray,
         node_power_vector_wye_candidate_no_source: np.ndarray,
         node_power_vector_delta_candidate_no_source: np.ndarray,
-        node_voltage_vector_no_load_no_source: np.ndarray,
         node_voltage_vector_initial_no_source: np.ndarray
     ) -> np.bool:
         """Check conditions for fixed-point solution existence, uniqueness and non-singularity for
@@ -1285,11 +1344,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         xi_initial = (
             np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
-                            (node_voltage_vector_no_load_no_source ** -1)
+                            (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                             * node_power_vector_wye_initial_no_source
                         )
                     )
@@ -1298,15 +1357,15 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             ))
             + np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
                             (
-                                node_transformation_matrix_no_source
+                                electric_grid_model.node_transformation_matrix_no_source
                                 * (
-                                    np.abs(node_transformation_matrix_no_source)
-                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                    np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                                    @ np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                                 ) ** -1
                             )
                             * node_power_vector_delta_initial_no_source
@@ -1321,11 +1380,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         xi_candidate = (
             np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
-                            (node_voltage_vector_no_load_no_source ** -1)
+                            (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                             * (
                                 node_power_vector_wye_candidate_no_source
                                 - node_power_vector_wye_initial_no_source
@@ -1337,15 +1396,15 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             ))
             + np.max(np.sum(
                 np.abs(
-                    (node_voltage_vector_no_load_no_source ** -1)
+                    (electric_grid_model.node_voltage_vector_reference_no_source ** -1)
                     * scipy.sparse.linalg.spsolve(
-                        node_admittance_matrix_no_source,
+                        electric_grid_model.node_admittance_matrix_no_source,
                         (
                             (
-                                node_transformation_matrix_no_source
+                                electric_grid_model.node_transformation_matrix_no_source
                                 * (
-                                    np.abs(node_transformation_matrix_no_source)
-                                    @ np.abs(node_voltage_vector_no_load_no_source)
+                                    np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                                    @ np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                                 ) ** -1
                             ) * (
                                 node_power_vector_delta_candidate_no_source
@@ -1363,16 +1422,16 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             np.min([
                 np.min(
                     np.abs(node_voltage_vector_initial_no_source)
-                    / np.abs(node_voltage_vector_no_load_no_source)
+                    / np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                 ),
                 np.min(
                     np.abs(
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         * node_voltage_vector_initial_no_source
                     )
                     / (
-                        np.abs(node_transformation_matrix_no_source)
-                        * np.abs(node_voltage_vector_no_load_no_source)
+                        np.abs(electric_grid_model.node_transformation_matrix_no_source)
+                        * np.abs(electric_grid_model.node_voltage_vector_reference_no_source)
                     )
                 )
             ])
@@ -1422,60 +1481,25 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # TODO: Add proper documentation.
         # TODO: Validate fixed-point solution conditions.
-        # TODO: Make algorithm more robust.
 
         # Debug message.
         logger.debug("Starting fixed point solution algorithm...")
 
-        # Obtain no-source variables for fixed point equation.
-        node_admittance_matrix_no_source = (
-            electric_grid_model.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            )]
-        )
-        node_transformation_matrix_no_source = (
-            electric_grid_model.node_transformation_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            )]
-        )
-        der_incidence_wye_matrix_no_source = (
-            electric_grid_model.der_incidence_wye_matrix[
-                np.ix_(
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                    range(len(electric_grid_model.ders))
-                )
-            ]
-        )
-        der_incidence_delta_matrix_no_source = (
-            electric_grid_model.der_incidence_delta_matrix[
-                np.ix_(
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                    range(len(electric_grid_model.ders))
-                )
-            ]
-        )
-
-        # Obtain nodal power and no-load nodal voltage vectors.
+        # Obtain nodal power vectors.
         node_power_vector_wye_no_source = (
-            der_incidence_wye_matrix_no_source
+            electric_grid_model.der_incidence_wye_matrix_no_source
             @ np.transpose([der_power_vector])
         ).ravel()
         node_power_vector_delta_no_source = (
-            der_incidence_delta_matrix_no_source
+            electric_grid_model.der_incidence_delta_matrix_no_source
             @ np.transpose([der_power_vector])
         ).ravel()
-        node_voltage_vector_no_load_no_source = (
-            electric_grid_model.node_voltage_vector_reference[
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
-            ]
-        )
 
         # Obtain initial nodal power and voltage vectors, assuming no power conditions.
+        # TODO: Enable passing previous solution for fixed-point initialization.
         node_power_vector_wye_initial_no_source = np.zeros(node_power_vector_wye_no_source.shape, dtype=complex)
         node_power_vector_delta_initial_no_source = np.zeros(node_power_vector_delta_no_source.shape, dtype=complex)
-        node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source
+        node_voltage_vector_initial_no_source = electric_grid_model.node_voltage_vector_reference_no_source.copy()
 
         # Define nodal power vector candidate to the desired nodal power vector.
         node_power_vector_wye_candidate_no_source = node_power_vector_wye_no_source.copy()
@@ -1503,13 +1527,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 # Check solution conditions for nodal power vector candidate.
                 is_final = (
                     PowerFlowSolutionFixedPoint.check_solution_conditions(
-                        node_admittance_matrix_no_source,
-                        node_transformation_matrix_no_source,
+                        electric_grid_model,
                         node_power_vector_wye_initial_no_source,
                         node_power_vector_delta_initial_no_source,
                         node_power_vector_wye_candidate_no_source,
                         node_power_vector_delta_candidate_no_source,
-                        node_voltage_vector_no_load_no_source,
                         node_voltage_vector_initial_no_source
                     )
                 )
@@ -1543,13 +1565,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
                     is_valid = (
                         PowerFlowSolutionFixedPoint.check_solution_conditions(
-                            node_admittance_matrix_no_source,
-                            node_transformation_matrix_no_source,
+                            electric_grid_model,
                             node_power_vector_wye_initial_no_source,
                             node_power_vector_delta_initial_no_source,
                             node_power_vector_wye_candidate_no_source,
                             node_power_vector_delta_candidate_no_source,
-                            node_voltage_vector_no_load_no_source,
                             node_voltage_vector_initial_no_source,
                         )
                     )
@@ -1574,18 +1594,17 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             # Instantiate fixed point iteration variables.
             voltage_iteration = 0
             voltage_change = np.inf
-
             while (
                     (voltage_iteration < voltage_iteration_limit)
                     & (voltage_change > voltage_tolerance)
             ):
 
                 # Calculate fixed point equation.
-                node_voltage_vector_solution_no_source = (
-                    np.transpose([node_voltage_vector_no_load_no_source])
+                node_voltage_vector_estimate_no_source = (
+                    np.transpose([electric_grid_model.node_voltage_vector_reference_no_source])
                     + np.transpose([
                         scipy.sparse.linalg.spsolve(
-                            node_admittance_matrix_no_source,
+                            electric_grid_model.node_admittance_matrix_no_source,
                             (
                                 (
                                     (
@@ -1594,11 +1613,11 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                                     * np.conj(np.transpose([node_power_vector_wye_candidate_no_source]))
                                 )
                                 + (
-                                    np.transpose(node_transformation_matrix_no_source)
+                                    np.transpose(electric_grid_model.node_transformation_matrix_no_source)
                                     @ (
                                         (
                                             (
-                                                node_transformation_matrix_no_source
+                                                electric_grid_model.node_transformation_matrix_no_source
                                                 @ np.conj(np.transpose([node_voltage_vector_initial_no_source]))
                                             ) ** -1
                                         )
@@ -1613,13 +1632,13 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                 # Calculate voltage change from previous iteration.
                 voltage_change = (
                     np.max(np.abs(
-                        node_voltage_vector_solution_no_source
+                        node_voltage_vector_estimate_no_source
                         - node_voltage_vector_initial_no_source
                     ))
                 )
 
                 # Set voltage solution as initial voltage for next iteration.
-                node_voltage_vector_initial_no_source = node_voltage_vector_solution_no_source.copy()
+                node_voltage_vector_initial_no_source = node_voltage_vector_estimate_no_source.copy()
 
                 # Increment voltage iteration counter.
                 voltage_iteration += 1
@@ -1636,7 +1655,9 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor
 
                     # Reset initial nodal voltage vector.
-                    node_voltage_vector_initial_no_source = node_voltage_vector_no_load_no_source.copy()
+                    node_voltage_vector_initial_no_source = (
+                        electric_grid_model.node_voltage_vector_reference_no_source.copy()
+                    )
 
                 # Otherwise, if power has previously been reduced, raise back power and re-try voltage solution.
                 else:
@@ -1652,7 +1673,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
                     else:
                         is_final = True
 
-            # For other solution algorithm, reaching the iteration limit is considered undesired and triggers a warning
+            # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning
             elif voltage_iteration >= voltage_iteration_limit:
                 logger.warning(
                     "Fixed point voltage solution algorithm reached "
@@ -1678,10 +1699,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         # Get full voltage vector by concatenating source and calculated voltage.
         node_voltage_vector = (
             np.concatenate([
-                electric_grid_model.node_voltage_vector_reference[
-                    fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
-                ],
-                node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_solution_no_source`.
+                electric_grid_model.node_voltage_vector_reference_source,
+                node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
             ])
         )
         return node_voltage_vector
@@ -1769,6 +1788,124 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             loss *= 3
 
         return loss
+
+
+class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
+    """Implicit Z-bus power flow solution object."""
+
+    # Overwrite `check_solution_conditions`, which is invalid for the Z-bus power flow.
+    @staticmethod
+    def check_solution_conditions(*args, **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_voltage(
+            electric_grid_model: ElectricGridModelDefault,
+            der_power_vector: np.ndarray,
+            voltage_iteration_limit=100,
+            voltage_tolerance=1e-2,
+            **kwargs
+    ) -> np.ndarray:
+        """Get nodal voltage vector by solving with the implicit Z-bus method."""
+
+        # Implicit Z-bus power flow solution (Arif Ahmed).
+        # - “Can, Can, Lah!” (literal meaning, can accomplish)
+        # - <https://www.financialexpress.com/opinion/singapore-turns-50-the-remarkable-nation-that-can-lah/115775/>
+
+        # Obtain nodal power vectors.
+        node_power_vector_wye_no_source = (
+            electric_grid_model.der_incidence_wye_matrix_no_source
+            @ np.transpose([der_power_vector])
+        ).ravel()
+        node_power_vector_delta_no_source = (
+            electric_grid_model.der_incidence_delta_matrix_no_source
+            @ np.transpose([der_power_vector])
+        ).ravel()
+
+        # Obtain utility variables.
+        node_admittance_matrix_no_source_inverse = (
+            scipy.sparse.linalg.inv(electric_grid_model.node_admittance_matrix_no_source.tocsc())
+        )
+        node_admittance_matrix_source_to_no_source = (
+            electric_grid_model.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+            )]
+        )
+        node_voltage_vector_initial_no_source = (
+            electric_grid_model.node_voltage_vector_reference_no_source.copy()
+        )
+
+        # Instantiate implicit Z-bus power flow iteration variables.
+        voltage_iteration = 0
+        voltage_change = np.inf
+        while (
+                (voltage_iteration < voltage_iteration_limit)
+                & (voltage_change > voltage_tolerance)
+        ):
+
+            # Calculate current injections.
+            node_current_injection_delta_in_wye_no_source = (
+                electric_grid_model.node_transformation_matrix_no_source.transpose()
+                @ np.conj(
+                    np.linalg.inv(np.diag((
+                        electric_grid_model.node_transformation_matrix_no_source
+                        @ node_voltage_vector_initial_no_source
+                    ).ravel()))
+                    @ node_power_vector_wye_no_source
+                )
+            )
+            node_current_injection_wye_no_source = (
+                np.conj(node_power_vector_delta_no_source)
+                / np.conj(node_voltage_vector_initial_no_source)
+            )
+            node_current_injection_no_source = (
+                node_current_injection_delta_in_wye_no_source
+                + node_current_injection_wye_no_source
+            )
+
+            # Calculate voltage.
+            node_voltage_vector_estimate_no_source = (
+                node_admittance_matrix_no_source_inverse @ (
+                    - node_admittance_matrix_source_to_no_source
+                    @ electric_grid_model.node_voltage_vector_reference_source
+                    + node_current_injection_no_source
+                )
+            )
+            # node_voltage_vector_estimate_no_source = (
+            #     electric_grid_model.node_voltage_vector_reference_no_source
+            #     + node_admittance_matrix_no_source_inverse @ node_current_injection_no_source
+            # )
+
+            # Calculate voltage change from previous iteration.
+            voltage_change = (
+                np.max(np.abs(
+                    node_voltage_vector_estimate_no_source
+                    - node_voltage_vector_initial_no_source
+                ))
+            )
+
+            # Set voltage estimate as new initial voltage for next iteration.
+            node_voltage_vector_initial_no_source = node_voltage_vector_estimate_no_source.copy()
+
+            # Increment voltage iteration counter.
+            voltage_iteration += 1
+
+        # Reaching the iteration limit is considered undesired and triggers a warning.
+        if voltage_iteration >= voltage_iteration_limit:
+            logger.warning(
+                "Z-bus solution algorithm reached "
+                f"maximum limit of {voltage_iteration_limit} iterations."
+            )
+
+        # Get full voltage vector by concatenating source and calculated voltage.
+        node_voltage_vector = (
+            np.concatenate([
+                electric_grid_model.node_voltage_vector_reference_source,
+                node_voltage_vector_estimate_no_source
+            ])
+        )
+        return node_voltage_vector
 
 
 class PowerFlowSolutionOpenDSS(PowerFlowSolution):
@@ -2339,7 +2476,7 @@ class LinearElectricGridModel(object):
     def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
-            price_timeseries=pd.DataFrame(1.0, columns=['price_value'], index=[0]),
+            price_data: fledge.data_interface.PriceData,
             timesteps=pd.Index([0], name='timestep')
     ):
 
@@ -2353,38 +2490,73 @@ class LinearElectricGridModel(object):
         if optimization_problem.find_component('objective') is None:
             optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
 
-        # Define objective related to electric power supply at source node.
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
-                * -1.0
-                * (
-                    np.real(self.power_flow_solution.der_power_vector[der_index])
-                    + optimization_problem.der_active_power_vector_change[timestep, der]
-                )
-                * timestep_interval_hours  # In Wh.
-                for der_index, der in enumerate(self.electric_grid_model.ders)
-                for timestep in timesteps
-            )
-        )
+        for timestep in timesteps:
 
-        # Define objective related to electric losses.
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.at[timestep, 'price_value']
+            # TODO: Add source node price in price timeseries.
+
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            for der_index, der in enumerate(self.electric_grid_model.ders):
+                optimization_problem.objective.expr += (
+                    (
+                        price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                        + price_data.price_sensitivity_coefficient
+                        * -1.0 * (
+                            np.real(self.power_flow_solution.der_power_vector[der_index])
+                            + optimization_problem.der_active_power_vector_change[timestep, der]
+                        )
+                        * timestep_interval_hours  # In Wh.
+                    )
+                    * -1.0 * (
+                        np.real(self.power_flow_solution.der_power_vector[der_index])
+                        + optimization_problem.der_active_power_vector_change[timestep, der]
+                    )
+                    * timestep_interval_hours  # In Wh.
+                )
+
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            for der_index, der in enumerate(self.electric_grid_model.ders):
+                optimization_problem.objective.expr += (
+                    (
+                        price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+                        + price_data.price_sensitivity_coefficient
+                        * -1.0 * (
+                            np.imag(self.power_flow_solution.der_power_vector[der_index])
+                            + optimization_problem.der_reactive_power_vector_change[timestep, der]
+                        )
+                        * timestep_interval_hours  # In Wh.
+                    )
+                    * -1.0 * (
+                        np.imag(self.power_flow_solution.der_power_vector[der_index])
+                        + optimization_problem.der_reactive_power_vector_change[timestep, der]
+                    )
+                    * timestep_interval_hours  # In Wh.
+                )
+
+            # Active loss cost.
+            optimization_problem.objective.expr += (
+                (
+                    price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                    # TODO: Validate if sensitivity term appropriate for loss component.
+                    + price_data.price_sensitivity_coefficient
+                    * (
+                        np.real(np.sum(self.power_flow_solution.loss))
+                        + optimization_problem.loss_active_change[timestep]
+                    )
+                    * timestep_interval_hours
+                )
                 * (
                     np.real(np.sum(self.power_flow_solution.loss))
                     + optimization_problem.loss_active_change[timestep]
                 )
-                * timestep_interval_hours  # In Wh.
-                for timestep in timesteps
+                * timestep_interval_hours
             )
-        )
 
     def get_optimization_dlmps(
             self,
             optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
+            price_data: fledge.data_interface.PriceData,
             timesteps=pd.Index([0], name='timestep')
     ) -> fledge.data_interface.ResultsDict:
 
@@ -2454,123 +2626,285 @@ class LinearElectricGridModel(object):
                     )
 
         # Instantiate DLMP variables.
-        # TODO: Split into DLMPs for wye / delta power.
-        voltage_magnitude_vector_minimum_dlmp = (
+        # TODO: Consider delta connections in nodal DLMPs.
+        electric_grid_energy_dlmp_node_active_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        voltage_magnitude_vector_maximum_dlmp = (
+        electric_grid_voltage_dlmp_node_active_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        branch_power_vector_1_squared_maximum_dlmp = (
+        electric_grid_congestion_dlmp_node_active_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        branch_power_vector_1_squared_minimum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
-        )
-        branch_power_vector_2_squared_maximum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
-        )
-        branch_power_vector_2_squared_minimum_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
-        )
-        loss_active_dlmp = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
-        )
-        loss_reactive_dlmp = (
+        electric_grid_loss_dlmp_node_active_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
 
-        electric_grid_energy_dlmp = (
+        electric_grid_energy_dlmp_node_reactive_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        electric_grid_voltage_dlmp = (
+        electric_grid_voltage_dlmp_node_reactive_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        electric_grid_congestion_dlmp = (
+        electric_grid_congestion_dlmp_node_reactive_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
         )
-        electric_grid_loss_dlmp = (
+        electric_grid_loss_dlmp_node_reactive_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+        )
+
+        electric_grid_energy_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+
+        electric_grid_energy_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
         )
 
         # Obtain DLMPs.
         for timestep in timesteps:
-            voltage_magnitude_vector_minimum_dlmp.loc[timestep, :] = (
+            electric_grid_energy_dlmp_node_active_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_node_active_power.loc[timestep, :] = (
                 (
                     self.sensitivity_voltage_magnitude_by_power_wye_active.transpose()
                     @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-            )
-            voltage_magnitude_vector_maximum_dlmp.loc[timestep, :] = (
-                (
+                + (
                     self.sensitivity_voltage_magnitude_by_power_wye_active.transpose()
                     @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
                 ).ravel()
             )
-            branch_power_vector_1_squared_maximum_dlmp.loc[timestep, :] = (
+            electric_grid_congestion_dlmp_node_active_power.loc[timestep, :] = (
                 (
                     self.sensitivity_branch_power_1_squared_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
                 ).ravel()
-            )
-            branch_power_vector_1_squared_minimum_dlmp.loc[timestep, :] = (
-                (
+                + (
                     self.sensitivity_branch_power_1_squared_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_1_squared_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-            )
-            branch_power_vector_2_squared_maximum_dlmp.loc[timestep, :] = (
-                (
+                + (
                     self.sensitivity_branch_power_2_squared_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
                 ).ravel()
-            )
-            branch_power_vector_2_squared_minimum_dlmp.loc[timestep, :] = (
-                (
+                + (
                     self.sensitivity_branch_power_2_squared_by_power_wye_active.transpose()
                     @ np.transpose([branch_power_vector_2_squared_minimum_dual.loc[timestep, :].values])
                 ).ravel()
             )
-            loss_active_dlmp.loc[timestep, :] = (
-                -1.0
-                * self.sensitivity_loss_active_by_power_wye_active.toarray().ravel()
-                * price_timeseries.at[timestep, 'price_value']
+            electric_grid_loss_dlmp_node_active_power.loc[timestep, :] = (
+                -1.0 * self.sensitivity_loss_active_by_power_wye_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.sensitivity_loss_reactive_by_power_wye_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
-            loss_reactive_dlmp.loc[timestep, :] = (
-                -1.0
-                * self.sensitivity_loss_reactive_by_power_wye_active.toarray().ravel()
-                * price_timeseries.at[timestep, 'price_value']
+
+            electric_grid_energy_dlmp_node_reactive_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
             )
-            electric_grid_energy_dlmp.loc[timestep, :] = (
-                price_timeseries.at[timestep, 'price_value']
+            electric_grid_voltage_dlmp_node_reactive_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_voltage_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_voltage_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
             )
-        electric_grid_voltage_dlmp = (
-            voltage_magnitude_vector_minimum_dlmp
-            + voltage_magnitude_vector_maximum_dlmp
+            electric_grid_congestion_dlmp_node_reactive_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_power_1_squared_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_1_squared_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_node_reactive_power.loc[timestep, :] = (
+                -1.0 * self.sensitivity_loss_active_by_power_wye_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.sensitivity_loss_reactive_by_power_wye_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+            electric_grid_energy_dlmp_der_active_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_der_active_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_der_active_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_power_1_squared_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_1_squared_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_der_active_power.loc[timestep, :] = (
+                -1.0 * self.sensitivity_loss_active_by_der_power_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.sensitivity_loss_reactive_by_der_power_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+            electric_grid_energy_dlmp_der_reactive_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_der_reactive_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_voltage_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_voltage_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_der_reactive_power.loc[timestep, :] = (
+                (
+                    self.sensitivity_branch_power_1_squared_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_1_squared_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_vector_1_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.sensitivity_branch_power_2_squared_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_vector_2_squared_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_der_reactive_power.loc[timestep, :] = (
+                -1.0 * self.sensitivity_loss_active_by_der_power_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.sensitivity_loss_reactive_by_der_power_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+        electric_grid_total_dlmp_node_active_power = (
+            electric_grid_energy_dlmp_node_active_power
+            + electric_grid_voltage_dlmp_node_active_power
+            + electric_grid_congestion_dlmp_node_active_power
+            + electric_grid_loss_dlmp_node_active_power
         )
-        electric_grid_congestion_dlmp = (
-            branch_power_vector_1_squared_maximum_dlmp
-            + branch_power_vector_1_squared_minimum_dlmp
-            + branch_power_vector_2_squared_maximum_dlmp
-            + branch_power_vector_2_squared_minimum_dlmp
+        electric_grid_total_dlmp_node_reactive_power = (
+            electric_grid_energy_dlmp_node_reactive_power
+            + electric_grid_voltage_dlmp_node_reactive_power
+            + electric_grid_congestion_dlmp_node_reactive_power
+            + electric_grid_loss_dlmp_node_reactive_power
         )
-        electric_grid_loss_dlmp = (
-            loss_active_dlmp
+        electric_grid_total_dlmp_der_active_power = (
+            electric_grid_energy_dlmp_der_active_power
+            + electric_grid_voltage_dlmp_der_active_power
+            + electric_grid_congestion_dlmp_der_active_power
+            + electric_grid_loss_dlmp_der_active_power
+        )
+        electric_grid_total_dlmp_der_reactive_power = (
+            electric_grid_energy_dlmp_der_reactive_power
+            + electric_grid_voltage_dlmp_der_reactive_power
+            + electric_grid_congestion_dlmp_der_reactive_power
+            + electric_grid_loss_dlmp_der_reactive_power
+        )
+
+        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        electric_grid_total_dlmp_price_timeseries = (
+            pd.concat(
+                [
+                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
+                    electric_grid_total_dlmp_der_active_power,
+                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
+                    electric_grid_total_dlmp_der_reactive_power
+                ],
+                axis='columns',
+                keys=['active_power', 'active_power', 'reactive_power', 'reactive_power'],
+                names=['commodity_type']
+            )
+        )
+        # Redefine columns to avoid slicing issues.
+        electric_grid_total_dlmp_price_timeseries.columns = (
+            price_data.price_timeseries.columns[
+                price_data.price_timeseries.columns.isin(electric_grid_total_dlmp_price_timeseries.columns)
+            ]
         )
 
         return fledge.data_interface.ResultsDict(
-            voltage_magnitude_vector_minimum_dlmp=voltage_magnitude_vector_minimum_dlmp,
-            voltage_magnitude_vector_maximum_dlmp=voltage_magnitude_vector_maximum_dlmp,
-            branch_power_vector_1_squared_maximum_dlmp=branch_power_vector_1_squared_maximum_dlmp,
-            branch_power_vector_1_squared_minimum_dlmp=branch_power_vector_1_squared_minimum_dlmp,
-            branch_power_vector_2_squared_maximum_dlmp=branch_power_vector_2_squared_maximum_dlmp,
-            branch_power_vector_2_squared_minimum_dlmp=branch_power_vector_2_squared_minimum_dlmp,
-            loss_active_dlmp=loss_active_dlmp,
-            loss_reactive_dlmp=loss_reactive_dlmp,
-            electric_grid_energy_dlmp=electric_grid_energy_dlmp,
-            electric_grid_voltage_dlmp=electric_grid_voltage_dlmp,
-            electric_grid_congestion_dlmp=electric_grid_congestion_dlmp,
-            electric_grid_loss_dlmp=electric_grid_loss_dlmp
+            electric_grid_energy_dlmp_node_active_power=electric_grid_energy_dlmp_node_active_power,
+            electric_grid_voltage_dlmp_node_active_power=electric_grid_voltage_dlmp_node_active_power,
+            electric_grid_congestion_dlmp_node_active_power=electric_grid_congestion_dlmp_node_active_power,
+            electric_grid_loss_dlmp_node_active_power=electric_grid_loss_dlmp_node_active_power,
+            electric_grid_total_dlmp_node_active_power=electric_grid_total_dlmp_node_active_power,
+            electric_grid_voltage_dlmp_node_reactive_power=electric_grid_voltage_dlmp_node_reactive_power,
+            electric_grid_congestion_dlmp_node_reactive_power=electric_grid_congestion_dlmp_node_reactive_power,
+            electric_grid_loss_dlmp_node_reactive_power=electric_grid_loss_dlmp_node_reactive_power,
+            electric_grid_energy_dlmp_node_reactive_power=electric_grid_energy_dlmp_node_reactive_power,
+            electric_grid_total_dlmp_node_reactive_power=electric_grid_total_dlmp_node_reactive_power,
+            electric_grid_energy_dlmp_der_active_power=electric_grid_energy_dlmp_der_active_power,
+            electric_grid_voltage_dlmp_der_active_power=electric_grid_voltage_dlmp_der_active_power,
+            electric_grid_congestion_dlmp_der_active_power=electric_grid_congestion_dlmp_der_active_power,
+            electric_grid_loss_dlmp_der_active_power=electric_grid_loss_dlmp_der_active_power,
+            electric_grid_total_dlmp_der_active_power=electric_grid_total_dlmp_der_active_power,
+            electric_grid_voltage_dlmp_der_reactive_power=electric_grid_voltage_dlmp_der_reactive_power,
+            electric_grid_congestion_dlmp_der_reactive_power=electric_grid_congestion_dlmp_der_reactive_power,
+            electric_grid_loss_dlmp_der_reactive_power=electric_grid_loss_dlmp_der_reactive_power,
+            electric_grid_energy_dlmp_der_reactive_power=electric_grid_energy_dlmp_der_reactive_power,
+            electric_grid_total_dlmp_der_reactive_power=electric_grid_total_dlmp_der_reactive_power,
+            electric_grid_total_dlmp_price_timeseries=electric_grid_total_dlmp_price_timeseries
         )
 
     def get_optimization_results(
@@ -2849,13 +3183,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.electric_grid_model = electric_grid_model
 
         # Obtain shorthands for no-source matrices and vectors.
-        node_admittance_matrix_no_source = (
+        electric_grid_model.node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
-        node_transformation_matrix_no_source = (
+        electric_grid_model.node_transformation_matrix_no_source = (
             electric_grid_model.node_transformation_matrix[np.ix_(
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
                 fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
@@ -2900,7 +3234,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                node_admittance_matrix_no_source.tocsc(),
+                electric_grid_model.node_admittance_matrix_no_source.tocsc(),
                 scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
@@ -2909,7 +3243,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                1.0j * node_admittance_matrix_no_source.tocsc(),
+                1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
                 scipy.sparse.diags(np.conj(node_voltage_no_source) ** -1, format='csc')
             )
         )
@@ -2918,13 +3252,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                node_admittance_matrix_no_source.tocsc(),
-                np.transpose(node_transformation_matrix_no_source)
+                electric_grid_model.node_admittance_matrix_no_source.tocsc(),
+                np.transpose(electric_grid_model.node_transformation_matrix_no_source)
             )
             @ scipy.sparse.diags(
                 (
                     (
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         @ np.conj(node_voltage_no_source)
                     ) ** -1
                 ).ravel()
@@ -2935,13 +3269,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
-                1.0j * node_admittance_matrix_no_source.tocsc(),
-                np.transpose(node_transformation_matrix_no_source)
+                1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
+                np.transpose(electric_grid_model.node_transformation_matrix_no_source)
             )
             @ scipy.sparse.diags(
                 (
                     (
-                        node_transformation_matrix_no_source
+                        electric_grid_model.node_transformation_matrix_no_source
                         * np.conj(node_voltage_no_source)
                     ) ** -1
                 ).ravel()

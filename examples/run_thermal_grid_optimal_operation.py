@@ -25,10 +25,6 @@ def main():
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain models.
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
@@ -74,7 +70,7 @@ def main():
     # Define objective (district cooling plant operation cost minimization).
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        price_timeseries,
+        price_data,
         scenario_data.timesteps
     )
 
@@ -113,7 +109,7 @@ def main():
     dlmps = (
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )

@@ -1480,7 +1480,7 @@ class DERModelSet(object):
     der_names: pd.Index
     fixed_der_names: pd.Index
     flexible_der_names: pd.Index
-    der_models: typing.Dict[str, DERModel]
+    der_models: typing.Dict[str, typing.Union[DERModel, FixedDERModel, FlexibleDERModel]]
     fixed_der_models: typing.Dict[str, FixedDERModel]
     flexible_der_models: typing.Dict[str, FlexibleDERModel]
     states: pd.Index

@@ -1550,13 +1550,6 @@ class DERModelSet(object):
                 thermal_power_flow_solution
             )
 
-        # Additional constraints for peak load reduction
-        # for timestep in self.timesteps:
-        #     optimization_problem.der_model_constraints.add(
-        #         sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-        #             for der_name in self.der_names) <= optimization_problem.peak_load
-        #     )
-
     @multimethod
     def define_optimization_objective(
             self,
@@ -1574,21 +1567,6 @@ class DERModelSet(object):
                 electric_grid_model,
                 thermal_grid_model
             )
-
-    @multimethod
-    def define_optimization_objective(
-            self,
-            optimization_problem: pyo.ConcreteModel
-    ):
-
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
-        optimization_problem.objective.expr += optimization_problem.peak_load
-        optimization_problem.objective.expr += (
-                1e-2 * sum(optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-                           for der_name in self.der_names for timestep in self.timesteps)
-        )
 
     @multimethod
     def define_optimization_objective(

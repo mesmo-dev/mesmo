@@ -6,6 +6,8 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import pyomo.environ as pyo
 
 import fledge.config
@@ -599,6 +601,13 @@ def main(
 
         # Print residuals.
         print(f"admm_residuals = \n{admm_residuals}")
+
+        # Plot residuals.
+        figure = px.line(admm_residuals / admm_residuals.max(), line_shape='spline')
+        figure.write_html(os.path.join(results_path, 'admm_residuals.html'))
+        # figure.write_image(os.path.join(results_path, 'admm_residuals.png'))
+        if admm_iteration == 1:
+            fledge.utils.launch(results_path)
 
         # Log progress.
         fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")

@@ -535,7 +535,6 @@ class FlexibleDERModel(DERModel):
                         optimization_problem.output_vector[timestep, self.der_name, 'thermal_power']
                     )
 
-    @multimethod
     def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
@@ -645,46 +644,6 @@ class FlexibleDERModel(DERModel):
         # - Always defined here as the cost of thermal power generation at the DER node.
         if self.is_thermal_grid_connected:
             pass
-
-    @multimethod
-    def define_optimization_objective(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            current_timestep: pd.Timestamp,
-            scenario: str
-    ):
-
-        # Define objective to calculate load shifting potential.
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-        if type(self) is FlexibleBuildingModel:
-            optimization_problem.objective.expr += (
-                sum(
-                    price_timeseries.at[timestep, 'price_value']
-                    * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                    for timestep in self.timesteps if timestep != current_timestep
-                )
-            )
-            if scenario == 'lower':
-                optimization_problem.objective.expr += (
-                    price_timeseries.at[current_timestep, 'lower_limit']
-                    * optimization_problem.output_vector[current_timestep, self.der_name, 'grid_electric_power']
-                )
-            elif scenario == 'upper':
-                optimization_problem.objective.expr += (
-                        price_timeseries.at[current_timestep, 'upper_limit']
-                        * optimization_problem.output_vector[current_timestep, self.der_name, 'grid_electric_power']
-                )
-        else:
-            optimization_problem.objective.expr += (
-                sum(
-                    -1.0
-                    * price_timeseries.at[timestep, 'price_value']
-                    * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                    for timestep in self.timesteps
-                )
-            )
 
     def get_optimization_results(
             self,

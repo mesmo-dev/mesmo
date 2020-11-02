@@ -423,13 +423,13 @@ def main(
             timesteps=scenario_data.timesteps
         )
 
-        # Define DER objective.
-        der_model_set.define_optimization_objective(
-            optimization_problem_thermal,
-            price_data,
-            # electric_grid_model=electric_grid_model,
-            thermal_grid_model=thermal_grid_model
-        )
+        # # Define DER objective.
+        # der_model_set.define_optimization_objective(
+        #     optimization_problem_thermal,
+        #     price_data,
+        #     electric_grid_model=electric_grid_model,
+        #     thermal_grid_model=thermal_grid_model
+        # )
 
         # Define ADMM objective.
         optimization_problem_thermal.objective.expr += (
@@ -468,12 +468,12 @@ def main(
 
         # Solve electric sub-problem.
         fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-        fledge.utils.solve_optimization(optimization_problem_electric, enable_duals=True)
+        fledge.utils.solve_optimization(optimization_problem_electric)
         fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
 
         # Solve thermal sub-problem.
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-        fledge.utils.solve_optimization(optimization_problem_thermal, enable_duals=True)
+        fledge.utils.solve_optimization(optimization_problem_thermal)
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
 
         # Print objective values.

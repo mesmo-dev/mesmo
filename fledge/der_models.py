@@ -1525,7 +1525,6 @@ class DERModelSet(object):
         optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
         optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
         optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
-        # optimization_problem.peak_load = pyo.Var(domain=pyo.NonNegativeReals)
 
     def define_optimization_constraints(
             self,
@@ -1546,7 +1545,6 @@ class DERModelSet(object):
                 thermal_power_flow_solution
             )
 
-    @multimethod
     def define_optimization_objective(
             self,
             optimization_problem: pyo.ConcreteModel,
@@ -1562,56 +1560,6 @@ class DERModelSet(object):
                 price_data,
                 electric_grid_model,
                 thermal_grid_model
-            )
-
-    @multimethod
-    def define_optimization_objective(
-            self,
-            optimization_problem: pyo.ConcreteModel,
-            price_timeseries: pd.DataFrame,
-            current_timestep: pd.Timestamp
-    ):
-
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
-        optimization_problem.objective.expr += (
-                sum(price_timeseries.loc[timestep, 'price_value']
-                    * optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-                    for der_name in self.der_names for timestep in self.timesteps if timestep != current_timestep
-                    )
-        )
-        optimization_problem.objective.expr += (
-            sum(
-                price_timeseries.loc[current_timestep, 'lower_limit']
-                * optimization_problem.output_vector[current_timestep, der_name, 'grid_electric_power']
-                for der_name in self.der_names
-            )
-        )
-
-
-    @multimethod
-    def define_optimization_objective(
-        self,
-        optimization_problem: pyo.ConcreteModel,
-        pv_generation: pd.Series,
-        residual_demand: pd.Series
-    ):
-
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
-        for timestep in self.timesteps:
-            optimization_problem.objective.expr += (
-                    (14.198
-                    + 0.0139 * (sum(
-                                optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-                                for der_name in self.der_names) / 1e6
-                                + residual_demand.loc[timestep] - pv_generation.loc[timestep]/1e3))  # aggregate demand in MW
-                                * (sum(
-                                optimization_problem.output_vector[timestep, der_name, 'grid_electric_power']
-                                for der_name in self.der_names
-                                ) / 1e6)
             )
 
     def get_optimization_results(

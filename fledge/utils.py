@@ -66,7 +66,7 @@ def solve_optimization(
     """
 
     # Enable duals.
-    if enable_duals:
+    if enable_duals and (optimization_problem.find_component('dual') is None):
         optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
     # Solve optimization problem.

@@ -163,13 +163,9 @@ def main(
     admm_residuals = pd.DataFrame()
 
     # Instantiate optimization problems.
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
     optimization_problem_baseline = pyo.ConcreteModel()
-    optimization_problem_baseline.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_problem_electric = pyo.ConcreteModel()
-    optimization_problem_electric.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     optimization_problem_thermal = pyo.ConcreteModel()
-    optimization_problem_thermal.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
     # ADMM: Centralized / baseline problem.
 
@@ -246,11 +242,7 @@ def main(
 
     # Solve baseline problem.
     fledge.utils.log_time(f"baseline problem solution")
-    optimization_result_baseline = optimization_solver.solve(optimization_problem_baseline, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result_baseline.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result_baseline.solver.termination_condition}")
+    fledge.utils.solve_optimization(optimization_problem_baseline, enable_duals=True)
     fledge.utils.log_time(f"baseline problem solution")
 
     # Get baseline results.
@@ -457,20 +449,12 @@ def main(
 
         # Solve electric sub-problem.
         fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-        optimization_result_electric = optimization_solver.solve(optimization_problem_electric, tee=fledge.config.config['optimization']['show_solver_output'])
-        try:
-            assert optimization_result_electric.solver.termination_condition is pyo.TerminationCondition.optimal
-        except AssertionError:
-            raise AssertionError(f"Solver termination condition: {optimization_result_electric.solver.termination_condition}")
+        fledge.utils.solve_optimization(optimization_problem_electric, enable_duals=True)
         fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
 
         # Solve thermal sub-problem.
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-        optimization_result_thermal = optimization_solver.solve(optimization_problem_thermal, tee=fledge.config.config['optimization']['show_solver_output'])
-        try:
-            assert optimization_result_thermal.solver.termination_condition is pyo.TerminationCondition.optimal
-        except AssertionError:
-            raise AssertionError(f"Solver termination condition: {optimization_result_thermal.solver.termination_condition}")
+        fledge.utils.solve_optimization(optimization_problem_thermal, enable_duals=True)
         fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
 
         # Print objective values.

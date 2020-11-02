@@ -7,6 +7,7 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import pyomo.environ as pyo
 import re
 import time
 import typing
@@ -54,6 +55,35 @@ def starmap(
         results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
+
+
+def solve_optimization(
+        optimization_problem: pyo.ConcreteModel
+):
+    """Utility function for solving a Pyomo optimization problem. Automatically instantiates the solver as given in
+    config. Raises error if no feasible solution is found.
+    """
+
+    # Obtain solver.
+    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+
+    # Enable duals.
+    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+    # Solve optimization problem.
+    optimization_result = (
+        optimization_solver.solve(
+            optimization_problem,
+            tee=fledge.config.config['optimization']['show_solver_output']
+        )
+    )
+
+    # Assert that solver exited with any solution. If not, raise an error.
+    try:
+        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
+    except AssertionError:
+        logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+        raise
 
 
 def log_timing_start(

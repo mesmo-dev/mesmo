@@ -20,10 +20,15 @@ import fledge.utils
 
 
 def main(
-        scenario_number=None
+        scenario_number=None,
+        admm_flatstart=None,
+        admm_rho=None
 ):
 
     # Settings.
+    admm_iteration_limit = 500
+    admm_flatstart = True if admm_flatstart is None else admm_flatstart
+    admm_rho = 1e-6 if admm_rho is None else admm_rho
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
@@ -62,7 +67,13 @@ def main(
 
     # Obtain results path.
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_3_coordination_thermal_electric_scenario_{scenario_number}', scenario_name)
+        fledge.utils.get_results_path(
+            (
+                f'paper_2020_3_coordination_thermal_electric_scenario_{scenario_number}'
+                f'_rho{admm_rho}_flat{1 if admm_flatstart else 0}'
+            ),
+            scenario_name
+        )
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -141,14 +152,20 @@ def main(
 
     # Instantiate ADMM variables.
     admm_iteration = 0
-    admm_iteration_limit = 100
     admm_continue = True
-    admm_rho = 1e-3
     admm_exchange_der_active_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
+        pd.DataFrame(
+            0.0 if admm_flatstart else [np.real(power_flow_solution.der_power_vector)] * len(scenario_data.timesteps),
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
     )
     admm_exchange_der_reactive_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
+        pd.DataFrame(
+            0.0 if admm_flatstart else [np.imag(power_flow_solution.der_power_vector)] * len(scenario_data.timesteps),
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
     )
     admm_lambda_electric_der_active_power = (
         pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
@@ -684,10 +701,19 @@ def main(
 
 if __name__ == '__main__':
 
-    run_all = False
+    run_all = True
 
     if run_all:
-        for scenario_number in range(1, 16):
-            main(scenario_number)
+        for scenario_number in [1]:
+            for admm_flatstart in [True, False]:
+                for admm_rho in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
+                    try:
+                        main(
+                            scenario_number=scenario_number,
+                            admm_flatstart=admm_flatstart,
+                            admm_rho=admm_rho
+                        )
+                    except AssertionError:
+                        pass
     else:
         main()

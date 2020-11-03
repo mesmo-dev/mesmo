@@ -26,9 +26,9 @@ def main(
 ):
 
     # Settings.
-    admm_iteration_limit = 500
+    admm_iteration_limit = 100
     admm_flatstart = True if admm_flatstart is None else admm_flatstart
-    admm_rho = 1e-6 if admm_rho is None else admm_rho
+    admm_rho = 1e-7 if admm_rho is None else admm_rho
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
@@ -701,7 +701,7 @@ def main(
 
 if __name__ == '__main__':
 
-    run_all = True
+    run_all = False
 
     if run_all:
         for scenario_number in [1]:

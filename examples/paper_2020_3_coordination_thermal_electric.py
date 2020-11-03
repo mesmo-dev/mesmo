@@ -544,25 +544,29 @@ def main(
                 )
             )
             admm_lambda_electric_der_active_power = (
-                admm_rho * (
+                admm_lambda_electric_der_active_power
+                + admm_rho * (
                     results_electric['der_active_power_vector']
                     - admm_exchange_der_active_power
                 )
             )
             admm_lambda_electric_der_reactive_power = (
-                admm_rho * (
+                admm_lambda_electric_der_reactive_power
+                + admm_rho * (
                     results_electric['der_reactive_power_vector']
                     - admm_exchange_der_reactive_power
                 )
             )
             admm_lambda_thermal_der_active_power = (
-                admm_rho * (
+                admm_lambda_thermal_der_active_power
+                + admm_rho * (
                     results_thermal['der_active_power_vector']
                     - admm_exchange_der_active_power
                 )
             )
             admm_lambda_thermal_der_reactive_power = (
-                admm_rho * (
+                admm_lambda_thermal_der_reactive_power
+                + admm_rho * (
                     results_thermal['der_reactive_power_vector']
                     - admm_exchange_der_reactive_power
                 )

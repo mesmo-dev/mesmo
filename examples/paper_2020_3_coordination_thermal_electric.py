@@ -28,7 +28,7 @@ def main(
     # Settings.
     admm_iteration_limit = 100
     admm_flatstart = True if admm_flatstart is None else admm_flatstart
-    admm_rho = 1e-7 if admm_rho is None else admm_rho
+    admm_rho = 1e-6 if admm_rho is None else admm_rho
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
@@ -629,7 +629,7 @@ def main(
             )
             figure.write_html(os.path.join(results_path, 'admm_residuals.html'))
             if admm_iteration == 1:
-                fledge.utils.launch(results_path)
+                fledge.utils.launch(os.path.join(results_path, 'admm_residuals.html'))
 
             # Log progress.
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
@@ -699,7 +699,6 @@ def main(
         figure.write_image(os.path.join(results_path, f'reactive_power_{der_name}.png'))
 
     # Print results path.
-    fledge.utils.launch(os.path.join(results_path, 'admm_residuals.html'))
     fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 

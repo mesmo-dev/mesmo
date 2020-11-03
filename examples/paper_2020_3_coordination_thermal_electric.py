@@ -29,6 +29,7 @@ def main(
     admm_iteration_limit = 100
     admm_flatstart = True if admm_flatstart is None else admm_flatstart
     admm_rho = 1e-6 if admm_rho is None else admm_rho
+    admm_residual_termination_limit = 1e7
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
@@ -639,7 +640,12 @@ def main(
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 
             # ADMM termination condition.
-            admm_continue = True if admm_iteration < admm_iteration_limit else False
+            admm_continue = (
+                True
+                if (admm_iteration < admm_iteration_limit)
+                and (admm_residuals.iloc[-1, :].max() > admm_residual_termination_limit)
+                else False
+            )
 
     except KeyboardInterrupt:
         # Enables manual termination of ADMM loop.

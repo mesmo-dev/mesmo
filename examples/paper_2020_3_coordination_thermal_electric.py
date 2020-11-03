@@ -597,16 +597,16 @@ def main(
                     - results_baseline['der_reactive_power_vector']
                 ).abs().sum().sum()
             )
-            admm_lambda_residual_der_active_power = (
+            admm_difference_der_active_power = (
                 (
-                    admm_lambda_electric_der_active_power
-                    - admm_lambda_thermal_der_active_power
+                    results_thermal['der_active_power_vector']
+                    - results_electric['der_active_power_vector']
                 ).abs().sum().sum()
             )
-            admm_lambda_residual_der_reactive_power = (
+            admm_difference_der_reactive_power = (
                 (
-                    admm_lambda_electric_der_reactive_power
-                    - admm_lambda_thermal_der_reactive_power
+                    results_thermal['der_reactive_power_vector']
+                    - results_electric['der_reactive_power_vector']
                 ).abs().sum().sum()
             )
             admm_residuals = admm_residuals.append(
@@ -615,8 +615,8 @@ def main(
                     admm_residual_electric_der_reactive_power=admm_residual_electric_der_reactive_power,
                     admm_residual_thermal_der_active_power=admm_residual_thermal_der_active_power,
                     admm_residual_thermal_der_reactive_power=admm_residual_thermal_der_reactive_power,
-                    admm_lambda_residual_der_active_power=admm_lambda_residual_der_active_power,
-                    admm_lambda_residual_der_reactive_power=admm_lambda_residual_der_reactive_power
+                    admm_difference_der_active_power=admm_difference_der_active_power,
+                    admm_difference_der_reactive_power=admm_difference_der_reactive_power
                 ),
                 ignore_index=True
             )

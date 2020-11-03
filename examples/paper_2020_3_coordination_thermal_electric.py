@@ -351,290 +351,295 @@ def main(
     # Log progress.
     fledge.utils.log_time(f"thermal sub-problem setup")
 
-    while admm_continue:
+    try:
+        while admm_continue:
 
-        # Iterate ADMM counter.
-        admm_iteration += 1
+            # Iterate ADMM counter.
+            admm_iteration += 1
 
-        # ADMM: Electric sub-problem.
+            # ADMM: Electric sub-problem.
 
-        # Log progress.
-        fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
+            # Log progress.
+            fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
 
-        # Reset objective, if any.
-        if optimization_problem_electric.find_component('objective') is not None:
-            optimization_problem_electric.objective.expr = 0.0
+            # Reset objective, if any.
+            if optimization_problem_electric.find_component('objective') is not None:
+                optimization_problem_electric.objective.expr = 0.0
 
-        # Define electric grid objective.
-        linear_electric_grid_model.define_optimization_objective(
-            optimization_problem_electric,
-            price_data,
-            timesteps=scenario_data.timesteps
-        )
-
-        # Define ADMM objective.
-        optimization_problem_electric.objective.expr += (
-            sum(
-                admm_lambda_electric_der_active_power.at[timestep, der]
-                * (
-                    optimization_problem_electric.der_active_power_vector_change[timestep, der]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_active_power.at[timestep, der]
-                )
-                + admm_lambda_electric_der_reactive_power.at[timestep, der]
-                * (
-                    optimization_problem_electric.der_reactive_power_vector_change[timestep, der]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_reactive_power.at[timestep, der]
-                )
-                + 0.5 * admm_rho
-                * (
-                    optimization_problem_electric.der_active_power_vector_change[timestep, der]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_active_power.at[timestep, der]
-                ) ** 2
-                + 0.5 * admm_rho
-                * (
-                    optimization_problem_electric.der_reactive_power_vector_change[timestep, der]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_reactive_power.at[timestep, der]
-                ) ** 2
-                for timestep in scenario_data.timesteps
-                for der_index, der in enumerate(electric_grid_model.ders)
-            )
-        )
-
-        # Log progress.
-        fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
-
-        # ADMM: Thermal sub-problem.
-
-        # Log progress.
-        fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
-
-        # Reset objective, if any.
-        if optimization_problem_thermal.find_component('objective') is not None:
-            optimization_problem_thermal.objective.expr = 0.0
-
-        # Define thermal grid objective.
-        linear_thermal_grid_model.define_optimization_objective(
-            optimization_problem_thermal,
-            price_data,
-            timesteps=scenario_data.timesteps
-        )
-
-        # # Define DER objective.
-        # der_model_set.define_optimization_objective(
-        #     optimization_problem_thermal,
-        #     price_data,
-        #     electric_grid_model=electric_grid_model,
-        #     thermal_grid_model=thermal_grid_model
-        # )
-
-        # Define ADMM objective.
-        optimization_problem_thermal.objective.expr += (
-            sum(
-                admm_lambda_thermal_der_active_power.at[timestep, der]
-                * (
-                    optimization_problem_thermal.der_active_power_vector_change[timestep, der]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_active_power.at[timestep, der]
-                )
-                + admm_lambda_thermal_der_reactive_power.at[timestep, der]
-                * (
-                    optimization_problem_thermal.der_reactive_power_vector_change[timestep, der]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_reactive_power.at[timestep, der]
-                )
-                + 0.5 * admm_rho
-                * (
-                    optimization_problem_thermal.der_active_power_vector_change[timestep, der]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_active_power.at[timestep, der]
-                ) ** 2
-                + 0.5 * admm_rho
-                * (
-                    optimization_problem_thermal.der_reactive_power_vector_change[timestep, der]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
-                    - admm_exchange_der_reactive_power.at[timestep, der]
-                ) ** 2
-                for timestep in scenario_data.timesteps
-                for der_index, der in enumerate(electric_grid_model.ders)
-            )
-        )
-
-        # Log progress.
-        fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
-
-        # Solve electric sub-problem.
-        fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-        fledge.utils.solve_optimization(optimization_problem_electric)
-        fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-
-        # Solve thermal sub-problem.
-        fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-        fledge.utils.solve_optimization(optimization_problem_thermal)
-        fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-
-        # Print objective values.
-        print(f"optimization_problem_electric.objective = {pyo.value(optimization_problem_electric.objective.expr)}")
-        print(f"optimization_problem_thermal.objective = {pyo.value(optimization_problem_thermal.objective.expr)}")
-
-        # ADMM intermediate steps.
-
-        # Log progress.
-        fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
-
-        # Get electric sub-problem results.
-        results_electric = (
-            linear_electric_grid_model.get_optimization_results(
+            # Define electric grid objective.
+            linear_electric_grid_model.define_optimization_objective(
                 optimization_problem_electric,
-                power_flow_solution,
-                scenario_data.timesteps
+                price_data,
+                timesteps=scenario_data.timesteps
             )
-        )
 
-        # Get thermal sub-problem results.
-        results_thermal = (
-            linear_thermal_grid_model.get_optimization_results(
+            # Define ADMM objective.
+            optimization_problem_electric.objective.expr += (
+                sum(
+                    admm_lambda_electric_der_active_power.at[timestep, der]
+                    * (
+                        optimization_problem_electric.der_active_power_vector_change[timestep, der]
+                        + np.real(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_active_power.at[timestep, der]
+                    )
+                    + admm_lambda_electric_der_reactive_power.at[timestep, der]
+                    * (
+                        optimization_problem_electric.der_reactive_power_vector_change[timestep, der]
+                        + np.imag(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_reactive_power.at[timestep, der]
+                    )
+                    + 0.5 * admm_rho
+                    * (
+                        optimization_problem_electric.der_active_power_vector_change[timestep, der]
+                        + np.real(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_active_power.at[timestep, der]
+                    ) ** 2
+                    + 0.5 * admm_rho
+                    * (
+                        optimization_problem_electric.der_reactive_power_vector_change[timestep, der]
+                        + np.imag(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_reactive_power.at[timestep, der]
+                    ) ** 2
+                    for timestep in scenario_data.timesteps
+                    for der_index, der in enumerate(electric_grid_model.ders)
+                )
+            )
+
+            # Log progress.
+            fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
+
+            # ADMM: Thermal sub-problem.
+
+            # Log progress.
+            fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
+
+            # Reset objective, if any.
+            if optimization_problem_thermal.find_component('objective') is not None:
+                optimization_problem_thermal.objective.expr = 0.0
+
+            # Define thermal grid objective.
+            linear_thermal_grid_model.define_optimization_objective(
                 optimization_problem_thermal,
-                scenario_data.timesteps
+                price_data,
+                timesteps=scenario_data.timesteps
             )
-        )
-        results_thermal.update(
-            der_model_set.get_optimization_results(
-                optimization_problem_thermal
-            )
-        )
-        der_active_power_vector = (
-            pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-        )
-        der_reactive_power_vector = (
-            pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
-        )
-        for timestep in scenario_data.timesteps:
-            for der_index, der in enumerate(electric_grid_model.ders):
-                der_active_power_vector.at[timestep, der] = (
-                    optimization_problem_thermal.der_active_power_vector_change[timestep, der].value
-                    + np.real(power_flow_solution.der_power_vector[der_index])
+
+            # # Define DER objective.
+            # der_model_set.define_optimization_objective(
+            #     optimization_problem_thermal,
+            #     price_data,
+            #     electric_grid_model=electric_grid_model,
+            #     thermal_grid_model=thermal_grid_model
+            # )
+
+            # Define ADMM objective.
+            optimization_problem_thermal.objective.expr += (
+                sum(
+                    admm_lambda_thermal_der_active_power.at[timestep, der]
+                    * (
+                        optimization_problem_thermal.der_active_power_vector_change[timestep, der]
+                        + np.real(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_active_power.at[timestep, der]
+                    )
+                    + admm_lambda_thermal_der_reactive_power.at[timestep, der]
+                    * (
+                        optimization_problem_thermal.der_reactive_power_vector_change[timestep, der]
+                        + np.imag(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_reactive_power.at[timestep, der]
+                    )
+                    + 0.5 * admm_rho
+                    * (
+                        optimization_problem_thermal.der_active_power_vector_change[timestep, der]
+                        + np.real(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_active_power.at[timestep, der]
+                    ) ** 2
+                    + 0.5 * admm_rho
+                    * (
+                        optimization_problem_thermal.der_reactive_power_vector_change[timestep, der]
+                        + np.imag(power_flow_solution.der_power_vector[der_index])
+                        - admm_exchange_der_reactive_power.at[timestep, der]
+                    ) ** 2
+                    for timestep in scenario_data.timesteps
+                    for der_index, der in enumerate(electric_grid_model.ders)
                 )
-                der_reactive_power_vector.at[timestep, der] = (
-                    optimization_problem_thermal.der_reactive_power_vector_change[timestep, der].value
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
+            )
+
+            # Log progress.
+            fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
+
+            # Solve electric sub-problem.
+            fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
+            fledge.utils.solve_optimization(optimization_problem_electric)
+            fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
+
+            # Solve thermal sub-problem.
+            fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
+            fledge.utils.solve_optimization(optimization_problem_thermal)
+            fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
+
+            # Print objective values.
+            print(f"optimization_problem_electric.objective = {pyo.value(optimization_problem_electric.objective.expr)}")
+            print(f"optimization_problem_thermal.objective = {pyo.value(optimization_problem_thermal.objective.expr)}")
+
+            # ADMM intermediate steps.
+
+            # Log progress.
+            fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
+
+            # Get electric sub-problem results.
+            results_electric = (
+                linear_electric_grid_model.get_optimization_results(
+                    optimization_problem_electric,
+                    power_flow_solution,
+                    scenario_data.timesteps
                 )
-        results_thermal.update(
-            fledge.data_interface.ResultsDict(
-                der_active_power_vector=der_active_power_vector,
-                der_reactive_power_vector=der_reactive_power_vector
             )
-        )
 
-        # Update ADMM variables.
-        admm_exchange_der_active_power = (
-            0.5 * (
-                results_electric['der_active_power_vector']
-                + results_thermal['der_active_power_vector']
+            # Get thermal sub-problem results.
+            results_thermal = (
+                linear_thermal_grid_model.get_optimization_results(
+                    optimization_problem_thermal,
+                    scenario_data.timesteps
+                )
             )
-        )
-        admm_exchange_der_reactive_power = (
-            0.5 * (
-                results_electric['der_reactive_power_vector']
-                + results_thermal['der_reactive_power_vector']
+            results_thermal.update(
+                der_model_set.get_optimization_results(
+                    optimization_problem_thermal
+                )
             )
-        )
-        admm_lambda_electric_der_active_power = (
-            admm_rho * (
-                results_electric['der_active_power_vector']
-                - admm_exchange_der_active_power
+            der_active_power_vector = (
+                pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
             )
-        )
-        admm_lambda_electric_der_reactive_power = (
-            admm_rho * (
-                results_electric['der_reactive_power_vector']
-                - admm_exchange_der_reactive_power
+            der_reactive_power_vector = (
+                pd.DataFrame(columns=electric_grid_model.ders, index=scenario_data.timesteps, dtype=np.float)
             )
-        )
-        admm_lambda_thermal_der_active_power = (
-            admm_rho * (
-                results_thermal['der_active_power_vector']
-                - admm_exchange_der_active_power
+            for timestep in scenario_data.timesteps:
+                for der_index, der in enumerate(electric_grid_model.ders):
+                    der_active_power_vector.at[timestep, der] = (
+                        optimization_problem_thermal.der_active_power_vector_change[timestep, der].value
+                        + np.real(power_flow_solution.der_power_vector[der_index])
+                    )
+                    der_reactive_power_vector.at[timestep, der] = (
+                        optimization_problem_thermal.der_reactive_power_vector_change[timestep, der].value
+                        + np.imag(power_flow_solution.der_power_vector[der_index])
+                    )
+            results_thermal.update(
+                fledge.data_interface.ResultsDict(
+                    der_active_power_vector=der_active_power_vector,
+                    der_reactive_power_vector=der_reactive_power_vector
+                )
             )
-        )
-        admm_lambda_thermal_der_reactive_power = (
-            admm_rho * (
-                results_thermal['der_reactive_power_vector']
-                - admm_exchange_der_reactive_power
-            )
-        )
 
-        # Calculate residuals.
-        admm_residual_electric_der_active_power = (
-            (
-                results_electric['der_active_power_vector']
-                - results_baseline['der_active_power_vector']
-            ).abs().sum().sum()
-        )
-        admm_residual_electric_der_reactive_power = (
-            (
-                results_electric['der_reactive_power_vector']
-                - results_baseline['der_reactive_power_vector']
-            ).abs().sum().sum()
-        )
-        admm_residual_thermal_der_active_power = (
-            (
-                results_thermal['der_active_power_vector']
-                - results_baseline['der_active_power_vector']
-            ).abs().sum().sum()
-        )
-        admm_residual_thermal_der_reactive_power = (
-            (
-                results_thermal['der_reactive_power_vector']
-                - results_baseline['der_reactive_power_vector']
-            ).abs().sum().sum()
-        )
-        admm_lambda_residual_der_active_power = (
-            (
-                admm_lambda_electric_der_active_power
-                - admm_lambda_thermal_der_active_power
-            ).abs().sum().sum()
-        )
-        admm_lambda_residual_der_reactive_power = (
-            (
-                admm_lambda_electric_der_reactive_power
-                - admm_lambda_thermal_der_reactive_power
-            ).abs().sum().sum()
-        )
-        admm_residuals = admm_residuals.append(
-            dict(
-                admm_residual_electric_der_active_power=admm_residual_electric_der_active_power,
-                admm_residual_electric_der_reactive_power=admm_residual_electric_der_reactive_power,
-                admm_residual_thermal_der_active_power=admm_residual_thermal_der_active_power,
-                admm_residual_thermal_der_reactive_power=admm_residual_thermal_der_reactive_power,
-                admm_lambda_residual_der_active_power=admm_lambda_residual_der_active_power,
-                admm_lambda_residual_der_reactive_power=admm_lambda_residual_der_reactive_power
-            ),
-            ignore_index=True
-        )
-
-        # Print residuals.
-        print(f"admm_residuals = \n{admm_residuals}")
-
-        # Plot residuals.
-        figure = (
-            px.line(
-                admm_residuals / admm_residuals.max(),
-                title=f'rho = {admm_rho} / flatstart = {admm_flatstart}'
+            # Update ADMM variables.
+            admm_exchange_der_active_power = (
+                0.5 * (
+                    results_electric['der_active_power_vector']
+                    + results_thermal['der_active_power_vector']
+                )
             )
-        )
-        figure.write_html(os.path.join(results_path, 'admm_residuals.html'))
-        if admm_iteration == 1:
-            fledge.utils.launch(results_path)
+            admm_exchange_der_reactive_power = (
+                0.5 * (
+                    results_electric['der_reactive_power_vector']
+                    + results_thermal['der_reactive_power_vector']
+                )
+            )
+            admm_lambda_electric_der_active_power = (
+                admm_rho * (
+                    results_electric['der_active_power_vector']
+                    - admm_exchange_der_active_power
+                )
+            )
+            admm_lambda_electric_der_reactive_power = (
+                admm_rho * (
+                    results_electric['der_reactive_power_vector']
+                    - admm_exchange_der_reactive_power
+                )
+            )
+            admm_lambda_thermal_der_active_power = (
+                admm_rho * (
+                    results_thermal['der_active_power_vector']
+                    - admm_exchange_der_active_power
+                )
+            )
+            admm_lambda_thermal_der_reactive_power = (
+                admm_rho * (
+                    results_thermal['der_reactive_power_vector']
+                    - admm_exchange_der_reactive_power
+                )
+            )
 
-        # Log progress.
-        fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
+            # Calculate residuals.
+            admm_residual_electric_der_active_power = (
+                (
+                    results_electric['der_active_power_vector']
+                    - results_baseline['der_active_power_vector']
+                ).abs().sum().sum()
+            )
+            admm_residual_electric_der_reactive_power = (
+                (
+                    results_electric['der_reactive_power_vector']
+                    - results_baseline['der_reactive_power_vector']
+                ).abs().sum().sum()
+            )
+            admm_residual_thermal_der_active_power = (
+                (
+                    results_thermal['der_active_power_vector']
+                    - results_baseline['der_active_power_vector']
+                ).abs().sum().sum()
+            )
+            admm_residual_thermal_der_reactive_power = (
+                (
+                    results_thermal['der_reactive_power_vector']
+                    - results_baseline['der_reactive_power_vector']
+                ).abs().sum().sum()
+            )
+            admm_lambda_residual_der_active_power = (
+                (
+                    admm_lambda_electric_der_active_power
+                    - admm_lambda_thermal_der_active_power
+                ).abs().sum().sum()
+            )
+            admm_lambda_residual_der_reactive_power = (
+                (
+                    admm_lambda_electric_der_reactive_power
+                    - admm_lambda_thermal_der_reactive_power
+                ).abs().sum().sum()
+            )
+            admm_residuals = admm_residuals.append(
+                dict(
+                    admm_residual_electric_der_active_power=admm_residual_electric_der_active_power,
+                    admm_residual_electric_der_reactive_power=admm_residual_electric_der_reactive_power,
+                    admm_residual_thermal_der_active_power=admm_residual_thermal_der_active_power,
+                    admm_residual_thermal_der_reactive_power=admm_residual_thermal_der_reactive_power,
+                    admm_lambda_residual_der_active_power=admm_lambda_residual_der_active_power,
+                    admm_lambda_residual_der_reactive_power=admm_lambda_residual_der_reactive_power
+                ),
+                ignore_index=True
+            )
 
-        # ADMM termination condition.
-        admm_continue = True if admm_iteration < admm_iteration_limit else False
+            # Print residuals.
+            print(f"admm_residuals = \n{admm_residuals}")
+
+            # Plot residuals.
+            figure = (
+                px.line(
+                    admm_residuals / admm_residuals.max(),
+                    title=f'rho = {admm_rho} / flatstart = {admm_flatstart}'
+                )
+            )
+            figure.write_html(os.path.join(results_path, 'admm_residuals.html'))
+            if admm_iteration == 1:
+                fledge.utils.launch(results_path)
+
+            # Log progress.
+            fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
+
+            # ADMM termination condition.
+            admm_continue = True if admm_iteration < admm_iteration_limit else False
+
+    except KeyboardInterrupt:
+        # Enables manual termination of ADMM loop.
+        pass
 
     # Plot residuals.
 

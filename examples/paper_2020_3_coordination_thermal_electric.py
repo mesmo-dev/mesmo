@@ -28,7 +28,7 @@ def main(
     # Settings.
     admm_iteration_limit = 100
     admm_flatstart = True if admm_flatstart is None else admm_flatstart
-    admm_rho = 1e-6 if admm_rho is None else admm_rho
+    admm_rho = 1e-9 if admm_rho is None else admm_rho
     admm_residual_termination_limit = 1e7
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:

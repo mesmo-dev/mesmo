@@ -636,6 +636,47 @@ def main(
             if admm_iteration == 1:
                 fledge.utils.launch(os.path.join(results_path, 'admm_residuals.html'))
 
+            # Plot active power.
+            values = (
+                pd.concat(
+                    [
+                        results_baseline['der_active_power_vector'],
+                        results_electric['der_active_power_vector'],
+                        results_thermal['der_active_power_vector']
+                    ],
+                    axis='columns',
+                    keys=['baseline', 'electric', 'thermal'],
+                    names=['solution_type']
+                ).droplevel('der_type', axis='columns').abs()
+            )
+            for der_name in der_model_set.der_names:
+                figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
+                figure.update_traces(fill='tozeroy')
+                # figure.show()
+                figure.write_image(os.path.join(results_path, f'active_power_{der_name}.png'))
+
+            # Plot reactive power.
+            values = (
+                pd.concat(
+                    [
+                        results_baseline['der_reactive_power_vector'],
+                        results_electric['der_reactive_power_vector'],
+                        results_thermal['der_reactive_power_vector']
+                    ],
+                    axis='columns',
+                    keys=['baseline', 'electric', 'thermal'],
+                    names=['solution_type']
+                ).droplevel('der_type', axis='columns').abs()
+            )
+            for der_name in der_model_set.der_names:
+                figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
+                figure.update_traces(fill='tozeroy')
+                # figure.show()
+                figure.write_image(os.path.join(results_path, f'reactive_power_{der_name}.png'))
+
+            if admm_iteration == 1:
+                fledge.utils.launch(results_path)
+
             # Log progress.
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 

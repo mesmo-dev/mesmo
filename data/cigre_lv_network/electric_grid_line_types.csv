@@ -1,0 +1,7 @@
+line_type,n_phases,maximum_current
+cigre_lv_network_UG1,3,1000.0
+cigre_lv_network_UG3,3,1000.0
+cigre_lv_network_UG2,3,1000.0
+cigre_lv_network_OH1,3,1000.0
+cigre_lv_network_OH2,3,1000.0
+cigre_lv_network_OH3,3,1000.0

@@ -1,0 +1,16 @@
+der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+Load R1,cigre_lv_network,fixed_load,cigre_residential,2,1,0,0,wye,-190000.0,-62449.98
+Load R11,cigre_lv_network,fixed_load,cigre_residential,12,1,0,0,wye,-14250.0,-4683.748
+Load R15,cigre_lv_network,fixed_load,cigre_residential,16,1,0,0,wye,-49400.0,-16236.995
+Load R16,cigre_lv_network,fixed_load,cigre_residential,17,1,0,0,wye,-52250.0,-17173.744000000002
+Load R17,cigre_lv_network,fixed_load,cigre_residential,18,1,0,0,wye,-33250.0,-10928.746
+Load R18,cigre_lv_network,fixed_load,cigre_residential,19,1,0,0,wye,-44650.0,-14675.745
+Load I2,cigre_lv_network,fixed_load,cigre_commercial,22,1,0,0,wye,-85000.0,-52678.269
+Load C1,cigre_lv_network,fixed_load,cigre_commercial,24,1,0,0,wye,-108000.0,-52306.787000000004
+Load C12,cigre_lv_network,fixed_load,cigre_commercial,35,1,0,0,wye,-18000.0,-8717.798
+Load C13,cigre_lv_network,fixed_load,cigre_commercial,36,1,0,0,wye,-18000.0,-8717.798
+Load C14,cigre_lv_network,fixed_load,cigre_commercial,37,1,0,0,wye,-22500.0,-10897.247000000001
+Load C17,cigre_lv_network,fixed_load,cigre_commercial,40,1,0,0,wye,-22500.0,-10897.247000000001
+Load C18,cigre_lv_network,fixed_load,cigre_commercial,41,1,0,0,wye,-7200.0,-3487.1189999999997
+Load C19,cigre_lv_network,fixed_load,cigre_commercial,42,1,0,0,wye,-14400.0,-6974.237999999999
+Load C20,cigre_lv_network,fixed_load,cigre_commercial,43,1,0,0,wye,-7200.0,-3487.1189999999997

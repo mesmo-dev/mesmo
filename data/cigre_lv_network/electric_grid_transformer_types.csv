@@ -1,0 +1,4 @@
+transformer_type,resistance_percentage,reactance_percentage,tap_maximum_voltage_per_unit,tap_minimum_voltage_per_unit
+cigre_lv_network_Trafo R0-R1,1.0,4.123106,,
+cigre_lv_network_Trafo I0-I1,1.003125,4.126896,,
+cigre_lv_network_Trafo C0-C1,0.99375,4.115529,,

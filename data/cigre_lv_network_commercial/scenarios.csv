@@ -1,0 +1,2 @@
+scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,electric_grid_operation_limit_type,timestep_start,timestep_end,timestep_interval
+cigre_lv_network_commercial,cigre_lv_network_commercial,,,EPEX SPOT Power DE Day Ahead,1e-12,default_limits,2018-11-19T00:00:00,2018-11-20T00:00:00,01:00:00

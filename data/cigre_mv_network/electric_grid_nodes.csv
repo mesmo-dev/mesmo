@@ -1,0 +1,16 @@
+node_name,electric_grid_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+0,cigre_mv_network,1,0,0,110000.0,7.0,16
+1,cigre_mv_network,1,0,0,20000.0,4.0,15
+2,cigre_mv_network,1,0,0,20000.0,4.0,13
+3,cigre_mv_network,1,0,0,20000.0,4.0,11
+4,cigre_mv_network,1,0,0,20000.0,2.5,9
+5,cigre_mv_network,1,0,0,20000.0,1.0,7
+6,cigre_mv_network,1,0,0,20000.0,1.0,3
+7,cigre_mv_network,1,0,0,20000.0,8.0,3
+8,cigre_mv_network,1,0,0,20000.0,8.0,5
+9,cigre_mv_network,1,0,0,20000.0,6.0,5
+10,cigre_mv_network,1,0,0,20000.0,4.0,5
+11,cigre_mv_network,1,0,0,20000.0,4.0,7
+12,cigre_mv_network,1,0,0,20000.0,10.0,15
+13,cigre_mv_network,1,0,0,20000.0,10.0,11
+14,cigre_mv_network,1,0,0,20000.0,10.0,5

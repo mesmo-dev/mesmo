@@ -1,0 +1,13 @@
+line_type,row,col,resistance,reactance,capacitance
+cigre_mv_network_underground,1,1,0.501,0.716,151.1749
+cigre_mv_network_underground,2,2,0.501,0.716,151.1749
+cigre_mv_network_underground,3,3,0.501,0.716,151.1749
+cigre_mv_network_underground,2,1,0,0,0
+cigre_mv_network_underground,3,1,0,0,0
+cigre_mv_network_underground,3,2,0,0,0
+cigre_mv_network_overhead,1,1,0.51,0.366,10.09679
+cigre_mv_network_overhead,2,2,0.51,0.366,10.09679
+cigre_mv_network_overhead,3,3,0.51,0.366,10.09679
+cigre_mv_network_overhead,2,1,0,0,0
+cigre_mv_network_overhead,3,1,0,0,0
+cigre_mv_network_overhead,3,2,0,0,0

@@ -1,0 +1,4 @@
+node_name,electric_grid_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+0,cigre_lv_network_industrial,1,0,0,20000.0,0.2,1
+21,cigre_lv_network_industrial,1,0,0,400.0,0.2,2
+22,cigre_lv_network_industrial,1,0,0,400.0,0.2,3

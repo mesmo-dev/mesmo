@@ -15,7 +15,7 @@ def aggregate_electric_grids(
         mv_scenario_name: str,
         aggregated_scenario_name: str,
         path_to_map_grids: str
-):
+) -> str:
     """Method to aggregate DERs from multiple low voltage grids to nodes of one MV grid based on a mapping table
     """
     # Load csv-file as dataframe that contains the mapping of LV grids to MV nodes
@@ -64,12 +64,14 @@ def aggregate_electric_grids(
     # call export function
     __export_grid_to_csv(aggregated_electric_grid_data, output_path)
 
+    return aggregated_scenario_name
+
 
 def combine_electric_grids(
         mv_scenario_name: str,
         combined_scenario_name: str,
         map_grids_filename: str
-):
+) -> str:
     """Method to combine multiple grids to one large grids based on a mapping table
     """
 
@@ -188,6 +190,8 @@ def combine_electric_grids(
     # call export function
     __export_grid_to_csv(combined_electric_grid_data, output_path)
 
+    return combined_scenario_name
+
 
 def __load_data(
         path_to_map_grids: str
@@ -196,6 +200,7 @@ def __load_data(
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
     return map_grids
+
 
 def __create_output_folder(
         scenario_name: str

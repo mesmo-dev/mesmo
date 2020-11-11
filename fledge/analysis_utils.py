@@ -13,13 +13,21 @@ path_to_data = fledge.config.config['paths']['data']
 
 def aggregate_electric_grids(
         mv_scenario_name: str,
-        aggregated_scenario_name: str,
-        path_to_map_grids: str
+        path_to_map_grids: str,
+        aggregated_scenario_name: str = None
 ) -> str:
-    """Method to aggregate DERs from multiple low voltage grids to nodes of one MV grid based on a mapping table
+    """
+    Method to aggregate DERs from multiple low voltage grids to nodes of one MV grid based on a mapping table
+    :param mv_scenario_name: name of the scenario for the medium voltage electric grid
+    :param path_to_map_grids: relative path within fledge project folder, e.g. 'examples/electric_grid_mapping.csv'
+    :param aggregated_scenario_name: optional, name of the aggregated scenario (will also be returned by the function)
+    :return: the name of the exported scenario
     """
     # Load csv-file as dataframe that contains the mapping of LV grids to MV nodes
     map_grids = __load_data(path_to_map_grids)
+
+    if aggregated_scenario_name is None:
+        aggregated_scenario_name = 'aggregated_' + mv_scenario_name
 
     # Create output folder for the new grid
     output_path = __create_output_folder(scenario_name=aggregated_scenario_name)
@@ -69,14 +77,22 @@ def aggregate_electric_grids(
 
 def combine_electric_grids(
         mv_scenario_name: str,
-        combined_scenario_name: str,
-        map_grids_filename: str
+        map_grids_filename: str,
+        combined_scenario_name: str = None
 ) -> str:
-    """Method to combine multiple grids to one large grids based on a mapping table
+    """
+    Method to combine multiple grids to one large grids based on a mapping table
+    :param mv_scenario_name: name of the scenario for the medium voltage electric grid
+    :param path_to_map_grids: relative path within fledge project folder, e.g. 'examples/electric_grid_mapping.csv'
+    :param combined_scenario_name: optional, name of the combined scenario (will also be returned by the function)
+    :return: the name of the exported scenario
     """
 
     # Load csv-file as dataframe that contains the mapping of LV grids to MV nodes
     map_grids = __load_data(map_grids_filename)
+
+    if combined_scenario_name is None:
+        combined_scenario_name = 'combined_' + mv_scenario_name
 
     output_path = __create_output_folder(scenario_name=combined_scenario_name)
 
@@ -204,7 +220,7 @@ def __load_data(
 
 def __create_output_folder(
         scenario_name: str
-):
+) -> str:
     # Create output folder for the new grid
     output_path = os.path.join(path_to_data, scenario_name)
     # Instantiate dedicated directory for current grid.
@@ -254,6 +270,8 @@ def __format_grid_tables(
         "electric_grid_name",
         "thermal_grid_name",
         "parameter_set",
+        "price_type",
+        "price_sensitivity_coefficient",
         "timestep_start",
         "timestep_end",
         "timestep_interval"

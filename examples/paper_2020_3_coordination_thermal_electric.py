@@ -1,8 +1,5 @@
 """Run script for reproducing results of the Paper XXX."""
 
-import matplotlib.dates
-import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 import os
 import pandas as pd
@@ -36,35 +33,8 @@ def main(
     # 2 - constrained thermal grid branch flow,
     # 3 - constrained thermal grid pressure head,
     # 4 - constrained electric grid branch power,
-    # 5 - constrained electric grid voltage,
-    # 6 - added cooling plant (cheaper than source),
-    # 7 - added cooling plant (more expensive than source),
-    # 8 - added cooling plant (more expensive than source) + constrained thermal grid branch flow,
-    # 9 - added very large cooling plant (cheaper than source) + constrained thermal grid branch flow,
-    # 10 - added PV plant (cheaper than source),
-    # 11 - added PV plant (more expensive than source),
-    # 12 - added PV plant (more expensive than source) + constrained electric grid branch power,
-    # 13 - added very large PV plant (cheaper than source) + constrained electric grid branch power,
-    # 14 - added cooling plant (more expensive than source) + added very large PV plant (cheaper than source)
-    #      + constrained electric grid branch power.
-    # 15 - added cooling plant (more expensive than source) + added very large PV plant (cheaper than source)
-    #      + constrained electric grid branch power + constrained thermal grid branch flow.
-    if scenario_number in [1, 2, 3, 4, 5]:
-        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
-    elif scenario_number in [6, 7, 8]:
-        scenario_name = 'paper_2020_2_scenario_6_7_8'
-    elif scenario_number in [9]:
-        scenario_name = 'paper_2020_2_scenario_9'
-    elif scenario_number in [10, 11, 12]:
-        scenario_name = 'paper_2020_2_scenario_10_11_12'
-    elif scenario_number in [13]:
-        scenario_name = 'paper_2020_2_scenario_13'
-    elif scenario_number in [14]:
-        scenario_name = 'paper_2020_2_scenario_14'
-    elif scenario_number in [15]:
-        scenario_name = 'paper_2020_2_scenario_15'
-    else:
-        scenario_name = 'singapore_tanjongpagar_modified'
+    # 5 - constrained electric grid voltage
+    scenario_name = 'paper_2020_3'
 
     # Obtain results path.
     results_path = (
@@ -108,7 +78,7 @@ def main(
     node_head_vector_minimum = 100.0 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 100.0 * np.abs(thermal_power_flow_solution.branch_flow_vector)
     # Modify limits for scenarios.
-    if scenario_number in [2, 8, 9, 15]:
+    if scenario_number in [2]:
         branch_flow_vector_maximum[
             fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
         ] *= 0.2 / 100.0
@@ -124,7 +94,7 @@ def main(
     voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
     # Modify limits for scenarios.
-    if scenario_number in [4, 12, 13, 14, 15]:
+    if scenario_number in [4]:
         branch_power_vector_squared_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
@@ -134,19 +104,6 @@ def main(
         ] *= 0.9985 / 0.5
     else:
         pass
-
-    # Modify DER models depending on scenario.
-    # Cooling plant.
-    if scenario_number in [6, 9]:
-        der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 2.0
-    elif scenario_number in [7, 8, 14, 15]:
-        # Cooling plant COP must remain larger than building cooling COP, otherwise cooling plant never dispatched.
-        der_model_set.flexible_der_models['23'].control_output_matrix.at['thermal_power', 'active_power'] *= 0.8
-    # PV plant.
-    if scenario_number in [11, 12]:
-        der_model_set.flexible_der_models['24'].marginal_cost = 0.1
-    if scenario_number in [15]:
-        der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate ADMM variables.
     admm_iteration = 0

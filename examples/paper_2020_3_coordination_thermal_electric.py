@@ -850,7 +850,7 @@ def main(
         # Enables manual termination of ADMM loop.
         pass
 
-    # Plot residuals.
+    # Plots.
 
     # Modify plot defaults to align with paper style.
     pio.templates.default.layout.update(
@@ -864,77 +864,176 @@ def main(
 
     # Absolute residuals.
     figure = px.line(admm_residuals)
-    figure.update_layout(legend=dict(orientation='h'))
+    figure.update_traces(line=dict(width=3))
+    figure.update_layout(
+        yaxis=go.layout.YAxis(type='log'),
+        xaxis_title="Iteration",
+        yaxis_title="Total residual",
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
+        margin=go.layout.Margin(r=10, t=10)
+    )
     # figure.show()
-    figure.write_image(os.path.join(results_path, 'admm_residuals_absolute.png'))
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_residuals_absolute'))
 
     # Relative residuals.
-    figure = px.line(admm_residuals / admm_residuals.max())
-    figure.update_layout(legend=dict(orientation='h'))
+    figure = px.line(admm_residuals / admm_residuals.max() * 100.0)
+    figure.update_traces(line=dict(width=3))
+    figure.update_layout(
+        yaxis=go.layout.YAxis(type='log'),
+        xaxis_title="Iteration",
+        yaxis_title="Relative residual [%]",
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
+        margin=go.layout.Margin(r=10, t=10)
+    )
     # figure.show()
-    figure.write_image(os.path.join(results_path, 'admm_residuals_relative.png'))
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_residuals_relative'))
 
     # Store residuals.
     admm_residuals.to_csv(os.path.join(results_path, 'admm_residuals.csv'))
 
     # Plot results.
 
-    # Active power.
-    values = (
-        pd.concat(
-            [
-                results_baseline['der_active_power_vector'],
-                results_electric['der_active_power_vector'],
-                results_aggregator['der_active_power_vector']
-            ],
-            axis='columns',
-            keys=['baseline', 'electric', 'aggregator'],
-            names=['solution_type']
-        ).droplevel('der_type', axis='columns').abs()
-    )
+    # Thermal power.
     for der_name in der_model_set.der_names:
-        figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-        figure.update_traces(fill='tozeroy')
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['der_thermal_power_vector'].index,
+                y=(
+                    results_baseline['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_thermal['der_thermal_power_vector'].index,
+                y=(
+                    results_thermal['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Thermal grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_aggregator['der_thermal_power_vector'].index,
+                y=(
+                    results_aggregator['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Thermal power [MWth]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
         # figure.show()
-        figure.write_image(os.path.join(results_path, f'active_power_{der_name}.png'))
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'thermal_power_{der_name}'))
+
+    # Active power.
+    for der_name in der_model_set.der_names:
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['der_active_power_vector'].index,
+                y=(
+                    results_baseline['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_electric['der_active_power_vector'].index,
+                y=(
+                    results_electric['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Electric grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_aggregator['der_active_power_vector'].index,
+                y=(
+                    results_aggregator['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Active power [MW]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'active_power_{der_name}'))
 
     # Reactive power.
-    values = (
-        pd.concat(
-            [
-                results_baseline['der_reactive_power_vector'],
-                results_electric['der_reactive_power_vector'],
-                results_aggregator['der_reactive_power_vector']
-            ],
-            axis='columns',
-            keys=['baseline', 'electric', 'aggregator'],
-            names=['solution_type']
-        ).droplevel('der_type', axis='columns').abs()
-    )
     for der_name in der_model_set.der_names:
-        figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-        figure.update_traces(fill='tozeroy')
+        # figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['der_reactive_power_vector'].index,
+                y=(
+                    results_baseline['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_electric['der_reactive_power_vector'].index,
+                y=(
+                    results_electric['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Electric grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=results_aggregator['der_reactive_power_vector'].index,
+                y=(
+                    results_aggregator['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+                    / 1e6
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Reactive power [MVAr]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
         # figure.show()
-        figure.write_image(os.path.join(results_path, f'reactive_power_{der_name}.png'))
-
-    # Thermal power.
-    values = (
-        pd.concat(
-            [
-                results_baseline['der_thermal_power_vector'],
-                results_thermal['der_thermal_power_vector'],
-                results_aggregator['der_thermal_power_vector']
-            ],
-            axis='columns',
-            keys=['baseline', 'thermal', 'aggregator'],
-            names=['solution_type']
-        ).droplevel('der_type', axis='columns').abs()
-    )
-    for der_name in der_model_set.der_names:
-        figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-        figure.update_traces(fill='tozeroy')
-        # figure.show()
-        figure.write_image(os.path.join(results_path, f'thermal_power_{der_name}.png'))
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'reactive_power_{der_name}'))
 
     # Print results path.
     fledge.utils.launch(results_path)

@@ -741,15 +741,52 @@ class LinearThermalGridModel(object):
                 * price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
 
+        thermal_grid_total_dlmp_node_thermal_power = (
+            thermal_grid_energy_dlmp_node_thermal_power
+            + thermal_grid_head_dlmp_node_thermal_power
+            + thermal_grid_congestion_dlmp_node_thermal_power
+            + thermal_grid_pump_dlmp_node_thermal_power
+        )
+        thermal_grid_total_dlmp_der_thermal_power = (
+            thermal_grid_energy_dlmp_der_thermal_power
+            + thermal_grid_head_dlmp_der_thermal_power
+            + thermal_grid_congestion_dlmp_der_thermal_power
+            + thermal_grid_pump_dlmp_der_thermal_power
+        )
+
+        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        thermal_grid_total_dlmp_price_timeseries = (
+            pd.concat(
+                [
+                    price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
+                    thermal_grid_total_dlmp_der_thermal_power
+                ],
+                axis='columns',
+                keys=['thermal_power', 'thermal_power'],
+                names=['commodity_type']
+            )
+        )
+        # Redefine columns to avoid slicing issues.
+        thermal_grid_total_dlmp_price_timeseries.columns = (
+            price_data.price_timeseries.columns[
+                price_data.price_timeseries.columns.isin(thermal_grid_total_dlmp_price_timeseries.columns)
+            ]
+        )
+
         return fledge.data_interface.ResultsDict(
             thermal_grid_energy_dlmp_node_thermal_power=thermal_grid_energy_dlmp_node_thermal_power,
             thermal_grid_head_dlmp_node_thermal_power=thermal_grid_head_dlmp_node_thermal_power,
             thermal_grid_congestion_dlmp_node_thermal_power=thermal_grid_congestion_dlmp_node_thermal_power,
             thermal_grid_pump_dlmp_node_thermal_power=thermal_grid_pump_dlmp_node_thermal_power,
+            thermal_grid_total_dlmp_node_thermal_power=thermal_grid_total_dlmp_node_thermal_power,
             thermal_grid_energy_dlmp_der_thermal_power=thermal_grid_energy_dlmp_der_thermal_power,
             thermal_grid_head_dlmp_der_thermal_power=thermal_grid_head_dlmp_der_thermal_power,
             thermal_grid_congestion_dlmp_der_thermal_power=thermal_grid_congestion_dlmp_der_thermal_power,
-            thermal_grid_pump_dlmp_der_thermal_power=thermal_grid_pump_dlmp_der_thermal_power
+            thermal_grid_pump_dlmp_der_thermal_power=thermal_grid_pump_dlmp_der_thermal_power,
+            thermal_grid_total_dlmp_der_thermal_power=thermal_grid_total_dlmp_der_thermal_power,
+            thermal_grid_total_dlmp_price_timeseries=thermal_grid_total_dlmp_price_timeseries
         )
 
     def get_optimization_results(

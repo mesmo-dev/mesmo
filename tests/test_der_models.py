@@ -112,7 +112,7 @@ class TestDERModels(unittest.TestCase):
 
     def test_cooling_plant_model(self):
         # Obtain test data.
-        der_data = fledge.data_interface.DERData('singapore_tanjongpagar_modified')
+        der_data = fledge.data_interface.DERData('paper_2020_2_scenario_6_7_8')
 
         # Get result.
         time_start = time.time()

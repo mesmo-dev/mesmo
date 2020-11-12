@@ -28,6 +28,9 @@ plots:
   matplotlib_font_family: ['Arial', 'Helvetica']
   matplotlib_figure_size: [7.0, 4.0]
   plotly_font_family: Arial
+  plotly_font_size: 15
+  plotly_figure_width: 1000
+  plotly_figure_height: 500
   file_format: png
   add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
   show_basemap_attribution: false # If True, show copyright notice for basemap.

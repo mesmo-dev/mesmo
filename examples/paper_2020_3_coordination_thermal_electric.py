@@ -25,10 +25,10 @@ def main(
 ):
 
     # Settings.
-    admm_iteration_limit = 100
+    admm_iteration_limit = 10000
     admm_rho = 1e-9 if admm_rho is None else admm_rho
-    admm_residual_termination_limit = 1e7
-    scenario_number = 1 if scenario_number is None else scenario_number
+    admm_residual_termination_limit = 5e8
+    scenario_number = 2 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
     # 2 - constrained thermal grid branch flow,
@@ -935,8 +935,8 @@ if __name__ == '__main__':
     run_all = False
 
     if run_all:
-        for scenario_number in [1]:
-            for admm_rho in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
+        for scenario_number in [None]:
+            for admm_rho in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
                 try:
                     main(
                         scenario_number=scenario_number,

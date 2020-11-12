@@ -56,7 +56,7 @@ def main(
     elif scenario_number in [15]:
         scenario_name = 'paper_2020_2_scenario_15'
     else:
-        scenario_name = 'singapore_tanjongpagar_modified'
+        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
 
     # Obtain results path.
     results_path = (
@@ -73,7 +73,8 @@ def main(
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2020_2_scenario_1_2_3_4_5')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -82,7 +83,8 @@ def main(
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2020_2_scenario_1_2_3_4_5')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,

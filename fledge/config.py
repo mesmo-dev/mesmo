@@ -188,7 +188,5 @@ pio.templates.default.layout.update(
     xaxis=go.layout.XAxis(showgrid=True),
     yaxis=go.layout.YAxis(showgrid=True)
 )
-pio.kaleido.scope.default_width = config['plots']['plotly_figure_width']
-pio.kaleido.scope.default_height = config['plots']['plotly_figure_height']
-pio.orca.config.default_width = config['plots']['plotly_figure_width']
-pio.orca.config.default_height = config['plots']['plotly_figure_height']
+pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots']['plotly_figure_width']
+pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']

@@ -300,8 +300,22 @@ def main(
         )
     )
     results_baseline.update(
+        linear_electric_grid_model.get_optimization_dlmps(
+            optimization_problem_baseline,
+            price_data,
+            scenario_data.timesteps
+        )
+    )
+    results_baseline.update(
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem_baseline,
+            scenario_data.timesteps
+        )
+    )
+    results_baseline.update(
+        linear_thermal_grid_model.get_optimization_dlmps(
+            optimization_problem_baseline,
+            price_data,
             scenario_data.timesteps
         )
     )
@@ -988,6 +1002,139 @@ def main(
         )
         # figure.show()
         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'reactive_power_{der_name}'))
+
+    # Thermal power price.
+    for der_name in der_model_set.der_names:
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['thermal_grid_total_dlmp_der_thermal_power'].index,
+                y=(
+                    results_baseline['thermal_grid_total_dlmp_der_thermal_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_thermal_der_thermal_power.index,
+                y=(
+                    admm_lambda_thermal_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Thermal grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_aggregator_der_thermal_power.index,
+                y=(
+                    -1.0 * admm_lambda_aggregator_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Price [S$/kWh]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_thermal_power_{der_name}'))
+
+    # Active power price.
+    for der_name in der_model_set.der_names:
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['electric_grid_total_dlmp_der_active_power'].index,
+                y=(
+                    results_baseline['electric_grid_total_dlmp_der_active_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_electric_der_active_power.index,
+                y=(
+                    admm_lambda_electric_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Electric grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_aggregator_der_active_power.index,
+                y=(
+                    -1.0 * admm_lambda_aggregator_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Price [S$/kWh]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_active_power_{der_name}'))
+
+    # Reactive power price.
+    for der_name in der_model_set.der_names:
+        # figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
+        figure = go.Figure()
+        figure.add_trace(
+            go.Bar(
+                x=results_baseline['electric_grid_total_dlmp_der_reactive_power'].index,
+                y=(
+                    results_baseline['electric_grid_total_dlmp_der_reactive_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Centralized op.',
+                # fill='tozeroy',
+                # line=go.scatter.Line(width=9, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_electric_der_reactive_power.index,
+                y=(
+                    admm_lambda_electric_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Electric grid op.',
+                # line=go.scatter.Line(width=6, shape='hv')
+            )
+        )
+        figure.add_trace(
+            go.Bar(
+                x=admm_lambda_aggregator_der_reactive_power.index,
+                y=(
+                    -1.0 * admm_lambda_aggregator_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                ).values,
+                name='Flexible load agg.',
+                # line=go.scatter.Line(width=3, shape='hv')
+            )
+        )
+        figure.update_layout(
+            xaxis_title=None,
+            yaxis_title="Price [S$/kVAh]",
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            margin=go.layout.Margin(b=30, r=30, t=10)
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_reactive_power_{der_name}'))
 
     # Print results path.
     fledge.utils.launch(results_path)

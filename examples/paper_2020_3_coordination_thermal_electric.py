@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import pyomo.environ as pyo
 
 import fledge.config
@@ -850,6 +851,16 @@ def main(
         pass
 
     # Plot residuals.
+
+    # Modify plot defaults to align with paper style.
+    pio.templates.default.layout.update(
+        font=go.layout.Font(
+            family=fledge.config.config['plots']['plotly_font_family'],
+            size=20
+        )
+    )
+    pio.kaleido.scope.default_width = pio.orca.config.default_width = pio.kaleido.scope.default_width = 1000
+    pio.kaleido.scope.default_height = pio.orca.config.default_height = pio.kaleido.scope.default_height = 285
 
     # Absolute residuals.
     figure = px.line(admm_residuals)

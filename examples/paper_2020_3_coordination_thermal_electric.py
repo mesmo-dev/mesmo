@@ -183,26 +183,28 @@ def main(
     )
     # For DERs, instantiate lambda with price time series.
     admm_lambda_aggregator_der_active_power = (
-        -1.0
-        * pd.DataFrame(
-            # Initialize with price timeseries.
-            price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].to_dict(),
-            index=electric_grid_model.ders,
-            columns=scenario_data.timesteps
-        ).T
+        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
+        # -1.0
+        # * pd.DataFrame(
+        #     # Initialize with price timeseries.
+        #     price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].to_dict(),
+        #     index=electric_grid_model.ders,
+        #     columns=scenario_data.timesteps
+        # ).T
     )
     admm_lambda_aggregator_der_reactive_power = (
         pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
     )
     admm_lambda_aggregator_der_thermal_power = (
-        -1.0
-        * (thermal_grid_model.cooling_plant_efficiency ** -1)
-        * pd.DataFrame(
-            # Initialize with price timeseries.
-            price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].to_dict(),
-            index=thermal_grid_model.ders,
-            columns=scenario_data.timesteps
-        ).T
+        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=thermal_grid_model.ders)
+        #  -1.0
+        # * (thermal_grid_model.cooling_plant_efficiency ** -1)
+        # * pd.DataFrame(
+        #     # Initialize with price timeseries.
+        #     price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].to_dict(),
+        #     index=thermal_grid_model.ders,
+        #     columns=scenario_data.timesteps
+        # ).T
     )
     admm_primal_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])
     admm_dual_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])

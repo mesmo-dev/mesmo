@@ -28,7 +28,8 @@ def main(
     # Settings.
     admm_iteration_limit = 10000
     admm_rho = 1e-9 if admm_rho is None else admm_rho
-    admm_residual_termination_limit = 5e8
+    admm_primal_residual_termination_limit = 1e1
+    admm_dual_residual_termination_limit = 1e-3
     scenario_number = 2 if scenario_number is None else scenario_number
     # Choices:
     # 1 - unconstrained operation,
@@ -203,7 +204,8 @@ def main(
             columns=scenario_data.timesteps
         ).T
     )
-    admm_residuals = pd.DataFrame()
+    admm_primal_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])
+    admm_dual_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])
 
     # Instantiate optimization problems.
     optimization_problem_baseline = pyo.ConcreteModel()
@@ -392,6 +394,8 @@ def main(
 
             # Iterate ADMM counter.
             admm_iteration += 1
+
+            # TODO: Consider timestep_interval_hours in ADMM objective.
 
             # ADMM: Electric sub-problem.
 
@@ -691,164 +695,119 @@ def main(
             )
 
             # Calculate residuals.
-            admm_residual_electric_der_active_power = (
-                (
-                    results_electric['der_active_power_vector']
-                    - results_baseline['der_active_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_residual_electric_der_reactive_power = (
-                (
-                    results_electric['der_reactive_power_vector']
-                    - results_baseline['der_reactive_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_residual_thermal_der_thermal_power = (
-                (
-                    results_thermal['der_thermal_power_vector']
-                    - results_baseline['der_thermal_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_residual_aggregator_der_active_power = (
-                (
-                    results_aggregator['der_active_power_vector']
-                    - results_baseline['der_active_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_residual_aggregator_der_reactive_power = (
-                (
-                    results_aggregator['der_reactive_power_vector']
-                    - results_baseline['der_reactive_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_residual_aggregator_der_thermal_power = (
-                (
-                    results_aggregator['der_thermal_power_vector']
-                    - results_baseline['der_thermal_power_vector']
-                ).abs().sum().sum()
-            )
-            admm_difference_der_active_power = (
+            # admm_residual_electric_der_active_power = (
+            #     (
+            #         results_electric['der_active_power_vector']
+            #         - results_baseline['der_active_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            # admm_residual_electric_der_reactive_power = (
+            #     (
+            #         results_electric['der_reactive_power_vector']
+            #         - results_baseline['der_reactive_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            # admm_residual_thermal_der_thermal_power = (
+            #     (
+            #         results_thermal['der_thermal_power_vector']
+            #         - results_baseline['der_thermal_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            # admm_residual_aggregator_der_active_power = (
+            #     (
+            #         results_aggregator['der_active_power_vector']
+            #         - results_baseline['der_active_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            # admm_residual_aggregator_der_reactive_power = (
+            #     (
+            #         results_aggregator['der_reactive_power_vector']
+            #         - results_baseline['der_reactive_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            # admm_residual_aggregator_der_thermal_power = (
+            #     (
+            #         results_aggregator['der_thermal_power_vector']
+            #         - results_baseline['der_thermal_power_vector']
+            #     ).abs().sum().sum()
+            # )
+            admm_primal_residual_der_active_power = (
                 (
                     results_aggregator['der_active_power_vector']
                     - results_electric['der_active_power_vector']
                 ).abs().sum().sum()
             )
-            admm_difference_der_reactive_power = (
+            admm_primal_residual_der_reactive_power = (
                 (
                     results_aggregator['der_reactive_power_vector']
                     - results_electric['der_reactive_power_vector']
                 ).abs().sum().sum()
             )
-            admm_difference_der_thermal_power = (
+            admm_primal_residual_der_thermal_power = (
                 (
                     results_aggregator['der_thermal_power_vector']
                     - results_thermal['der_thermal_power_vector']
                 ).abs().sum().sum()
             )
-            admm_residuals = admm_residuals.append(
-                dict(
-                    admm_residual_electric_der_active_power=admm_residual_electric_der_active_power,
-                    admm_residual_electric_der_reactive_power=admm_residual_electric_der_reactive_power,
-                    admm_residual_thermal_der_thermal_power=admm_residual_thermal_der_thermal_power,
-                    admm_residual_aggregator_der_active_power=admm_residual_aggregator_der_active_power,
-                    admm_residual_aggregator_der_reactive_power=admm_residual_aggregator_der_reactive_power,
-                    admm_residual_aggregator_der_thermal_power=admm_residual_aggregator_der_thermal_power,
-                    admm_difference_der_active_power=admm_difference_der_active_power,
-                    admm_difference_der_reactive_power=admm_difference_der_reactive_power,
-                    admm_difference_der_thermal_power=admm_difference_der_thermal_power
-                ),
+            admm_dual_residual_der_active_power = (
+                (
+                    admm_lambda_aggregator_der_active_power
+                    + admm_lambda_electric_der_active_power
+                ).abs().sum().sum()
+            )
+            admm_dual_residual_der_reactive_power = (
+                (
+                    admm_lambda_aggregator_der_reactive_power
+                    + admm_lambda_electric_der_reactive_power
+                ).abs().sum().sum()
+            )
+            admm_dual_residual_der_thermal_power = (
+                (
+                    admm_lambda_aggregator_der_thermal_power
+                    + admm_lambda_thermal_der_thermal_power
+                ).abs().sum().sum()
+            )
+
+            admm_primal_residuals = admm_primal_residuals.append(
+                pd.Series({
+                    'Thermal pw.': admm_primal_residual_der_thermal_power,
+                    'Active pw.': admm_primal_residual_der_active_power,
+                    'Reactive pw.': admm_primal_residual_der_reactive_power,
+                }),
+                ignore_index=True
+            )
+            admm_dual_residuals = admm_dual_residuals.append(
+                pd.Series({
+                    'Thermal pw.': admm_dual_residual_der_thermal_power,
+                    'Active pw.': admm_dual_residual_der_active_power,
+                    'Reactive pw.': admm_dual_residual_der_reactive_power
+                }),
                 ignore_index=True
             )
 
             # Print residuals.
-            print(f"admm_residuals = \n{admm_residuals}")
-
-            # Plot residuals.
-            figure = (
-                px.line(
-                    admm_residuals / admm_residuals.max(),
-                    title=f'admm_rho = {admm_rho}'
-                )
-            )
-            figure.write_html(os.path.join(results_path, 'admm_residuals.html'))
-            if admm_iteration == 1:
-                fledge.utils.launch(os.path.join(results_path, 'admm_residuals.html'))
-
-            # Plot active power.
-            values = (
-                pd.concat(
-                    [
-                        results_baseline['der_active_power_vector'],
-                        results_electric['der_active_power_vector'],
-                        results_aggregator['der_active_power_vector']
-                    ],
-                    axis='columns',
-                    keys=['baseline', 'electric', 'aggregator'],
-                    names=['solution_type']
-                ).droplevel('der_type', axis='columns').abs()
-            )
-            for der_name in der_model_set.der_names:
-                figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-                figure.update_traces(fill='tozeroy')
-                # figure.show()
-                figure.write_image(os.path.join(results_path, f'active_power_{der_name}.png'))
-
-            # Plot reactive power.
-            values = (
-                pd.concat(
-                    [
-                        results_baseline['der_reactive_power_vector'],
-                        results_electric['der_reactive_power_vector'],
-                        results_aggregator['der_reactive_power_vector']
-                    ],
-                    axis='columns',
-                    keys=['baseline', 'electric', 'aggregator'],
-                    names=['solution_type']
-                ).droplevel('der_type', axis='columns').abs()
-            )
-            for der_name in der_model_set.der_names:
-                figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-                figure.update_traces(fill='tozeroy')
-                # figure.show()
-                figure.write_image(os.path.join(results_path, f'reactive_power_{der_name}.png'))
-
-            # Plot thermal power.
-            values = (
-                pd.concat(
-                    [
-                        results_baseline['der_thermal_power_vector'],
-                        results_thermal['der_thermal_power_vector'],
-                        results_aggregator['der_thermal_power_vector']
-                    ],
-                    axis='columns',
-                    keys=['baseline', 'thermal', 'aggregator'],
-                    names=['solution_type']
-                ).droplevel('der_type', axis='columns').abs()
-            )
-            for der_name in der_model_set.der_names:
-                figure = px.line(values.loc[:, (slice(None), der_name)].droplevel('der_name', axis='columns'), line_shape='hv')
-                figure.update_traces(fill='tozeroy')
-                # figure.show()
-                figure.write_image(os.path.join(results_path, f'thermal_power_{der_name}.png'))
-
-            # Launch results directory.
-            if admm_iteration == 1:
-                fledge.utils.launch(results_path)
+            print(f"admm_dual_residuals = \n{admm_dual_residuals}")
+            print(f"admm_primal_residuals = \n{admm_primal_residuals}")
 
             # Log progress.
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 
             # ADMM termination condition.
             admm_continue = (
-                True
-                if (admm_iteration < admm_iteration_limit)
-                and (admm_residuals.iloc[-1, :].max() > admm_residual_termination_limit)
-                else False
+                (admm_iteration < admm_iteration_limit)
+                and (
+                    (admm_primal_residuals.iloc[-1, :].max() > admm_primal_residual_termination_limit)
+                    or (admm_dual_residuals.iloc[-1, :].max() > admm_dual_residual_termination_limit)
+                )
             )
 
     except KeyboardInterrupt:
         # Enables manual termination of ADMM loop.
         pass
+
+    # Store residuals.
+    admm_primal_residuals.to_csv(os.path.join(results_path, 'admm_primal_residuals.csv'))
+    admm_dual_residuals.to_csv(os.path.join(results_path, 'admm_dual_residuals.csv'))
 
     # Plots.
 
@@ -862,36 +821,31 @@ def main(
     pio.kaleido.scope.default_width = pio.orca.config.default_width = pio.kaleido.scope.default_width = 1000
     pio.kaleido.scope.default_height = pio.orca.config.default_height = pio.kaleido.scope.default_height = 285
 
-    # Absolute residuals.
-    figure = px.line(admm_residuals)
+    # Primal residuals.
+    figure = px.line(admm_primal_residuals)
     figure.update_traces(line=dict(width=3))
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Total residual",
+        yaxis_title="Primal residual",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
         margin=go.layout.Margin(r=10, t=10)
     )
     # figure.show()
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_residuals_absolute'))
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_primal_residuals'))
 
-    # Relative residuals.
-    figure = px.line(admm_residuals / admm_residuals.max() * 100.0)
+    # Dual residuals.
+    figure = px.line(admm_dual_residuals)
     figure.update_traces(line=dict(width=3))
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Relative residual [%]",
+        yaxis_title="Dual residual",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
         margin=go.layout.Margin(r=10, t=10)
     )
     # figure.show()
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_residuals_relative'))
-
-    # Store residuals.
-    admm_residuals.to_csv(os.path.join(results_path, 'admm_residuals.csv'))
-
-    # Plot results.
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_dual_residuals'))
 
     # Thermal power.
     for der_name in der_model_set.der_names:

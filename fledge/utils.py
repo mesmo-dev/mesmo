@@ -7,6 +7,8 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
 import pyomo.environ as pyo
 import re
 import time
@@ -267,3 +269,30 @@ def get_building_model(*args, **kwargs):
     """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
 
     return cobmo.building_model.BuildingModel(*args, **kwargs)
+
+
+def write_figure_plotly(
+        figure: go.Figure,
+        results_path: str,
+        file_format=fledge.config.config['plots']['file_format']
+):
+    """Utility function for writing / storing plotly figure to output file. File format can be given with
+    `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.
+
+    - `results_path` should be given as file name without file extension, because the file extension is appended
+      automatically based on given `file_format`.
+    - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'
+    """
+
+    if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
+        pio.write_image(figure, f"{results_path}.{file_format}")
+    elif file_format in ['html']:
+        pio.write_html(figure, f"{results_path}.{file_format}")
+    elif file_format in ['json']:
+        pio.write_json(figure, f"{results_path}.{file_format}")
+    else:
+        logger.error(
+            f"Invalid `file_format` for `write_figure_plotly`: {file_format}"
+            f" - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'"
+        )
+        raise ValueError

@@ -21,106 +21,130 @@ import fledge.analysis_utils as au
 voltage_min = 0.8
 voltage_max = 1.2
 path_to_solver_executable = '/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx/cplex'
-
-
-# def main():
-#
-#     scenario_name = 'cigre_high_granularity'
-#     price_data = get_price_data_for_scenario(scenario_name)
-#     # Recreate / overwrite database, to incorporate the new grids that we created
-#     fledge.data_interface.recreate_database()
-#     results_path = fledge.utils.get_results_path('run_electric_grid_optimal_operation', scenario_name)
-#     _, results, dlmps = run_centralized_problem(scenario_name, results_path)
-#
-#     price_data_dlmps = price_data.copy()
-#     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
-#
-#     _, results_validation = run_decentralized_problem(scenario_name, results_path, price_data_dlmps)
+plots = True  # will generate plots if set to True
+regenerate_scenario_data = False  # will re-generate the grid input data if set to True
 
 
 def main():
-    plots = True  # will generate plots if set to True
-    regenerate_scenarios = False  # will regenerate the grid input data
 
-    # Define grid / scenario names
+    # Define grid / scenario names (the exported scenario data will have these names)
     mv_grid_name = 'cigre_mv_network'
     high_granularity_scenario_name = 'cigre_high_granularity'
     low_granularity_scenario_name = 'cigre_low_granularity'
     no_granularity_scenario_name = low_granularity_scenario_name  # use same scenario, only without the actual grid
+    # no_granularity does not generate new scenario data
+
+    der_penetration_scenario_data = {
+        'no_penetration': 0.0,
+        'low_penetration': 0.3,
+        'high_penetration': 0.6,
+    }
 
     # Generate the grids that are needed for different granularity levels (comment out if not needed)
-    if regenerate_scenarios:
+    if regenerate_scenario_data:
+        # generate aggregated / combined grids
         path_to_grid_map = 'examples/electric_grid_mapping.csv'
         au.combine_electric_grids(mv_grid_name, path_to_grid_map, high_granularity_scenario_name)
         au.aggregate_electric_grids(mv_grid_name, path_to_grid_map, low_granularity_scenario_name)
+        # generate scenario data for DER penetration scenarios
+        path_to_der_data = 'examples/additional_electric_grid_ders.csv'
+        grid_scenarios = [low_granularity_scenario_name, high_granularity_scenario_name]
+        for scenario_name in grid_scenarios:
+            for der_penetration in der_penetration_scenario_data.keys():
+                au.increase_der_penetration_of_scenario_on_lv_level(
+                    scenario_name=scenario_name,
+                    path_to_der_data=path_to_der_data,
+                    penetration_ratio=der_penetration_scenario_data[der_penetration],
+                    new_scenario_name=scenario_name + '_' + der_penetration
+                )
 
     # Recreate / overwrite database, to incorporate the new grids that we created
     fledge.data_interface.recreate_database()
+    results_dict = {}
+    # Run different granularity / der penetration scenarios and analyze
+    for der_penetration in der_penetration_scenario_data:
+        granularity_scenario_data = {
+            'high_granularity': high_granularity_scenario_name + '_' + der_penetration,
+            'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
+            'no_granularity': no_granularity_scenario_name + '_' + der_penetration
+        }
+        results_dict[der_penetration] = run_dlmp_analysis_for_scenario(
+            granularity_scenario_data=granularity_scenario_data,
+            der_penetration=der_penetration
+        )
+
+    return results_dict
+
+
+def run_dlmp_analysis_for_scenario(
+    granularity_scenario_data: dict,
+    der_penetration: str = 'default'
+) -> dict:
 
     # Run centralized problems for all granularity levels
-    scenarios = [high_granularity_scenario_name, low_granularity_scenario_name]
-    # the no granularity scenario is added below in the  decentralized case
     opf_results_dict = {}
-    for scenario_name in scenarios:
+    for granularity_level in granularity_scenario_data.keys():
+        if 'no_granularity' in granularity_level:
+            # if there is no granularity (only on node), then the problem is formulated as decentral (below)
+            continue
         results_path = fledge.utils.get_results_path(
-            'run_electric_grid_optimal_operation', scenario_name + '_central')
+            'run_electric_grid_optimal_operation', granularity_level + '_central_' + der_penetration)
+        scenario_name = granularity_scenario_data[granularity_level]
         opt_objective, opf_results, dlmps = run_centralized_problem(scenario_name, results_path)
-        opf_results_dict['opt_objective_' + scenario_name + '_central'] = opt_objective
-        opf_results_dict['opf_results_' + scenario_name + '_central'] = opf_results
-        opf_results_dict['dlmps_' + scenario_name] = dlmps
+        opf_results_dict['opt_objective_' + granularity_level + '_central'] = opt_objective
+        opf_results_dict['opf_results_' + granularity_level + '_central'] = opf_results
+        opf_results_dict['dlmps_' + granularity_level] = dlmps
 
     # Run decentralized problem based on the DLMPs and one based on wholesale market price (no granularity)
     # TODO: Test scenario with weighted average DLMP instead of MV-level DLMP
-    # first the scenarios from above
     price_timeseries_dict = {}
-    for scenario_name in scenarios:
+    for granularity_level in granularity_scenario_data.keys():
         results_path = fledge.utils.get_results_path(
-            'run_electric_grid_optimal_operation', scenario_name + '_decentral')
+            'run_electric_grid_optimal_operation', granularity_level + '_decentral_' + der_penetration)
+        scenario_name = granularity_scenario_data[granularity_level]
         # Obtain price data
         price_data = get_price_data_for_scenario(scenario_name)
         # Change price time series to dlmps
-        dlmps = opf_results_dict['dlmps_' + scenario_name]
-        price_data.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
+        if 'no_granularity' not in granularity_level:
+            # Change price timeseries to DLMPs that were calculated in centralized problem
+            dlmps = opf_results_dict['dlmps_' + granularity_level]
+            if dlmps is None:
+                continue
+            price_data.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
         opt_objective, opf_results = run_decentralized_problem(
             scenario_name, results_path, price_data)
-        opf_results_dict['opt_objective_' + scenario_name + '_decentral'] = opt_objective
-        opf_results_dict['opf_results_' + scenario_name + '_decentral'] = opf_results
-        price_timeseries_dict[scenario_name] = price_data.price_timeseries
-
-    # then the "no granularity" scenario based on the wholesale market
-    scenario_name = no_granularity_scenario_name
-    price_data = get_price_data_for_scenario(scenario_name)
-    results_path = fledge.utils.get_results_path('run_electric_grid_optimal_operation',
-                                                 'cigre_no_granularity' + '_decentral')
-    opt_objective, results = run_decentralized_problem(
-        scenario_name, results_path, price_data)
-    opf_results_dict['opt_objective_' + 'cigre_no_granularity' + '_decentral'] = opt_objective
-    opf_results_dict['opf_results_' + 'cigre_no_granularity' + '_decentral'] = opf_results
-    price_timeseries_dict['cigre_no_granularity'] = price_data.price_timeseries
+        opf_results_dict['opt_objective_' + granularity_level + '_decentral'] = opt_objective
+        opf_results_dict['opf_results_' + granularity_level + '_decentral'] = opf_results
+        price_timeseries_dict[granularity_level] = price_data.price_timeseries
 
     # Get the set points from decentralized problems and calculate nominal power flow
     # now using the entire grid again
     pf_results_dict = {}
     der_costs_revenues_dict = {}
     system_costs = {}
-    scenario_name = high_granularity_scenario_name
+    scenario_name = granularity_scenario_data['high_granularity']
     for key in opf_results_dict.keys():
         if ('decentral' in key) and ('opf_results' in key):
-            results_path = fledge.utils.get_results_path('run_electric_grid_nominal_operation', key + '_power_flow')
+            results_path = fledge.utils.get_results_path('run_electric_grid_nominal_operation', key + '_power_flow_' + der_penetration)
             # change the set points of the DERs
-            der_model_set = change_der_set_points_based_on_results(scenario_name, opf_results_dict[key])
+            try:
+                der_model_set_new_setpoints = change_der_set_points_based_on_results(scenario_name, opf_results_dict[key])
+            except KeyError:
+                continue
             # run the nominal power flow and store results in dictionary
-            pf_results_dict[get_scenario_string(key)] = run_nominal_operation(scenario_name, der_model_set,
+            pf_results_dict[get_scenario_string(key)] = run_nominal_operation(scenario_name, der_model_set_new_setpoints,
                                                                               results_path)
             # calculate the system costs
-            system_costs[get_scenario_string(key)] = calculate_system_costs_at_source_node(scenario_name, der_model_set)
+            system_costs[get_scenario_string(key)] = calculate_system_costs_at_source_node(scenario_name, der_model_set_new_setpoints)
             # calculate individual DER costs / revenues
+            # TODO: this is currently only working for flexible and fixed loads, no generators, etc.!!!
             der_costs_revenues_dict[get_scenario_string(key)] = \
                 price_timeseries_dict[get_scenario_string(key)].loc[:,
-                ('active_power', slice(None), der_model_set.der_names)] \
+                ('active_power', ['fixed_load', 'flexible_load'], slice(None))] \
                 * pf_results_dict[get_scenario_string(key)]['der_power_magnitude'].values
 
     # Gather all result data in a dictionary and generate plots
+    results_dict = {}
     if plots:
         # Combine all results in one big dictionary
         results_dict = {'opf_results': opf_results_dict,
@@ -129,13 +153,14 @@ def main():
                         'system_costs': system_costs,
                         'der_costs_revenues': der_costs_revenues_dict}
         # Pass to plot function
-        results_path = fledge.utils.get_results_path('dlmp_analysis_plots', mv_grid_name)
-        generate_result_plots(results_dict, high_granularity_scenario_name, results_path)
+        results_path = fledge.utils.get_results_path('dlmp_analysis_plots', der_penetration)
+        generate_result_plots(results_dict, granularity_scenario_data, results_path)
 
     # TODO: repeat the above with higher DER penetration
     # DERs can be modified based on the code example in function change_der_set_points...
 
     print('Done.')
+    return results_dict
 
 
 def run_centralized_problem(
@@ -171,6 +196,8 @@ def run_centralized_problem(
 
     # Solve centralized optimization problem.
     solve_optimization_problem(optimization_problem)
+    if optimization_problem is None:
+        return [None, None, None]
 
     # Obtain results.
     results = (
@@ -313,6 +340,8 @@ def run_decentralized_problem(
 
     # Solve decentralized DER optimization problem.
     solve_optimization_problem(optimization_problem)
+    if optimization_problem is None:
+        return [None, None]
 
     # Obtain results.
     results = (
@@ -345,7 +374,9 @@ def solve_optimization_problem(
     try:
         assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
     except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+        print(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+        optimization_problem = None
+        # raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
 
 
 def run_nominal_operation(
@@ -544,7 +575,7 @@ def get_power_flow_solutions_for_timesteps(
 
 def generate_result_plots(
         results_dict: dict,
-        high_granularity_scenario_name: str,
+        granularity_scenario_data: dict,
         results_path: str = None
 ):
     # This function produces the plots:
@@ -558,7 +589,7 @@ def generate_result_plots(
     # [x] node voltage magnitude over time per node
     # [x] der output over time
     # [x] dlmp validation
-    # [ ] load flow calculation
+    # TODO: [ ] load flow calculation comparison --> ask Sebastian
     pf_results = results_dict['pf_results']
     system_costs = results_dict['system_costs']
     opf_results = results_dict['opf_results']
@@ -566,9 +597,8 @@ def generate_result_plots(
 
     # Get the electric grid model of the high granularity (was the same for all power flow calculations)
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(
-        high_granularity_scenario_name)
-    scenario_data = fledge.data_interface.ScenarioData(high_granularity_scenario_name)  # only used for timesteps
-    der_model_set = fledge.der_models.DERModelSet(high_granularity_scenario_name)
+        granularity_scenario_data['high_granularity'])
+    scenario_data = fledge.data_interface.ScenarioData(granularity_scenario_data['high_granularity'])  # only used for timesteps
 
     # Branch power magnitude for both directions and node voltage
     plots = {
@@ -581,20 +611,20 @@ def generate_result_plots(
     for plot in plots.keys():
         minimum = None
         maximum = None
-        legend = scenarios
         if 'Node voltage' in plot:
             x_index = electric_grid_model.nodes
-            minimum = voltage_min * 0.8
-            maximum = voltage_max * 1.2
+            minimum = voltage_min
+            maximum = voltage_max
         elif 'Branch power' in plot:
             x_index = electric_grid_model.branches.append(electric_grid_model.transformers)
             minimum = 0.0
-            maximum = 1.3
+            maximum = 1.0
         elif 'DER' in plot:
             x_index = electric_grid_model.ders
             minimum = 0.0
-            maximum = 1.3
+            maximum = 1.0
         for timestep in scenario_data.timesteps:
+            plt.figure()
             plt.title(plot + ' at: ' + timestep.strftime("%H-%M-%S"))
             marker_index = 4
             for scenario_name in scenarios:
@@ -603,18 +633,28 @@ def generate_result_plots(
                 plt.scatter(
                     range(len(x_index)),
                     pf_results_of_scenario[plots[plot]].loc[timestep, :].reindex(x_index).values,
-                    marker=marker_index
+                    marker=marker_index,
+                    label=scenario_name
                 )
                 marker_index += 1
+            if (minimum is not None) and (maximum is not None):
+                label_min = 'Minimum'
+                label_max = 'Maximum'
+                plt.plot([range(len(x_index))[0], range(len(x_index))[-1]], [minimum, minimum], 'k-', color='r',
+                         label=label_min)
+                plt.plot([range(len(x_index))[0], range(len(x_index))[-1]], [maximum, maximum], 'k-', color='r',
+                         label=label_max)
+                # plt.ylim((minimum, maximum))
+            handles, labels = plt.gca().get_legend_handles_labels()
+            # sort both labels and handles by labels
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            plt.legend(handles, labels)
             plt.xticks(
                 range(len(x_index)),
                 x_index,
                 rotation=45,
                 ha='right'
             )
-            if minimum is not None:
-                plt.ylim((minimum, maximum))
-            plt.legend(legend)
             plt.grid()
             plt.tight_layout()
             save_or_show_plot(plot, results_path, timestep)
@@ -629,20 +669,20 @@ def generate_result_plots(
     minimum = None
     maximum = None
     for plot in plots.keys():
-        legend = scenarios
         if 'Node voltage' in plot:
             assets = electric_grid_model.nodes
-            minimum = voltage_min * 0.8
-            maximum = voltage_max * 1.2
+            minimum = voltage_min
+            maximum = voltage_max
         elif 'Branch power' in plot:
             assets = electric_grid_model.branches
             minimum = 0.0
-            maximum = 1.3
+            maximum = 1.0
         elif 'DER' in plot:
             assets = electric_grid_model.ders
             minimum = 0.0
-            maximum = 1.3
+            maximum = 1.0
         for asset in assets:
+            plt.figure()
             plt.title(plot + asset[1])
             marker_index = 4
             for scenario_name in scenarios:
@@ -651,12 +691,21 @@ def generate_result_plots(
                 plt.plot(
                     scenario_data.timesteps,
                     pf_results_of_scenario[plots[plot]].loc[:, (asset[0],  asset[1], slice(None))],
-                    marker=marker_index
+                    marker=marker_index,
+                    label=scenario_name
                 )
                 marker_index += 1
-            if minimum is not None:
-                plt.ylim((minimum, maximum))
-            plt.legend(legend)
+            if (minimum is not None) and (maximum is not None):
+                label_min = 'Minimum'
+                label_max = 'Maximum'
+                plt.plot([scenario_data.timesteps[0], scenario_data.timesteps[-1]], [minimum, minimum], 'k-', color='r',
+                         label=label_min)
+                plt.plot([scenario_data.timesteps[0], scenario_data.timesteps[-1]], [maximum, maximum], 'k-', color='r',
+                         label=label_max)
+            handles, labels = plt.gca().get_legend_handles_labels()
+            # sort both labels and handles by labels
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            plt.legend(handles, labels)
             plt.grid()
             plt.tight_layout()
             save_or_show_plot(plot + asset[1], results_path)
@@ -738,6 +787,7 @@ def generate_result_plots(
         save_or_show_plot(plot, results_path)
 
     # Price plots
+    der_model_set = fledge.der_models.DERModelSet(granularity_scenario_data['high_granularity'])
     for der_name in der_model_set.der_names:
         plot = f'Price at {der_name} in EUR per kWh'
         plt.title(plot)
@@ -762,11 +812,48 @@ def generate_result_plots(
         plt.tight_layout()
         save_or_show_plot(plot, results_path)
 
+    # DLMPs at time step over all nodes
+    plots = {
+        'Nodal Prices in EUR per kWh': '',
+    }
+    for plot in plots.keys():
+        if 'Nodal Prices' in plot:
+            x_index = der_model_set.der_names
+        for timestep in scenario_data.timesteps:
+            plt.figure()
+            plt.title(plot + ' at: ' + timestep.strftime("%H-%M-%S"))
+            marker_index = 4
+            for scenario_name in scenarios:
+                prices_at_timestep = price_timeseries[scenario_name].loc[timestep, ('active_power', ['fixed_load', 'flexible_load'], slice(None))]
+                plt.scatter(
+                    range(len(x_index)),
+                    prices_at_timestep.values * 1e3,
+                    marker=marker_index,
+                    label=scenario_name
+                )
+                marker_index += 1
+            handles, labels = plt.gca().get_legend_handles_labels()
+            # sort both labels and handles by labels
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            plt.legend(handles, labels)
+            plt.xticks(
+                range(len(x_index)),
+                x_index,
+                rotation=45,
+                ha='right'
+            )
+            plt.grid()
+            plt.tight_layout()
+            save_or_show_plot(plot, results_path, timestep)
+
     # DLMP validation plots
-    wholesale_price = price_timeseries['cigre_no_granularity']
-    price_timeseries_dlmps = price_timeseries['cigre_high_granularity']
-    central_opf_results = opf_results['opf_results_cigre_high_granularity_central']
-    decentral_opf_results = opf_results['opf_results_cigre_high_granularity_decentral']
+    try:
+        wholesale_price = price_timeseries['no_granularity']
+    except KeyError:
+        return
+    price_timeseries_dlmps = price_timeseries['high_granularity']
+    central_opf_results = opf_results['opf_results_high_granularity_central']
+    decentral_opf_results = opf_results['opf_results_high_granularity_decentral']
     for der_name in der_model_set.der_names:
         if issubclass(type(der_model_set.der_models[der_name]), fledge.der_models.FlexibleDERModel):
             plot_dlmp_validation(
@@ -903,4 +990,4 @@ def plot_dlmp_validation(
 
 
 if __name__ == '__main__':
-    main()
+    results_dict = main()

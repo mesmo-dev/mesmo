@@ -15,5 +15,5 @@ fixed_generator,cigre_pv_NUTS2_DE21,timeseries_per_unit,cigre_pv_NUTS2_DE21,,,,,
 flexible_generator,cigre_pv_NUTS2_DE21,timeseries_per_unit,cigre_pv_NUTS2_DE21,0.0,1.0,,,,,,0.0
 fixed_load,cigre_residential,schedule_per_unit,cigre_residential,,,,,,,,
 fixed_load,cigre_commercial,schedule_per_unit,cigre_commercial,,,,,,,,
-flexible_load,cigre_residential,schedule_per_unit,cigre_residential,0.6,1.4,,,4.0,,,
-flexible_load,cigre_commercial,schedule_per_unit,cigre_commercial,0.6,1.4,,,4.0,,,
+flexible_load,cigre_residential,schedule_per_unit,cigre_residential,0,1.2,,,12.0,,,
+flexible_load,cigre_commercial,schedule_per_unit,cigre_commercial,0,1.2,,,12.0,,,

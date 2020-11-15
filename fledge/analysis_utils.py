@@ -11,6 +11,54 @@ import fledge.config
 path_to_data = fledge.config.config['paths']['data']
 
 
+def increase_der_penetration_of_scenario_on_lv_level(
+        scenario_name: str,
+        path_to_der_data: str,
+        penetration_ratio: float = 1.0,
+        new_scenario_name: str = None
+) -> str:
+    der_data = __load_data(path_to_der_data)
+
+    if new_scenario_name is None:
+        new_scenario_name = scenario_name + '_increased_der_penetration'
+
+    # Create output folder for the new grid
+    output_path = __create_output_folder(scenario_name=new_scenario_name)
+
+    grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+
+    # Loop through der data and add to the scenario
+    for new_der_index, new_der_row in der_data.iterrows():
+        additional_der_name = str(new_der_row['der_name'])
+        num_of_lv_nodes = len(grid_data.electric_grid_ders[grid_data.electric_grid_ders['der_name'].str.contains('_')])
+        count = 1
+        for der_index, der_row in grid_data.electric_grid_ders.iterrows():
+            if count > int(num_of_lv_nodes * penetration_ratio):
+                break
+            der_name = der_row['der_name']
+            if '_' in der_name:
+                node = der_row['node_name']
+                print(f'Adding DER {additional_der_name} to node {node} in scenario {scenario_name}.')
+                new_der_row['node_name'] = str(node)
+                new_der_row['der_name'] = additional_der_name + '_' + str(der_name) + '_' + str(count)
+                # Add the DER to the main DER table
+                grid_data.electric_grid_ders = \
+                    grid_data.electric_grid_ders.append(new_der_row).reset_index(drop=True)
+                count += 1
+
+    # Change electric grid name to new name
+    __change_electric_grid_name(grid_data, new_scenario_name)
+    grid_data.scenario_data.scenario.loc['scenario_name'] = new_scenario_name
+
+    # Format all dataframes correctly for export
+    __format_grid_tables(grid_data)
+
+    # call export function
+    __export_grid_to_csv(grid_data, output_path)
+
+    return new_scenario_name
+
+
 def aggregate_electric_grids(
         mv_scenario_name: str,
         path_to_map_grids: str,
@@ -212,10 +260,10 @@ def combine_electric_grids(
 def __load_data(
         path_to_map_grids: str
 ):
-    map_grids = pd.read_csv(os.path.join(os.path.dirname(path_to_data), path_to_map_grids))
+    csv_file = pd.read_csv(os.path.join(os.path.dirname(path_to_data), path_to_map_grids))
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
-    return map_grids
+    return csv_file
 
 
 def __create_output_folder(

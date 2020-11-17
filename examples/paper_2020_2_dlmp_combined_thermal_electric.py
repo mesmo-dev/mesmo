@@ -56,7 +56,7 @@ def main(
     elif scenario_number in [15]:
         scenario_name = 'paper_2020_2_scenario_15'
     else:
-        scenario_name = 'singapore_tanjongpagar_modified'
+        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
 
     # Obtain results path.
     results_path = (
@@ -73,7 +73,8 @@ def main(
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2020_2_scenario_1_2_3_4_5')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -82,7 +83,8 @@ def main(
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2020_2_scenario_1_2_3_4_5')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,
@@ -178,29 +180,6 @@ def main(
         thermal_grid_model=thermal_grid_model,
         thermal_power_flow_solution=thermal_power_flow_solution
     )
-
-    # Connect thermal grid source.
-    # TODO: Incorporate this workaround in model definition.
-    der_index = fledge.utils.get_index(electric_grid_model.ders, der_type='thermal_grid_source')[0]
-    der = electric_grid_model.ders[der_index]
-    for timestep in scenario_data.timesteps:
-        optimization_problem.der_model_constraints.add(
-            optimization_problem.der_active_power_vector_change[timestep, der]
-            ==
-            sum(
-                optimization_problem.der_thermal_power_vector[timestep, thermal_der]
-                for thermal_der in thermal_grid_model.ders
-            )
-            / thermal_grid_model.cooling_plant_efficiency
-            + optimization_problem.pump_power[timestep]
-            - np.real(power_flow_solution.der_power_vector[der_index])
-        )
-        optimization_problem.der_model_constraints.add(
-            optimization_problem.der_reactive_power_vector_change[timestep, der]
-            ==
-            0.5  # Constant power factor.
-            * optimization_problem.der_active_power_vector_change[timestep, der]
-        )
 
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
@@ -377,7 +356,7 @@ def main(
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
@@ -464,7 +443,7 @@ def main(
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))

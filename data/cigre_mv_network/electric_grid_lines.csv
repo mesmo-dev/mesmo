@@ -2,12 +2,4 @@ line_name,electric_grid_name,line_type,node_1_name,node_2_name,is_phase_1_connec
 Line_1_2,cigre_mv_network,cigre_mv_network_underground,1,2,1,0,0,2.82
 Line_2_3,cigre_mv_network,cigre_mv_network_underground,2,3,1,0,0,4.42
 Line_3_4,cigre_mv_network,cigre_mv_network_underground,3,4,1,0,0,0.61
-Line_4_5,cigre_mv_network,cigre_mv_network_underground,4,5,1,0,0,0.56
-Line_5_6,cigre_mv_network,cigre_mv_network_underground,5,6,1,0,0,1.54
-Line_7_8,cigre_mv_network,cigre_mv_network_underground,7,8,1,0,0,1.67
-Line_8_9,cigre_mv_network,cigre_mv_network_underground,8,9,1,0,0,0.32
-Line_9_10,cigre_mv_network,cigre_mv_network_underground,9,10,1,0,0,0.77
-Line_10_11,cigre_mv_network,cigre_mv_network_underground,10,11,1,0,0,0.33
 Line_3_8,cigre_mv_network,cigre_mv_network_underground,3,8,1,0,0,1.3
-Line_12_13,cigre_mv_network,cigre_mv_network_overhead,12,13,1,0,0,4.89
-Line_13_14,cigre_mv_network,cigre_mv_network_overhead,13,14,1,0,0,2.99

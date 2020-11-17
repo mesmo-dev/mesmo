@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+import pyomo.environ as pyo
 import typing
 import yaml
 
@@ -151,6 +152,9 @@ if config['caching']['enable']:
     if config['caching']['reset_cache']:
         cache.clear()
 
+# Instantiate Pyomo optimization solver.
+optimization_solver = pyo.SolverFactory(config['optimization']['solver_name'])
+
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
 matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
@@ -176,8 +180,13 @@ except ValueError:
 # Modify plotly default settings.
 pio.templates.default = go.layout.Template(pio.templates['simple_white'])
 pio.templates.default.layout.update(
-    font_family=config['plots']['plotly_font_family'],
+    font=go.layout.Font(
+        family=config['plots']['plotly_font_family'],
+        size=config['plots']['plotly_font_size']
+    ),
     legend=go.layout.Legend(borderwidth=1),
     xaxis=go.layout.XAxis(showgrid=True),
     yaxis=go.layout.YAxis(showgrid=True)
 )
+pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots']['plotly_figure_width']
+pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']

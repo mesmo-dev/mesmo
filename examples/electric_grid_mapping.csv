@@ -1,2 +1,4 @@
 mv_node_name,lv_grid_name
-11,cigre_lv_network_residential
+4,cigre_lv_network_residential
+8,cigre_lv_network_residential
+8,cigre_lv_network_commercial

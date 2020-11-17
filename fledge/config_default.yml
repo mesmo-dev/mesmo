@@ -6,6 +6,7 @@ paths:
   data: ./data
   database: ./data/database.sqlite
   results: ./results
+  cobmo_additional_data: []
 multiprocessing:
   run_parallel: true
 caching:

@@ -1,0 +1,4 @@
+line_type,n_phases,maximum_current
+kerber_landnetz_kabel_2_NAYY 4x150,3,275.0
+kerber_landnetz_kabel_2_NAYY 4x50,3,141.0
+kerber_landnetz_kabel_2_NAYY 4x50 SE,3,142.0

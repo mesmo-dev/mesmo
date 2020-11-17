@@ -1,0 +1,4 @@
+line_type,row,col,resistance,reactance,capacitance
+kerber_dorfnetz_NAYY 4x150,1,1,0.2067,0.08042478,830.0
+kerber_dorfnetz_NAYY 4x50,1,1,0.6417,0.084823,670.0
+kerber_dorfnetz_NAYY 4x50 SE,1,1,0.642,0.083,210.0

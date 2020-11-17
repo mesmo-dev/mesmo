@@ -1,0 +1,4 @@
+line_type,row,col,resistance,reactance,capacitance
+kerber_vorstadtnetz_kabel_2_NAYY 4x185,1,1,0.165,0.08042478,830.0
+kerber_vorstadtnetz_kabel_2_NAYY 4x50,1,1,0.6417,0.084823,670.0
+kerber_vorstadtnetz_kabel_2_NYY 4x35,1,1,0.5240284,0.08513716,0.0

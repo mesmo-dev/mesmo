@@ -1,0 +1,15 @@
+der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+Load_3,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,3,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_5,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,5,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_7,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_9,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,9,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_11,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,11,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_13,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,13,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_15,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,15,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_17,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,17,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_19,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,19,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_21,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,21,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_23,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,23,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_25,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,25,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_27,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,27,1,0,0,wye,-8000.0,-2629.4728414309056
+Load_29,kerber_landnetz_kabel_2,fixed_load,mixed_commercial_residential,29,1,0,0,wye,-8000.0,-2629.4728414309056

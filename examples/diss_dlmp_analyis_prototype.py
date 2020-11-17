@@ -35,9 +35,9 @@ def main():
     # no_granularity does not generate new scenario data
 
     der_penetration_scenario_data = {
-        'no_penetration': 0.0,
+        # 'no_penetration': 0.0,
         'low_penetration': 0.3,
-        'high_penetration': 0.6,
+        # 'high_penetration': 0.8,
     }
 
     # Generate the grids that are needed for different granularity levels (comment out if not needed)
@@ -602,8 +602,8 @@ def generate_result_plots(
 
     # Branch power magnitude for both directions and node voltage
     plots = {
-        'Branch power (direction 1) magnitude [p.u.]': 'branch_power_1_magnitude_per_unit',
-        'Branch power (direction 2) magnitude [p.u.]': 'branch_power_2_magnitude_per_unit',
+        'Branch power (direction 1) magnitude [p.u.]': 'branch_power_vector_1',
+        'Branch power (direction 2) magnitude [p.u.]': 'branch_power_vector_2',
         'Node voltage magnitude [p.u.]': 'node_voltage_magnitude_per_unit',
         'DER power magnitude [p.u.]': 'der_power_magnitude_per_unit',
     }
@@ -616,7 +616,7 @@ def generate_result_plots(
             minimum = voltage_min
             maximum = voltage_max
         elif 'Branch power' in plot:
-            x_index = electric_grid_model.branches.append(electric_grid_model.transformers)
+            x_index = electric_grid_model.branches
             minimum = 0.0
             maximum = 1.0
         elif 'DER' in plot:
@@ -630,9 +630,14 @@ def generate_result_plots(
             for scenario_name in scenarios:
                 pf_results_scenario_name = [key for key in pf_results.keys() if scenario_name in key][0]
                 pf_results_of_scenario = pf_results[pf_results_scenario_name]
+                if 'Branch power' in plot:
+                    y_values = np.abs(pf_results_of_scenario[plots[plot]].loc[timestep, :].reindex(x_index).values ** 2)
+                    y_values = y_values / (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+                else:
+                    y_values = pf_results_of_scenario[plots[plot]].loc[timestep, :].reindex(x_index).values
                 plt.scatter(
                     range(len(x_index)),
-                    pf_results_of_scenario[plots[plot]].loc[timestep, :].reindex(x_index).values,
+                    y_values,
                     marker=marker_index,
                     label=scenario_name
                 )
@@ -661,8 +666,8 @@ def generate_result_plots(
 
     # Branch power magnitude for both directions and node voltage over time
     plots = {
-        'Branch power (direction 1) magnitude [p.u.] for branch ': 'branch_power_1_magnitude_per_unit',
-        'Branch power (direction 2) magnitude [p.u.] for branch ': 'branch_power_2_magnitude_per_unit',
+        'Branch power (direction 1) magnitude [p.u.] for ': 'branch_power_vector_1',
+        'Branch power (direction 2) magnitude [p.u.] for ': 'branch_power_vector_2',
         'Node voltage magnitude [p.u.] for node ': 'node_voltage_magnitude_per_unit',
         'DER power magnitude [p.u.] for ': 'der_power_magnitude_per_unit',
     }
@@ -683,14 +688,20 @@ def generate_result_plots(
             maximum = 1.0
         for asset in assets:
             plt.figure()
-            plt.title(plot + asset[1])
+            plt.title(plot + asset[0] + ' :' + asset[1])
             marker_index = 4
             for scenario_name in scenarios:
                 pf_results_scenario_name = [key for key in pf_results.keys() if scenario_name in key][0]
                 pf_results_of_scenario = pf_results[pf_results_scenario_name]
+                if 'Branch power' in plot:
+                    y_values = np.abs(pf_results_of_scenario[plots[plot]].loc[:, (asset[0],  asset[1], slice(None))] ** 2)
+                    branch_index = fledge.utils.get_index(electric_grid_model.branches, branch_type=asset[0], branch_name=asset[1])
+                    y_values = y_values / (electric_grid_model.branch_power_vector_magnitude_reference[branch_index] ** 2)
+                else:
+                    y_values = pf_results_of_scenario[plots[plot]].loc[:, (asset[0],  asset[1], slice(None))]
                 plt.plot(
                     scenario_data.timesteps,
-                    pf_results_of_scenario[plots[plot]].loc[:, (asset[0],  asset[1], slice(None))],
+                    y_values,
                     marker=marker_index,
                     label=scenario_name
                 )

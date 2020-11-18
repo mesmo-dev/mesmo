@@ -816,6 +816,146 @@ class FlexibleLoadModel(FlexibleDERModel):
         )
 
 
+class FlexibleEVChargerModel(FlexibleDERModel):
+    """Flexible EV charger model object."""
+
+    der_type = 'flexible_ev_charger'
+
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+        """Construct flexible load model object by `der_data` and `der_name`."""
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
+        der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
+
+        # Obtain grid connection flags.
+        # - Flexible loads are currently only implemented for electric grids.
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
+        self.is_thermal_grid_connected = False
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # # Construct active and reactive power timeseries.
+        # self.active_power_nominal_timeseries = (
+        #     der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('active_power')
+        # )
+        # self.reactive_power_nominal_timeseries = (
+        #     der_data.der_definitions[der.at['definition_index']].loc[:, 'value'].copy().abs().rename('reactive_power')
+        # )
+        # if 'per_unit' in der.at['definition_type']:
+        #     # If per unit definition, multiply nominal active / reactive power.
+        #     self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+        #     self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+        # else:
+        #     self.active_power_nominal_timeseries *= np.sign(der.at['active_power_nominal'])
+        #     self.reactive_power_nominal_timeseries *= (
+        #         np.sign(der.at['reactive_power_nominal'])
+        #         * (
+        #             der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+        #             if der.at['active_power_nominal'] != 0.0
+        #             else 1.0
+        #         )
+        #     )
+
+        # Construct active and reactive power timeseries.
+        self.active_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='active_power')
+        )
+        self.reactive_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='reactive_power')
+        )
+
+        # Construct nominal thermal power timeseries.
+        self.thermal_power_nominal_timeseries = (
+            pd.Series(0.0, index=self.timesteps, name='thermal_power')
+        )
+
+        # Instantiate indexes.
+        self.states = pd.Index(['charged_energy'])
+        self.storage_states = pd.Index(['charged_energy'])
+        self.controls = pd.Index(['active_power'])
+        self.disturbances = pd.Index(['departing_vehicle_energy'])
+        self.outputs = pd.Index(['charged_energy', 'active_power', 'reactive_power'])
+
+        # Instantiate initial state.
+        # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
+        self.state_vector_initial = (
+            pd.Series(0.0, index=self.states)
+        )
+
+        # Instantiate state space matrices.
+        # TODO: Add shifting losses / self discharge.
+        self.state_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.states)
+        )
+        self.state_matrix.at['charged_energy', 'charged_energy'] = 1.0
+        self.control_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        )
+        self.control_matrix.at['charged_energy', 'active_power'] = (
+            -1.0
+            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+            * der['charging_efficiency']
+        )
+        self.disturbance_matrix = (
+            pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        )
+        self.disturbance_matrix.at['charged_energy', 'departing_vehicle_energy'] = -1.0
+        self.state_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        )
+        self.state_output_matrix.at['charged_energy', 'charged_energy'] = 1.0
+        self.control_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        )
+        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
+        )
+        self.disturbance_output_matrix = (
+            pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+        )
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = (
+            pd.concat([
+                pd.Series((
+                    der_data.der_definitions[der.at['departure_definition_index']].loc[:, 'value'].copy()
+                    * der.at['vehicle_energy_demand']
+                ), index=self.timesteps, name='departing_vehicle_energy')
+            ], axis='columns')
+        )
+
+        # Construct output constraint timeseries
+        self.output_maximum_timeseries = (
+            pd.concat([
+                pd.Series((
+                    der_data.der_definitions[der.at['occupancy_definition_index']].loc[:, 'value'].copy()
+                    * der.at['vehicle_energy_demand']
+                ), index=self.timesteps, name='charged_energy'),
+                pd.Series(0.0, index=self.timesteps, name='active_power'),
+                pd.Series(0.0, index=self.timesteps, name='reactive_power')
+            ], axis='columns')
+        )
+        self.output_minimum_timeseries = (
+            pd.concat([
+                pd.Series(0.0, index=self.timesteps, name='charged_energy'),
+                pd.Series(-1.0 * der.at['maximum_active_power'], index=self.timesteps, name='active_power'),
+                pd.Series(-np.inf, index=self.timesteps, name='reactive_power')
+            ], axis='columns')
+        )
+
+
 class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 

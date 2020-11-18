@@ -563,9 +563,11 @@ class DERData(object):
         self.ders.index = self.ders['der_name']
         self.ders = self.ders.reindex(index=natsort.natsorted(self.ders.index))
 
-        # Instantiate DER definitions dictionary for unique `definition_type` / `definition_name`.
+        # Obtain unique `definition_type` / `definition_name`.
         der_definitions_unique = self.ders.loc[:, ['definition_type', 'definition_name']].drop_duplicates()
         der_definitions_unique = der_definitions_unique.dropna(subset=['definition_type'])
+
+        # Instantiate DER definitions dictionary.
         self.der_definitions = dict.fromkeys(pd.MultiIndex.from_frame(der_definitions_unique))
 
         # Append `definition_index` column to DERs, for more convenient indexing into DER definitions.
@@ -573,7 +575,76 @@ class DERData(object):
             pd.MultiIndex.from_frame(self.ders.loc[:, ['definition_type', 'definition_name']])
         )
 
-        # Load DER definitions, e.g. timeseries definitions, for each `definition_name`.
+        # Instantiate dict for additional DER definitions, e.g. from `flexible_ev_charger`.
+        additional_der_definitions = dict()
+
+        # Load DER definitions, first for special definition types, e.g. `cooling_plant`, `flexible_ev_charger`.
+        for definition_index in self.der_definitions:
+
+            if definition_index[0] == 'cooling_plant':
+
+                self.der_definitions[definition_index] = (
+                    pd.concat([
+                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                            """
+                            SELECT * FROM thermal_grids
+                            WHERE thermal_grid_name = (
+                                SELECT thermal_grid_name FROM main.scenarios
+                                WHERE scenario_name = ?
+                            )
+                            """,
+                            con=database_connection,
+                            params=[scenario_name]
+                        )).iloc[0],
+                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                            """
+                            SELECT * FROM der_cooling_plants
+                            WHERE definition_name = ?
+                            """,
+                            con=database_connection,
+                            params=[definition_index[1]]
+                        )).iloc[0]
+                    ]).drop('thermal_grid_name')  # Remove `thermal_grid_name` to avoid duplicate index in `der_models`.
+                )
+
+            elif definition_index[0] == 'flexible_ev_charger':
+
+                self.der_definitions[definition_index] = (
+                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                        """
+                        SELECT * FROM der_ev_chargers
+                        WHERE definition_name = ?
+                        """,
+                        con=database_connection,
+                        params=[definition_index[1]]
+                    )).iloc[0]
+                )
+
+                # Append `definition_index`, for more convenient indexing into DER definitions.
+                self.der_definitions[definition_index].at['arrival_definition_index'] = (
+                    self.der_definitions[definition_index].at['arrival_definition_type'],
+                    self.der_definitions[definition_index].at['arrival_definition_name']
+                )
+                self.der_definitions[definition_index].at['departure_definition_index'] = (
+                    self.der_definitions[definition_index].at['departure_definition_type'],
+                    self.der_definitions[definition_index].at['departure_definition_name']
+                )
+                self.der_definitions[definition_index].at['occupancy_definition_index'] = (
+                    self.der_definitions[definition_index].at['occupancy_definition_type'],
+                    self.der_definitions[definition_index].at['occupancy_definition_name']
+                )
+
+                # Append arrival / occupancy timeseries / schedule to additional definitions.
+                additional_der_definitions.update({
+                    self.der_definitions[definition_index].at['arrival_definition_index']: None,
+                    self.der_definitions[definition_index].at['departure_definition_index']: None,
+                    self.der_definitions[definition_index].at['occupancy_definition_index']: None
+                })
+
+        # Append additional DER definitions.
+        self.der_definitions.update(additional_der_definitions)
+
+        # Load DER definitions, for schedule / timeseries definitions, for each `definition_name`.
         for definition_index in self.der_definitions:
 
             if 'timeseries' in definition_index[0]:
@@ -690,32 +761,6 @@ class DERData(object):
                 der_schedule.index = self.scenario_data.timesteps
 
                 self.der_definitions[definition_index] = der_schedule
-
-            elif definition_index[0] == 'cooling_plant':
-
-                self.der_definitions[definition_index] = (
-                    pd.concat([
-                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                            """
-                            SELECT * FROM thermal_grids
-                            WHERE thermal_grid_name = (
-                                SELECT thermal_grid_name FROM main.scenarios
-                                WHERE scenario_name = ?
-                            )
-                            """,
-                            con=database_connection,
-                            params=[scenario_name]
-                        )).iloc[0],
-                        self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                            """
-                            SELECT * FROM der_cooling_plants
-                            WHERE definition_name = ?
-                            """,
-                            con=database_connection,
-                            params=[definition_index[1]]
-                        )).iloc[0]
-                    ]).drop('thermal_grid_name')  # Remove `thermal_grid_name` to avoid duplicate index in `der_models`.
-                )
 
 
 class PriceData(object):

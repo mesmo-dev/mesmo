@@ -18,26 +18,27 @@ import fledge.analysis_utils as au
 
 
 # Global Settings
-voltage_min = 0.8
-voltage_max = 1.2
+voltage_min = 0.9
+voltage_max = 1.1
+solver = 'default'  #choice: 'cplex', default is currently 'gurobi' (see config.yml)
 path_to_solver_executable = '/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx/cplex'
 plots = True  # will generate plots if set to True
-regenerate_scenario_data = False  # will re-generate the grid input data if set to True
+regenerate_scenario_data = True  # will re-generate the grid input data if set to True
 
 
 def main():
 
     # Define grid / scenario names (the exported scenario data will have these names)
-    mv_grid_name = 'cigre_mv_network'
-    high_granularity_scenario_name = 'cigre_high_granularity'
-    low_granularity_scenario_name = 'cigre_low_granularity'
+    mv_grid_name = 'simple_mv_3node'
+    high_granularity_scenario_name = 'simple_high_granularity'
+    low_granularity_scenario_name = 'simple_low_granularity'
     no_granularity_scenario_name = low_granularity_scenario_name  # use same scenario, only without the actual grid
     # no_granularity does not generate new scenario data
 
     der_penetration_scenario_data = {
-        # 'no_penetration': 0.0,
-        'low_penetration': 0.3,
-        # 'high_penetration': 0.8,
+        'no_penetration': 0.0,
+        'low_penetration': 0.5,
+        'high_penetration': 1.0,
     }
 
     # Generate the grids that are needed for different granularity levels (comment out if not needed)
@@ -65,6 +66,7 @@ def main():
     for der_penetration in der_penetration_scenario_data:
         granularity_scenario_data = {
             'high_granularity': high_granularity_scenario_name + '_' + der_penetration,
+            'high_granularity_mean': high_granularity_scenario_name + '_' + der_penetration,
             'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
             'no_granularity': no_granularity_scenario_name + '_' + der_penetration
         }
@@ -87,16 +89,23 @@ def run_dlmp_analysis_for_scenario(
         if 'no_granularity' in granularity_level:
             # if there is no granularity (only on node), then the problem is formulated as decentral (below)
             continue
-        results_path = fledge.utils.get_results_path(
-            'run_electric_grid_optimal_operation', granularity_level + '_central_' + der_penetration)
         scenario_name = granularity_scenario_data[granularity_level]
-        opt_objective, opf_results, dlmps = run_centralized_problem(scenario_name, results_path)
-        opf_results_dict['opt_objective_' + granularity_level + '_central'] = opt_objective
-        opf_results_dict['opf_results_' + granularity_level + '_central'] = opf_results
-        opf_results_dict['dlmps_' + granularity_level] = dlmps
+        if 'mean' not in granularity_level:
+            results_path = fledge.utils.get_results_path(
+                'run_electric_grid_optimal_operation', granularity_level + '_central_' + der_penetration)
+            opt_objective, opf_results, dlmps = run_centralized_problem(scenario_name, results_path)
+            opf_results_dict['opt_objective_' + granularity_level + '_central'] = opt_objective
+            opf_results_dict['opf_results_' + granularity_level + '_central'] = opf_results
+            opf_results_dict['dlmps_' + granularity_level] = dlmps
+        else:
+            # for the mean DLMPs, we calculate them based on the the high granularity dlmps
+            opf_results_dict['opt_objective_' + granularity_level + '_central'] = None
+            opf_results_dict['opf_results_' + granularity_level + '_central'] = None
+            scenario_name = granularity_scenario_data['high_granularity']
+            mean_dlmps = calculate_mean_dlmps_for_lv_nodes(opf_results_dict['dlmps_' + 'high_granularity'], scenario_name)
+            opf_results_dict['dlmps_' + granularity_level] = mean_dlmps
 
     # Run decentralized problem based on the DLMPs and one based on wholesale market price (no granularity)
-    # TODO: Test scenario with weighted average DLMP instead of MV-level DLMP
     price_timeseries_dict = {}
     for granularity_level in granularity_scenario_data.keys():
         results_path = fledge.utils.get_results_path(
@@ -195,8 +204,8 @@ def run_centralized_problem(
     )
 
     # Solve centralized optimization problem.
-    solve_optimization_problem(optimization_problem)
-    if optimization_problem is None:
+    feasible = solve_optimization_problem(optimization_problem)
+    if not feasible:
         return [None, None, None]
 
     # Obtain results.
@@ -364,19 +373,24 @@ def run_decentralized_problem(
 
 def solve_optimization_problem(
         optimization_problem: pyo.ConcreteModel
-):
+) -> bool:
     # Solve decentralized DER optimization problem.
     optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    # optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_solver = pyo.SolverFactory('cplex', executable=path_to_solver_executable)
+    if solver is 'default':
+        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    else:
+        optimization_solver = pyo.SolverFactory('cplex', executable=path_to_solver_executable)
     optimization_result = optimization_solver.solve(optimization_problem,
                                                     tee=fledge.config.config['optimization']['show_solver_output'])
     try:
         assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
     except AssertionError:
+        print('######### COULD NOT SOLVE OPTIMIZATION #########')
         print(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-        optimization_problem = None
+        return False
         # raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+
+    return True
 
 
 def run_nominal_operation(
@@ -571,6 +585,33 @@ def get_power_flow_solutions_for_timesteps(
         )
     )
     return dict(zip(timesteps, power_flow_solutions))
+
+
+def calculate_mean_dlmps_for_lv_nodes(
+        dlmps: fledge.data_interface.ResultsDict,
+        scenario_name: str
+) -> fledge.data_interface.ResultsDict:
+    if dlmps is None:
+        return None
+    electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    mean_dlmps = dlmps.copy()
+    lv_der_names = electric_grid_model.der_names[electric_grid_model.der_names.str.contains('_')]
+    # find the MV node names in the LV ders:
+    mv_nodes = []
+    for der_name in lv_der_names:
+        split_der_name = der_name.split('_')
+        mv_nodes.append(split_der_name[0])
+    mv_nodes = list(set(mv_nodes))  # remove duplicates
+    dlmp_type = 'electric_grid_total_dlmp_price_timeseries'
+    for mv_node in mv_nodes:
+        lv_der_names_at_node = lv_der_names[lv_der_names.str.contains(mv_node + '_')]
+        mean_dlmps[dlmp_type].loc[:, ('active_power', slice(None), lv_der_names_at_node)] = \
+            mean_dlmps[dlmp_type].loc[:, ('active_power', slice(None), lv_der_names_at_node)].apply(
+            lambda x: dlmps[dlmp_type].loc[:, ('active_power', slice(None), lv_der_names_at_node)].mean(axis=1))
+        mean_dlmps[dlmp_type].loc[:, ('reactive_power', slice(None), lv_der_names_at_node)] = \
+            mean_dlmps[dlmp_type].loc[:, ('reactive_power', slice(None), lv_der_names_at_node)].apply(
+            lambda x: dlmps[dlmp_type].loc[:, ('reactive_power', slice(None), lv_der_names_at_node)].mean(axis=1))
+    return mean_dlmps
 
 
 def generate_result_plots(
@@ -860,11 +901,12 @@ def generate_result_plots(
     # DLMP validation plots
     try:
         wholesale_price = price_timeseries['no_granularity']
+        price_timeseries_dlmps = price_timeseries['high_granularity']
+        central_opf_results = opf_results['opf_results_high_granularity_central']
+        decentral_opf_results = opf_results['opf_results_high_granularity_decentral']
     except KeyError:
+        print('Missing data! It seems that one of the optimization problems was infeasible and returned no results. Cannot generate plots!')
         return
-    price_timeseries_dlmps = price_timeseries['high_granularity']
-    central_opf_results = opf_results['opf_results_high_granularity_central']
-    decentral_opf_results = opf_results['opf_results_high_granularity_decentral']
     for der_name in der_model_set.der_names:
         if issubclass(type(der_model_set.der_models[der_name]), fledge.der_models.FlexibleDERModel):
             plot_dlmp_validation(

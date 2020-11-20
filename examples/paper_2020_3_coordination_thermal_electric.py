@@ -25,7 +25,7 @@ def main(
     # Settings.
     admm_iteration_limit = 10000
     admm_rho = 1e-9 if admm_rho is None else admm_rho
-    admm_primal_residual_termination_limit = 1e1
+    admm_primal_residual_termination_limit = 1e4
     admm_dual_residual_termination_limit = 1e-3
     scenario_number = 2 if scenario_number is None else scenario_number
     # Choices:

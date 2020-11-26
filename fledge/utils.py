@@ -1,5 +1,6 @@
 """Utility functions module."""
 
+import cvxpy as cp
 import datetime
 import functools
 import itertools
@@ -23,6 +24,32 @@ logger = fledge.config.get_logger(__name__)
 
 # Instantiate dictionary for execution time logging.
 log_times = dict()
+
+
+class OptimizationProblem(object):
+    """Optimization problem object for use with CVXPY."""
+
+    constraints: list = []
+    objective: cp.Expression = 0.0
+    cvxpy_problem: cp.Problem
+
+    def solve(self):
+
+        # Instantiate CVXPY problem object.
+        self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
+
+        # Solve optimization problem.
+        self.cvxpy_problem.solve(
+            solver=cp.GUROBI,
+            verbose=fledge.config.config['optimization']['show_solver_output']
+        )
+
+        # Assert that solver exited with an optimal solution. If not, raise an error.
+        try:
+            assert self.cvxpy_problem.status == 'optimal'
+        except AssertionError:
+            logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
+            raise
 
 
 def starmap(

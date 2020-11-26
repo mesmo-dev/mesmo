@@ -1,6 +1,13 @@
 """Setup script."""
 
 import setuptools
+import subprocess
+import sys
+
+# Install submodules.
+# - Note that this will run without command line outputs.
+# - TODO: Update documentation.
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', 'cobmo'])
 
 setuptools.setup(
     name='fledge',

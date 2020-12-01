@@ -69,8 +69,8 @@ def main():
         )
     )
 
-    # Print results.
-    print(results)
+    # Store results to CSV.
+    results.to_csv(results_path)
 
     # Plot results.
     if plots:

@@ -1163,7 +1163,12 @@ class StorageModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power_discharge', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
-        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+        self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
+            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
+        )
+        self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
             der.at['reactive_power_nominal'] / der.at['active_power_nominal']
             if der.at['active_power_nominal'] != 0.0
             else 0.0

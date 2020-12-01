@@ -2,12 +2,16 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
 import fledge.der_models
+import fledge.utils
 
 
 def main():
@@ -15,6 +19,9 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
     der_name = '4_2'  # Must be valid flexible DER from given scenario.
+    results_path = (
+        fledge.utils.get_results_path('run_flexible_load_optimal_operation', f'{scenario_name}_der_{der_name}')
+    )
     plots = True  # If True, script may produce plots.
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -69,18 +76,53 @@ def main():
     if plots:
 
         for output in flexible_der_model.outputs:
-            plt.plot(flexible_der_model.output_maximum_timeseries[output], label="Maximum", drawstyle='steps-post')
-            plt.plot(flexible_der_model.output_minimum_timeseries[output], label="Minimum", drawstyle='steps-post')
-            plt.plot(results['output_vector'][output], label="Optimal", drawstyle='steps-post')
-            plt.legend()
-            plt.title(f"Output: {output}")
-            plt.show()
-            plt.close()
 
-        plt.plot(price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')], drawstyle='steps-post')
-        plt.title(f"Price")
-        plt.show()
-        plt.close()
+            figure = go.Figure()
+            figure.add_trace(go.Scatter(
+                x=flexible_der_model.output_maximum_timeseries.index,
+                y=flexible_der_model.output_maximum_timeseries.loc[:, output].values,
+                name='Maximum',
+                line=go.scatter.Line(shape='hv')
+            ))
+            figure.add_trace(go.Scatter(
+                x=flexible_der_model.output_minimum_timeseries.index,
+                y=flexible_der_model.output_minimum_timeseries.loc[:, output].values,
+                name='Minimum',
+                line=go.scatter.Line(shape='hv')
+            ))
+            figure.add_trace(go.Scatter(
+                x=results['output_vector'].index,
+                y=results['output_vector'].loc[:, output].values,
+                name='Optimal',
+                line=go.scatter.Line(shape='hv')
+            ))
+            figure.update_layout(
+                title=f'Output: {output}',
+                xaxis=go.layout.XAxis(tickformat='%H:%M'),
+                legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+            )
+            # figure.show()
+            fledge.utils.write_figure_plotly(figure, os.path.join(results_path, output))
+
+        for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
+
+            if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):
+                figure = go.Figure()
+                figure.add_trace(go.Scatter(
+                    x=price_data.price_timeseries.index,
+                    y=price_data.price_timeseries.loc[:, (commodity_type, 'source', 'source')].values,
+                    line=go.scatter.Line(shape='hv')
+                ))
+                figure.update_layout(
+                    title=f'Price: {commodity_type}',
+                    xaxis=go.layout.XAxis(tickformat='%H:%M')
+                )
+                # figure.show()
+                fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+
+    # Print results path.
+    fledge.utils.launch(results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

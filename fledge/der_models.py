@@ -979,7 +979,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
 
         # Instantiate indexes.
-        self.states = pd.Index([])
+        self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in the optimization problem definition.
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index([])
         self.outputs = pd.Index(['active_power', 'reactive_power'])
@@ -1407,7 +1407,7 @@ class CoolingPlantModel(FlexibleDERModel):
         )
 
         # Instantiate indexes.
-        self.states = pd.Index([])
+        self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in the optimization problem definition.
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index([])
         self.outputs = pd.Index(['active_power', 'reactive_power', 'thermal_power'])

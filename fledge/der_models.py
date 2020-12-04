@@ -1,11 +1,11 @@
 """Distributed energy resource (DER) models."""
 
+import cvxpy as cp
 import inspect
 import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.environ as pyo
 import scipy.constants
 import sys
 import typing
@@ -39,7 +39,7 @@ class FixedDERModel(DERModel):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Fixed DERs have no optimization variables.
@@ -47,7 +47,7 @@ class FixedDERModel(DERModel):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
@@ -55,30 +55,21 @@ class FixedDERModel(DERModel):
     ):
 
         # Define connection constraints.
-        if optimization_problem.find_component('der_model_constraints') is None:
-            optimization_problem.der_model_constraints = pyo.ConstraintList()
-
         if (electric_grid_model is not None) and self.is_electric_grid_connected:
             der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
-            der = electric_grid_model.ders[der_index]
 
-            for timestep in self.timesteps:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.der_active_power_vector_change[timestep, der]
-                    ==
-                    self.active_power_nominal_timeseries.at[timestep]
-                    - np.real(
-                        power_flow_solution.der_power_vector[der_index]
-                    )
-                )
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.der_reactive_power_vector_change[timestep, der]
-                    ==
-                    self.reactive_power_nominal_timeseries.at[timestep]
-                    - np.imag(
-                        power_flow_solution.der_power_vector[der_index]
-                    )
-                )
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector_change[:, der_index]
+                ==
+                self.active_power_nominal_timeseries.values
+                - np.array([np.real(power_flow_solution.der_power_vector[der_index])])
+            )
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector_change[:, der_index]
+                ==
+                self.reactive_power_nominal_timeseries.values
+                - np.array([np.imag(power_flow_solution.der_power_vector[der_index])])
+            )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
             # TODO: Implement fixed load / fixed generator models for thermal grid.
@@ -86,7 +77,7 @@ class FixedDERModel(DERModel):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
@@ -95,43 +86,41 @@ class FixedDERModel(DERModel):
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
-        # Define objective.
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
         # Define objective for electric loads.
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
-            for timestep in self.timesteps:
 
-                # Active power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective.expr += (
-                    (
-                        price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
-                        + price_data.price_sensitivity_coefficient
-                        * -1.0 * self.active_power_nominal_timeseries.at[timestep]
-                        * timestep_interval_hours  # In Wh.
-                    )
-                    * -1.0 * self.active_power_nominal_timeseries.at[timestep]
-                    * timestep_interval_hours  # In Wh.
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ np.transpose([self.active_power_nominal_timeseries.values])
                 )
+                + cp.quad_form(
+                    -1.0 * timestep_interval_hours  # In Wh.
+                    * np.transpose([self.active_power_nominal_timeseries.values]),
+                    scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                )
+            )
 
-                # Reactive power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective.expr += (
-                    (
-                        price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
-                        # TODO: Check if sensitivity needed for reactive power cost.
-                        + price_data.price_sensitivity_coefficient
-                        * -1.0 * self.reactive_power_nominal_timeseries.at[timestep]
-                        * timestep_interval_hours  # In Wh.
-                    )
-                    * -1.0 * self.reactive_power_nominal_timeseries.at[timestep]
-                    * timestep_interval_hours  # In Wh.
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ np.transpose([self.reactive_power_nominal_timeseries.values])
                 )
+                + cp.quad_form(
+                    -1.0 * timestep_interval_hours  # In Wh.
+                    * np.transpose([self.reactive_power_nominal_timeseries.values]),
+                    scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                )
+            )
 
         # TODO: Define objective for thermal loads.
         # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
@@ -145,14 +134,13 @@ class FixedDERModel(DERModel):
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
             if issubclass(type(self), FlexibleGeneratorModel):
-                for timestep in self.timesteps:
 
-                    # Active power generation cost.
-                    optimization_problem.objective.expr += (
-                        self.marginal_cost
-                        * self.active_power_nominal_timeseries.at[timestep]
-                        * timestep_interval_hours  # In Wh.
-                    )
+                # Active power generation cost.
+                optimization_problem.objective += (
+                    np.array([[self.marginal_cost] * len(self.timesteps)])
+                    * timestep_interval_hours  # In Wh.
+                    @ np.transpose([self.active_power_nominal_timeseries.values])
+                )
 
         # TODO: Define objective for thermal generators.
         # - Always defined here as the cost of thermal power generation at the DER node.
@@ -161,7 +149,7 @@ class FixedDERModel(DERModel):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyo.ConcreteModel
+            optimization_problem: fledge.utils.OptimizationProblem
     ) -> fledge.data_interface.ResultsDict:
 
         # Fixed DERs have no optimization variables, therefore return empty results.
@@ -354,190 +342,136 @@ class FlexibleDERModel(DERModel):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
     ):
 
         # Define variables.
-        optimization_problem.state_vector = pyo.Var(self.timesteps, [self.der_name], self.states)
-        optimization_problem.control_vector = pyo.Var(self.timesteps, [self.der_name], self.controls)
-        optimization_problem.output_vector = pyo.Var(self.timesteps, [self.der_name], self.outputs)
+        # - Defined as dict with single entry for current DER. This is for compability of
+        # `define_optimization_constraints`, etc. with `DERModelSet`.
+        optimization_problem.state_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.states)))}
+        optimization_problem.control_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.controls)))}
+        optimization_problem.output_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.outputs)))}
 
     def define_optimization_constraints(
         self,
-        optimization_problem: pyo.ConcreteModel,
+        optimization_problem: fledge.utils.OptimizationProblem,
         electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
         power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
         thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
         thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
     ):
 
-        # Define shorthand for indexing 't+1'.
-        # - This implementation assumes that timesteps are always equally spaced.
-        timestep_interval = self.timesteps[1] - self.timesteps[0]
-
-        # Define constraints.
-        if optimization_problem.find_component('der_model_constraints') is None:
-            optimization_problem.der_model_constraints = pyo.ConstraintList()
-
         # Initial state.
-        for state in self.states:
-            if state in self.storage_states:
-                # For states which represent storage state of charge, initial state of charge is final state of charge.
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
-                    ==
-                    sum(
-                        self.state_matrix.at[state, state_other]
-                        * optimization_problem.state_vector[self.timesteps[-1], self.der_name, state_other]
-                        for state_other in self.states
-                    )
-                    + sum(
-                        self.control_matrix.at[state, control]
-                        * optimization_problem.control_vector[self.timesteps[-1], self.der_name, control]
-                        for control in self.controls
-                    )
-                    + sum(
-                        self.disturbance_matrix.at[state, disturbance]
-                        * self.disturbance_timeseries.at[self.timesteps[-1], disturbance]
-                        for disturbance in self.disturbances
-                    )
-                )
-            else:
-                # For other states, set initial state according to the initial state vector.
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.state_vector[self.timesteps[0], self.der_name, state]
-                    ==
-                    self.state_vector_initial.at[state]
-                )
+        # - For states which represent storage state of charge, initial state of charge is final state of charge.
+        if any(self.states.isin(self.storage_states)):
+            optimization_problem.constraints.append(
+                optimization_problem.state_vector[self.der_name][0, self.states.isin(self.storage_states)]
+                ==
+                optimization_problem.state_vector[self.der_name][-1, self.states.isin(self.storage_states)]
+            )
+        # - For other states, set initial state according to the initial state vector.
+        if any(~self.states.isin(self.storage_states)):
+            optimization_problem.constraints.append(
+                optimization_problem.state_vector[self.der_name][0, ~self.states.isin(self.storage_states)]
+                ==
+                self.state_vector_initial.loc[~self.states.isin(self.storage_states)].values
+            )
 
-        for timestep in self.timesteps[:-1]:
+        # State equation.
+        optimization_problem.constraints.append(
+            optimization_problem.state_vector[self.der_name][1:, :]
+            ==
+            cp.transpose(
+                self.state_matrix.values
+                @ cp.transpose(optimization_problem.state_vector[self.der_name][:-1, :])
+                + self.control_matrix.values
+                @ cp.transpose(optimization_problem.control_vector[self.der_name][:-1, :])
+                + self.disturbance_matrix.values
+                @ np.transpose(self.disturbance_timeseries.iloc[:-1, :].values)
+            )
+        )
 
-            # State equation.
-            for state in self.states:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.state_vector[timestep + timestep_interval, self.der_name, state]
-                    ==
-                    sum(
-                        self.state_matrix.at[state, state_other]
-                        * optimization_problem.state_vector[timestep, self.der_name, state_other]
-                        for state_other in self.states
-                    )
-                    + sum(
-                        self.control_matrix.at[state, control]
-                        * optimization_problem.control_vector[timestep, self.der_name, control]
-                        for control in self.controls
-                    )
-                    + sum(
-                        self.disturbance_matrix.at[state, disturbance]
-                        * self.disturbance_timeseries.at[timestep, disturbance]
-                        for disturbance in self.disturbances
-                    )
-                )
+        # Output equation.
+        optimization_problem.constraints.append(
+            optimization_problem.output_vector[self.der_name]
+            ==
+            cp.transpose(
+                self.state_output_matrix.values
+                @ cp.transpose(optimization_problem.state_vector[self.der_name])
+                + self.control_output_matrix.values
+                @ cp.transpose(optimization_problem.control_vector[self.der_name])
+                + self.disturbance_output_matrix.values
+                @ np.transpose(self.disturbance_timeseries.values)
+            )
+        )
 
-        for timestep in self.timesteps:
-
-            # Output equation.
-            for output in self.outputs:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    ==
-                    sum(
-                        self.state_output_matrix.at[output, state]
-                        * optimization_problem.state_vector[timestep, self.der_name, state]
-                        for state in self.states
-                    )
-                    + sum(
-                        self.control_output_matrix.at[output, control]
-                        * optimization_problem.control_vector[timestep, self.der_name, control]
-                        for control in self.controls
-                    )
-                    + sum(
-                        self.disturbance_output_matrix.at[output, disturbance]
-                        * self.disturbance_timeseries.at[timestep, disturbance]
-                        for disturbance in self.disturbances
-                    )
-                )
-
-            # Output limits.
-            for output in self.outputs:
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    >=
-                    self.output_minimum_timeseries.at[timestep, output]
-                )
-                optimization_problem.der_model_constraints.add(
-                    optimization_problem.output_vector[timestep, self.der_name, output]
-                    <=
-                    self.output_maximum_timeseries.at[timestep, output]
-                )
+        # Output limits.
+        optimization_problem.constraints.append(
+            optimization_problem.output_vector[self.der_name]
+            >=
+            self.output_minimum_timeseries.values
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.output_vector[self.der_name]
+            <=
+            self.output_maximum_timeseries.values
+        )
 
         # Define connection constraints.
         if (electric_grid_model is not None) and self.is_electric_grid_connected:
             der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
-            der = electric_grid_model.ders[der_index]
 
             if type(self) is FlexibleBuildingModel:
-                for timestep in self.timesteps:
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_active_power_vector_change[timestep, der]
-                        ==
-                        -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                        - np.real(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_active_power_vector_change[:, der_index]
+                    ==
+                    -1.0
+                    * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                    - np.real(power_flow_solution.der_power_vector[der_index])
+                )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_reactive_power_vector_change[:, der_index]
+                    ==
+                    -1.0 * (
+                        optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                        * np.tan(np.arccos(self.power_factor_nominal))
                     )
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_reactive_power_vector_change[timestep, der]
-                        ==
-                        -1.0 * (
-                            optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                            * np.tan(np.arccos(self.power_factor_nominal))
-                        )
-                        - np.imag(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
-                    )
+                    - np.imag(power_flow_solution.der_power_vector[der_index])
+                )
             else:
-                for timestep in self.timesteps:
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_active_power_vector_change[timestep, der]
-                        ==
-                        optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                        - np.real(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
-                    )
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_reactive_power_vector_change[timestep, der]
-                        ==
-                        optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
-                        - np.imag(
-                            power_flow_solution.der_power_vector[der_index]
-                        )
-                    )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_active_power_vector_change[:, der_index]
+                    ==
+                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
+                    - np.real(power_flow_solution.der_power_vector[der_index])
+                )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_reactive_power_vector_change[:, der_index]
+                    ==
+                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
+                    - np.imag(power_flow_solution.der_power_vector[der_index])
+                )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
             der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
-            der = thermal_grid_model.ders[der_index]
 
             if type(self) is FlexibleBuildingModel:
-                for timestep in self.timesteps:
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_thermal_power_vector[timestep, der]
-                        ==
-                        -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'grid_thermal_power_cooling']
-                    )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_thermal_power_vector[:, der_index]
+                    ==
+                    -1.0
+                    * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                )
             elif type(self) is CoolingPlantModel:
-                for timestep in self.timesteps:
-                    optimization_problem.der_model_constraints.add(
-                        optimization_problem.der_thermal_power_vector[timestep, der]
-                        ==
-                        optimization_problem.output_vector[timestep, self.der_name, 'thermal_power']
-                    )
+                optimization_problem.constraints.append(
+                    optimization_problem.der_thermal_power_vector[:, der_index]
+                    ==
+                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
+                )
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
@@ -546,99 +480,128 @@ class FlexibleDERModel(DERModel):
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
-        # Define objective.
-        # TODO: Consider timestep interval.
-        if optimization_problem.find_component('objective') is None:
-            optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-
         # Define objective for electric loads.
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
             if type(self) is FlexibleBuildingModel:
-                for timestep in self.timesteps:
 
-                    # Active power cost.
-                    optimization_problem.objective.expr += (
-                        (
-                            price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
-                            + price_data.price_sensitivity_coefficient
-                            * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                            * timestep_interval_hours  # In Wh.
-                        )
-                        * optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
+                # Active power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
                         * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
                     )
+                    + cp.quad_form(
+                        timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')],
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    )
+                )
 
-                    # Reactive power cost.
-                    optimization_problem.objective.expr += (
-                        (
-                            price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
-                            + price_data.price_sensitivity_coefficient
-                            * (
-                                optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                                * np.tan(np.arccos(self.power_factor_nominal))
-                            )
-                            * timestep_interval_hours  # In Wh.
-                        )
-                        * (
-                            optimization_problem.output_vector[timestep, self.der_name, 'grid_electric_power']
-                            * np.tan(np.arccos(self.power_factor_nominal))
-                        )
+                # Reactive power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
                         * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                        * np.tan(np.arccos(self.power_factor_nominal))
                     )
+                    + cp.quad_form(
+                        timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                        * np.tan(np.arccos(self.power_factor_nominal)),
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    )
+                )
 
             else:
-                for timestep in self.timesteps:
 
-                    # Active power cost / revenue.
-                    # - Cost for load / demand, revenue for generation / supply.
-                    optimization_problem.objective.expr += (
-                        (
-                            price_data.price_timeseries.loc[timestep, ('active_power', slice(None), self.der_name)].iat[0]
-                            + price_data.price_sensitivity_coefficient
-                            * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                            * timestep_interval_hours  # In Wh.
-                        )
-                        * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                        * timestep_interval_hours  # In Wh.
+                # Active power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
                     )
-
-                    # Reactive power cost / revenue.
-                    # - Cost for load / demand, revenue for generation / supply.
-                    optimization_problem.objective.expr += (
-                        (
-                            price_data.price_timeseries.loc[timestep, ('reactive_power', slice(None), self.der_name)].iat[0]
-                            # TODO: Check if sensitivity needed for reactive power cost.
-                            + price_data.price_sensitivity_coefficient
-                            * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
-                            * timestep_interval_hours  # In Wh.
-                        )
-                        * -1.0 * optimization_problem.output_vector[timestep, self.der_name, 'reactive_power']
-                        * timestep_interval_hours  # In Wh.
+                    + cp.quad_form(
+                        -1.0 * timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')],
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
                     )
+                )
 
-        # TODO: Define objective for thermal loads.
+                # Reactive power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
+                    )
+                    + cp.quad_form(
+                        -1.0 * timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')],
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    )
+                )
+
+        # Define objective for thermal loads.
         # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
         # - Otherwise, defined as cost of thermal supply at thermal grid source node
         #   in `LinearThermalGridModel.define_optimization_objective`.
         # - This enables proper calculation of the DLMPs.
         if (thermal_grid_model is None) and self.is_thermal_grid_connected:
-            pass
+            if type(self) is FlexibleBuildingModel:
+
+                # Thermal power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
+                        * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                    )
+                    + cp.quad_form(
+                        timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')],
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    )
+                )
+
+            else:
+
+                # Thermal power cost / revenue.
+                # - Cost for load / demand, revenue for generation / supply.
+                optimization_problem.objective += (
+                    (
+                        price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
+                    )
+                    + cp.quad_form(
+                        -1.0 * timestep_interval_hours  # In Wh.
+                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')],
+                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    )
+                )
 
         # Define objective for electric generators.
         # - Always defined here as the cost of electric power generation at the DER node.
         if self.is_electric_grid_connected:
             if issubclass(type(self), FlexibleGeneratorModel):
-                for timestep in self.timesteps:
 
-                    # Active power generation cost.
-                    optimization_problem.objective.expr += (
-                        self.marginal_cost
-                        * optimization_problem.output_vector[timestep, self.der_name, 'active_power']
-                        * timestep_interval_hours  # In Wh.
-                    )
+                # Active power generation cost.
+                optimization_problem.objective += (
+                    self.marginal_cost
+                    * sum(optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')])
+                    * timestep_interval_hours  # In Wh.
+                )
 
         # TODO: Define objective for thermal generators.
         # - Always defined here as the cost of thermal power generation at the DER node.
@@ -647,28 +610,31 @@ class FlexibleDERModel(DERModel):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyo.ConcreteModel
+            optimization_problem: fledge.utils.OptimizationProblem
     ) -> fledge.data_interface.ResultsDict:
 
-        # Instantiate results variables.
-        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
-        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
-        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
-
         # Obtain results.
-        for timestep in self.timesteps:
-            for state in self.states:
-                state_vector.at[timestep, state] = (
-                    optimization_problem.state_vector[timestep, self.der_name, state].value
-                )
-            for control in self.controls:
-                control_vector.at[timestep, control] = (
-                    optimization_problem.control_vector[timestep, self.der_name, control].value
-                )
-            for output in self.outputs:
-                output_vector.at[timestep, output] = (
-                    optimization_problem.output_vector[timestep, self.der_name, output].value
-                )
+        state_vector = (
+            pd.DataFrame(
+                optimization_problem.state_vector[self.der_name].value,
+                index=self.timesteps,
+                columns=self.states
+            )
+        )
+        control_vector = (
+            pd.DataFrame(
+                optimization_problem.control_vector[self.der_name].value,
+                index=self.timesteps,
+                columns=self.controls
+            )
+        )
+        output_vector = (
+            pd.DataFrame(
+                optimization_problem.output_vector[self.der_name].value,
+                index=self.timesteps,
+                columns=self.outputs
+            )
+        )
 
         return fledge.data_interface.ResultsDict(
             state_vector=state_vector,
@@ -1590,17 +1556,36 @@ class DERModelSet(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: pyo.ConcreteModel
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Define flexible DER variables.
-        optimization_problem.state_vector = pyo.Var(self.timesteps, self.states.tolist())
-        optimization_problem.control_vector = pyo.Var(self.timesteps, self.controls.tolist())
-        optimization_problem.output_vector = pyo.Var(self.timesteps, self.outputs.tolist())
+        optimization_problem.state_vector = dict.fromkeys(self.flexible_der_names)
+        optimization_problem.control_vector = dict.fromkeys(self.flexible_der_names)
+        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
+        for der_name in self.flexible_der_names:
+            optimization_problem.state_vector[der_name] = (
+                cp.Variable((
+                    len(self.flexible_der_models[der_name].timesteps),
+                    len(self.flexible_der_models[der_name].states)
+                ))
+            )
+            optimization_problem.control_vector[der_name] = (
+                cp.Variable((
+                    len(self.flexible_der_models[der_name].timesteps),
+                    len(self.flexible_der_models[der_name].controls)
+                ))
+            )
+            optimization_problem.output_vector[der_name] = (
+                cp.Variable((
+                    len(self.flexible_der_models[der_name].timesteps),
+                    len(self.flexible_der_models[der_name].outputs)
+                ))
+            )
 
     def define_optimization_constraints(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
             power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
@@ -1619,7 +1604,7 @@ class DERModelSet(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: pyo.ConcreteModel,
+            optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
@@ -1636,7 +1621,7 @@ class DERModelSet(object):
 
     def get_optimization_results(
             self,
-            optimization_problem: pyo.ConcreteModel
+            optimization_problem: fledge.utils.OptimizationProblem
     ) -> fledge.data_interface.ResultsDict:
 
         # Instantiate results variables.
@@ -1645,19 +1630,16 @@ class DERModelSet(object):
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
 
         # Obtain results.
-        for timestep in self.timesteps:
-            for state in self.states:
-                state_vector.at[timestep, state] = (
-                    optimization_problem.state_vector[timestep, state].value
-                )
-            for control in self.controls:
-                control_vector.at[timestep, control] = (
-                    optimization_problem.control_vector[timestep, control].value
-                )
-            for output in self.outputs:
-                output_vector.at[timestep, output] = (
-                    optimization_problem.output_vector[timestep, output].value
-                )
+        for der_name in self.flexible_der_names:
+            state_vector.at[:, (der_name, slice(None), slice(None))] = (
+                optimization_problem.state_vector[der_name].value
+            )
+            control_vector.at[:, (der_name, slice(None), slice(None))] = (
+                optimization_problem.control_vector[der_name].value
+            )
+            output_vector.at[:, (der_name, slice(None), slice(None))] = (
+                optimization_problem.output_vector[der_name].value
+            )
 
         return fledge.data_interface.ResultsDict(
             state_vector=state_vector,

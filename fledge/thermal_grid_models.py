@@ -365,7 +365,7 @@ class LinearThermalGridModel(object):
     thermal_power_flow_solution: ThermalPowerFlowSolution
     sensitivity_branch_flow_by_der_power: scipy.sparse.spmatrix
     sensitivity_node_head_by_der_power: scipy.sparse.spmatrix
-    sensitivity_pump_power_by_der_power: scipy.sparse.spmatrix
+    sensitivity_pump_power_by_der_power: np.array
 
     def __init__(
             self,
@@ -464,8 +464,10 @@ class LinearThermalGridModel(object):
             )
         )
         self.sensitivity_pump_power_by_der_power = (
-            self.sensitivity_pump_power_by_node_power
-            @ self.sensitivity_node_power_by_der_power
+            np.array([
+                self.sensitivity_pump_power_by_node_power
+                @ self.sensitivity_node_power_by_der_power
+            ])
         )
 
     def define_optimization_variables(

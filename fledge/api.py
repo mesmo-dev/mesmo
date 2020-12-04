@@ -43,6 +43,7 @@ def run_nominal_operation_problem(
     # Store results as CSV.
     if store_results:
         results.to_csv(results_path)
+        logger.info(f"Results are stored in: {results_path}")
 
     return results
 
@@ -80,5 +81,6 @@ def run_optimal_operation_problem(
     # Store results as CSV.
     if store_results:
         results.to_csv(results_path)
+        logger.info(f"Results are stored in: {results_path}")
 
     return results

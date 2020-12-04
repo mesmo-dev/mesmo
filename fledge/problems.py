@@ -4,7 +4,6 @@ import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -243,7 +242,7 @@ class OptimalOperationProblem(object):
     thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
     linear_thermal_grid_model: fledge.thermal_grid_models.LinearThermalGridModel = None
     der_model_set: fledge.der_models.DERModelSet
-    optimization_problem: pyo.ConcreteModel
+    optimization_problem: fledge.utils.OptimizationProblem
 
     @multimethod
     def __init__(
@@ -290,7 +289,7 @@ class OptimalOperationProblem(object):
         self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
         # Instantiate optimization problem.
-        self.optimization_problem = pyo.ConcreteModel()
+        self.optimization_problem = fledge.utils.OptimizationProblem()
 
         # Define linear electric grid model variables and constraints.
         if self.electric_grid_model is not None:
@@ -384,21 +383,7 @@ class OptimalOperationProblem(object):
     def solve(self):
 
         # Solve optimization problem.
-        self.optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-        optimization_result = (
-            optimization_solver.solve(
-                self.optimization_problem,
-                tee=fledge.config.config['optimization']['show_solver_output']
-            )
-        )
-
-        # Assert that solver exited with any solution. If not, raise an error.
-        try:
-            assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-        except AssertionError:
-            logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-            raise
+        self.optimization_problem.solve()
 
     def get_results(
             self,

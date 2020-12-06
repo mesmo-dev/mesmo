@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -60,7 +59,7 @@ def main(
 
     # Obtain results path.
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
+        fledge.utils.get_results_path(f'{os.path.basename(__file__)[:-3]}_scenario_{scenario_number}', scenario_name)
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -107,7 +106,7 @@ def main(
         der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -204,14 +203,7 @@ def main(
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
     in_per_unit = True

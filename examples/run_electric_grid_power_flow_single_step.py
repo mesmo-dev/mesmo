@@ -14,7 +14,7 @@ def main():
 
     # Settings.
     scenario_name = 'test_2node'
-    results_path = fledge.utils.get_results_path('run_electric_grid_power_flow_single_step', scenario_name)
+    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -102,6 +102,7 @@ def main():
     plt.show()
 
     # Print results path.
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

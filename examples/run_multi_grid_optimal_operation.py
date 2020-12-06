@@ -1,11 +1,10 @@
 """Example script for setting up and solving a multi-grid optimal operation problem."""
 
-import matplotlib.dates
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
+import plotly.express as px
+import plotly.graph_objects as go
 
 import fledge.config
 import fledge.data_interface
@@ -19,7 +18,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
-    results_path = fledge.utils.get_results_path('run_multi_grid_optimal_operation', scenario_name)
+    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -38,8 +37,6 @@ def main():
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_grid_model.energy_transfer_station_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
-    thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
@@ -50,18 +47,25 @@ def main():
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define linear electric grid model variables.
+    # Define optimization variables.
     linear_electric_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
+    linear_thermal_grid_model.define_optimization_variables(
+        optimization_problem,
+        scenario_data.timesteps
+    )
+    der_model_set.define_optimization_variables(
+        optimization_problem
+    )
 
-    # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
+    # Define constraints.
+    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_vector_squared_maximum = 10.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
@@ -69,29 +73,14 @@ def main():
         voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
         branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
     )
-
-    # Define thermal grid model variables.
-    linear_thermal_grid_model.define_optimization_variables(
-        optimization_problem,
-        scenario_data.timesteps
-    )
-
-    # Define thermal grid model constraints.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    branch_flow_vector_maximum = 10.0 * thermal_power_flow_solution.branch_flow_vector
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
-
-    # Define DER variables.
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
-
-    # Define DER constraints.
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
@@ -101,6 +90,11 @@ def main():
     )
 
     # Define objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        scenario_data.timesteps
+    )
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
         price_data,
@@ -112,14 +106,7 @@ def main():
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
     results = (
@@ -148,7 +135,7 @@ def main():
     # Print results.
     print(results)
 
-    # Store results as CSV.
+    # Store results to CSV.
     results.to_csv(results_path)
 
     # Obtain DLMPs.
@@ -170,10 +157,11 @@ def main():
     # Print DLMPs.
     print(dlmps)
 
-    # Store DLMPs as CSV.
+    # Store DLMPs to CSV.
     dlmps.to_csv(results_path)
 
     # Print results path.
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

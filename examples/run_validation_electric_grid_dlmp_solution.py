@@ -3,8 +3,8 @@
 import numpy as np
 import os
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -17,7 +17,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_6node'
-    results_path = fledge.utils.get_results_path('run_electric_grid_optimal_operation', scenario_name)
+    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -38,15 +38,18 @@ def main():
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate centralized optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define linear electric grid model variables.
+    # Define optimization variables.
     linear_electric_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
+    der_model_set.define_optimization_variables(
+        optimization_problem
+    )
 
-    # Define linear electric grid model constraints.
+    # Define constraints.
     voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     voltage_magnitude_vector_minimum[
         fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
@@ -63,27 +66,18 @@ def main():
         voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
         branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
     )
-
-    # Define grid  / centralized objective.
-    linear_electric_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data,
-        scenario_data.timesteps
-    )
-
-    # Define DER variables.
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
-
-    # Define DER constraints.
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
         power_flow_solution=power_flow_solution
     )
 
-    # Define DER objective.
+    # Define objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        scenario_data.timesteps
+    )
     der_model_set.define_optimization_objective(
         optimization_problem,
         price_data,
@@ -91,13 +85,7 @@ def main():
     )
 
     # Solve centralized optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+    optimization_problem.solve()
 
     # Obtain results.
     results = (
@@ -118,7 +106,7 @@ def main():
     # Print results.
     print(results)
 
-    # Store results as CSV.
+    # Store results to CSV.
     results.to_csv(results_path)
 
     # Obtain DLMPs.
@@ -142,32 +130,26 @@ def main():
     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
 
     # Instantiate decentralized DER optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define DER variables.
+    # Define optimization variables.
     der_model_set.der_models[der_name].define_optimization_variables(
         optimization_problem
     )
 
-    # Define DER constraints.
+    # Define constraints.
     der_model_set.der_models[der_name].define_optimization_constraints(
         optimization_problem
     )
 
-    # Define objective (DER operation cost minimization).
+    # Define objective.
     der_model_set.der_models[der_name].define_optimization_objective(
         optimization_problem,
         price_data_dlmps
     )
 
     # Solve decentralized DER optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+    optimization_problem.solve()
 
     # Obtain results.
     results_validation = (

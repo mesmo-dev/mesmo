@@ -1,6 +1,5 @@
 """Test problems."""
 
-import pyomo.environ as pyo
 import time
 import unittest
 

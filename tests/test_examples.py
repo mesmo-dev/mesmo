@@ -1,9 +1,9 @@
 """Test run scripts in the `examples` directory."""
 
+import cvxpy as cp
 import glob
 import os
 from parameterized import parameterized
-import pyomo.environ as pyo
 import time
 import unittest
 
@@ -12,10 +12,9 @@ import fledge.config
 logger = fledge.config.get_logger(__name__)
 
 # Check availability of optimization solver.
-try:
-    optimization_solver_available = pyo.SolverFactory(fledge.config.config['optimization']['solver_name']).available()
-except Exception:
-    optimization_solver_available = False
+optimization_solver_available = (
+    fledge.config.config['optimization']['solver_name'].upper() in cp.installed_solvers()
+)
 
 # Run tests, if optimization solver is available.
 if optimization_solver_available and fledge.config.config['tests']['test_examples']:

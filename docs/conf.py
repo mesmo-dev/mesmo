@@ -43,7 +43,7 @@ autodoc_mock_imports = [
     'opendssdirect',
     'pandas',
     'plotly',
-    'pyomo',
+    'pyomo',  # Deprecated.
     'scipy',
 ]
 napoleon_use_ivar = True

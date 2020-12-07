@@ -29,7 +29,6 @@ setuptools.setup(
         'pandas',
         'parameterized',  # For tests.
         'plotly',
-        'pyomo',
         'pyyaml',
         'scipy',
     ]

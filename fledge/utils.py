@@ -32,10 +32,16 @@ class OptimizationProblem(object):
     objective: cp.Expression = 0.0
     cvxpy_problem: cp.Problem
 
-    def solve(self):
+    def solve(
+            self,
+            keep_problem=False
+    ):
 
         # Instantiate CVXPY problem object.
-        self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
+        if hasattr(self, 'cvxpy_problem') and keep_problem:
+            pass
+        else:
+            self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
 
         # Solve optimization problem.
         self.cvxpy_problem.solve(

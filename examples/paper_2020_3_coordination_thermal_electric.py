@@ -108,65 +108,67 @@ def main(
     # Instantiate ADMM variables.
     admm_iteration = 0
     admm_continue = True
-    admm_exchange_der_active_power = (
-        pd.DataFrame(
-            0.0,
-            index=scenario_data.timesteps,
-            columns=electric_grid_model.ders
-        )
-    )
-    admm_exchange_der_reactive_power = (
-        pd.DataFrame(
-            0.0,
-            index=scenario_data.timesteps,
-            columns=electric_grid_model.ders
-        )
-    )
-    admm_exchange_der_thermal_power = (
-        pd.DataFrame(
-            0.0,
-            index=scenario_data.timesteps,
-            columns=thermal_grid_model.ders
-        )
-    )
-    admm_lambda_electric_der_active_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
-    )
-    admm_lambda_electric_der_reactive_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
-    )
-    admm_lambda_thermal_der_thermal_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=thermal_grid_model.ders)
-    )
-    # For DERs, instantiate lambda with price time series.
-    admm_lambda_aggregator_der_active_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
-        # -1.0
-        # * pd.DataFrame(
-        #     # Initialize with price timeseries.
-        #     price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].to_dict(),
-        #     index=electric_grid_model.ders,
-        #     columns=scenario_data.timesteps
-        # ).T
-    )
-    admm_lambda_aggregator_der_reactive_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=electric_grid_model.ders)
-    )
-    admm_lambda_aggregator_der_thermal_power = (
-        pd.DataFrame(0.0, index=scenario_data.timesteps, columns=thermal_grid_model.ders)
-        #  -1.0
-        # * (thermal_grid_model.cooling_plant_efficiency ** -1)
-        # * pd.DataFrame(
-        #     # Initialize with price timeseries.
-        #     price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].to_dict(),
-        #     index=thermal_grid_model.ders,
-        #     columns=scenario_data.timesteps
-        # ).T
-    )
     admm_primal_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])
     admm_dual_residuals = pd.DataFrame(columns=['Thermal pw.', 'Active pw.', 'Reactive pw.'])
 
+    # Instantiate ADMM optimization parameters.
+    admm_exchange_der_active_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_exchange_der_reactive_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_exchange_der_thermal_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(thermal_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(thermal_grid_model.ders)))
+        )
+    )
+    admm_lambda_electric_der_active_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_lambda_electric_der_reactive_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_lambda_thermal_der_thermal_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(thermal_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(thermal_grid_model.ders)))
+        )
+    )
+    admm_lambda_aggregator_der_active_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_lambda_aggregator_der_reactive_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(electric_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(electric_grid_model.ders)))
+        )
+    )
+    admm_lambda_aggregator_der_thermal_power = (
+        cp.Parameter(
+            (len(scenario_data.timesteps), len(thermal_grid_model.ders)),
+            value=np.zeros((len(scenario_data.timesteps), len(thermal_grid_model.ders)))
+        )
+    )
+
     # Instantiate optimization problems.
+    # TODO: Consider timestep_interval_hours in ADMM objective.
     optimization_problem_baseline = fledge.utils.OptimizationProblem()
     optimization_problem_electric = fledge.utils.OptimizationProblem()
     optimization_problem_thermal = fledge.utils.OptimizationProblem()
@@ -304,6 +306,47 @@ def main(
         branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
     )
 
+    # Define electric grid objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem_electric,
+        price_data,
+        timesteps=scenario_data.timesteps
+    )
+
+    # Define ADMM objective.
+    optimization_problem_electric.objective += (
+        cp.sum(
+            cp.multiply(
+                admm_lambda_electric_der_active_power,
+                (
+                    optimization_problem_electric.der_active_power_vector_change
+                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                    # - admm_exchange_der_active_power
+                )
+            )
+            + cp.multiply(
+                admm_lambda_electric_der_reactive_power,
+                (
+                    optimization_problem_electric.der_reactive_power_vector_change
+                    + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                    # - admm_exchange_der_reactive_power
+                )
+            )
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_electric.der_active_power_vector_change
+                + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                - admm_exchange_der_active_power
+            ) ** 2
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_electric.der_reactive_power_vector_change
+                + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                - admm_exchange_der_reactive_power
+            ) ** 2
+        )
+    )
+
     # Log progress.
     fledge.utils.log_time(f"electric sub-problem setup")
 
@@ -324,6 +367,31 @@ def main(
         scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
+    )
+
+    # Define thermal grid objective.
+    linear_thermal_grid_model.define_optimization_objective(
+        optimization_problem_thermal,
+        price_data,
+        timesteps=scenario_data.timesteps
+    )
+
+    # Define ADMM objective.
+    optimization_problem_thermal.objective += (
+        cp.sum(
+            cp.multiply(
+                admm_lambda_thermal_der_thermal_power,
+                (
+                    optimization_problem_thermal.der_thermal_power_vector
+                    # - admm_exchange_der_thermal_power
+                )
+            )
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_thermal.der_thermal_power_vector
+                - admm_exchange_der_thermal_power
+            ) ** 2
+        )
     )
 
     # Log progress.
@@ -359,6 +427,62 @@ def main(
         thermal_power_flow_solution=thermal_power_flow_solution
     )
 
+    # # Define DER objective.
+    # der_model_set.define_optimization_objective(
+    #     optimization_problem_aggregator,
+    #     price_data,
+    #     electric_grid_model=electric_grid_model,
+    #     thermal_grid_model=thermal_grid_model
+    # )
+
+    # Define ADMM objective.
+    optimization_problem_aggregator.objective += (
+        cp.sum(
+            cp.multiply(
+                admm_lambda_aggregator_der_active_power,
+                (
+                    optimization_problem_aggregator.der_active_power_vector_change
+                    + np.array([np.real(power_flow_solution.der_power_vector)])
+                    # - admm_exchange_der_active_power
+                )
+            )
+            + cp.multiply(
+                admm_lambda_aggregator_der_reactive_power,
+                (
+                    optimization_problem_aggregator.der_reactive_power_vector_change
+                    + np.array([np.imag(power_flow_solution.der_power_vector)])
+                    # - admm_exchange_der_reactive_power
+                )
+            )
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_aggregator.der_active_power_vector_change
+                + np.array([np.real(power_flow_solution.der_power_vector)])
+                - admm_exchange_der_active_power
+            ) ** 2
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_aggregator.der_reactive_power_vector_change
+                + np.array([np.imag(power_flow_solution.der_power_vector)])
+                - admm_exchange_der_reactive_power
+            ) ** 2
+        )
+        + cp.sum(
+            cp.multiply(
+                admm_lambda_aggregator_der_thermal_power,
+                (
+                    optimization_problem_aggregator.der_thermal_power_vector
+                    # - admm_exchange_der_thermal_power
+                )
+            )
+            + 0.5 * admm_rho
+            * (
+                optimization_problem_aggregator.der_thermal_power_vector
+                - admm_exchange_der_thermal_power
+            ) ** 2
+        )
+    )
+
     # Log progress.
     fledge.utils.log_time(f"aggregator sub-problem setup")
 
@@ -368,176 +492,19 @@ def main(
             # Iterate ADMM counter.
             admm_iteration += 1
 
-            # TODO: Consider timestep_interval_hours in ADMM objective.
-
-            # ADMM: Electric sub-problem.
-
-            # Log progress.
-            fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
-
-            # Reset objective.
-            optimization_problem_electric.objective = 0.0
-
-            # Define electric grid objective.
-            linear_electric_grid_model.define_optimization_objective(
-                optimization_problem_electric,
-                price_data,
-                timesteps=scenario_data.timesteps
-            )
-
-            # Define ADMM objective.
-            optimization_problem_electric.objective += (
-                cp.sum(
-                    cp.multiply(
-                        admm_lambda_electric_der_active_power.values,
-                        (
-                            optimization_problem_electric.der_active_power_vector_change
-                            + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
-                            - admm_exchange_der_active_power.values
-                        )
-                    )
-                    + cp.multiply(
-                        admm_lambda_electric_der_reactive_power.values,
-                        (
-                            optimization_problem_electric.der_reactive_power_vector_change
-                            + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
-                            - admm_exchange_der_reactive_power.values
-                        )
-                    )
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_electric.der_active_power_vector_change
-                        + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
-                        - admm_exchange_der_active_power.values
-                    ) ** 2
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_electric.der_reactive_power_vector_change
-                        + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
-                        - admm_exchange_der_reactive_power.values
-                    ) ** 2
-                )
-            )
-
-            # Log progress.
-            fledge.utils.log_time(f"electric sub-problem update #{admm_iteration}")
-
-            # ADMM: Thermal sub-problem.
-
-            # Log progress.
-            fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
-
-            # Reset objective.
-            optimization_problem_thermal.objective = 0.0
-
-            # Define thermal grid objective.
-            linear_thermal_grid_model.define_optimization_objective(
-                optimization_problem_thermal,
-                price_data,
-                timesteps=scenario_data.timesteps
-            )
-
-            # Define ADMM objective.
-            optimization_problem_thermal.objective += (
-                cp.sum(
-                    cp.multiply(
-                        admm_lambda_thermal_der_thermal_power.values,
-                        (
-                            optimization_problem_thermal.der_thermal_power_vector
-                            - admm_exchange_der_thermal_power.values
-                        )
-                    )
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_thermal.der_thermal_power_vector
-                        - admm_exchange_der_thermal_power.values
-                    ) ** 2
-                )
-            )
-
-            # Log progress.
-            fledge.utils.log_time(f"thermal sub-problem update #{admm_iteration}")
-
-            # ADMM :Aggregator sub-problem.
-
-            # Log progress.
-            fledge.utils.log_time(f"aggregator sub-problem update #{admm_iteration}")
-
-            # Reset objective.
-            optimization_problem_aggregator.objective = 0.0
-
-            # # Define DER objective.
-            # der_model_set.define_optimization_objective(
-            #     optimization_problem_aggregator,
-            #     price_data,
-            #     electric_grid_model=electric_grid_model,
-            #     thermal_grid_model=thermal_grid_model
-            # )
-
-            # Define ADMM objective.
-            optimization_problem_aggregator.objective += (
-                cp.sum(
-                    cp.multiply(
-                        admm_lambda_aggregator_der_active_power.values,
-                        (
-                            optimization_problem_aggregator.der_active_power_vector_change
-                            + np.array([np.real(power_flow_solution.der_power_vector)])
-                            - admm_exchange_der_active_power.values
-                        )
-                    )
-                    + cp.multiply(
-                        admm_lambda_aggregator_der_reactive_power.values,
-                        (
-                            optimization_problem_aggregator.der_reactive_power_vector_change
-                            + np.array([np.imag(power_flow_solution.der_power_vector)])
-                            - admm_exchange_der_reactive_power.values
-                        )
-                    )
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_aggregator.der_active_power_vector_change
-                        + np.array([np.real(power_flow_solution.der_power_vector)])
-                        - admm_exchange_der_active_power.values
-                    ) ** 2
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_aggregator.der_reactive_power_vector_change
-                        + np.array([np.imag(power_flow_solution.der_power_vector)])
-                        - admm_exchange_der_reactive_power.values
-                    ) ** 2
-                )
-                + cp.sum(
-                    cp.multiply(
-                        admm_lambda_aggregator_der_thermal_power.values,
-                        (
-                            optimization_problem_aggregator.der_thermal_power_vector
-                            - admm_exchange_der_thermal_power.values
-                        )
-                    )
-                    + 0.5 * admm_rho
-                    * (
-                        optimization_problem_aggregator.der_thermal_power_vector
-                        - admm_exchange_der_thermal_power.values
-                    ) ** 2
-                )
-            )
-
-            # Log progress.
-            fledge.utils.log_time(f"aggregator sub-problem update #{admm_iteration}")
-
             # Solve electric sub-problem.
             fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-            optimization_problem_electric.solve()
+            optimization_problem_electric.solve(keep_problem=True)
             fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
 
             # Solve thermal sub-problem.
             fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-            optimization_problem_thermal.solve()
+            optimization_problem_thermal.solve(keep_problem=True)
             fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
 
             # Solve aggregator sub-problem.
             fledge.utils.log_time(f"aggregator sub-problem solution #{admm_iteration}")
-            optimization_problem_aggregator.solve()
+            optimization_problem_aggregator.solve(keep_problem=True)
             fledge.utils.log_time(f"aggregator sub-problem solution #{admm_iteration}")
 
             # Print objective values.
@@ -603,64 +570,64 @@ def main(
             )
 
             # Update ADMM variables.
-            admm_exchange_der_active_power = (
+            admm_exchange_der_active_power.value = (
                 0.5 * (
-                    results_electric['der_active_power_vector']
-                    + results_aggregator['der_active_power_vector']
+                    results_electric['der_active_power_vector'].values
+                    + results_aggregator['der_active_power_vector'].values
                 )
             )
-            admm_exchange_der_reactive_power = (
+            admm_exchange_der_reactive_power.value = (
                 0.5 * (
-                    results_electric['der_reactive_power_vector']
-                    + results_aggregator['der_reactive_power_vector']
+                    results_electric['der_reactive_power_vector'].values
+                    + results_aggregator['der_reactive_power_vector'].values
                 )
             )
-            admm_exchange_der_thermal_power = (
+            admm_exchange_der_thermal_power.value = (
                 0.5 * (
-                    results_thermal['der_thermal_power_vector']
-                    + results_aggregator['der_thermal_power_vector']
+                    results_thermal['der_thermal_power_vector'].values
+                    + results_aggregator['der_thermal_power_vector'].values
                 )
             )
-            admm_lambda_electric_der_active_power = (
-                admm_lambda_electric_der_active_power
+            admm_lambda_electric_der_active_power.value = (
+                admm_lambda_electric_der_active_power.value
                 + admm_rho * (
-                    results_electric['der_active_power_vector']
-                    - admm_exchange_der_active_power
+                    results_electric['der_active_power_vector'].values
+                    - admm_exchange_der_active_power.value
                 )
             )
-            admm_lambda_electric_der_reactive_power = (
-                admm_lambda_electric_der_reactive_power
+            admm_lambda_electric_der_reactive_power.value = (
+                admm_lambda_electric_der_reactive_power.value
                 + admm_rho * (
-                    results_electric['der_reactive_power_vector']
-                    - admm_exchange_der_reactive_power
+                    results_electric['der_reactive_power_vector'].values
+                    - admm_exchange_der_reactive_power.value
                 )
             )
-            admm_lambda_thermal_der_thermal_power = (
-                admm_lambda_thermal_der_thermal_power
+            admm_lambda_thermal_der_thermal_power.value = (
+                admm_lambda_thermal_der_thermal_power.value
                 + admm_rho * (
-                    results_thermal['der_thermal_power_vector']
-                    - admm_exchange_der_thermal_power
+                    results_thermal['der_thermal_power_vector'].values
+                    - admm_exchange_der_thermal_power.value
                 )
             )
-            admm_lambda_aggregator_der_active_power = (
-                admm_lambda_aggregator_der_active_power
+            admm_lambda_aggregator_der_active_power.value = (
+                admm_lambda_aggregator_der_active_power.value
                 + admm_rho * (
-                    results_aggregator['der_active_power_vector']
-                    - admm_exchange_der_active_power
+                    results_aggregator['der_active_power_vector'].values
+                    - admm_exchange_der_active_power.value
                 )
             )
-            admm_lambda_aggregator_der_reactive_power = (
-                admm_lambda_aggregator_der_reactive_power
+            admm_lambda_aggregator_der_reactive_power.value = (
+                admm_lambda_aggregator_der_reactive_power.value
                 + admm_rho * (
-                    results_aggregator['der_reactive_power_vector']
-                    - admm_exchange_der_reactive_power
+                    results_aggregator['der_reactive_power_vector'].values
+                    - admm_exchange_der_reactive_power.value
                 )
             )
-            admm_lambda_aggregator_der_thermal_power = (
-                admm_lambda_aggregator_der_thermal_power
+            admm_lambda_aggregator_der_thermal_power.value = (
+                admm_lambda_aggregator_der_thermal_power.value
                 + admm_rho * (
-                    results_aggregator['der_thermal_power_vector']
-                    - admm_exchange_der_thermal_power
+                    results_aggregator['der_thermal_power_vector'].values
+                    - admm_exchange_der_thermal_power.value
                 )
             )
 
@@ -702,40 +669,40 @@ def main(
             #     ).abs().sum().sum()
             # )
             admm_primal_residual_der_active_power = (
-                (
-                    results_aggregator['der_active_power_vector']
-                    - results_electric['der_active_power_vector']
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    results_aggregator['der_active_power_vector'].values
+                    - results_electric['der_active_power_vector'].values
+                )))
             )
             admm_primal_residual_der_reactive_power = (
-                (
-                    results_aggregator['der_reactive_power_vector']
-                    - results_electric['der_reactive_power_vector']
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    results_aggregator['der_reactive_power_vector'].values
+                    - results_electric['der_reactive_power_vector'].values
+                )))
             )
             admm_primal_residual_der_thermal_power = (
-                (
-                    results_aggregator['der_thermal_power_vector']
-                    - results_thermal['der_thermal_power_vector']
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    results_aggregator['der_thermal_power_vector'].values
+                    - results_thermal['der_thermal_power_vector'].values
+                )))
             )
             admm_dual_residual_der_active_power = (
-                (
-                    admm_lambda_aggregator_der_active_power
-                    + admm_lambda_electric_der_active_power
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    admm_lambda_aggregator_der_active_power.value
+                    + admm_lambda_electric_der_active_power.value
+                )))
             )
             admm_dual_residual_der_reactive_power = (
-                (
-                    admm_lambda_aggregator_der_reactive_power
-                    + admm_lambda_electric_der_reactive_power
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    admm_lambda_aggregator_der_reactive_power.value
+                    + admm_lambda_electric_der_reactive_power.value
+                )))
             )
             admm_dual_residual_der_thermal_power = (
-                (
-                    admm_lambda_aggregator_der_thermal_power
-                    + admm_lambda_thermal_der_thermal_power
-                ).abs().sum().sum()
+                np.sum(np.sum(np.abs(
+                    admm_lambda_aggregator_der_thermal_power.value
+                    + admm_lambda_thermal_der_thermal_power.value
+                )))
             )
 
             admm_primal_residuals = admm_primal_residuals.append(
@@ -774,6 +741,71 @@ def main(
     except KeyboardInterrupt:
         # Enables manual termination of ADMM loop.
         pass
+
+    # Obtain ADMM parameters.
+    admm_exchange_der_active_power = (
+        pd.DataFrame(
+            admm_exchange_der_active_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_exchange_der_reactive_power = (
+        pd.DataFrame(
+            admm_exchange_der_reactive_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_exchange_der_thermal_power = (
+        pd.DataFrame(
+            admm_exchange_der_thermal_power.value,
+            index=scenario_data.timesteps,
+            columns=thermal_grid_model.ders
+        )
+    )
+    admm_lambda_electric_der_active_power = (
+        pd.DataFrame(
+            admm_lambda_electric_der_active_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_lambda_electric_der_reactive_power = (
+        pd.DataFrame(
+            admm_lambda_electric_der_reactive_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_lambda_thermal_der_thermal_power = (
+        pd.DataFrame(
+            admm_lambda_thermal_der_thermal_power.value,
+            index=scenario_data.timesteps,
+            columns=thermal_grid_model.ders
+        )
+    )
+    admm_lambda_aggregator_der_active_power = (
+        pd.DataFrame(
+            admm_lambda_aggregator_der_active_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_lambda_aggregator_der_reactive_power = (
+        pd.DataFrame(
+            admm_lambda_aggregator_der_reactive_power.value,
+            index=scenario_data.timesteps,
+            columns=electric_grid_model.ders
+        )
+    )
+    admm_lambda_aggregator_der_thermal_power = (
+        pd.DataFrame(
+            admm_lambda_aggregator_der_thermal_power.value,
+            index=scenario_data.timesteps,
+            columns=thermal_grid_model.ders
+        )
+    )
 
     # Store residuals.
     admm_primal_residuals.to_csv(os.path.join(results_path, 'admm_primal_residuals.csv'))

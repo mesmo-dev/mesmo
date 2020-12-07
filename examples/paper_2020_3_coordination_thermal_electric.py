@@ -1137,11 +1137,17 @@ if __name__ == '__main__':
         for scenario_number in [None]:
             for admm_rho in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
                 try:
+
+                    # Reset timings.
+                    fledge.utils.log_times = dict()
+
+                    # Run ADMM solution.
                     main(
                         scenario_number=scenario_number,
                         admm_rho=admm_rho
                     )
-                except AssertionError:
+
+                except (AssertionError, cp.error.SolverError):
                     pass
     else:
         main()

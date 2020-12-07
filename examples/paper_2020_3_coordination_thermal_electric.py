@@ -442,7 +442,7 @@ def main(
                 admm_lambda_aggregator_der_active_power,
                 (
                     optimization_problem_aggregator.der_active_power_vector_change
-                    + np.array([np.real(power_flow_solution.der_power_vector)])
+                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
                     # - admm_exchange_der_active_power
                 )
             )
@@ -450,20 +450,20 @@ def main(
                 admm_lambda_aggregator_der_reactive_power,
                 (
                     optimization_problem_aggregator.der_reactive_power_vector_change
-                    + np.array([np.imag(power_flow_solution.der_power_vector)])
+                    + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
                 optimization_problem_aggregator.der_active_power_vector_change
-                + np.array([np.real(power_flow_solution.der_power_vector)])
+                + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
                 optimization_problem_aggregator.der_reactive_power_vector_change
-                + np.array([np.imag(power_flow_solution.der_power_vector)])
+                + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -492,20 +492,12 @@ def main(
             # Iterate ADMM counter.
             admm_iteration += 1
 
-            # Solve electric sub-problem.
-            fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
+            # Solve ADMM sub-problems.
+            fledge.utils.log_time(f"ADMM sub-problem solution #{admm_iteration}")
             optimization_problem_electric.solve(keep_problem=True)
-            fledge.utils.log_time(f"electric sub-problem solution #{admm_iteration}")
-
-            # Solve thermal sub-problem.
-            fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
             optimization_problem_thermal.solve(keep_problem=True)
-            fledge.utils.log_time(f"thermal sub-problem solution #{admm_iteration}")
-
-            # Solve aggregator sub-problem.
-            fledge.utils.log_time(f"aggregator sub-problem solution #{admm_iteration}")
             optimization_problem_aggregator.solve(keep_problem=True)
-            fledge.utils.log_time(f"aggregator sub-problem solution #{admm_iteration}")
+            fledge.utils.log_time(f"ADMM sub-problem solution #{admm_iteration}")
 
             # Print objective values.
             print(f"optimization_problem_electric.objective = {optimization_problem_electric.objective.value}")
@@ -632,42 +624,6 @@ def main(
             )
 
             # Calculate residuals.
-            # admm_residual_electric_der_active_power = (
-            #     (
-            #         results_electric['der_active_power_vector']
-            #         - results_baseline['der_active_power_vector']
-            #     ).abs().sum().sum()
-            # )
-            # admm_residual_electric_der_reactive_power = (
-            #     (
-            #         results_electric['der_reactive_power_vector']
-            #         - results_baseline['der_reactive_power_vector']
-            #     ).abs().sum().sum()
-            # )
-            # admm_residual_thermal_der_thermal_power = (
-            #     (
-            #         results_thermal['der_thermal_power_vector']
-            #         - results_baseline['der_thermal_power_vector']
-            #     ).abs().sum().sum()
-            # )
-            # admm_residual_aggregator_der_active_power = (
-            #     (
-            #         results_aggregator['der_active_power_vector']
-            #         - results_baseline['der_active_power_vector']
-            #     ).abs().sum().sum()
-            # )
-            # admm_residual_aggregator_der_reactive_power = (
-            #     (
-            #         results_aggregator['der_reactive_power_vector']
-            #         - results_baseline['der_reactive_power_vector']
-            #     ).abs().sum().sum()
-            # )
-            # admm_residual_aggregator_der_thermal_power = (
-            #     (
-            #         results_aggregator['der_thermal_power_vector']
-            #         - results_baseline['der_thermal_power_vector']
-            #     ).abs().sum().sum()
-            # )
             admm_primal_residual_der_active_power = (
                 np.sum(np.sum(np.abs(
                     results_aggregator['der_active_power_vector'].values
@@ -723,8 +679,8 @@ def main(
             )
 
             # Print residuals.
-            print(f"admm_dual_residuals = \n{admm_dual_residuals}")
-            print(f"admm_primal_residuals = \n{admm_primal_residuals}")
+            print(f"admm_dual_residuals = \n{admm_dual_residuals.tail()}")
+            print(f"admm_primal_residuals = \n{admm_primal_residuals.tail()}")
 
             # Log progress.
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
@@ -743,27 +699,6 @@ def main(
         pass
 
     # Obtain ADMM parameters.
-    admm_exchange_der_active_power = (
-        pd.DataFrame(
-            admm_exchange_der_active_power.value,
-            index=scenario_data.timesteps,
-            columns=electric_grid_model.ders
-        )
-    )
-    admm_exchange_der_reactive_power = (
-        pd.DataFrame(
-            admm_exchange_der_reactive_power.value,
-            index=scenario_data.timesteps,
-            columns=electric_grid_model.ders
-        )
-    )
-    admm_exchange_der_thermal_power = (
-        pd.DataFrame(
-            admm_exchange_der_thermal_power.value,
-            index=scenario_data.timesteps,
-            columns=thermal_grid_model.ders
-        )
-    )
     admm_lambda_electric_der_active_power = (
         pd.DataFrame(
             admm_lambda_electric_der_active_power.value,

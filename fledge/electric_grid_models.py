@@ -2529,22 +2529,11 @@ class LinearElectricGridModel(object):
         voltage_magnitude_vector_maximum_dual = (
             pd.DataFrame(
                 (
-                    optimization_problem.voltage_magnitude_vector_maximum_constraint.dual_value
+                    -1.0 * optimization_problem.voltage_magnitude_vector_maximum_constraint.dual_value
                     if hasattr(optimization_problem, 'voltage_magnitude_vector_maximum_constraint')
                     else 0.0
                 ),
                 columns=self.electric_grid_model.nodes,
-                index=timesteps
-            )
-        )
-        branch_power_vector_1_squared_maximum_dual = (
-            pd.DataFrame(
-                (
-                    optimization_problem.branch_power_vector_1_squared_maximum_constraint.dual_value
-                    if hasattr(optimization_problem, 'branch_power_vector_1_squared_maximum_constraint')
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.branches,
                 index=timesteps
             )
         )
@@ -2559,11 +2548,11 @@ class LinearElectricGridModel(object):
                 index=timesteps
             )
         )
-        branch_power_vector_2_squared_maximum_dual = (
+        branch_power_vector_1_squared_maximum_dual = (
             pd.DataFrame(
                 (
-                    optimization_problem.branch_power_vector_2_squared_maximum_constraint.dual_value
-                    if hasattr(optimization_problem, 'branch_power_vector_2_squared_maximum_constraint')
+                    -1.0 * optimization_problem.branch_power_vector_1_squared_maximum_constraint.dual_value
+                    if hasattr(optimization_problem, 'branch_power_vector_1_squared_maximum_constraint')
                     else 0.0
                 ),
                 columns=self.electric_grid_model.branches,
@@ -2575,6 +2564,17 @@ class LinearElectricGridModel(object):
                 (
                     optimization_problem.branch_power_vector_2_squared_minimum_constraint.dual_value
                     if hasattr(optimization_problem, 'branch_power_vector_2_squared_minimum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.branches,
+                index=timesteps
+            )
+        )
+        branch_power_vector_2_squared_maximum_dual = (
+            pd.DataFrame(
+                (
+                    -1.0 * optimization_problem.branch_power_vector_2_squared_maximum_constraint.dual_value
+                    if hasattr(optimization_problem, 'branch_power_vector_2_squared_maximum_constraint')
                     else 0.0
                 ),
                 columns=self.electric_grid_model.branches,

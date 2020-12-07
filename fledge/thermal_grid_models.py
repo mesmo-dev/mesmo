@@ -621,22 +621,22 @@ class LinearThermalGridModel(object):
                 index=timesteps
             )
         )
-        branch_flow_vector_maximum_dual = (
+        branch_flow_vector_minimum_dual = (
             pd.DataFrame(
                 (
-                    optimization_problem.branch_flow_vector_minimum_constraint.dual_value
-                    if hasattr(optimization_problem, 'branch_flow_vector_minimum_constraint')
+                    optimization_problem.branch_flow_vector_maximum_constraint.dual_value
+                    if hasattr(optimization_problem, 'branch_flow_vector_maximum_constraint')
                     else 0.0
                 ),
                 columns=self.thermal_grid_model.branches,
                 index=timesteps
             )
         )
-        branch_flow_vector_minimum_dual = (
+        branch_flow_vector_maximum_dual = (
             pd.DataFrame(
                 (
-                    optimization_problem.branch_flow_vector_maximum_constraint.dual_value
-                    if hasattr(optimization_problem, 'branch_flow_vector_maximum_constraint')
+                    -1.0 * optimization_problem.branch_flow_vector_minimum_constraint.dual_value
+                    if hasattr(optimization_problem, 'branch_flow_vector_minimum_constraint')
                     else 0.0
                 ),
                 columns=self.thermal_grid_model.branches,

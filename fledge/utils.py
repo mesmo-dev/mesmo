@@ -28,9 +28,14 @@ log_times = dict()
 class OptimizationProblem(object):
     """Optimization problem object for use with CVXPY."""
 
-    constraints: list = []
-    objective: cp.Expression = 0.0
+    constraints: list
+    objective: cp.Expression
     cvxpy_problem: cp.Problem
+
+    def __init__(self):
+
+        self.constraints = []
+        self.objective = cp.Constant(value=0.0)
 
     def solve(
             self,

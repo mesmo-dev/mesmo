@@ -39,13 +39,17 @@ class OptimizationProblem(object):
 
         # Solve optimization problem.
         self.cvxpy_problem.solve(
-            solver=cp.GUROBI,
+            solver=(
+                fledge.config.config['optimization']['solver_name'].upper()
+                if fledge.config.config['optimization']['solver_name'] is not None
+                else None
+            ),
             verbose=fledge.config.config['optimization']['show_solver_output']
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
         try:
-            assert self.cvxpy_problem.status == 'optimal'
+            assert self.cvxpy_problem.status == cp.OPTIMAL
         except AssertionError:
             logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
             raise

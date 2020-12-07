@@ -60,15 +60,15 @@ class FixedDERModel(DERModel):
 
             optimization_problem.constraints.append(
                 optimization_problem.der_active_power_vector_change[:, der_index]
+                + np.array([np.real(power_flow_solution.der_power_vector[der_index])])
                 ==
                 self.active_power_nominal_timeseries.values
-                - np.array([np.real(power_flow_solution.der_power_vector[der_index])])
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector_change[:, der_index]
+                + np.array([np.imag(power_flow_solution.der_power_vector[der_index])])
                 ==
                 self.reactive_power_nominal_timeseries.values
-                - np.array([np.imag(power_flow_solution.der_power_vector[der_index])])
             )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
@@ -97,13 +97,13 @@ class FixedDERModel(DERModel):
             optimization_problem.objective += (
                 (
                     price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ np.transpose([self.active_power_nominal_timeseries.values])
+                    * timestep_interval_hours  # In Wh.
+                    @ np.transpose([-1.0 * self.active_power_nominal_timeseries.values])
                 )
-                + cp.quad_form(
-                    -1.0 * timestep_interval_hours  # In Wh.
-                    * np.transpose([self.active_power_nominal_timeseries.values]),
-                    scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                + (
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum(np.transpose([self.active_power_nominal_timeseries.values]) ** 2)
                 )
             )
 
@@ -112,13 +112,13 @@ class FixedDERModel(DERModel):
             optimization_problem.objective += (
                 (
                     price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ np.transpose([self.reactive_power_nominal_timeseries.values])
+                    * timestep_interval_hours  # In Wh.
+                    @ np.transpose([-1.0 * self.reactive_power_nominal_timeseries.values])
                 )
-                + cp.quad_form(
-                    -1.0 * timestep_interval_hours  # In Wh.
-                    * np.transpose([self.reactive_power_nominal_timeseries.values]),
-                    scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                + (
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum(np.transpose([self.reactive_power_nominal_timeseries.values]) ** 2)
                 )
             )
 
@@ -137,9 +137,9 @@ class FixedDERModel(DERModel):
 
                 # Active power generation cost.
                 optimization_problem.objective += (
-                    np.array([[self.marginal_cost] * len(self.timesteps)])
+                    self.marginal_cost
                     * timestep_interval_hours  # In Wh.
-                    @ np.transpose([self.active_power_nominal_timeseries.values])
+                    @ cp.sum(self.active_power_nominal_timeseries.values)
                 )
 
         # TODO: Define objective for thermal generators.
@@ -424,32 +424,32 @@ class FlexibleDERModel(DERModel):
             if type(self) is FlexibleBuildingModel:
                 optimization_problem.constraints.append(
                     optimization_problem.der_active_power_vector_change[:, der_index]
+                    + np.real(power_flow_solution.der_power_vector[der_index])
                     ==
                     -1.0
                     * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
-                    - np.real(power_flow_solution.der_power_vector[der_index])
                 )
                 optimization_problem.constraints.append(
                     optimization_problem.der_reactive_power_vector_change[:, der_index]
+                    + np.imag(power_flow_solution.der_power_vector[der_index])
                     ==
                     -1.0 * (
                         optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
                         * np.tan(np.arccos(self.power_factor_nominal))
                     )
-                    - np.imag(power_flow_solution.der_power_vector[der_index])
                 )
             else:
                 optimization_problem.constraints.append(
                     optimization_problem.der_active_power_vector_change[:, der_index]
+                    + np.real(power_flow_solution.der_power_vector[der_index])
                     ==
                     optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
-                    - np.real(power_flow_solution.der_power_vector[der_index])
                 )
                 optimization_problem.constraints.append(
                     optimization_problem.der_reactive_power_vector_change[:, der_index]
+                    + np.imag(power_flow_solution.der_power_vector[der_index])
                     ==
                     optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
-                    - np.imag(power_flow_solution.der_power_vector[der_index])
                 )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
@@ -495,10 +495,12 @@ class FlexibleDERModel(DERModel):
                         * timestep_interval_hours  # In Wh.
                         @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
                     )
-                    + cp.quad_form(
-                        timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')],
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                        ) ** 2)
                     )
                 )
 
@@ -511,11 +513,13 @@ class FlexibleDERModel(DERModel):
                         @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
                         * np.tan(np.arccos(self.power_factor_nominal))
                     )
-                    + cp.quad_form(
-                        timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
-                        * np.tan(np.arccos(self.power_factor_nominal)),
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                            * np.tan(np.arccos(self.power_factor_nominal))
+                        ) ** 2)
                     )
                 )
 
@@ -526,13 +530,17 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     (
                         price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
+                        * timestep_interval_hours  # In Wh.
+                        @ (-1.0 * (
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
+                        ))
                     )
-                    + cp.quad_form(
-                        -1.0 * timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')],
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
+                        ) ** 2)
                     )
                 )
 
@@ -541,13 +549,17 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     (
                         price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
+                        * timestep_interval_hours  # In Wh.
+                        @ (-1.0 * (
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
+                        ))
                     )
-                    + cp.quad_form(
-                        -1.0 * timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')],
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
+                        ) ** 2)
                     )
                 )
 
@@ -567,10 +579,12 @@ class FlexibleDERModel(DERModel):
                         * timestep_interval_hours  # In Wh.
                         @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
                     )
-                    + cp.quad_form(
-                        timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')],
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                        ) ** 2)
                     )
                 )
 
@@ -584,10 +598,12 @@ class FlexibleDERModel(DERModel):
                         * -1.0 * timestep_interval_hours  # In Wh.
                         @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
                     )
-                    + cp.quad_form(
-                        -1.0 * timestep_interval_hours  # In Wh.
-                        * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')],
-                        scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(self.timesteps))
+                    + (
+                        price_data.price_sensitivity_coefficient
+                        * timestep_interval_hours  # In Wh.
+                        * cp.sum((
+                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
+                        ) ** 2)
                     )
                 )
 
@@ -599,8 +615,8 @@ class FlexibleDERModel(DERModel):
                 # Active power generation cost.
                 optimization_problem.objective += (
                     self.marginal_cost
-                    * sum(optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')])
                     * timestep_interval_hours  # In Wh.
+                    * cp.sum(optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')])
                 )
 
         # TODO: Define objective for thermal generators.

@@ -571,19 +571,19 @@ class LinearThermalGridModel(object):
         optimization_problem.objective += (
             (
                 price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values.T
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ cp.sum((
+                * timestep_interval_hours  # In Wh.
+                @ cp.sum(-1.0 * (
                     optimization_problem.der_thermal_power_vector
                     / self.thermal_grid_model.cooling_plant_efficiency
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + cp.quad_form(
-                -1.0 * timestep_interval_hours  # In Wh.
+            + (
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_thermal_power_vector
                     / self.thermal_grid_model.cooling_plant_efficiency
-                ), axis=1, keepdims=True),  # Sum along DERs, i.e. sum for each timestep.
-                scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(timesteps))
+                ) ** 2)
             )
         )
 
@@ -595,10 +595,10 @@ class LinearThermalGridModel(object):
                 * timestep_interval_hours  # In Wh.
                 @ optimization_problem.pump_power
             )
-            + cp.quad_form(
-                timestep_interval_hours  # In Wh.
-                * optimization_problem.pump_power,
-                scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(timesteps))
+            + (
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * cp.sum(optimization_problem.pump_power ** 2)
             )
         )
 

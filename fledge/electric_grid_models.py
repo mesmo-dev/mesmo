@@ -2450,19 +2450,19 @@ class LinearElectricGridModel(object):
         optimization_problem.objective += (
             (
                 price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ cp.sum((
+                * timestep_interval_hours  # In Wh.
+                @ cp.sum(-1.0 * (
                     optimization_problem.der_active_power_vector_change
                     + np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + cp.quad_form(
-                -1.0 * timestep_interval_hours  # In Wh.
+            + (
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_active_power_vector_change
                     + np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                ), axis=1, keepdims=True),  # Sum along DERs, i.e. sum for each timestep.
-                scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(timesteps))
+                ) ** 2)
             )
         )
 
@@ -2471,19 +2471,19 @@ class LinearElectricGridModel(object):
         optimization_problem.objective += (
             (
                 price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.T
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ cp.sum((
+                * timestep_interval_hours  # In Wh.
+                @ cp.sum(-1.0 * (
                     optimization_problem.der_reactive_power_vector_change
                     + np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + cp.quad_form(
-                -1.0 * timestep_interval_hours  # In Wh.
+            + (
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_reactive_power_vector_change
                     + np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                ), axis=1, keepdims=True),  # Sum along DERs, i.e. sum for each timestep.
-                scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(timesteps))
+                ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
             )
         )
 
@@ -2497,13 +2497,13 @@ class LinearElectricGridModel(object):
                     + np.real(np.sum(self.power_flow_solution.loss))
                 )
             )
-            + cp.quad_form(
-                timestep_interval_hours  # In Wh.
-                * (
+            + (
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * cp.sum((
                     optimization_problem.loss_active_change
                     + np.real(np.sum(self.power_flow_solution.loss))
-                ),
-                scipy.sparse.diags([price_data.price_sensitivity_coefficient] * len(timesteps))
+                ) ** 2)
             )
         )
 

@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-import pyomo.environ as pyo
 import re
 import time
 import typing
@@ -84,34 +83,6 @@ def starmap(
         results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
-
-
-def solve_optimization(
-        optimization_problem: pyo.ConcreteModel,
-        enable_duals=False
-):
-    """Utility function for solving a Pyomo optimization problem. Automatically instantiates the solver as given in
-    config. Raises error if no feasible solution is found.
-    """
-
-    # Enable duals.
-    if enable_duals and (optimization_problem.find_component('dual') is None):
-        optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-
-    # Solve optimization problem.
-    optimization_result = (
-        fledge.config.optimization_solver.solve(
-            optimization_problem,
-            tee=fledge.config.config['optimization']['show_solver_output']
-        )
-    )
-
-    # Assert that solver exited with any solution. If not, raise an error.
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-        raise
 
 
 def log_timing_start(

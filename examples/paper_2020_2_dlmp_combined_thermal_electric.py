@@ -502,7 +502,7 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            plt.show()
+            # plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.

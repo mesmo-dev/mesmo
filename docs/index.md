@@ -38,4 +38,5 @@ Please note that the repository is under active development and the interface ma
     api
     data
     contributing
+    changelog
 ```

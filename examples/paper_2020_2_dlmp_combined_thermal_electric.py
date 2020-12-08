@@ -115,16 +115,16 @@ def main(
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 100.0 * electric_grid_model.branch_power_vector_magnitude_reference
     # Modify limits for scenarios.
     if scenario_number in [4, 12, 13, 14, 15]:
-        branch_power_vector_squared_maximum[
+        branch_power_magnitude_vector_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
     elif scenario_number in [5]:
-        voltage_magnitude_vector_minimum[
+        node_voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.9985 / 0.5
     else:
@@ -132,9 +132,9 @@ def main(
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
@@ -175,9 +175,7 @@ def main(
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # Define electric grid objective.
@@ -231,8 +229,8 @@ def main(
     # Obtain additional results.
     branch_power_vector_magnitude_per_unit = (
         (
-            np.sqrt(np.abs(results['branch_power_vector_1_squared']))
-            + np.sqrt(np.abs(results['branch_power_vector_2_squared']))
+            results['branch_power_magnitude_vector_1']
+            + results['branch_power_magnitude_vector_2']
         ) / 2
         # / electric_grid_model.branch_power_vector_magnitude_reference
     )

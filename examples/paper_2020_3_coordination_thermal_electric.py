@@ -90,16 +90,16 @@ def main(
         pass
 
     # Define electric grid limits.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 100.0 * electric_grid_model.branch_power_vector_magnitude_reference
     # Modify limits for scenarios.
     if scenario_number in [4]:
-        branch_power_vector_squared_maximum[
+        branch_power_magnitude_vector_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
     elif scenario_number in [5]:
-        voltage_magnitude_vector_minimum[
+        node_voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.9985 / 0.5
     else:
@@ -189,9 +189,9 @@ def main(
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem_baseline,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
@@ -217,9 +217,7 @@ def main(
     der_model_set.define_optimization_constraints(
         optimization_problem_baseline,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # Define electric grid objective.
@@ -301,9 +299,9 @@ def main(
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem_electric,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define electric grid objective.
@@ -319,29 +317,25 @@ def main(
             cp.multiply(
                 admm_lambda_electric_der_active_power,
                 (
-                    optimization_problem_electric.der_active_power_vector_change
-                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                    optimization_problem_electric.der_active_power_vector
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_electric_der_reactive_power,
                 (
-                    optimization_problem_electric.der_reactive_power_vector_change
-                    + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                    optimization_problem_electric.der_reactive_power_vector
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_active_power_vector_change
-                + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                optimization_problem_electric.der_active_power_vector
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_reactive_power_vector_change
-                + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                optimization_problem_electric.der_reactive_power_vector
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -408,10 +402,10 @@ def main(
     )
 
     # Define DER connection variables.
-    optimization_problem_aggregator.der_active_power_vector_change = (
+    optimization_problem_aggregator.der_active_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
-    optimization_problem_aggregator.der_reactive_power_vector_change = (
+    optimization_problem_aggregator.der_reactive_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
     optimization_problem_aggregator.der_thermal_power_vector = (
@@ -422,9 +416,7 @@ def main(
     der_model_set.define_optimization_constraints(
         optimization_problem_aggregator,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # # Define DER objective.
@@ -441,29 +433,25 @@ def main(
             cp.multiply(
                 admm_lambda_aggregator_der_active_power,
                 (
-                    optimization_problem_aggregator.der_active_power_vector_change
-                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                    optimization_problem_aggregator.der_active_power_vector
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_aggregator_der_reactive_power,
                 (
-                    optimization_problem_aggregator.der_reactive_power_vector_change
-                    + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                    optimization_problem_aggregator.der_reactive_power_vector
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_active_power_vector_change
-                + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
+                optimization_problem_aggregator.der_active_power_vector
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_reactive_power_vector_change
-                + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
+                optimization_problem_aggregator.der_reactive_power_vector
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -534,14 +522,14 @@ def main(
             )
             der_active_power_vector = (
                 pd.DataFrame(
-                    optimization_problem_aggregator.der_active_power_vector_change.value,
+                    optimization_problem_aggregator.der_active_power_vector.value,
                     columns=electric_grid_model.ders,
                     index=scenario_data.timesteps
                 )
             )
             der_reactive_power_vector = (
                 pd.DataFrame(
-                    optimization_problem_aggregator.der_reactive_power_vector_change.value,
+                    optimization_problem_aggregator.der_reactive_power_vector.value,
                     columns=electric_grid_model.ders,
                     index=scenario_data.timesteps
                 )

@@ -50,26 +50,25 @@ def main():
     )
 
     # Define constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_minimum[
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_minimum[
         fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
     ] *= 0.965 / 0.5
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 10.0 * np.abs(electric_grid_model.branch_power_vector_magnitude_reference ** 2)
-    branch_power_vector_squared_maximum[
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
+    branch_power_magnitude_vector_maximum[
         fledge.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
     ] *= 1.2 / 10.0
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
     der_model_set.define_optimization_constraints(
         optimization_problem,
-        electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution
+        electric_grid_model=electric_grid_model
     )
 
     # Define objective.

@@ -60,8 +60,7 @@ def main():
     )
     der_model_set.define_optimization_constraints(
         optimization_problem,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # Define objective.

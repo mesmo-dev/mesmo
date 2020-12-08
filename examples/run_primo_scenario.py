@@ -41,10 +41,10 @@ def main():
     optimization_problem_baseline = fledge.utils.OptimizationProblem()
 
     # Define DER connection variables.
-    optimization_problem_baseline.der_active_power_vector_change = (
+    optimization_problem_baseline.der_active_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
-    optimization_problem_baseline.der_reactive_power_vector_change = (
+    optimization_problem_baseline.der_reactive_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
 
@@ -54,13 +54,12 @@ def main():
     )
     der_model_set.define_optimization_constraints(
         optimization_problem_baseline,
-        electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution
+        electric_grid_model=electric_grid_model
     )
 
     # Define objective.
     optimization_problem_baseline.objective += (
-        -1.0 * sum(sum(optimization_problem_baseline.der_active_power_vector_change))
+        -1.0 * sum(sum(optimization_problem_baseline.der_active_power_vector))
     )
 
     # Solve optimization problem.
@@ -71,18 +70,12 @@ def main():
     results_baseline.update(
         fledge.data_interface.ResultsDict(
             der_active_power_vector=pd.DataFrame(
-                (
-                    optimization_problem_baseline.der_active_power_vector_change.value
-                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
-                ),
+                optimization_problem_baseline.der_active_power_vector.value,
                 columns=electric_grid_model.ders,
                 index=scenario_data.timesteps
             ),
             der_reactive_power_vector=pd.DataFrame(
-                (
-                        optimization_problem_baseline.der_reactive_power_vector_change.value
-                        + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
-                ),
+                optimization_problem_baseline.der_reactive_power_vector.value,
                 columns=electric_grid_model.ders,
                 index=scenario_data.timesteps
             ),
@@ -95,10 +88,10 @@ def main():
     optimization_problem_peak_shaving = fledge.utils.OptimizationProblem()
 
     # Define DER connection variables.
-    optimization_problem_peak_shaving.der_active_power_vector_change = (
+    optimization_problem_peak_shaving.der_active_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
-    optimization_problem_peak_shaving.der_reactive_power_vector_change = (
+    optimization_problem_peak_shaving.der_reactive_power_vector = (
         cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
     )
 
@@ -108,13 +101,12 @@ def main():
     )
     der_model_set.define_optimization_constraints(
         optimization_problem_peak_shaving,
-        electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution
+        electric_grid_model=electric_grid_model
     )
 
     # Define objective.
     optimization_problem_peak_shaving.objective += (
-        -1.0 * sum(sum(optimization_problem_baseline.der_active_power_vector_change))
+        -1.0 * sum(sum(optimization_problem_baseline.der_active_power_vector))
     )
 
     # Define peak power variable / constraint / objective.
@@ -124,10 +116,7 @@ def main():
         * np.ones(len(scenario_data.timesteps))
         <=
         cp.sum(
-            (
-                optimization_problem_peak_shaving.der_active_power_vector_change
-                + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
-            ),
+            optimization_problem_peak_shaving.der_active_power_vector,
             axis=1  # Sum along DERs, i.e. sum for each timestep.
         )
     )
@@ -145,18 +134,12 @@ def main():
     results_peak_shaving.update(
         dict(
             der_active_power_vector=pd.DataFrame(
-                (
-                    optimization_problem_peak_shaving.der_active_power_vector_change.value
-                    + np.array([np.real(power_flow_solution.der_power_vector.ravel())])
-                ),
+                optimization_problem_peak_shaving.der_active_power_vector.value,
                 columns=electric_grid_model.ders,
                 index=scenario_data.timesteps
             ),
             der_reactive_power_vector=pd.DataFrame(
-                (
-                    optimization_problem_peak_shaving.der_reactive_power_vector_change.value
-                    + np.array([np.imag(power_flow_solution.der_power_vector.ravel())])
-                ),
+                optimization_problem_peak_shaving.der_reactive_power_vector.value,
                 columns=electric_grid_model.ders,
                 index=scenario_data.timesteps
             ),

@@ -29,8 +29,9 @@ def get_config() -> dict:
     if not os.path.isfile(os.path.join(base_path, 'config.yml')):
         with open(os.path.join(base_path, 'config.yml'), 'w') as file:
             file.write(
-                "# Local configuration values.\n"
-                "# - Default values can be found in `fledge/config_default.yml`\n"
+                "# Local configuration parameters."
+                "# - Configuration parameters and their default are defined in `fledge/config_default.yml`"
+                "# - Copy from `fledge/config_default.yml` and modify parameters here to set the local configuration."
                 "paths:\n"
                 "  additional_data: []\n"
             )

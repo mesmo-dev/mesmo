@@ -40,7 +40,6 @@ The preliminary documentation is located at [tumcreate-estl.github.io/fledge](ht
 2. Clone or download repository.
 3. In your Python environment, run:
     1. `pip install -e path_to_repository`
-    2. `pip install -e path_to_repository/cobmo`
 
 Please also read [docs/intro.md](./docs/intro.md).
 

@@ -297,30 +297,30 @@ class OptimalOperationProblem(object):
                 self.optimization_problem,
                 self.timesteps
             )
-            voltage_magnitude_vector_minimum = (
+            node_voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
                 else None
             )
-            voltage_magnitude_vector_maximum = (
+            node_voltage_magnitude_vector_maximum = (
                 scenario_data.scenario['voltage_per_unit_maximum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
                 else None
             )
-            branch_power_vector_squared_maximum = (
+            branch_power_magnitude_vector_maximum = (
                 scenario_data.scenario['branch_flow_per_unit_maximum']
-                * np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+                * self.electric_grid_model.branch_power_vector_magnitude_reference
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )
             self.linear_electric_grid_model.define_optimization_constraints(
                 self.optimization_problem,
                 self.timesteps,
-                voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-                voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-                branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+                node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+                node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+                branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
             )
 
         # Define thermal grid model variables and constraints.
@@ -355,9 +355,7 @@ class OptimalOperationProblem(object):
         self.der_model_set.define_optimization_constraints(
             self.optimization_problem,
             electric_grid_model=self.electric_grid_model,
-            power_flow_solution=self.power_flow_solution_reference,
-            thermal_grid_model=self.thermal_grid_model,
-            thermal_power_flow_solution=self.thermal_power_flow_solution_reference
+            thermal_grid_model=self.thermal_grid_model
         )
 
         # Define objective.

@@ -53,6 +53,19 @@ If you are running into errors when installing or running FLEDGE, this may be du
 
 The `examples` directory contains run scripts which demonstrate possible usages of FLEDGE. You may also check the `test` directory for a better understanding of the API.
 
+## Configuration with `config.yml`
+
+FLEDGE configuration parameters (e.g. the output format of plots) can be set in `config.yml`. As an initial user, you most likely will not need to modify the configuration.
+
+If you want to change the configuration, you can create or modify `config.yml` in the FLEDGE repository main directory. FLEDGE will automatically create `config.yml` if it does not exist. Initially, `config.yml` will be empty. You can copy configuration parameters from `fledge/config_default.yml` to `config.yml` and modify their value to define your local configuration. To define nested configuration parameters, you need to replicate the nested structure in `config.yml`. For example, to define CPLEX as the optimization solver, use:
+
+```
+optimization:
+  solver_name: cplex
+```
+
+The configuration parameters which are defined in `config.yml` will take precedence over those defined in `fledge/config_default.yml`. If you would like to revert a parameter to its default value, just delete the parameter from `config.yml`. Please do not modify `fledge/config_default.yml` directly.
+
 ## Papers
 
 The following papers have been prepared in relation to FLEDGE:

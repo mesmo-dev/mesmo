@@ -49,9 +49,7 @@ class FixedDERModel(DERModel):
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     ):
 
         # Define connection constraints.
@@ -59,14 +57,12 @@ class FixedDERModel(DERModel):
             der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
 
             optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector_change[:, der_index]
-                + np.array([np.real(power_flow_solution.der_power_vector[der_index])])
+                optimization_problem.der_active_power_vector[:, der_index]
                 ==
                 self.active_power_nominal_timeseries.values
             )
             optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector_change[:, der_index]
-                + np.array([np.imag(power_flow_solution.der_power_vector[der_index])])
+                optimization_problem.der_reactive_power_vector[:, der_index]
                 ==
                 self.reactive_power_nominal_timeseries.values
             )
@@ -356,9 +352,7 @@ class FlexibleDERModel(DERModel):
         self,
         optimization_problem: fledge.utils.OptimizationProblem,
         electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-        power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
-        thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-        thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
+        thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     ):
 
         # Initial state.
@@ -423,15 +417,13 @@ class FlexibleDERModel(DERModel):
 
             if type(self) is FlexibleBuildingModel:
                 optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector_change[:, der_index]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
+                    optimization_problem.der_active_power_vector[:, der_index]
                     ==
                     -1.0
                     * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
                 )
                 optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector_change[:, der_index]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
+                    optimization_problem.der_reactive_power_vector[:, der_index]
                     ==
                     -1.0 * (
                         optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
@@ -440,14 +432,12 @@ class FlexibleDERModel(DERModel):
                 )
             else:
                 optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector_change[:, der_index]
-                    + np.real(power_flow_solution.der_power_vector[der_index])
+                    optimization_problem.der_active_power_vector[:, der_index]
                     ==
                     optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
                 )
                 optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector_change[:, der_index]
-                    + np.imag(power_flow_solution.der_power_vector[der_index])
+                    optimization_problem.der_reactive_power_vector[:, der_index]
                     ==
                     optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
                 )
@@ -1603,9 +1593,7 @@ class DERModelSet(object):
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
             electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            power_flow_solution: fledge.electric_grid_models.PowerFlowSolution = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-            thermal_power_flow_solution: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     ):
 
         # Define DER constraints for each DER.
@@ -1613,9 +1601,7 @@ class DERModelSet(object):
             self.der_models[der_name].define_optimization_constraints(
                 optimization_problem,
                 electric_grid_model,
-                power_flow_solution,
-                thermal_grid_model,
-                thermal_power_flow_solution
+                thermal_grid_model
             )
 
     def define_optimization_objective(

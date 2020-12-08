@@ -4,10 +4,11 @@ import setuptools
 import subprocess
 import sys
 
-# Install submodules.
-# - Note that this will run without command line outputs.
-# - TODO: Update documentation.
+# Install submodules. (This will run without command line outputs.)
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', 'cobmo'])
+
+# Install Gurobi interface. (This will run without command line outputs.)
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-i', 'https://pypi.gurobi.com', 'gurobipy'])
 
 setuptools.setup(
     name='fledge',

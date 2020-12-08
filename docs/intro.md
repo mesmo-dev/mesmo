@@ -28,6 +28,7 @@ The following installation procedure requires additional steps, but can improve 
    4. `conda install numpy pandas`
    5. `pip install -e path_to_repository`
 4. If you want to use CPLEX:
+   1. Install CPLEX Python interface (see latest CPLEX documentation).
    2. Create or modify `config.yml` (see below in "Configuration with `config.yml`").
 
 ### Alternative installation

@@ -12,20 +12,22 @@ import fledge.problems
 def main():
 
     # Settings.
-    scenario_name = 'singapore_district1'
-
-    # High-level API.
-    # - Running the operation problem through the high-level API directly stores results in the results directory.
-    # - This is intended for single runs of scenarios and does not allow successive changes to the problem.
-    fledge.api.run_nominal_operation_problem(scenario_name)
+    scenario_name = 'singapore_tanjongpagar'
 
     # Low-level API.
     # - Obtain a problem object, which can be used to incrementally apply changes, solve and retrieve results.
-    # - This intended for scripting and to enable custom work flows.
+    # - This intended for scripting / custom work flows which may require manipulation of the problem object.
+    # - Requires separate function calls to solve, obtain results and print / store results.
+
     problem = fledge.problems.NominalOperationProblem(scenario_name)
     problem.solve()
     results = problem.get_results()
     print(results)
+
+    # High-level API.
+    # - Running the operation problem through the high-level API directly stores results in the results directory.
+
+    # fledge.api.run_nominal_operation_problem(scenario_name)
 
 
 if __name__ == '__main__':

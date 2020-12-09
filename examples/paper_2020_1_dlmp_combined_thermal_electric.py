@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -23,7 +22,7 @@ def main():
     scenario_name = 'singapore_tanjongpagar'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_1_dlmp_combined_thermal_electric_scenario_{scenario}', scenario_name)
+        fledge.utils.get_results_path(f'{os.path.basename(__file__)[:-3]}_scenario_{scenario}', scenario_name)
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -55,7 +54,7 @@ def main():
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -64,15 +63,15 @@ def main():
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
-    branch_power_vector_squared_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1 ** 2)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
+    branch_power_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1)
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
@@ -109,9 +108,7 @@ def main():
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # Define objective.
@@ -128,14 +125,7 @@ def main():
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
     in_per_unit = False
@@ -262,6 +252,7 @@ def main():
         plt.close()
 
     # Print results path.
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

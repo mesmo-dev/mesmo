@@ -1,6 +1,6 @@
 """Test API."""
 
-import pyomo.environ as pyo
+import cvxpy as cp
 import time
 import unittest
 
@@ -8,12 +8,6 @@ import fledge.config
 import fledge.api
 
 logger = fledge.config.get_logger(__name__)
-
-# Check availability of optimization solver.
-try:
-    optimization_solver_available = pyo.SolverFactory(fledge.config.config['optimization']['solver_name']).available()
-except Exception:
-    optimization_solver_available = False
 
 
 class TestAPI(unittest.TestCase):
@@ -25,11 +19,13 @@ class TestAPI(unittest.TestCase):
         time_duration = time.time() - time_start
         logger.info(f"Test run_nominal_operation_problem: Completed in {time_duration:.6f} seconds.")
 
-    if optimization_solver_available:
-
-        def test_run_optimal_operation_problem(self):
-            # Get result.
-            time_start = time.time()
+    def test_run_optimal_operation_problem(self):
+        # Get result.
+        time_start = time.time()
+        try:
             fledge.api.run_optimal_operation_problem('singapore_tanjongpagar')
-            time_duration = time.time() - time_start
-            logger.info(f"Test run_optimal_operation_problem: Completed in {time_duration:.6f} seconds.")
+        except (cp.SolverError, AttributeError):
+            # Soft fail: Only raise warning on selected errors, since it may be due to solver not installed.
+            logger.warning(f"Test run_optimal_operation_problem failed due to solver error.", exc_info=True)
+        time_duration = time.time() - time_start
+        logger.info(f"Test run_optimal_operation_problem: Completed in {time_duration:.6f} seconds.")

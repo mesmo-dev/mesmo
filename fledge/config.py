@@ -9,8 +9,6 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-import pyomo.environ as pyo
-import typing
 import yaml
 
 
@@ -31,8 +29,9 @@ def get_config() -> dict:
     if not os.path.isfile(os.path.join(base_path, 'config.yml')):
         with open(os.path.join(base_path, 'config.yml'), 'w') as file:
             file.write(
-                "# Local configuration values.\n"
-                "# - Default values can be found in `fledge/config_default.yml`\n"
+                "# Local configuration parameters."
+                "# - Configuration parameters and their default are defined in `fledge/config_default.yml`"
+                "# - Copy from `fledge/config_default.yml` and modify parameters here to set the local configuration."
                 "paths:\n"
                 "  additional_data: []\n"
             )
@@ -151,9 +150,6 @@ if config['caching']['enable']:
     cache = diskcache.Cache(os.path.join(base_path, 'cache'))
     if config['caching']['reset_cache']:
         cache.clear()
-
-# Instantiate Pyomo optimization solver.
-optimization_solver = pyo.SolverFactory(config['optimization']['solver_name'])
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

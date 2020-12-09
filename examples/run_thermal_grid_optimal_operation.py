@@ -3,7 +3,8 @@
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
+import plotly.express as px
+import plotly.graph_objects as go
 
 import fledge.config
 import fledge.data_interface
@@ -15,8 +16,8 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
-    results_path = fledge.utils.get_results_path('run_thermal_grid_optimal_operation', scenario_name)
+    scenario_name = 'singapore_tanjongpagar_thermal_only'
+    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -37,37 +38,37 @@ def main():
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define thermal grid model variables.
+    # Define optimization variables.
     linear_thermal_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
+    der_model_set.define_optimization_variables(
+        optimization_problem
+    )
 
-    # Define thermal grid model constraints.
+    # Define constraints.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
-    branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
+    branch_flow_vector_maximum = 10.0 * thermal_power_flow_solution.branch_flow_vector
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
-
-    # Define DER variables.
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
-
-    # Define DER constraints.
     der_model_set.define_optimization_constraints(
         optimization_problem,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
-    # Define objective (district cooling plant operation cost minimization).
+    # Define objective.
+    der_model_set.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        thermal_grid_model=thermal_grid_model
+    )
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
         price_data,
@@ -75,14 +76,7 @@ def main():
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
     results = (
@@ -102,7 +96,7 @@ def main():
     # Print results.
     print(results)
 
-    # Store results as CSV.
+    # Store results to CSV.
     results.to_csv(results_path)
 
     # Obtain DLMPs.
@@ -117,10 +111,11 @@ def main():
     # Print DLMPs.
     print(dlmps)
 
-    # Store DLMPs as CSV.
+    # Store DLMPs to CSV.
     dlmps.to_csv(results_path)
 
     # Print results path.
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

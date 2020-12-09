@@ -6,6 +6,7 @@ paths:
   data: ./data
   database: ./data/database.sqlite
   results: ./results
+  cobmo_additional_data: []
 multiprocessing:
   run_parallel: true
 caching:
@@ -14,7 +15,7 @@ caching:
   expiry_time: 3600  # Expiry time of the cache, in seconds.
   get_building_model: true
 optimization:
-  solver_name: gurobi  # Must be valid input string for Pyomo's `SolverFactory`.
+  solver_name: gurobi  # Must be valid solver name for CVXPY.
   show_solver_output: true  # If True, activate verbose solver output.
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.

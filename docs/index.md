@@ -20,7 +20,7 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for opti
     - Time series models for EV charging.
     - Linear models for flexible building loads.
 - Optimal operation problems:
-    - Obtain numerical optimization problem for combined optimal operation for electric / thermal grids with DERs via [Pyomo](https://github.com/Pyomo/pyomo).
+    - Obtain numerical optimization problem for combined optimal operation for electric / thermal grids with DERs.
     - Obtain electric / thermal optimal power flow solution.
     - Obtain distribution locational marginal prices (DLMPs) for the electric / thermal grids.
 
@@ -38,4 +38,5 @@ Please note that the repository is under active development and the interface ma
     api
     data
     contributing
+    changelog
 ```

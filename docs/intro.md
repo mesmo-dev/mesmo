@@ -24,7 +24,7 @@ The following installation procedure requires additional steps, but can improve 
 3. In Anaconda Prompt, run:
    1. `conda create -n fledge python=3.7`
    2. `conda activate fledge`
-   3. `conda install -c conda-forge contextily`
+   3. `conda install -c conda-forge contextily cvxpy`
    4. `conda install numpy pandas`
    5. `pip install -v -e path_to_repository`
 4. If you want to use CPLEX:

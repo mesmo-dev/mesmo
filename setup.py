@@ -5,15 +5,21 @@ import setuptools
 import subprocess
 import sys
 
-# Check if submodule is loaded.
-if not os.path.exists(os.path.join('cobmo', 'setup.py')):
-    raise FileNotFoundError(
-        "No setup file found for submodule `cobmo`. "
-        "Please check if the submodule is loaded correctly."
-    )
+submodules = [
+    'cobmo'
+]
+
+# Check if submodules are loaded.
+for submodule in submodules:
+    if not os.path.exists(os.path.join(submodule, 'setup.py')):
+        raise FileNotFoundError(
+            f"No setup file found for submodule `{submodule}`. "
+            "Please check if the submodule is loaded correctly."
+        )
 
 # Install submodules. Use `pip -v` to see subprocess outputs.
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', 'cobmo'])
+for submodule in submodules:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', submodule])
 
 # Install Gurobi interface. Use `pip -v` to see subprocess outputs.
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-i', 'https://pypi.gurobi.com', 'gurobipy'])

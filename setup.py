@@ -12,10 +12,10 @@ if not os.path.exists(os.path.join('cobmo', 'setup.py')):
         "Please check if the submodule is loaded correctly."
     )
 
-# Install submodules. (This will run without command line outputs.)
+# Install submodules. Use `pip -v` to see subprocess outputs.
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', 'cobmo'])
 
-# Install Gurobi interface. (This will run without command line outputs.)
+# Install Gurobi interface. Use `pip -v` to see subprocess outputs.
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-i', 'https://pypi.gurobi.com', 'gurobipy'])
 
 setuptools.setup(

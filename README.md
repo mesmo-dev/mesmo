@@ -39,7 +39,7 @@ The preliminary documentation is located at [tumcreate-estl.github.io/fledge](ht
     - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In your Python environment, run:
-    1. `pip install -e path_to_repository`
+    1. `pip install -v -e path_to_repository`
 
 Please also read [docs/intro.md](./docs/intro.md).
 

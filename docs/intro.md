@@ -9,7 +9,7 @@
    - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In your Python environment, run:
-   1. `pip install -e path_to_repository`
+   1. `pip install -v -e path_to_repository`
 
 Note that the `fledge.plots` module optionally allows adding contextual basemaps to grid plots for orientation. This requires installation of `contextily`, which is an optional dependency, because it needs to be installed through `conda` on Windows. If you need it, please follow the reccomended installation procedure below.
 
@@ -26,7 +26,7 @@ The following installation procedure requires additional steps, but can improve 
    2. `conda activate fledge`
    3. `conda install -c conda-forge contextily`
    4. `conda install numpy pandas`
-   5. `pip install -e path_to_repository`
+   5. `pip install -v -e path_to_repository`
 4. If you want to use CPLEX:
    1. Install CPLEX Python interface (see latest CPLEX documentation).
    2. Create or modify `config.yml` (see below in "Configuration with `config.yml`").
@@ -43,8 +43,7 @@ If you are running into errors when installing or running FLEDGE, this may be du
 4. In Anaconda Prompt, run:
    1. `conda env create -f path_to_fledge_repository/environment.yml`
    2. `conda activate fledge`
-   3. `pip install -e path_to_repository`.
-   4. `pip install -e path_to_repository/cobmo`
+   3. `pip install -v -e path_to_repository`.
 
 ``` important::
     Please create an issue on Github if you run into problems with the normal installation procedure.

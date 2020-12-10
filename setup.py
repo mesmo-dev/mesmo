@@ -1,8 +1,16 @@
 """Setup script."""
 
+import os
 import setuptools
 import subprocess
 import sys
+
+# Check if submodule is loaded.
+if not os.path.exists(os.path.join('cobmo', 'setup.py')):
+    raise FileNotFoundError(
+        "No setup file found for submodule `cobmo`. "
+        "Please check if the submodule is loaded correctly."
+    )
 
 # Install submodules. (This will run without command line outputs.)
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', 'cobmo'])

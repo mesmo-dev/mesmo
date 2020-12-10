@@ -7,7 +7,7 @@
 1. Check requirements:
    - Python 3.7
    - [Gurobi Optimizer](http://www.gurobi.com/)
-2. Clone or download repository.
+2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In your Python environment, run:
    1. `pip install -e path_to_repository`
 
@@ -20,7 +20,7 @@ The following installation procedure requires additional steps, but can improve 
 1. Check requirements:
    - [Anaconda Distribution](https://www.anaconda.com/distribution/) (Python 3.x version)
    - [Gurobi Optimizer](http://www.gurobi.com/) or [CPLEX Optimizer](https://www.ibm.com/analytics/cplex-optimizer)
-2. Clone or download repository.
+2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In Anaconda Prompt, run:
    1. `conda create -n fledge python=3.7`
    2. `conda activate fledge`
@@ -39,7 +39,7 @@ If you are running into errors when installing or running FLEDGE, this may be du
    - Windows 10
    - [Anaconda Distribution](https://www.anaconda.com/distribution/) (Python 3.x version)
    - [Gurobi Optimizer](http://www.gurobi.com/)
-2. Clone or download repository.
+2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 4. In Anaconda Prompt, run:
    1. `conda env create -f path_to_fledge_repository/environment.yml`
    2. `conda activate fledge`

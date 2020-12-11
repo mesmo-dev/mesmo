@@ -40,7 +40,7 @@ def increase_der_penetration_of_scenario_on_lv_level(
                 node = der_row['node_name']
                 print(f'Adding DER {additional_der_name} to node {node} in scenario {scenario_name}.')
                 new_der_row['node_name'] = str(node)
-                new_der_row['der_name'] = additional_der_name + '_' + str(der_name) + '_' + str(count)
+                new_der_row['der_name'] = str(der_name) + '_' + additional_der_name + '_' + str(count)
                 # Add the DER to the main DER table
                 grid_data.electric_grid_ders = \
                     grid_data.electric_grid_ders.append(new_der_row).reset_index(drop=True)
@@ -105,6 +105,9 @@ def aggregate_electric_grids(
         # Change electric grid name
         lv_electric_grid_data.electric_grid_ders.loc[:, 'electric_grid_name'] = aggregated_scenario_name
         # Change DER names
+        # Check if DER name contains an underscore, if so, stop!
+        if any(lv_electric_grid_data.electric_grid_ders.loc[:, 'der_name'].str.contains('_')):
+            raise NameError('DERs of the LV grid may not have an underscore in their name!')
         lv_electric_grid_data.electric_grid_ders.loc[:, 'der_name'] = \
             mv_node_name + '_' + lv_electric_grid_data.electric_grid_ders.loc[:, 'der_name']
 

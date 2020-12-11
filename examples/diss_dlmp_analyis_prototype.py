@@ -23,7 +23,7 @@ voltage_max = 1.1
 solver = 'default'  #choice: 'cplex', default is currently 'gurobi' (see config.yml)
 path_to_solver_executable = '/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx/cplex'
 plots = True  # will generate plots if set to True
-regenerate_scenario_data = True  # will re-generate the grid input data if set to True
+regenerate_scenario_data = False  # will re-generate the grid input data if set to True
 
 
 def main():
@@ -36,9 +36,9 @@ def main():
     # no_granularity does not generate new scenario data
 
     der_penetration_scenario_data = {
-        'no_penetration': 0.0,
+        # 'no_penetration': 0.0,
         'low_penetration': 0.5,
-        'high_penetration': 1.0,
+        # 'high_penetration': 1.0,
     }
 
     # Generate the grids that are needed for different granularity levels (comment out if not needed)
@@ -66,8 +66,8 @@ def main():
     for der_penetration in der_penetration_scenario_data:
         granularity_scenario_data = {
             'high_granularity': high_granularity_scenario_name + '_' + der_penetration,
-            'high_granularity_mean': high_granularity_scenario_name + '_' + der_penetration,
-            'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
+            # 'high_granularity_mean': high_granularity_scenario_name + '_' + der_penetration,
+            # 'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
             'no_granularity': no_granularity_scenario_name + '_' + der_penetration
         }
         results_dict[der_penetration] = run_dlmp_analysis_for_scenario(
@@ -1044,3 +1044,20 @@ def plot_dlmp_validation(
 
 if __name__ == '__main__':
     results_dict = main()
+
+
+# check if the relationship between flexible load utility and nodal price holds true
+scenario_name = 'simple_mv_3node'
+scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+timesteps = scenario_data.timesteps
+
+results = results_dict['low_penetration']['opf_results']['opf_results_high_granularity_central']
+der_name = '2_Load R2_Heat Pump_2'
+active_power = results['output_vector'].loc[:, (der_name, 'active_power')]
+
+price_timeseries = results_dict['low_penetration']['opf_results']['dlmps_high_granularity']
+dlmps = price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+wholesale_price = price_timeseries.loc[:, ('active_power', slice(None), 'source')].iloc[:, 0]
+price_sensitivity_coefficient = scenario_data.scenario['price_sensitivity_coefficient']
+
+(-1)*wholesale_price - 2*price_sensitivity_coefficient * active_power

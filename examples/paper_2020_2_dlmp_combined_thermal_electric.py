@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -60,7 +59,7 @@ def main(
 
     # Obtain results path.
     results_path = (
-        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
+        fledge.utils.get_results_path(f'{os.path.basename(__file__)[:-3]}_scenario_{scenario_number}', scenario_name)
     )
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -107,7 +106,7 @@ def main(
         der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -116,16 +115,16 @@ def main(
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 100.0 * electric_grid_model.branch_power_vector_magnitude_reference
     # Modify limits for scenarios.
     if scenario_number in [4, 12, 13, 14, 15]:
-        branch_power_vector_squared_maximum[
+        branch_power_magnitude_vector_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
     elif scenario_number in [5]:
-        voltage_magnitude_vector_minimum[
+        node_voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.9985 / 0.5
     else:
@@ -133,9 +132,9 @@ def main(
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
@@ -176,9 +175,7 @@ def main(
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
 
     # Define electric grid objective.
@@ -204,14 +201,7 @@ def main(
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
     in_per_unit = True
@@ -239,8 +229,8 @@ def main(
     # Obtain additional results.
     branch_power_vector_magnitude_per_unit = (
         (
-            np.sqrt(np.abs(results['branch_power_vector_1_squared']))
-            + np.sqrt(np.abs(results['branch_power_vector_2_squared']))
+            results['branch_power_magnitude_vector_1']
+            + results['branch_power_magnitude_vector_2']
         ) / 2
         # / electric_grid_model.branch_power_vector_magnitude_reference
     )
@@ -510,7 +500,7 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            plt.show()
+            # plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.

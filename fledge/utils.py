@@ -1,5 +1,6 @@
 """Utility functions module."""
 
+import cvxpy as cp
 import datetime
 import functools
 import itertools
@@ -9,7 +10,6 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-import pyomo.environ as pyo
 import re
 import time
 import typing
@@ -23,6 +23,47 @@ logger = fledge.config.get_logger(__name__)
 
 # Instantiate dictionary for execution time logging.
 log_times = dict()
+
+
+class OptimizationProblem(object):
+    """Optimization problem object for use with CVXPY."""
+
+    constraints: list
+    objective: cp.Expression
+    cvxpy_problem: cp.Problem
+
+    def __init__(self):
+
+        self.constraints = []
+        self.objective = cp.Constant(value=0.0)
+
+    def solve(
+            self,
+            keep_problem=False
+    ):
+
+        # Instantiate CVXPY problem object.
+        if hasattr(self, 'cvxpy_problem') and keep_problem:
+            pass
+        else:
+            self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
+
+        # Solve optimization problem.
+        self.cvxpy_problem.solve(
+            solver=(
+                fledge.config.config['optimization']['solver_name'].upper()
+                if fledge.config.config['optimization']['solver_name'] is not None
+                else None
+            ),
+            verbose=fledge.config.config['optimization']['show_solver_output']
+        )
+
+        # Assert that solver exited with an optimal solution. If not, raise an error.
+        try:
+            assert self.cvxpy_problem.status == cp.OPTIMAL
+        except AssertionError:
+            logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
+            raise
 
 
 def starmap(
@@ -57,34 +98,6 @@ def starmap(
         results = list(itertools.starmap(function_partial, argument_sequence))
 
     return results
-
-
-def solve_optimization(
-        optimization_problem: pyo.ConcreteModel,
-        enable_duals=False
-):
-    """Utility function for solving a Pyomo optimization problem. Automatically instantiates the solver as given in
-    config. Raises error if no feasible solution is found.
-    """
-
-    # Enable duals.
-    if enable_duals and (optimization_problem.find_component('dual') is None):
-        optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-
-    # Solve optimization problem.
-    optimization_result = (
-        fledge.config.optimization_solver.solve(
-            optimization_problem,
-            tee=fledge.config.config['optimization']['show_solver_output']
-        )
-    )
-
-    # Assert that solver exited with any solution. If not, raise an error.
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-        raise
 
 
 def log_timing_start(
@@ -256,12 +269,17 @@ def get_alphanumeric_string(
 def launch(path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
+    try:
+        assert os.path.exists(path)
+    except AssertionError:
+        logger.error(f'Cannot launch file or directory that does not exist: {path}')
+
     if sys.platform == 'win32':
         os.startfile(path)
     elif sys.platform == 'darwin':
-        subprocess.call(['open', path])
+        subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
-        subprocess.call(['xdg-open', path])
+        subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 @fledge.config.memoize('get_building_model')

@@ -4,7 +4,6 @@ import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
@@ -243,7 +242,7 @@ class OptimalOperationProblem(object):
     thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
     linear_thermal_grid_model: fledge.thermal_grid_models.LinearThermalGridModel = None
     der_model_set: fledge.der_models.DERModelSet
-    optimization_problem: pyo.ConcreteModel
+    optimization_problem: fledge.utils.OptimizationProblem
 
     @multimethod
     def __init__(
@@ -290,7 +289,7 @@ class OptimalOperationProblem(object):
         self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
         # Instantiate optimization problem.
-        self.optimization_problem = pyo.ConcreteModel()
+        self.optimization_problem = fledge.utils.OptimizationProblem()
 
         # Define linear electric grid model variables and constraints.
         if self.electric_grid_model is not None:
@@ -298,30 +297,30 @@ class OptimalOperationProblem(object):
                 self.optimization_problem,
                 self.timesteps
             )
-            voltage_magnitude_vector_minimum = (
+            node_voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_minimum'])
                 else None
             )
-            voltage_magnitude_vector_maximum = (
+            node_voltage_magnitude_vector_maximum = (
                 scenario_data.scenario['voltage_per_unit_maximum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
                 if pd.notnull(scenario_data.scenario['voltage_per_unit_maximum'])
                 else None
             )
-            branch_power_vector_squared_maximum = (
+            branch_power_magnitude_vector_maximum = (
                 scenario_data.scenario['branch_flow_per_unit_maximum']
-                * np.abs(self.electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+                * self.electric_grid_model.branch_power_vector_magnitude_reference
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )
             self.linear_electric_grid_model.define_optimization_constraints(
                 self.optimization_problem,
                 self.timesteps,
-                voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-                voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-                branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+                node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+                node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+                branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
             )
 
         # Define thermal grid model variables and constraints.
@@ -356,9 +355,7 @@ class OptimalOperationProblem(object):
         self.der_model_set.define_optimization_constraints(
             self.optimization_problem,
             electric_grid_model=self.electric_grid_model,
-            power_flow_solution=self.power_flow_solution_reference,
-            thermal_grid_model=self.thermal_grid_model,
-            thermal_power_flow_solution=self.thermal_power_flow_solution_reference
+            thermal_grid_model=self.thermal_grid_model
         )
 
         # Define objective.
@@ -384,21 +381,7 @@ class OptimalOperationProblem(object):
     def solve(self):
 
         # Solve optimization problem.
-        self.optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-        optimization_result = (
-            optimization_solver.solve(
-                self.optimization_problem,
-                tee=fledge.config.config['optimization']['show_solver_output']
-            )
-        )
-
-        # Assert that solver exited with any solution. If not, raise an error.
-        try:
-            assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-        except AssertionError:
-            logger.error(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-            raise
+        self.optimization_problem.solve()
 
     def get_results(
             self,

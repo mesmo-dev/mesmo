@@ -22,7 +22,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_all'
-    results_path = fledge.utils.get_results_path('plot_electric_grid', scenario_name)
+    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

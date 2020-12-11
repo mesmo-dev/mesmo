@@ -15,6 +15,18 @@ CREATE TABLE der_cooling_plants (
     cooling_tower_set_ventilation_factor TEXT,
     PRIMARY KEY(definition_name)
 );
+CREATE TABLE der_ev_chargers (
+    definition_name TEXT,
+    arrival_definition_type TEXT,
+    arrival_definition_name TEXT,
+    departure_definition_type TEXT,
+    departure_definition_name TEXT,
+    occupancy_definition_type TEXT,
+    occupancy_definition_name TEXT,
+    vehicle_energy_demand TEXT,
+    maximum_active_power TEXT,
+    PRIMARY KEY(definition_name)
+);
 CREATE TABLE der_models (
     der_type TEXT,
     der_model_name TEXT,

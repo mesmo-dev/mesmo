@@ -1,12 +1,12 @@
 """Script for analyzing the impact of the granularity of a price signal"""
 
 import numpy as np
-import pyomo.environ as pyo
 import matplotlib.pyplot as plt
 import pandas as pd
 import itertools
 import os
 import plotly.graph_objects as go
+import cvxpy as cp
 
 import fledge.config
 import fledge.data_interface
@@ -36,7 +36,7 @@ def main():
     # no_granularity does not generate new scenario data
 
     der_penetration_scenario_data = {
-        # 'no_penetration': 0.0,
+        'no_penetration': 0.0,
         'low_penetration': 0.5,
         # 'high_penetration': 1.0,
     }
@@ -67,7 +67,7 @@ def main():
         granularity_scenario_data = {
             'high_granularity': high_granularity_scenario_name + '_' + der_penetration,
             # 'high_granularity_mean': high_granularity_scenario_name + '_' + der_penetration,
-            # 'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
+            'low_granularity': low_granularity_scenario_name + '_' + der_penetration,
             'no_granularity': no_granularity_scenario_name + '_' + der_penetration
         }
         results_dict[der_penetration] = run_dlmp_analysis_for_scenario(
@@ -193,7 +193,6 @@ def run_centralized_problem(
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution
     )
 
     # Define DER objective.
@@ -249,7 +248,7 @@ def run_centralized_problem(
     # fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
-    return [pyo.value(optimization_problem.objective), results, dlmps]
+    return [optimization_problem.objective.value[0], results, dlmps]
 
 
 def formulate_electric_grid_optimization_problem(
@@ -258,7 +257,7 @@ def formulate_electric_grid_optimization_problem(
       fledge.electric_grid_models.ElectricGridModelDefault,
       fledge.electric_grid_models.LinearElectricGridModelGlobal,
       fledge.electric_grid_models.PowerFlowSolutionFixedPoint,
-      pyo.ConcreteModel]:
+      fledge.utils.OptimizationProblem]:
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name, price_type=scenario_data.scenario['price_type'])
@@ -275,7 +274,7 @@ def formulate_electric_grid_optimization_problem(
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate centralized optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -284,22 +283,15 @@ def formulate_electric_grid_optimization_problem(
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = voltage_min * np.abs(electric_grid_model.node_voltage_vector_reference)
-    # voltage_magnitude_vector_minimum[
-    #     fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
-    # ] *= 0.965 / 0.5
-    voltage_magnitude_vector_maximum = voltage_max * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = np.abs(
-        electric_grid_model.branch_power_vector_magnitude_reference ** 2)
-    # branch_power_vector_squared_maximum[
-    #     fledge.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
-    # ] *= 1.2 / 10.0
+    node_voltage_magnitude_vector_minimum = voltage_min * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = voltage_max * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 1.0 * electric_grid_model.branch_power_vector_magnitude_reference
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define grid  / centralized objective.
@@ -329,7 +321,7 @@ def run_decentralized_problem(
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate decentralized DER optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define DER variables.
     der_model_set.define_optimization_variables(
@@ -368,27 +360,37 @@ def run_decentralized_problem(
     # fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
-    return [pyo.value(optimization_problem.objective), results]
+    return [optimization_problem.objective.value[0], results]
 
 
 def solve_optimization_problem(
-        optimization_problem: pyo.ConcreteModel
+        optimization_problem: fledge.utils.OptimizationProblem
 ) -> bool:
     # Solve decentralized DER optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    if solver is 'default':
-        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
+    # Instantiate CVXPY problem object.
+    keep_problem = False
+    if hasattr(optimization_problem, 'cvxpy_problem') and keep_problem:
+        pass
     else:
-        optimization_solver = pyo.SolverFactory('cplex', executable=path_to_solver_executable)
-    optimization_result = optimization_solver.solve(optimization_problem,
-                                                    tee=fledge.config.config['optimization']['show_solver_output'])
+        optimization_problem.cvxpy_problem = cp.Problem(cp.Minimize(optimization_problem.objective), optimization_problem.constraints)
+
+    # Solve optimization problem.
+    optimization_problem.cvxpy_problem.solve(
+        solver=(
+            fledge.config.config['optimization']['solver_name'].upper()
+            if fledge.config.config['optimization']['solver_name'] is not None
+            else None
+        ),
+        verbose=fledge.config.config['optimization']['show_solver_output']
+    )
+
+    # Assert that solver exited with an optimal solution. If not, raise an error.
     try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
+        assert optimization_problem.cvxpy_problem.status == cp.OPTIMAL
     except AssertionError:
         print('######### COULD NOT SOLVE OPTIMIZATION #########')
-        print(f"Solver termination condition: {optimization_result.solver.termination_condition}")
+        print(f"Solver termination status: {optimization_problem.cvxpy_problem.status}")
         return False
-        # raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
 
     return True
 
@@ -511,7 +513,7 @@ def calculate_system_costs_at_source_node(
         )
     )
     # Instantiate centralized optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -537,7 +539,7 @@ def calculate_system_costs_at_source_node(
 
 
 def set_electric_grid_optimization_variables_based_on_power_flow(
-        optimization_problem: pyo.ConcreteModel,
+        optimization_problem: fledge.utils.OptimizationProblem,
         electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
         power_flow_solution_reference,
         power_flow_solutions,

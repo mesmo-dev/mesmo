@@ -2,9 +2,9 @@ line_name,electric_grid_name,line_type,node_1_name,node_2_name,is_phase_1_connec
 line_1_1,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,1,2,1,0,0,0.082
 branchout_line_1_1,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50,2,3,1,0,0,0.018
 line_1_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,2,4,1,0,0,0.082
-branchout_line_1_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50,4,5,1,0,0,0.033
+branchout_line_1_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50 SE,4,5,1,0,0,0.033
 line_1_3,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,4,6,1,0,0,0.082
-branchout_line_1_3,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50 SE,6,7,1,0,0,0.018
+branchout_line_1_3,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50,6,7,1,0,0,0.018
 line_1_4,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,6,8,1,0,0,0.082
 branchout_line_1_4,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50 SE,8,9,1,0,0,0.033
 line_1_5,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,8,10,1,0,0,0.082
@@ -14,4 +14,4 @@ branchout_line_1_6,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50 SE,
 line_2_1,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,1,14,1,0,0,0.175
 branchout_line_2_1,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50,14,15,1,0,0,0.018
 line_2_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x150,14,16,1,0,0,0.175
-branchout_line_2_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50,16,17,1,0,0,0.033
+branchout_line_2_2,kerber_landnetz_kabel_1,kerber_landnetz_kabel_1_NAYY 4x50 SE,16,17,1,0,0,0.033

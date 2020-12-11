@@ -1,58 +1,58 @@
 der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
-Load_3,kerber_dorfnetz,fixed_load,mixed_commercial_residential,3,1,0,0,wye,-6000.0,-1972.104631073179
-Load_5,kerber_dorfnetz,fixed_load,mixed_commercial_residential,5,1,0,0,wye,-6000.0,-1972.104631073179
-Load_7,kerber_dorfnetz,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-6000.0,-1972.104631073179
-Load_9,kerber_dorfnetz,fixed_load,mixed_commercial_residential,9,1,0,0,wye,-6000.0,-1972.104631073179
-Load_11,kerber_dorfnetz,fixed_load,mixed_commercial_residential,11,1,0,0,wye,-6000.0,-1972.104631073179
-Load_13,kerber_dorfnetz,fixed_load,mixed_commercial_residential,13,1,0,0,wye,-6000.0,-1972.104631073179
-Load_15,kerber_dorfnetz,fixed_load,mixed_commercial_residential,15,1,0,0,wye,-6000.0,-1972.104631073179
-Load_17,kerber_dorfnetz,fixed_load,mixed_commercial_residential,17,1,0,0,wye,-6000.0,-1972.104631073179
-Load_19,kerber_dorfnetz,fixed_load,mixed_commercial_residential,19,1,0,0,wye,-6000.0,-1972.104631073179
-Load_21,kerber_dorfnetz,fixed_load,mixed_commercial_residential,21,1,0,0,wye,-6000.0,-1972.104631073179
-Load_23,kerber_dorfnetz,fixed_load,mixed_commercial_residential,23,1,0,0,wye,-6000.0,-1972.104631073179
-Load_25,kerber_dorfnetz,fixed_load,mixed_commercial_residential,25,1,0,0,wye,-6000.0,-1972.104631073179
-Load_27,kerber_dorfnetz,fixed_load,mixed_commercial_residential,27,1,0,0,wye,-6000.0,-1972.104631073179
-Load_29,kerber_dorfnetz,fixed_load,mixed_commercial_residential,29,1,0,0,wye,-6000.0,-1972.104631073179
-Load_31,kerber_dorfnetz,fixed_load,mixed_commercial_residential,31,1,0,0,wye,-6000.0,-1972.104631073179
-Load_33,kerber_dorfnetz,fixed_load,mixed_commercial_residential,33,1,0,0,wye,-6000.0,-1972.104631073179
-Load_35,kerber_dorfnetz,fixed_load,mixed_commercial_residential,35,1,0,0,wye,-6000.0,-1972.104631073179
-Load_37,kerber_dorfnetz,fixed_load,mixed_commercial_residential,37,1,0,0,wye,-6000.0,-1972.104631073179
-Load_39,kerber_dorfnetz,fixed_load,mixed_commercial_residential,39,1,0,0,wye,-6000.0,-1972.104631073179
-Load_41,kerber_dorfnetz,fixed_load,mixed_commercial_residential,41,1,0,0,wye,-6000.0,-1972.104631073179
-Load_43,kerber_dorfnetz,fixed_load,mixed_commercial_residential,43,1,0,0,wye,-6000.0,-1972.104631073179
-Load_45,kerber_dorfnetz,fixed_load,mixed_commercial_residential,45,1,0,0,wye,-6000.0,-1972.104631073179
-Load_47,kerber_dorfnetz,fixed_load,mixed_commercial_residential,47,1,0,0,wye,-6000.0,-1972.104631073179
-Load_49,kerber_dorfnetz,fixed_load,mixed_commercial_residential,49,1,0,0,wye,-6000.0,-1972.104631073179
-Load_51,kerber_dorfnetz,fixed_load,mixed_commercial_residential,51,1,0,0,wye,-6000.0,-1972.104631073179
-Load_53,kerber_dorfnetz,fixed_load,mixed_commercial_residential,53,1,0,0,wye,-6000.0,-1972.104631073179
-Load_55,kerber_dorfnetz,fixed_load,mixed_commercial_residential,55,1,0,0,wye,-6000.0,-1972.104631073179
-Load_57,kerber_dorfnetz,fixed_load,mixed_commercial_residential,57,1,0,0,wye,-6000.0,-1972.104631073179
-Load_59,kerber_dorfnetz,fixed_load,mixed_commercial_residential,59,1,0,0,wye,-6000.0,-1972.104631073179
-Load_61,kerber_dorfnetz,fixed_load,mixed_commercial_residential,61,1,0,0,wye,-6000.0,-1972.104631073179
-Load_63,kerber_dorfnetz,fixed_load,mixed_commercial_residential,63,1,0,0,wye,-6000.0,-1972.104631073179
-Load_65,kerber_dorfnetz,fixed_load,mixed_commercial_residential,65,1,0,0,wye,-6000.0,-1972.104631073179
-Load_67,kerber_dorfnetz,fixed_load,mixed_commercial_residential,67,1,0,0,wye,-6000.0,-1972.104631073179
-Load_69,kerber_dorfnetz,fixed_load,mixed_commercial_residential,69,1,0,0,wye,-6000.0,-1972.104631073179
-Load_71,kerber_dorfnetz,fixed_load,mixed_commercial_residential,71,1,0,0,wye,-6000.0,-1972.104631073179
-Load_73,kerber_dorfnetz,fixed_load,mixed_commercial_residential,73,1,0,0,wye,-6000.0,-1972.104631073179
-Load_75,kerber_dorfnetz,fixed_load,mixed_commercial_residential,75,1,0,0,wye,-6000.0,-1972.104631073179
-Load_77,kerber_dorfnetz,fixed_load,mixed_commercial_residential,77,1,0,0,wye,-6000.0,-1972.104631073179
-Load_79,kerber_dorfnetz,fixed_load,mixed_commercial_residential,79,1,0,0,wye,-6000.0,-1972.104631073179
-Load_81,kerber_dorfnetz,fixed_load,mixed_commercial_residential,81,1,0,0,wye,-6000.0,-1972.104631073179
-Load_83,kerber_dorfnetz,fixed_load,mixed_commercial_residential,83,1,0,0,wye,-6000.0,-1972.104631073179
-Load_85,kerber_dorfnetz,fixed_load,mixed_commercial_residential,85,1,0,0,wye,-6000.0,-1972.104631073179
-Load_87,kerber_dorfnetz,fixed_load,mixed_commercial_residential,87,1,0,0,wye,-6000.0,-1972.104631073179
-Load_89,kerber_dorfnetz,fixed_load,mixed_commercial_residential,89,1,0,0,wye,-6000.0,-1972.104631073179
-Load_91,kerber_dorfnetz,fixed_load,mixed_commercial_residential,91,1,0,0,wye,-6000.0,-1972.104631073179
-Load_93,kerber_dorfnetz,fixed_load,mixed_commercial_residential,93,1,0,0,wye,-6000.0,-1972.104631073179
-Load_95,kerber_dorfnetz,fixed_load,mixed_commercial_residential,95,1,0,0,wye,-6000.0,-1972.104631073179
-Load_97,kerber_dorfnetz,fixed_load,mixed_commercial_residential,97,1,0,0,wye,-6000.0,-1972.104631073179
-Load_99,kerber_dorfnetz,fixed_load,mixed_commercial_residential,99,1,0,0,wye,-6000.0,-1972.104631073179
-Load_101,kerber_dorfnetz,fixed_load,mixed_commercial_residential,101,1,0,0,wye,-6000.0,-1972.104631073179
-Load_103,kerber_dorfnetz,fixed_load,mixed_commercial_residential,103,1,0,0,wye,-6000.0,-1972.104631073179
-Load_105,kerber_dorfnetz,fixed_load,mixed_commercial_residential,105,1,0,0,wye,-6000.0,-1972.104631073179
-Load_107,kerber_dorfnetz,fixed_load,mixed_commercial_residential,107,1,0,0,wye,-6000.0,-1972.104631073179
-Load_109,kerber_dorfnetz,fixed_load,mixed_commercial_residential,109,1,0,0,wye,-6000.0,-1972.104631073179
-Load_111,kerber_dorfnetz,fixed_load,mixed_commercial_residential,111,1,0,0,wye,-6000.0,-1972.104631073179
-Load_113,kerber_dorfnetz,fixed_load,mixed_commercial_residential,113,1,0,0,wye,-6000.0,-1972.104631073179
-Load_115,kerber_dorfnetz,fixed_load,mixed_commercial_residential,115,1,0,0,wye,-6000.0,-1972.104631073179
+Load 3,kerber_dorfnetz,fixed_load,mixed_commercial_residential,3,1,0,0,wye,-6000.0,-1972.104631073179
+Load 5,kerber_dorfnetz,fixed_load,mixed_commercial_residential,5,1,0,0,wye,-6000.0,-1972.104631073179
+Load 7,kerber_dorfnetz,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-6000.0,-1972.104631073179
+Load 9,kerber_dorfnetz,fixed_load,mixed_commercial_residential,9,1,0,0,wye,-6000.0,-1972.104631073179
+Load 11,kerber_dorfnetz,fixed_load,mixed_commercial_residential,11,1,0,0,wye,-6000.0,-1972.104631073179
+Load 13,kerber_dorfnetz,fixed_load,mixed_commercial_residential,13,1,0,0,wye,-6000.0,-1972.104631073179
+Load 15,kerber_dorfnetz,fixed_load,mixed_commercial_residential,15,1,0,0,wye,-6000.0,-1972.104631073179
+Load 17,kerber_dorfnetz,fixed_load,mixed_commercial_residential,17,1,0,0,wye,-6000.0,-1972.104631073179
+Load 19,kerber_dorfnetz,fixed_load,mixed_commercial_residential,19,1,0,0,wye,-6000.0,-1972.104631073179
+Load 21,kerber_dorfnetz,fixed_load,mixed_commercial_residential,21,1,0,0,wye,-6000.0,-1972.104631073179
+Load 23,kerber_dorfnetz,fixed_load,mixed_commercial_residential,23,1,0,0,wye,-6000.0,-1972.104631073179
+Load 25,kerber_dorfnetz,fixed_load,mixed_commercial_residential,25,1,0,0,wye,-6000.0,-1972.104631073179
+Load 27,kerber_dorfnetz,fixed_load,mixed_commercial_residential,27,1,0,0,wye,-6000.0,-1972.104631073179
+Load 29,kerber_dorfnetz,fixed_load,mixed_commercial_residential,29,1,0,0,wye,-6000.0,-1972.104631073179
+Load 31,kerber_dorfnetz,fixed_load,mixed_commercial_residential,31,1,0,0,wye,-6000.0,-1972.104631073179
+Load 33,kerber_dorfnetz,fixed_load,mixed_commercial_residential,33,1,0,0,wye,-6000.0,-1972.104631073179
+Load 35,kerber_dorfnetz,fixed_load,mixed_commercial_residential,35,1,0,0,wye,-6000.0,-1972.104631073179
+Load 37,kerber_dorfnetz,fixed_load,mixed_commercial_residential,37,1,0,0,wye,-6000.0,-1972.104631073179
+Load 39,kerber_dorfnetz,fixed_load,mixed_commercial_residential,39,1,0,0,wye,-6000.0,-1972.104631073179
+Load 41,kerber_dorfnetz,fixed_load,mixed_commercial_residential,41,1,0,0,wye,-6000.0,-1972.104631073179
+Load 43,kerber_dorfnetz,fixed_load,mixed_commercial_residential,43,1,0,0,wye,-6000.0,-1972.104631073179
+Load 45,kerber_dorfnetz,fixed_load,mixed_commercial_residential,45,1,0,0,wye,-6000.0,-1972.104631073179
+Load 47,kerber_dorfnetz,fixed_load,mixed_commercial_residential,47,1,0,0,wye,-6000.0,-1972.104631073179
+Load 49,kerber_dorfnetz,fixed_load,mixed_commercial_residential,49,1,0,0,wye,-6000.0,-1972.104631073179
+Load 51,kerber_dorfnetz,fixed_load,mixed_commercial_residential,51,1,0,0,wye,-6000.0,-1972.104631073179
+Load 53,kerber_dorfnetz,fixed_load,mixed_commercial_residential,53,1,0,0,wye,-6000.0,-1972.104631073179
+Load 55,kerber_dorfnetz,fixed_load,mixed_commercial_residential,55,1,0,0,wye,-6000.0,-1972.104631073179
+Load 57,kerber_dorfnetz,fixed_load,mixed_commercial_residential,57,1,0,0,wye,-6000.0,-1972.104631073179
+Load 59,kerber_dorfnetz,fixed_load,mixed_commercial_residential,59,1,0,0,wye,-6000.0,-1972.104631073179
+Load 61,kerber_dorfnetz,fixed_load,mixed_commercial_residential,61,1,0,0,wye,-6000.0,-1972.104631073179
+Load 63,kerber_dorfnetz,fixed_load,mixed_commercial_residential,63,1,0,0,wye,-6000.0,-1972.104631073179
+Load 65,kerber_dorfnetz,fixed_load,mixed_commercial_residential,65,1,0,0,wye,-6000.0,-1972.104631073179
+Load 67,kerber_dorfnetz,fixed_load,mixed_commercial_residential,67,1,0,0,wye,-6000.0,-1972.104631073179
+Load 69,kerber_dorfnetz,fixed_load,mixed_commercial_residential,69,1,0,0,wye,-6000.0,-1972.104631073179
+Load 71,kerber_dorfnetz,fixed_load,mixed_commercial_residential,71,1,0,0,wye,-6000.0,-1972.104631073179
+Load 73,kerber_dorfnetz,fixed_load,mixed_commercial_residential,73,1,0,0,wye,-6000.0,-1972.104631073179
+Load 75,kerber_dorfnetz,fixed_load,mixed_commercial_residential,75,1,0,0,wye,-6000.0,-1972.104631073179
+Load 77,kerber_dorfnetz,fixed_load,mixed_commercial_residential,77,1,0,0,wye,-6000.0,-1972.104631073179
+Load 79,kerber_dorfnetz,fixed_load,mixed_commercial_residential,79,1,0,0,wye,-6000.0,-1972.104631073179
+Load 81,kerber_dorfnetz,fixed_load,mixed_commercial_residential,81,1,0,0,wye,-6000.0,-1972.104631073179
+Load 83,kerber_dorfnetz,fixed_load,mixed_commercial_residential,83,1,0,0,wye,-6000.0,-1972.104631073179
+Load 85,kerber_dorfnetz,fixed_load,mixed_commercial_residential,85,1,0,0,wye,-6000.0,-1972.104631073179
+Load 87,kerber_dorfnetz,fixed_load,mixed_commercial_residential,87,1,0,0,wye,-6000.0,-1972.104631073179
+Load 89,kerber_dorfnetz,fixed_load,mixed_commercial_residential,89,1,0,0,wye,-6000.0,-1972.104631073179
+Load 91,kerber_dorfnetz,fixed_load,mixed_commercial_residential,91,1,0,0,wye,-6000.0,-1972.104631073179
+Load 93,kerber_dorfnetz,fixed_load,mixed_commercial_residential,93,1,0,0,wye,-6000.0,-1972.104631073179
+Load 95,kerber_dorfnetz,fixed_load,mixed_commercial_residential,95,1,0,0,wye,-6000.0,-1972.104631073179
+Load 97,kerber_dorfnetz,fixed_load,mixed_commercial_residential,97,1,0,0,wye,-6000.0,-1972.104631073179
+Load 99,kerber_dorfnetz,fixed_load,mixed_commercial_residential,99,1,0,0,wye,-6000.0,-1972.104631073179
+Load 101,kerber_dorfnetz,fixed_load,mixed_commercial_residential,101,1,0,0,wye,-6000.0,-1972.104631073179
+Load 103,kerber_dorfnetz,fixed_load,mixed_commercial_residential,103,1,0,0,wye,-6000.0,-1972.104631073179
+Load 105,kerber_dorfnetz,fixed_load,mixed_commercial_residential,105,1,0,0,wye,-6000.0,-1972.104631073179
+Load 107,kerber_dorfnetz,fixed_load,mixed_commercial_residential,107,1,0,0,wye,-6000.0,-1972.104631073179
+Load 109,kerber_dorfnetz,fixed_load,mixed_commercial_residential,109,1,0,0,wye,-6000.0,-1972.104631073179
+Load 111,kerber_dorfnetz,fixed_load,mixed_commercial_residential,111,1,0,0,wye,-6000.0,-1972.104631073179
+Load 113,kerber_dorfnetz,fixed_load,mixed_commercial_residential,113,1,0,0,wye,-6000.0,-1972.104631073179
+Load 115,kerber_dorfnetz,fixed_load,mixed_commercial_residential,115,1,0,0,wye,-6000.0,-1972.104631073179

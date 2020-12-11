@@ -1,147 +1,147 @@
 der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
-Load_3,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,3,1,0,0,wye,-2000.0,-657.3682103577264
-Load_5,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,5,1,0,0,wye,-2000.0,-657.3682103577264
-Load_7,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-2000.0,-657.3682103577264
-Load_9,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,9,1,0,0,wye,-2000.0,-657.3682103577264
-Load_11,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,11,1,0,0,wye,-2000.0,-657.3682103577264
-Load_13,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,13,1,0,0,wye,-2000.0,-657.3682103577264
-Load_15,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,15,1,0,0,wye,-2000.0,-657.3682103577264
-Load_17,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,17,1,0,0,wye,-2000.0,-657.3682103577264
-Load_19,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,19,1,0,0,wye,-2000.0,-657.3682103577264
-Load_21,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,21,1,0,0,wye,-2000.0,-657.3682103577264
-Load_23,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,23,1,0,0,wye,-2000.0,-657.3682103577264
-Load_25,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,25,1,0,0,wye,-2000.0,-657.3682103577264
-Load_27,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,27,1,0,0,wye,-2000.0,-657.3682103577264
-Load_29,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,29,1,0,0,wye,-2000.0,-657.3682103577264
-Load_31,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,31,1,0,0,wye,-2000.0,-657.3682103577264
-Load_33,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,33,1,0,0,wye,-2000.0,-657.3682103577264
-Load_35,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,35,1,0,0,wye,-2000.0,-657.3682103577264
-Load_37,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,37,1,0,0,wye,-2000.0,-657.3682103577264
-Load_39,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,39,1,0,0,wye,-2000.0,-657.3682103577264
-Load_41,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,41,1,0,0,wye,-2000.0,-657.3682103577264
-Load_43,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,43,1,0,0,wye,-2000.0,-657.3682103577264
-Load_45,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,45,1,0,0,wye,-2000.0,-657.3682103577264
-Load_47,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,47,1,0,0,wye,-2000.0,-657.3682103577264
-Load_49,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,49,1,0,0,wye,-2000.0,-657.3682103577264
-Load_51,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,51,1,0,0,wye,-2000.0,-657.3682103577264
-Load_53,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,53,1,0,0,wye,-2000.0,-657.3682103577264
-Load_55,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,55,1,0,0,wye,-2000.0,-657.3682103577264
-Load_57,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,57,1,0,0,wye,-2000.0,-657.3682103577264
-Load_59,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,59,1,0,0,wye,-2000.0,-657.3682103577264
-Load_61,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,61,1,0,0,wye,-2000.0,-657.3682103577264
-Load_63,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,63,1,0,0,wye,-2000.0,-657.3682103577264
-Load_65,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,65,1,0,0,wye,-2000.0,-657.3682103577264
-Load_67,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,67,1,0,0,wye,-2000.0,-657.3682103577264
-Load_69,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,69,1,0,0,wye,-2000.0,-657.3682103577264
-Load_71,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,71,1,0,0,wye,-2000.0,-657.3682103577264
-Load_73,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,73,1,0,0,wye,-2000.0,-657.3682103577264
-Load_75,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,75,1,0,0,wye,-2000.0,-657.3682103577264
-Load_77,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,77,1,0,0,wye,-2000.0,-657.3682103577264
-Load_79,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,79,1,0,0,wye,-2000.0,-657.3682103577264
-Load_81,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,81,1,0,0,wye,-2000.0,-657.3682103577264
-Load_83,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,83,1,0,0,wye,-2000.0,-657.3682103577264
-Load_85,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,85,1,0,0,wye,-2000.0,-657.3682103577264
-Load_87,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,87,1,0,0,wye,-2000.0,-657.3682103577264
-Load_89,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,89,1,0,0,wye,-2000.0,-657.3682103577264
-Load_91,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,91,1,0,0,wye,-2000.0,-657.3682103577264
-Load_93,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,93,1,0,0,wye,-2000.0,-657.3682103577264
-Load_95,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,95,1,0,0,wye,-2000.0,-657.3682103577264
-Load_97,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,97,1,0,0,wye,-2000.0,-657.3682103577264
-Load_99,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,99,1,0,0,wye,-2000.0,-657.3682103577264
-Load_101,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,101,1,0,0,wye,-2000.0,-657.3682103577264
-Load_103,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,103,1,0,0,wye,-2000.0,-657.3682103577264
-Load_105,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,105,1,0,0,wye,-2000.0,-657.3682103577264
-Load_107,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,107,1,0,0,wye,-2000.0,-657.3682103577264
-Load_109,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,109,1,0,0,wye,-2000.0,-657.3682103577264
-Load_111,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,111,1,0,0,wye,-2000.0,-657.3682103577264
-Load_113,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,113,1,0,0,wye,-2000.0,-657.3682103577264
-Load_115,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,115,1,0,0,wye,-2000.0,-657.3682103577264
-Load_117,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,117,1,0,0,wye,-2000.0,-657.3682103577264
-Load_119,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,119,1,0,0,wye,-2000.0,-657.3682103577264
-Load_121,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,121,1,0,0,wye,-2000.0,-657.3682103577264
-Load_123,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,123,1,0,0,wye,-2000.0,-657.3682103577264
-Load_125,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,125,1,0,0,wye,-2000.0,-657.3682103577264
-Load_127,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,127,1,0,0,wye,-2000.0,-657.3682103577264
-Load_129,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,129,1,0,0,wye,-2000.0,-657.3682103577264
-Load_131,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,131,1,0,0,wye,-2000.0,-657.3682103577264
-Load_133,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,133,1,0,0,wye,-2000.0,-657.3682103577264
-Load_135,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,135,1,0,0,wye,-2000.0,-657.3682103577264
-Load_137,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,137,1,0,0,wye,-2000.0,-657.3682103577264
-Load_139,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,139,1,0,0,wye,-2000.0,-657.3682103577264
-Load_141,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,141,1,0,0,wye,-2000.0,-657.3682103577264
-Load_143,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,143,1,0,0,wye,-2000.0,-657.3682103577264
-Load_145,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,145,1,0,0,wye,-2000.0,-657.3682103577264
-Load_147,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,147,1,0,0,wye,-2000.0,-657.3682103577264
-Load_149,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,149,1,0,0,wye,-2000.0,-657.3682103577264
-Load_151,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,151,1,0,0,wye,-2000.0,-657.3682103577264
-Load_153,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,153,1,0,0,wye,-2000.0,-657.3682103577264
-Load_155,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,155,1,0,0,wye,-2000.0,-657.3682103577264
-Load_157,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,157,1,0,0,wye,-2000.0,-657.3682103577264
-Load_159,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,159,1,0,0,wye,-2000.0,-657.3682103577264
-Load_161,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,161,1,0,0,wye,-2000.0,-657.3682103577264
-Load_163,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,163,1,0,0,wye,-2000.0,-657.3682103577264
-Load_165,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,165,1,0,0,wye,-2000.0,-657.3682103577264
-Load_167,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,167,1,0,0,wye,-2000.0,-657.3682103577264
-Load_169,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,169,1,0,0,wye,-2000.0,-657.3682103577264
-Load_171,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,171,1,0,0,wye,-2000.0,-657.3682103577264
-Load_173,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,173,1,0,0,wye,-2000.0,-657.3682103577264
-Load_175,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,175,1,0,0,wye,-2000.0,-657.3682103577264
-Load_177,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,177,1,0,0,wye,-2000.0,-657.3682103577264
-Load_179,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,179,1,0,0,wye,-2000.0,-657.3682103577264
-Load_181,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,181,1,0,0,wye,-2000.0,-657.3682103577264
-Load_183,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,183,1,0,0,wye,-2000.0,-657.3682103577264
-Load_185,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,185,1,0,0,wye,-2000.0,-657.3682103577264
-Load_187,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,187,1,0,0,wye,-2000.0,-657.3682103577264
-Load_189,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,189,1,0,0,wye,-2000.0,-657.3682103577264
-Load_191,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,191,1,0,0,wye,-2000.0,-657.3682103577264
-Load_193,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,193,1,0,0,wye,-2000.0,-657.3682103577264
-Load_195,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,195,1,0,0,wye,-2000.0,-657.3682103577264
-Load_197,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,197,1,0,0,wye,-2000.0,-657.3682103577264
-Load_199,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,199,1,0,0,wye,-2000.0,-657.3682103577264
-Load_201,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,201,1,0,0,wye,-2000.0,-657.3682103577264
-Load_203,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,203,1,0,0,wye,-2000.0,-657.3682103577264
-Load_205,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,205,1,0,0,wye,-2000.0,-657.3682103577264
-Load_207,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,207,1,0,0,wye,-2000.0,-657.3682103577264
-Load_209,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,209,1,0,0,wye,-2000.0,-657.3682103577264
-Load_211,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,211,1,0,0,wye,-2000.0,-657.3682103577264
-Load_213,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,213,1,0,0,wye,-2000.0,-657.3682103577264
-Load_215,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,215,1,0,0,wye,-2000.0,-657.3682103577264
-Load_217,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,217,1,0,0,wye,-2000.0,-657.3682103577264
-Load_219,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,219,1,0,0,wye,-2000.0,-657.3682103577264
-Load_221,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,221,1,0,0,wye,-2000.0,-657.3682103577264
-Load_223,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,223,1,0,0,wye,-2000.0,-657.3682103577264
-Load_225,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,225,1,0,0,wye,-2000.0,-657.3682103577264
-Load_227,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,227,1,0,0,wye,-2000.0,-657.3682103577264
-Load_229,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,229,1,0,0,wye,-2000.0,-657.3682103577264
-Load_231,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,231,1,0,0,wye,-2000.0,-657.3682103577264
-Load_233,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,233,1,0,0,wye,-2000.0,-657.3682103577264
-Load_235,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,235,1,0,0,wye,-2000.0,-657.3682103577264
-Load_237,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,237,1,0,0,wye,-2000.0,-657.3682103577264
-Load_239,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,239,1,0,0,wye,-2000.0,-657.3682103577264
-Load_241,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,241,1,0,0,wye,-2000.0,-657.3682103577264
-Load_243,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,243,1,0,0,wye,-2000.0,-657.3682103577264
-Load_245,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,245,1,0,0,wye,-2000.0,-657.3682103577264
-Load_247,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,247,1,0,0,wye,-2000.0,-657.3682103577264
-Load_249,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,249,1,0,0,wye,-2000.0,-657.3682103577264
-Load_251,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,251,1,0,0,wye,-2000.0,-657.3682103577264
-Load_253,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,253,1,0,0,wye,-2000.0,-657.3682103577264
-Load_255,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,255,1,0,0,wye,-2000.0,-657.3682103577264
-Load_257,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,257,1,0,0,wye,-2000.0,-657.3682103577264
-Load_259,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,259,1,0,0,wye,-2000.0,-657.3682103577264
-Load_261,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,261,1,0,0,wye,-2000.0,-657.3682103577264
-Load_263,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,263,1,0,0,wye,-2000.0,-657.3682103577264
-Load_265,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,265,1,0,0,wye,-2000.0,-657.3682103577264
-Load_267,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,267,1,0,0,wye,-2000.0,-657.3682103577264
-Load_269,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,269,1,0,0,wye,-2000.0,-657.3682103577264
-Load_271,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,271,1,0,0,wye,-2000.0,-657.3682103577264
-Load_273,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,273,1,0,0,wye,-2000.0,-657.3682103577264
-Load_275,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,275,1,0,0,wye,-2000.0,-657.3682103577264
-Load_277,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,277,1,0,0,wye,-2000.0,-657.3682103577264
-Load_279,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,279,1,0,0,wye,-2000.0,-657.3682103577264
-Load_281,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,281,1,0,0,wye,-2000.0,-657.3682103577264
-Load_283,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,283,1,0,0,wye,-2000.0,-657.3682103577264
-Load_285,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,285,1,0,0,wye,-2000.0,-657.3682103577264
-Load_287,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,287,1,0,0,wye,-2000.0,-657.3682103577264
-Load_289,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,289,1,0,0,wye,-2000.0,-657.3682103577264
-Load_291,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,291,1,0,0,wye,-2000.0,-657.3682103577264
-Load_293,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,293,1,0,0,wye,-2000.0,-657.3682103577264
+Load 3,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,3,1,0,0,wye,-2000.0,-657.3682103577264
+Load 5,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,5,1,0,0,wye,-2000.0,-657.3682103577264
+Load 7,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,7,1,0,0,wye,-2000.0,-657.3682103577264
+Load 9,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,9,1,0,0,wye,-2000.0,-657.3682103577264
+Load 11,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,11,1,0,0,wye,-2000.0,-657.3682103577264
+Load 13,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,13,1,0,0,wye,-2000.0,-657.3682103577264
+Load 15,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,15,1,0,0,wye,-2000.0,-657.3682103577264
+Load 17,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,17,1,0,0,wye,-2000.0,-657.3682103577264
+Load 19,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,19,1,0,0,wye,-2000.0,-657.3682103577264
+Load 21,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,21,1,0,0,wye,-2000.0,-657.3682103577264
+Load 23,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,23,1,0,0,wye,-2000.0,-657.3682103577264
+Load 25,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,25,1,0,0,wye,-2000.0,-657.3682103577264
+Load 27,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,27,1,0,0,wye,-2000.0,-657.3682103577264
+Load 29,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,29,1,0,0,wye,-2000.0,-657.3682103577264
+Load 31,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,31,1,0,0,wye,-2000.0,-657.3682103577264
+Load 33,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,33,1,0,0,wye,-2000.0,-657.3682103577264
+Load 35,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,35,1,0,0,wye,-2000.0,-657.3682103577264
+Load 37,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,37,1,0,0,wye,-2000.0,-657.3682103577264
+Load 39,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,39,1,0,0,wye,-2000.0,-657.3682103577264
+Load 41,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,41,1,0,0,wye,-2000.0,-657.3682103577264
+Load 43,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,43,1,0,0,wye,-2000.0,-657.3682103577264
+Load 45,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,45,1,0,0,wye,-2000.0,-657.3682103577264
+Load 47,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,47,1,0,0,wye,-2000.0,-657.3682103577264
+Load 49,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,49,1,0,0,wye,-2000.0,-657.3682103577264
+Load 51,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,51,1,0,0,wye,-2000.0,-657.3682103577264
+Load 53,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,53,1,0,0,wye,-2000.0,-657.3682103577264
+Load 55,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,55,1,0,0,wye,-2000.0,-657.3682103577264
+Load 57,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,57,1,0,0,wye,-2000.0,-657.3682103577264
+Load 59,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,59,1,0,0,wye,-2000.0,-657.3682103577264
+Load 61,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,61,1,0,0,wye,-2000.0,-657.3682103577264
+Load 63,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,63,1,0,0,wye,-2000.0,-657.3682103577264
+Load 65,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,65,1,0,0,wye,-2000.0,-657.3682103577264
+Load 67,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,67,1,0,0,wye,-2000.0,-657.3682103577264
+Load 69,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,69,1,0,0,wye,-2000.0,-657.3682103577264
+Load 71,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,71,1,0,0,wye,-2000.0,-657.3682103577264
+Load 73,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,73,1,0,0,wye,-2000.0,-657.3682103577264
+Load 75,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,75,1,0,0,wye,-2000.0,-657.3682103577264
+Load 77,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,77,1,0,0,wye,-2000.0,-657.3682103577264
+Load 79,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,79,1,0,0,wye,-2000.0,-657.3682103577264
+Load 81,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,81,1,0,0,wye,-2000.0,-657.3682103577264
+Load 83,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,83,1,0,0,wye,-2000.0,-657.3682103577264
+Load 85,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,85,1,0,0,wye,-2000.0,-657.3682103577264
+Load 87,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,87,1,0,0,wye,-2000.0,-657.3682103577264
+Load 89,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,89,1,0,0,wye,-2000.0,-657.3682103577264
+Load 91,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,91,1,0,0,wye,-2000.0,-657.3682103577264
+Load 93,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,93,1,0,0,wye,-2000.0,-657.3682103577264
+Load 95,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,95,1,0,0,wye,-2000.0,-657.3682103577264
+Load 97,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,97,1,0,0,wye,-2000.0,-657.3682103577264
+Load 99,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,99,1,0,0,wye,-2000.0,-657.3682103577264
+Load 101,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,101,1,0,0,wye,-2000.0,-657.3682103577264
+Load 103,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,103,1,0,0,wye,-2000.0,-657.3682103577264
+Load 105,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,105,1,0,0,wye,-2000.0,-657.3682103577264
+Load 107,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,107,1,0,0,wye,-2000.0,-657.3682103577264
+Load 109,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,109,1,0,0,wye,-2000.0,-657.3682103577264
+Load 111,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,111,1,0,0,wye,-2000.0,-657.3682103577264
+Load 113,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,113,1,0,0,wye,-2000.0,-657.3682103577264
+Load 115,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,115,1,0,0,wye,-2000.0,-657.3682103577264
+Load 117,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,117,1,0,0,wye,-2000.0,-657.3682103577264
+Load 119,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,119,1,0,0,wye,-2000.0,-657.3682103577264
+Load 121,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,121,1,0,0,wye,-2000.0,-657.3682103577264
+Load 123,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,123,1,0,0,wye,-2000.0,-657.3682103577264
+Load 125,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,125,1,0,0,wye,-2000.0,-657.3682103577264
+Load 127,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,127,1,0,0,wye,-2000.0,-657.3682103577264
+Load 129,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,129,1,0,0,wye,-2000.0,-657.3682103577264
+Load 131,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,131,1,0,0,wye,-2000.0,-657.3682103577264
+Load 133,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,133,1,0,0,wye,-2000.0,-657.3682103577264
+Load 135,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,135,1,0,0,wye,-2000.0,-657.3682103577264
+Load 137,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,137,1,0,0,wye,-2000.0,-657.3682103577264
+Load 139,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,139,1,0,0,wye,-2000.0,-657.3682103577264
+Load 141,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,141,1,0,0,wye,-2000.0,-657.3682103577264
+Load 143,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,143,1,0,0,wye,-2000.0,-657.3682103577264
+Load 145,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,145,1,0,0,wye,-2000.0,-657.3682103577264
+Load 147,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,147,1,0,0,wye,-2000.0,-657.3682103577264
+Load 149,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,149,1,0,0,wye,-2000.0,-657.3682103577264
+Load 151,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,151,1,0,0,wye,-2000.0,-657.3682103577264
+Load 153,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,153,1,0,0,wye,-2000.0,-657.3682103577264
+Load 155,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,155,1,0,0,wye,-2000.0,-657.3682103577264
+Load 157,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,157,1,0,0,wye,-2000.0,-657.3682103577264
+Load 159,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,159,1,0,0,wye,-2000.0,-657.3682103577264
+Load 161,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,161,1,0,0,wye,-2000.0,-657.3682103577264
+Load 163,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,163,1,0,0,wye,-2000.0,-657.3682103577264
+Load 165,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,165,1,0,0,wye,-2000.0,-657.3682103577264
+Load 167,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,167,1,0,0,wye,-2000.0,-657.3682103577264
+Load 169,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,169,1,0,0,wye,-2000.0,-657.3682103577264
+Load 171,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,171,1,0,0,wye,-2000.0,-657.3682103577264
+Load 173,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,173,1,0,0,wye,-2000.0,-657.3682103577264
+Load 175,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,175,1,0,0,wye,-2000.0,-657.3682103577264
+Load 177,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,177,1,0,0,wye,-2000.0,-657.3682103577264
+Load 179,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,179,1,0,0,wye,-2000.0,-657.3682103577264
+Load 181,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,181,1,0,0,wye,-2000.0,-657.3682103577264
+Load 183,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,183,1,0,0,wye,-2000.0,-657.3682103577264
+Load 185,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,185,1,0,0,wye,-2000.0,-657.3682103577264
+Load 187,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,187,1,0,0,wye,-2000.0,-657.3682103577264
+Load 189,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,189,1,0,0,wye,-2000.0,-657.3682103577264
+Load 191,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,191,1,0,0,wye,-2000.0,-657.3682103577264
+Load 193,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,193,1,0,0,wye,-2000.0,-657.3682103577264
+Load 195,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,195,1,0,0,wye,-2000.0,-657.3682103577264
+Load 197,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,197,1,0,0,wye,-2000.0,-657.3682103577264
+Load 199,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,199,1,0,0,wye,-2000.0,-657.3682103577264
+Load 201,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,201,1,0,0,wye,-2000.0,-657.3682103577264
+Load 203,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,203,1,0,0,wye,-2000.0,-657.3682103577264
+Load 205,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,205,1,0,0,wye,-2000.0,-657.3682103577264
+Load 207,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,207,1,0,0,wye,-2000.0,-657.3682103577264
+Load 209,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,209,1,0,0,wye,-2000.0,-657.3682103577264
+Load 211,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,211,1,0,0,wye,-2000.0,-657.3682103577264
+Load 213,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,213,1,0,0,wye,-2000.0,-657.3682103577264
+Load 215,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,215,1,0,0,wye,-2000.0,-657.3682103577264
+Load 217,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,217,1,0,0,wye,-2000.0,-657.3682103577264
+Load 219,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,219,1,0,0,wye,-2000.0,-657.3682103577264
+Load 221,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,221,1,0,0,wye,-2000.0,-657.3682103577264
+Load 223,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,223,1,0,0,wye,-2000.0,-657.3682103577264
+Load 225,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,225,1,0,0,wye,-2000.0,-657.3682103577264
+Load 227,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,227,1,0,0,wye,-2000.0,-657.3682103577264
+Load 229,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,229,1,0,0,wye,-2000.0,-657.3682103577264
+Load 231,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,231,1,0,0,wye,-2000.0,-657.3682103577264
+Load 233,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,233,1,0,0,wye,-2000.0,-657.3682103577264
+Load 235,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,235,1,0,0,wye,-2000.0,-657.3682103577264
+Load 237,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,237,1,0,0,wye,-2000.0,-657.3682103577264
+Load 239,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,239,1,0,0,wye,-2000.0,-657.3682103577264
+Load 241,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,241,1,0,0,wye,-2000.0,-657.3682103577264
+Load 243,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,243,1,0,0,wye,-2000.0,-657.3682103577264
+Load 245,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,245,1,0,0,wye,-2000.0,-657.3682103577264
+Load 247,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,247,1,0,0,wye,-2000.0,-657.3682103577264
+Load 249,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,249,1,0,0,wye,-2000.0,-657.3682103577264
+Load 251,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,251,1,0,0,wye,-2000.0,-657.3682103577264
+Load 253,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,253,1,0,0,wye,-2000.0,-657.3682103577264
+Load 255,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,255,1,0,0,wye,-2000.0,-657.3682103577264
+Load 257,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,257,1,0,0,wye,-2000.0,-657.3682103577264
+Load 259,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,259,1,0,0,wye,-2000.0,-657.3682103577264
+Load 261,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,261,1,0,0,wye,-2000.0,-657.3682103577264
+Load 263,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,263,1,0,0,wye,-2000.0,-657.3682103577264
+Load 265,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,265,1,0,0,wye,-2000.0,-657.3682103577264
+Load 267,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,267,1,0,0,wye,-2000.0,-657.3682103577264
+Load 269,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,269,1,0,0,wye,-2000.0,-657.3682103577264
+Load 271,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,271,1,0,0,wye,-2000.0,-657.3682103577264
+Load 273,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,273,1,0,0,wye,-2000.0,-657.3682103577264
+Load 275,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,275,1,0,0,wye,-2000.0,-657.3682103577264
+Load 277,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,277,1,0,0,wye,-2000.0,-657.3682103577264
+Load 279,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,279,1,0,0,wye,-2000.0,-657.3682103577264
+Load 281,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,281,1,0,0,wye,-2000.0,-657.3682103577264
+Load 283,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,283,1,0,0,wye,-2000.0,-657.3682103577264
+Load 285,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,285,1,0,0,wye,-2000.0,-657.3682103577264
+Load 287,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,287,1,0,0,wye,-2000.0,-657.3682103577264
+Load 289,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,289,1,0,0,wye,-2000.0,-657.3682103577264
+Load 291,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,291,1,0,0,wye,-2000.0,-657.3682103577264
+Load 293,kerber_vorstadtnetz_kabel_1,fixed_load,mixed_commercial_residential,293,1,0,0,wye,-2000.0,-657.3682103577264

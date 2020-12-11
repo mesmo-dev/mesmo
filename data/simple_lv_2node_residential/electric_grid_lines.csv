@@ -1,0 +1,2 @@
+line_name,electric_grid_name,line_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,length
+Line 1-2,simple_lv_2node_residential,cigre_lv_network_UG1,1,2,1,0,0,0.3

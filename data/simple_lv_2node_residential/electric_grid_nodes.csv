@@ -1,0 +1,4 @@
+node_name,electric_grid_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+0,simple_lv_2node_residential,1,0,0,20000.0,0.2,1
+1,simple_lv_2node_residential,1,0,0,400.0,-1.4583333333000001,2
+2,simple_lv_2node_residential,1,0,0,400.0,-1.4583333333000001,3

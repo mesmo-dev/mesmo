@@ -1,0 +1,5 @@
+node_name,electric_grid_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+0,simple_mv_3node,1,0,0,110000.0,7.0,16
+1,simple_mv_3node,1,0,0,20000.0,4.0,15
+2,simple_mv_3node,1,0,0,20000.0,4.0,13
+3,simple_mv_3node,1,0,0,20000.0,4.0,11

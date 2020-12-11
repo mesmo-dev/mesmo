@@ -1633,13 +1633,13 @@ class DERModelSet(object):
 
         # Obtain results.
         for der_name in self.flexible_der_names:
-            state_vector.at[:, (der_name, slice(None), slice(None))] = (
+            state_vector.loc[:, (der_name, slice(None))] = (
                 optimization_problem.state_vector[der_name].value
             )
-            control_vector.at[:, (der_name, slice(None), slice(None))] = (
+            control_vector.loc[:, (der_name, slice(None))] = (
                 optimization_problem.control_vector[der_name].value
             )
-            output_vector.at[:, (der_name, slice(None), slice(None))] = (
+            output_vector.loc[:, (der_name, slice(None))] = (
                 optimization_problem.output_vector[der_name].value
             )
 

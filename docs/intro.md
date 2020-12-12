@@ -15,18 +15,17 @@ Note that the `fledge.plots` module optionally allows adding contextual basemaps
 
 ### Recommended installation
 
-The following installation procedure requires additional steps, but can improve performance and includes optional dependencies. For example, the numpy and pandas packages are installed through Anaconda, which ensures the use of more performant math libraries. Additionally, the contextily package is installed, which is required for some geographical plots.
+The following installation procedure requires additional steps, but can improve performance and includes optional dependencies. For example, the numpy, pandas and cvxpy packages are installed through Anaconda, which ensures the use of more performant math libraries. Additionally, the contextily package is installed, which is required for some geographical plots.
 
 1. Check requirements:
-   - [Anaconda Distribution](https://www.anaconda.com/distribution/) (Python 3.x version)
+   - [Anaconda Python Distribution](https://www.anaconda.com/distribution/)
    - [Gurobi Optimizer](http://www.gurobi.com/) or [CPLEX Optimizer](https://www.ibm.com/analytics/cplex-optimizer)
 2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In Anaconda Prompt, run:
    1. `conda create -n fledge python=3.7`
    2. `conda activate fledge`
-   3. `conda install -c conda-forge contextily cvxpy`
-   4. `conda install numpy pandas`
-   5. `pip install -v -e path_to_repository`
+   3. `conda install -c conda-forge contextily cvxpy numpy pandas`
+   4. `pip install -v -e path_to_repository`
 4. If you want to use CPLEX:
    1. Install CPLEX Python interface (see latest CPLEX documentation).
    2. Create or modify `config.yml` (see below in "Configuration with `config.yml`").
@@ -37,7 +36,7 @@ If you are running into errors when installing or running FLEDGE, this may be du
 
 1. Check requirements:
    - Windows 10
-   - [Anaconda Distribution](https://www.anaconda.com/distribution/) (Python 3.x version)
+   - [Anaconda Python Distribution](https://www.anaconda.com/distribution/)
    - [Gurobi Optimizer](http://www.gurobi.com/)
 2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 4. In Anaconda Prompt, run:
@@ -68,11 +67,14 @@ The configuration parameters which are defined in `config.yml` will take precede
 
 ## Papers
 
-The following papers have been prepared in relation to FLEDGE:
+The following papers have been submitted in relation to FLEDGE:
 
-- [Preprint] Troitzsch, S., Grussmann, M., Zhang, K., & Hamacher, T., **Distribution Locational Marginal Pricing for Combined Thermal and Electric Grid Operation**, 2020. [`doi: 10.36227/techrxiv.11918712`](https://doi.org/10.36227/techrxiv.11918712)
-    - FLEDGE [v0.3.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.3.0) was used to preare the results for this paper.
-    - The related script is [`examples/paper_2020_dlmp_combined_thermal_electric.py`](https://github.com/TUMCREATE-ESTL/fledge/blob/v0.3.0/examples/paper_2020_dlmp_combined_thermal_electric.py).
+- [Preprint] Troitzsch, S., Zhang, K., Massier, T., & Hamacher, T., **Coordinated Market Clearing for Combined Thermal and Electric Distribution Grid Operation**, 2020. [`doi:10.36227/techrxiv.13247246`](https://doi.org/10.36227/techrxiv.13247246)
+   - FLEDGE [v0.4.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.4.0) was used to prepare the results for this paper.
+   - The related script is [`examples/paper_2020_3_coordination_thermal_electric.py`](https://github.com/TUMCREATE-ESTL/fledge/blob/v0.4.0/examples/paper_2020_3_coordination_thermal_electric.py).
+- [Preprint] Troitzsch, S., Grussmann, M., Zhang, K., & Hamacher, T., **Distribution Locational Marginal Pricing for Combined Thermal and Electric Grid Operation**, IEEE ISGT Europe, 2020. [`doi:10.36227/techrxiv.11918712`](https://doi.org/10.36227/techrxiv.11918712)
+    - FLEDGE [v0.3.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.3.0) was used to prepare the results for this paper.
+    - The related script is [`examples/paper_2020_1_dlmp_combined_thermal_electric.py`](https://github.com/TUMCREATE-ESTL/fledge/blob/v0.3.0/examples/paper_2020_dlmp_combined_thermal_electric.py).
 - Troitzsch, S., Hanif, S., Zhang, K., Trpovski, A., & Hamacher, T., **Flexible Distribution Grid Demonstrator (FLEDGE): Requirements and Software Architecture**, in IEEE PES General Meeting, Atlanta, GA, USA, 2019. [`doi: 10.1109/PESGM40551.2019.8973567`](https://doi.org/10.1109/PESGM40551.2019.8973567).
     - The paper served as an outline for the [software architecture](architecture.md) of FLEDGE.
 - D. Recalde, A. Trpovski, S. Troitzsch, K. Zhang, S. Hanif, and T. Hamacher, **A Review of Operation Methods and Simulation Requirements for Future Smart Distribution Grids**, in IEEE PES Innovative Smart Grid Technologies Conference Asia, Singapore, 2018. [`doi:10.1109/ISGT-Asia.2018.8467850`](https://doi.org/10.1109/ISGT-Asia.2018.8467850).

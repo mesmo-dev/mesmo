@@ -1,4 +1,4 @@
-"""Example script for setting up and solving an optimal operation problem.
+"""Example script for setting up and solving an nominal operation problem.
 
 - The nominal operation problem (alias: power flow problem, electric grid simulation problem)
   formulates the steady-state power flow problem for all timesteps of the given scenario

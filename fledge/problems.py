@@ -562,3 +562,14 @@ class Results(object):
             repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
 
         return repr_string
+
+    def update(self, other_results):
+
+        # Obtain attributes of other results object.
+        attributes = vars(other_results)
+
+        # Update attributes.
+        # - Existing attributes are overwritten with values from the other results object.
+        for attribute_name in attributes:
+            if attributes[attribute_name] is not None:
+                self.__setattr__(attribute_name, attributes[attribute_name])

@@ -3684,3 +3684,38 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             + self.sensitivity_loss_reactive_by_power_delta_reactive
             @ electric_grid_model.der_incidence_delta_matrix
         )
+
+
+class ElectricGridOperationResults(fledge.utils.ResultsBase):
+
+    electric_grid_model: ElectricGridModel = None
+    der_power_vector: pd.DataFrame = None
+    node_voltage_vector: pd.DataFrame = None
+    branch_power_vector_1: pd.DataFrame = None
+    branch_power_vector_2: pd.DataFrame = None
+    loss: pd.DataFrame = None
+
+
+class ElectricGridDLMPResults(fledge.utils.ResultsBase):
+
+    electric_grid_energy_dlmp_node_active_power: pd.DataFrame = None
+    electric_grid_voltage_dlmp_node_active_power: pd.DataFrame = None
+    electric_grid_congestion_dlmp_node_active_power: pd.DataFrame = None
+    electric_grid_loss_dlmp_node_active_power: pd.DataFrame = None
+    electric_grid_total_dlmp_node_active_power: pd.DataFrame = None
+    electric_grid_voltage_dlmp_node_reactive_power: pd.DataFrame = None
+    electric_grid_congestion_dlmp_node_reactive_power: pd.DataFrame = None
+    electric_grid_loss_dlmp_node_reactive_power: pd.DataFrame = None
+    electric_grid_energy_dlmp_node_reactive_power: pd.DataFrame = None
+    electric_grid_total_dlmp_node_reactive_power: pd.DataFrame = None
+    electric_grid_energy_dlmp_der_active_power: pd.DataFrame = None
+    electric_grid_voltage_dlmp_der_active_power: pd.DataFrame = None
+    electric_grid_congestion_dlmp_der_active_power: pd.DataFrame = None
+    electric_grid_loss_dlmp_der_active_power: pd.DataFrame = None
+    electric_grid_total_dlmp_der_active_power: pd.DataFrame = None
+    electric_grid_voltage_dlmp_der_reactive_power: pd.DataFrame = None
+    electric_grid_congestion_dlmp_der_reactive_power: pd.DataFrame = None
+    electric_grid_loss_dlmp_der_reactive_power: pd.DataFrame = None
+    electric_grid_energy_dlmp_der_reactive_power: pd.DataFrame = None
+    electric_grid_total_dlmp_der_reactive_power: pd.DataFrame = None
+    electric_grid_total_dlmp_price_timeseries: pd.DataFrame = None

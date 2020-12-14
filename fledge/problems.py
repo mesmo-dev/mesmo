@@ -448,130 +448,13 @@ class OptimalOperationProblem(object):
         return results
 
 
-class Results(object):
+class Results(
+    fledge.electric_grid_models.ElectricGridOperationResults,
+    fledge.thermal_grid_models.ThermalGridOperationResults,
+    fledge.der_models.DERModelSetResults,
+    fledge.electric_grid_models.ElectricGridDLMPResults,
+    fledge.thermal_grid_models.ThermalGridDLMPResults
+):
     """Results object."""
 
-    # Models.
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModel = None
-    thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
-    der_model_set: fledge.der_models.DERModelSet = None
-
-    # Price input data.
     price_data: fledge.data_interface.PriceData = None
-
-    # Electric grid result variables.
-    der_power_vector: pd.DataFrame = None
-    node_voltage_vector: pd.DataFrame = None
-    branch_power_vector_1: pd.DataFrame = None
-    branch_power_vector_2: pd.DataFrame = None
-    loss: pd.DataFrame = None
-
-    # Thermal grid result variables.
-    der_thermal_power_vector: pd.DataFrame = None
-    node_head_vector: pd.DataFrame = None
-    branch_flow_vector: pd.DataFrame = None
-    pump_power: pd.DataFrame = None
-
-    # DER model result variables.
-    state_vector: pd.DataFrame = None
-    control_vector: pd.DataFrame = None
-    output_vector: pd.DataFrame = None
-    output_minimum_timeseries: pd.DataFrame = None
-    output_maximum_timeseries: pd.DataFrame = None
-
-    # Electric grid DLMPs.
-    electric_grid_energy_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_total_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_total_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_price_timeseries: pd.DataFrame = None
-
-    # Thermal grid DLMPs.
-    thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_pump_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_energy_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_head_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_congestion_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_pump_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_price_timeseries: pd.DataFrame = None
-
-    def __init__(
-            self,
-            **kwargs
-    ):
-
-        # Set all keyword arguments as attributes.
-        for attribute_name in kwargs:
-            self.__setattr__(attribute_name, kwargs[attribute_name])
-
-    def __setattr__(self, attribute_name, value):
-
-        # Assert that attribute name is valid.
-        # - Valid attributes are those which are defined as class attributes and instantiated with `None` above.
-        try:
-            assert hasattr(Results, attribute_name)
-        except AssertionError:
-            logger.error(f"Cannot set invalid results object variable: {attribute_name}")
-            raise
-
-        # Set attribute value.
-        super().__setattr__(attribute_name, value)
-
-    def __getattribute__(self, attribute_name):
-
-        # Obtain attribute value.
-        value = super().__getattribute__(attribute_name)
-
-        # Assert that the attribute value has been set / is not None.
-        # - This error is raised here to avoid downstream issues, e.g. when `None` is passed instead of a valid value.
-        try:
-            assert value is not None
-        except AssertionError:
-            logger.error(f"Results variable '{attribute_name}' has no value / has not been set.")
-            raise
-
-        return value
-
-    def __repr__(self) -> str:
-        """Obtain string representation of results."""
-
-        # Obtain attributes.
-        attributes = vars(self)
-
-        # Obtain representation string.
-        repr_string = ""
-        for attribute_name in attributes:
-            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
-
-        return repr_string
-
-    def update(self, other_results):
-
-        # Obtain attributes of other results object.
-        attributes = vars(other_results)
-
-        # Update attributes.
-        # - Existing attributes are overwritten with values from the other results object.
-        for attribute_name in attributes:
-            if attributes[attribute_name] is not None:
-                self.__setattr__(attribute_name, attributes[attribute_name])

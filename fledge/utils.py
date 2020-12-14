@@ -66,6 +66,71 @@ class OptimizationProblem(object):
             raise
 
 
+class ResultsBase(object):
+    """Results object base class."""
+
+    def __init__(
+            self,
+            **kwargs
+    ):
+
+        # Set all keyword arguments as attributes.
+        for attribute_name in kwargs:
+            self.__setattr__(attribute_name, kwargs[attribute_name])
+
+    def __setattr__(self, attribute_name, value):
+
+        # Assert that attribute name is valid.
+        # - Valid attributes are those which are defined as class attributes and instantiated with `None`.
+        try:
+            assert hasattr(type(self), attribute_name)
+        except AssertionError:
+            logger.error(f"Cannot set invalid results object variable: {attribute_name}")
+            raise
+
+        # Set attribute value.
+        super().__setattr__(attribute_name, value)
+
+    def __getattribute__(self, attribute_name):
+
+        # Obtain attribute value.
+        value = super().__getattribute__(attribute_name)
+
+        # Assert that the attribute value has been set / is not None.
+        # - This error is raised here to avoid downstream issues, e.g. when `None` is passed instead of a valid value.
+        try:
+            assert value is not None
+        except AssertionError:
+            logger.error(f"Results variable '{attribute_name}' has no value / has not been set.")
+            raise
+
+        return value
+
+    def __repr__(self) -> str:
+        """Obtain string representation of results."""
+
+        # Obtain attributes.
+        attributes = vars(self)
+
+        # Obtain representation string.
+        repr_string = ""
+        for attribute_name in attributes:
+            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
+
+        return repr_string
+
+    def update(self, other_results):
+
+        # Obtain attributes of other results object.
+        attributes = vars(other_results)
+
+        # Update attributes.
+        # - Existing attributes are overwritten with values from the other results object.
+        for attribute_name in attributes:
+            if attributes[attribute_name] is not None:
+                self.__setattr__(attribute_name, attributes[attribute_name])
+
+
 def starmap(
         function: typing.Callable,
         argument_sequence: typing.Iterable[tuple],

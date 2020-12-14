@@ -8,9 +8,9 @@ paths:
   results: ./results
   cobmo_additional_data: []
 multiprocessing:
-  run_parallel: true
+  run_parallel: false  # Disabled by default to avoid unexpected issues.
 caching:
-  enable: false  # If false, no cache is created.
+  enable: false  # If false, no cache is created. Disabled by default to avoid unexpected issues.
   reset_cache: false  # If true, reset the cache on each restart of FLEDGE, to incorporate changes in the database.
   expiry_time: 3600  # Expiry time of the cache, in seconds.
   get_building_model: true

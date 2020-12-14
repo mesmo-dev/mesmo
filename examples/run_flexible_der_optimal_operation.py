@@ -17,9 +17,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
     der_name = '4_2'  # Must be valid flexible DER from given scenario.
-    results_path = (
-        fledge.utils.get_results_path(os.path.basename(__file__)[:-3], f'{scenario_name}_der_{der_name}')
-    )
+    results_path = fledge.utils.get_results_path(__file__, f'{scenario_name}_der_{der_name}')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

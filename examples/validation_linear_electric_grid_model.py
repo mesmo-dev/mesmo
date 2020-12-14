@@ -15,7 +15,7 @@ def main():
 
     # Settings.
     scenario_name = fledge.config.config['tests']['scenario_name']
-    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
     power_multipliers = np.arange(-0.2, 1.2, 0.1)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.

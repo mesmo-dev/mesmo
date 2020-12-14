@@ -21,9 +21,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
-    results_path = (
-        fledge.utils.get_results_path(f'{os.path.basename(__file__)[:-3]}_scenario_{scenario}', scenario_name)
-    )
+    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario}_{scenario_name}')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

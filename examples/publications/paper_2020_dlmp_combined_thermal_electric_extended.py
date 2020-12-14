@@ -58,9 +58,7 @@ def main(
         scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
 
     # Obtain results path.
-    results_path = (
-        fledge.utils.get_results_path(f'{os.path.basename(__file__)[:-3]}_scenario_{scenario_number}', scenario_name)
-    )
+    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_{scenario_name}')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

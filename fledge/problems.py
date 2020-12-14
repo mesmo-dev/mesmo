@@ -515,6 +515,15 @@ class Results(object):
     thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame = None
     thermal_grid_total_dlmp_price_timeseries: pd.DataFrame = None
 
+    def __init__(
+            self,
+            **kwargs
+    ):
+
+        # Set all keyword arguments as attributes.
+        for attribute_name in kwargs:
+            self.__setattr__(attribute_name, kwargs[attribute_name])
+
     def __setattr__(self, attribute_name, value):
 
         # Assert that attribute name is valid.

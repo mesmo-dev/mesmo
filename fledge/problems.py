@@ -527,6 +527,7 @@ class Results(object):
     def __setattr__(self, attribute_name, value):
 
         # Assert that attribute name is valid.
+        # - Valid attributes are those which are defined as class attributes and instantiated with `None` above.
         try:
             assert hasattr(Results, attribute_name)
         except AssertionError:
@@ -541,7 +542,8 @@ class Results(object):
         # Obtain attribute value.
         value = super().__getattribute__(attribute_name)
 
-        # Assert that attribute value has been set.
+        # Assert that the attribute value has been set / is not None.
+        # - This error is raised here to avoid downstream issues, e.g. when `None` is passed instead of a valid value.
         try:
             assert value is not None
         except AssertionError:

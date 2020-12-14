@@ -857,23 +857,23 @@ class LinearThermalGridModel(object):
 
 class ThermalGridOperationResults(fledge.utils.ResultsBase):
 
-    thermal_grid_model: ThermalGridModel = None
-    der_thermal_power_vector: pd.DataFrame = None
-    node_head_vector: pd.DataFrame = None
-    branch_flow_vector: pd.DataFrame = None
-    pump_power: pd.DataFrame = None
+    thermal_grid_model: ThermalGridModel
+    der_thermal_power_vector: pd.DataFrame
+    node_head_vector: pd.DataFrame
+    branch_flow_vector: pd.DataFrame
+    pump_power: pd.DataFrame
 
 
 class ThermalGridDLMPResults(fledge.utils.ResultsBase):
 
-    thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_pump_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_node_thermal_power: pd.DataFrame = None
-    thermal_grid_energy_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_head_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_congestion_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_pump_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame = None
-    thermal_grid_total_dlmp_price_timeseries: pd.DataFrame = None
+    thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_pump_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_energy_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_head_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_congestion_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_pump_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_price_timeseries: pd.DataFrame

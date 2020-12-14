@@ -3688,34 +3688,34 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
 
 class ElectricGridOperationResults(fledge.utils.ResultsBase):
 
-    electric_grid_model: ElectricGridModel = None
-    der_power_vector: pd.DataFrame = None
-    node_voltage_vector: pd.DataFrame = None
-    branch_power_vector_1: pd.DataFrame = None
-    branch_power_vector_2: pd.DataFrame = None
-    loss: pd.DataFrame = None
+    electric_grid_model: ElectricGridModel
+    der_power_vector: pd.DataFrame
+    node_voltage_vector: pd.DataFrame
+    branch_power_vector_1: pd.DataFrame
+    branch_power_vector_2: pd.DataFrame
+    loss: pd.DataFrame
 
 
 class ElectricGridDLMPResults(fledge.utils.ResultsBase):
 
-    electric_grid_energy_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_total_dlmp_node_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_node_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_total_dlmp_der_active_power: pd.DataFrame = None
-    electric_grid_voltage_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_congestion_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_loss_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_energy_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_der_reactive_power: pd.DataFrame = None
-    electric_grid_total_dlmp_price_timeseries: pd.DataFrame = None
+    electric_grid_energy_dlmp_node_active_power: pd.DataFrame
+    electric_grid_voltage_dlmp_node_active_power: pd.DataFrame
+    electric_grid_congestion_dlmp_node_active_power: pd.DataFrame
+    electric_grid_loss_dlmp_node_active_power: pd.DataFrame
+    electric_grid_total_dlmp_node_active_power: pd.DataFrame
+    electric_grid_voltage_dlmp_node_reactive_power: pd.DataFrame
+    electric_grid_congestion_dlmp_node_reactive_power: pd.DataFrame
+    electric_grid_loss_dlmp_node_reactive_power: pd.DataFrame
+    electric_grid_energy_dlmp_node_reactive_power: pd.DataFrame
+    electric_grid_total_dlmp_node_reactive_power: pd.DataFrame
+    electric_grid_energy_dlmp_der_active_power: pd.DataFrame
+    electric_grid_voltage_dlmp_der_active_power: pd.DataFrame
+    electric_grid_congestion_dlmp_der_active_power: pd.DataFrame
+    electric_grid_loss_dlmp_der_active_power: pd.DataFrame
+    electric_grid_total_dlmp_der_active_power: pd.DataFrame
+    electric_grid_voltage_dlmp_der_reactive_power: pd.DataFrame
+    electric_grid_congestion_dlmp_der_reactive_power: pd.DataFrame
+    electric_grid_loss_dlmp_der_reactive_power: pd.DataFrame
+    electric_grid_energy_dlmp_der_reactive_power: pd.DataFrame
+    electric_grid_total_dlmp_der_reactive_power: pd.DataFrame
+    electric_grid_total_dlmp_price_timeseries: pd.DataFrame

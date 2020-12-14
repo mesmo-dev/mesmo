@@ -1652,12 +1652,12 @@ class DERModelSet(object):
 
 class DERModelSetResults(fledge.utils.ResultsBase):
 
-    der_model_set: DERModelSet = None
-    state_vector: pd.DataFrame = None
-    control_vector: pd.DataFrame = None
-    output_vector: pd.DataFrame = None
-    output_minimum_timeseries: pd.DataFrame = None
-    output_maximum_timeseries: pd.DataFrame = None
+    der_model_set: DERModelSet
+    state_vector: pd.DataFrame
+    control_vector: pd.DataFrame
+    output_vector: pd.DataFrame
+    output_minimum_timeseries: pd.DataFrame
+    output_maximum_timeseries: pd.DataFrame
 
 
 def make_der_model(

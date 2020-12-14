@@ -81,30 +81,18 @@ class ResultsBase(object):
     def __setattr__(self, attribute_name, value):
 
         # Assert that attribute name is valid.
-        # - Valid attributes are those which are defined as class attributes and instantiated with `None`.
+        # - Valid attributes are those which are defined as results class attributes with type declaration.
         try:
-            assert hasattr(type(self), attribute_name)
+            assert attribute_name in typing.get_type_hints(type(self))
         except AssertionError:
-            logger.error(f"Cannot set invalid results object variable: {attribute_name}")
+            logger.error(
+                f"Cannot set invalid results variable '{attribute_name}'. "
+                f"Please ensure that the variable has been defined as results class attribute."
+            )
             raise
 
         # Set attribute value.
         super().__setattr__(attribute_name, value)
-
-    def __getattribute__(self, attribute_name):
-
-        # Obtain attribute value.
-        value = super().__getattribute__(attribute_name)
-
-        # Assert that the attribute value has been set / is not None.
-        # - This error is raised here to avoid downstream issues, e.g. when `None` is passed instead of a valid value.
-        try:
-            assert value is not None
-        except AssertionError:
-            logger.error(f"Results variable '{attribute_name}' has no value / has not been set.")
-            raise
-
-        return value
 
     def __repr__(self) -> str:
         """Obtain string representation of results."""

@@ -457,4 +457,4 @@ class Results(
 ):
     """Results object."""
 
-    price_data: fledge.data_interface.PriceData = None
+    price_data: fledge.data_interface.PriceData

@@ -549,3 +549,16 @@ class Results(object):
             raise
 
         return value
+
+    def __repr__(self) -> str:
+        """Obtain string representation of results."""
+
+        # Obtain attributes.
+        attributes = vars(self)
+
+        # Obtain representation string.
+        repr_string = ""
+        for attribute_name in attributes:
+            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
+
+        return repr_string

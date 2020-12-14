@@ -58,7 +58,7 @@ Every time the `master` branch changes, a new version number is defined accordin
 The `environment.yml` file in the repository base directory provides a snapshot of an Anaconda environment with specific package versions which has been tested and is confirmed to work. The `environment.yml` file should be updated before releases, i.e. commits to the `master` branch. To update `environment.yml`, follow these steps:
 
 1. Uninstall FLEDGE / delete the existing `fledge` Anaconda environment: `conda env remove -n fledge`
-2. Reinstall FLEDGE / recreate the `fledge` Anaconda environment based on the recommended installation steps in [Getting Started](getting_started.md).
+2. Reinstall FLEDGE / recreate the `fledge` Anaconda environment based on the recommended installation steps in [Getting started](getting_started.md).
 3. Run **all test** and **all examples scripts** and fix any incompatibilities / bugs.
 4. Update `environment.yml`: `conda env export -n fledge > path_to_repository/environment.yml`
 5. Remove `prefix: ...` line from `environment.yml`.

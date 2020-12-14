@@ -18,7 +18,7 @@ def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
-    results_path = fledge.utils.get_results_path(os.path.basename(__file__)[:-3], scenario_name)
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

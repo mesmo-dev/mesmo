@@ -235,21 +235,24 @@ def get_timestamp(
 
 def get_results_path(
         base_name: str,
-        scenario_name: str
+        scenario_name: str = None
 ) -> str:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
     created on disk along with this.
+
+    - Non-alphanumeric characters are removed from `base_name` and `scenario_name`.
+    - If is a script file path or `__file__` is passed as `base_name`, the base file name without extension
+      will be taken as base name.
     """
 
+    # Preprocess results path name components, including removing non-alphanumeric characters.
+    base_name = re.sub(r'\W+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
+    scenario_name = '' if scenario_name is None else re.sub(r'\W+', '', scenario_name) + '_'
+    timestamp = fledge.utils.get_timestamp()
+
     # Obtain results path.
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            # Remove non-alphanumeric characters, except `_`, then append timestamp string.
-            re.sub(r'\W+', '', f'{base_name}_{scenario_name}_') + fledge.utils.get_timestamp()
-        )
-    )
+    results_path = os.path.join(fledge.config.config['paths']['results'], f'{base_name}{scenario_name}{timestamp}')
 
     # Instantiate results directory.
     # TODO: Catch error if dir exists.

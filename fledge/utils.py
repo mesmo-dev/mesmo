@@ -4,6 +4,7 @@ import cvxpy as cp
 import datetime
 import dill
 import functools
+import glob
 import itertools
 import logging
 import numpy as np
@@ -129,7 +130,37 @@ class ResultsBase(ObjectBase):
             else:
                 # Other objects are stored to pickle binary file (PKL).
                 with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
-                    dill.dump(attributes[attribute_name], output_file)
+                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+
+    def load(
+            self,
+            results_path: str
+    ):
+        """Load results from given path."""
+
+        # Obtain all CSV and PKL files at results path.
+        files = glob.glob(os.path.join(results_path, '*.csv')) + glob.glob(os.path.join(results_path, '*.pkl'))
+
+        # Load all files which correspond to valid attributes.
+        for file in files:
+
+            # Obtain file extension / attribute name.
+            file_extension = os.path.splitext(file)[1]
+            attribute_name = os.path.basename(os.path.splitext(file)[0])
+
+            # Load file and set attribute value.
+            if attribute_name in typing.get_type_hints(type(self)):
+                if file_extension.lower() == '.csv':
+                    value = pd.read_csv(file)
+                else:
+                    with open(file, 'rb') as input_file:
+                        value = dill.load(input_file)
+                self.__setattr__(attribute_name, value)
+            else:
+                # Files which do not match any valid results attribute are not loaded.
+                logger.debug(f"Skipping results file which does match any valid results attribute: {file}")
+
+        return self
 
 
 class OptimizationProblem(object):

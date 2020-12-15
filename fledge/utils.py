@@ -36,7 +36,7 @@ class ObjectBase(object):
 
     Example:
 
-        Attributes should be defined in the begging of the class definition as follows::
+        Attributes should be defined in the beginning of the class definition as follows::
 
             class ExampleClass(ObjectBase):
 
@@ -46,7 +46,11 @@ class ObjectBase(object):
         In this case, ``example_attribute1`` and ``example_attribute2`` are valid attributes of the class.
     """
 
-    def __setattr__(self, attribute_name, value):
+    def __setattr__(
+            self,
+            attribute_name,
+            value
+    ):
 
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
@@ -88,7 +92,10 @@ class ResultsBase(ObjectBase):
         for attribute_name in kwargs:
             self.__setattr__(attribute_name, kwargs[attribute_name])
 
-    def update(self, other_results):
+    def update(
+            self,
+            other_results
+    ):
 
         # Obtain attributes of other results object.
         attributes = vars(other_results)

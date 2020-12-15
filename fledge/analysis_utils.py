@@ -4,11 +4,161 @@
 import pandas as pd
 import shutil
 import os
+import random
+import numpy as np
+import datetime
 
 import fledge.data_interface
 import fledge.config
 
 path_to_data = fledge.config.config['paths']['data']
+
+
+def generate_der_input_data(
+        scenario_name: str,
+        path_to_der_schedules_data: str
+):
+    num_of_loads = 12
+    der_type = 'fixed_load'
+    definition_type = 'schedule'
+    power_factor = 0.95
+
+    der_schedules = __load_data(path_to_der_schedules_data)
+
+    # load scenario data to get the relevant time period and grid data (nodes)
+    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+
+    # in der_schedules, there is a unique timeseries for every week of the year with the week number as identifier
+    # and related to the season
+    [season, weeknums] = __get_season_of_scenario_data(scenario_data)
+
+    grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+    nodes = grid_data.electric_grid_nodes
+
+    der_data = fledge.data_interface.DERData(scenario_name)
+
+    # Drop / remove all data from dataframe (if exist)
+    der_data.ders.drop(der_data.ders.index, inplace=True)
+    grid_data.electric_grid_ders.drop(grid_data.electric_grid_ders.index, inplace=True)
+
+    counter = 1
+    source_node_name = grid_data.electric_grid['source_node_name']
+    for node_name in nodes['node_name']:
+        if counter > num_of_loads:
+            break
+        # don't add a new der to the source node
+        if node_name == source_node_name:
+            continue
+
+        der_name = 'Load R' + node_name
+        # TODO: loop over all phases
+        der_model_name = __pick_random_consumer_type() + '_' + season + '_' + random.choice(weeknums) + '_phase_0'
+
+        active_power_nominal = (-1) * max(der_schedules.loc[der_schedules['definition_name'] == der_model_name, 'value'])
+        reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
+
+        # Add to ders data
+        der_data.ders = der_data.ders.append({
+            'der_name': der_name,
+            'der_model_name': der_model_name,
+            'der_type': der_type,
+            'definition_name': der_model_name,
+            'definition_type': definition_type
+        }, ignore_index=True)
+        # Add to electric grid ders dataframe
+        grid_data.electric_grid_ders = grid_data.electric_grid_ders.append({
+            'electric_grid_name': scenario_name,
+            'der_name': der_name,
+            'der_type': der_type,
+            'der_model_name': der_model_name,
+            'node_name': node_name,
+            'is_phase_1_connected': '1',
+            'is_phase_2_connected': '0',
+            'is_phase_3_connected': '0',
+            'connection': 'wye',
+            'active_power_nominal': active_power_nominal,
+            'reactive_power_nominal': reactive_power_nominal,
+            'in_service': '1'
+        }, ignore_index=True)
+
+        counter += 1
+
+    __export_der_data_to_csv(grid_data, der_data, output_path=os.path.join(path_to_data, scenario_name))
+
+
+def __pick_random_consumer_type() -> str:
+    consumer_types = {
+        1: 'One_full-time_working_person',
+        2: 'One_pensioneer',
+        3: 'Two_full-time_working_persons',
+        4: 'Two_pensioneers',
+        5: 'One_full-time_and_one_part-time_working_person',
+        6: 'Two_full-time_working_persons_one_child',
+        7: 'One_full-time_and_one_part-time_working_person_one_child',
+        8: 'Two_full-time_working_persons_two_children',
+        9: 'One_full-time_and_one_part-time_working_person_two_children',
+        10: 'Two_full-time_working_persons_three_children',
+        11: 'One_full-time_and_one_part-time_working_person_three_children'
+    }
+    key_list = list(consumer_types.keys())
+    return consumer_types[random.choice(key_list)]
+
+
+def __get_season_of_scenario_data(
+        scenario_data: fledge.data_interface.ScenarioData
+) -> [str, list]:
+
+    # TODO: this is currently copied from notebook, there should be one central spot!
+    year = scenario_data.timesteps.year[0]
+    # According to German seasons
+    season_start_dates = {
+        'spring': datetime.date(year, 3, 1),
+        'summer': datetime.date(year, 6, 1),
+        'fall': datetime.date(year, 9, 1),
+        'winter_1': datetime.date(year, 12, 1),
+        'winter_2': datetime.date(year, 1, 1)
+    }
+    season_end_dates = {
+        'spring': datetime.datetime(year, 5, 31, 23, 59, 59),
+        'summer': datetime.datetime(year, 8, 31, 23, 59, 59),
+        'fall': datetime.datetime(year, 11, 30, 23, 59, 59),
+        'winter_1': datetime.datetime(year, 12, 31, 23, 59, 59),
+        'winter_2': datetime.datetime(year, 2, 28, 23, 59, 59)
+    }
+
+    # Adjust all dates so that every season starts on a Monday (for compatibility with fledge)
+    for date in season_start_dates:
+        if 'winter_2' not in date:
+            season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
+                days=-season_start_dates[date].weekday())
+        else:
+            # Here we have to cut the first days of the year before the first Monday
+            season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
+                days=-season_start_dates[date].weekday(), weeks=1)
+
+    for date in season_end_dates:
+        if season_end_dates[date].weekday() != 6:
+            season_end_dates[date] = season_end_dates[date] + datetime.timedelta(
+                days=-season_end_dates[date].weekday() - 1)
+
+    seasons = {}
+    for season in season_start_dates:
+        if 'winter' not in season:
+            seasons[season] = pd.date_range(start=season_start_dates[season], end=season_end_dates[season],
+                                            freq='T'),  # 'T' for minutely intervals
+        else:
+            seasons['winter'] = pd.date_range(start=season_start_dates['winter_2'], end=season_end_dates['winter_2'],
+                                              freq='T').append(
+                pd.date_range(start=season_start_dates['winter_1'], end=season_end_dates['winter_1'], freq='T'))
+    season = None
+    for season in seasons.keys():
+        if scenario_data.timesteps[0] in seasons[season]:
+            break
+
+    time_format = '%W'
+    weeknums = seasons[season].strftime(time_format).unique().to_list()
+
+    return [season, weeknums]
 
 
 def increase_der_penetration_of_scenario_on_lv_level(
@@ -50,11 +200,8 @@ def increase_der_penetration_of_scenario_on_lv_level(
     __change_electric_grid_name(grid_data, new_scenario_name)
     grid_data.scenario_data.scenario.loc['scenario_name'] = new_scenario_name
 
-    # Format all dataframes correctly for export
-    __format_grid_tables(grid_data)
-
     # call export function
-    __export_grid_to_csv(grid_data, output_path)
+    __export_grid_data_to_csv(grid_data, output_path)
 
     return new_scenario_name
 
@@ -117,11 +264,8 @@ def aggregate_electric_grids(
                 lv_electric_grid_data.electric_grid_ders
             ).reset_index(drop=True)
 
-    # Format all dataframes correctly for export
-    __format_grid_tables(aggregated_electric_grid_data)
-
     # call export function
-    __export_grid_to_csv(aggregated_electric_grid_data, output_path)
+    __export_grid_data_to_csv(aggregated_electric_grid_data, output_path)
 
     return aggregated_scenario_name
 
@@ -251,22 +395,20 @@ def combine_electric_grids(
                 lv_electric_grid_data.electric_grid_transformers
             ).reset_index(drop=True)
 
-    # Format all dataframes correctly for export
-    __format_grid_tables(combined_electric_grid_data)
-
     # call export function
-    __export_grid_to_csv(combined_electric_grid_data, output_path)
+    __export_grid_data_to_csv(combined_electric_grid_data, output_path)
 
     return combined_scenario_name
 
 
 def __load_data(
-        path_to_map_grids: str
-):
-    csv_file = pd.read_csv(os.path.join(os.path.dirname(path_to_data), path_to_map_grids))
+        path_to_csv_data: str,
+) -> pd.DataFrame:
+    print('Loading data...')
+    csv_data = pd.read_csv(os.path.join(os.path.dirname(path_to_data), path_to_csv_data))
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
-    return csv_file
+    return csv_data
 
 
 def __create_output_folder(
@@ -307,7 +449,7 @@ def __remove_original_ders(
         print(f'CAUTION: All DERs at MV node {mv_node_name} have been removed and will be replaced with LV grid.')
 
 
-def __format_grid_tables(
+def __format_grid_data_tables(
         grid_data: fledge.data_interface.ElectricGridData,
 ):
     # Transform series into dataframes
@@ -381,10 +523,34 @@ def __format_grid_tables(
         grid_data.electric_grid_line_types_matrices.drop_duplicates()
 
 
-def __export_grid_to_csv(
+def __format_der_data_tables(
+        der_data: fledge.data_interface.DERData,
+):
+    # Drop columns of the lines table that are not part of the csv-file
+    der_models_columns = [
+        'der_type',
+        'der_model_name',
+        'definition_type',
+        'definition_name',
+        'power_per_unit_minimum',
+        'power_per_unit_maximum',
+        'power_factor_minimum',
+        'power_factor_maximum',
+        'energy_storage_capacity_per_unit',
+        'charging_efficiency',
+        'self_discharge_rate',
+        'marginal_cost'
+    ]
+    der_data.ders = der_data.ders[der_models_columns]
+
+
+def __export_grid_data_to_csv(
         grid_data: fledge.data_interface.ElectricGridData,
         output_path: str
 ):
+    # Format all dataframes correctly for export
+    __format_grid_data_tables(grid_data)
+
     # Export csv file to output_path/combined_scenario_name
     grid_data.electric_grid_nodes.to_csv(
         os.path.join(output_path, 'electric_grid_nodes.csv'), index=False)
@@ -404,3 +570,19 @@ def __export_grid_to_csv(
     # combined_electric_grid_data.electric_grid_transformer_types.to_csv(os.path.join(output_path, combined_scenario_name, 'electric_grid_transformer_types.csv'), index=False)
     print('Note: The geographical information of the nodes must be adjusted manually.')
     print(f'Done. The grid can be found in: {output_path}')
+
+
+def __export_der_data_to_csv(
+        grid_data: fledge.data_interface.ElectricGridData,
+        der_data: fledge.data_interface.DERData,
+        output_path: str
+):
+    # Format all dataframes correctly for export
+    __format_grid_data_tables(grid_data)
+    __format_der_data_tables(der_data)
+
+    grid_data.electric_grid_ders.to_csv(
+        os.path.join(output_path, 'electric_grid_ders.csv'), index=False)
+    der_data.ders.to_csv(
+        os.path.join(output_path, 'der_models.csv'), index=False)
+    print('Note: Please copy the der_models.csv into the original der_models.csv and delete this file')

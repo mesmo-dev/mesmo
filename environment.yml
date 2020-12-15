@@ -4,58 +4,62 @@ channels:
   - defaults
 dependencies:
   - affine=2.3.0=py_0
-  - attrs=20.2.0=pyh9f0ad1d_0
-  - boost-cpp=1.74.0=hd4e6614_0
+  - attrs=20.3.0=pyhd3deb0d_0
+  - boost-cpp=1.74.0=h54f0996_1
   - brotlipy=0.7.0=py37h0013d47_1001
-  - bzip2=1.0.8=he774522_3
-  - ca-certificates=2020.10.14=0
-  - cairo=1.16.0=hf56ce5a_1006
-  - certifi=2020.6.20=py37haa95532_2
-  - cffi=1.14.3=py37hd6b71e5_1
-  - cfitsio=3.470=hbbe6aef_7
+  - bzip2=1.0.8=h8ffe710_4
+  - ca-certificates=2020.12.5=h5b45459_0
+  - cairo=1.16.0=hd28d34b_1006
+  - certifi=2020.12.5=py37h03978a9_0
+  - cffi=1.14.4=py37hd8e9650_1
+  - cfitsio=3.470=h0af3d06_7
   - chardet=3.0.4=py37hf50a25e_1008
   - click=7.1.2=pyh9f0ad1d_0
   - click-plugins=1.1.1=py_0
-  - cligj=0.7.0=py_0
+  - cligj=0.7.1=pyhd8ed1ab_0
   - contextily=1.0.1=py_0
-  - cryptography=3.2=py37hd6b71e5_0
+  - cryptography=3.3.1=py37hd8e9650_0
   - curl=7.71.1=h4b64cdc_8
+  - cvxpy=1.1.7=py37h1834ac0_0
+  - cvxpy-base=1.1.7=py37h414f9d2_0
   - cycler=0.10.0=py_2
+  - ecos=2.0.7.post1=py37hda49f71_3
   - expat=2.2.9=h33f27b4_2
-  - freetype=2.10.4=hd328e21_0
+  - freetype=2.10.4=h546665d_0
   - freexl=1.0.5=hd288d7e_1002
+  - future=0.18.2=py37h03978a9_2
   - geographiclib=1.50=py_0
   - geopy=2.0.0=pyh9f0ad1d_0
   - geos=3.8.1=he025d50_0
   - geotiff=1.6.0=h8884d1a_3
-  - gettext=0.19.8.1=hfbb10ce_1004
-  - glib=2.66.2=ha925a31_0
-  - hdf4=4.2.13=hf8e6fe8_1003
-  - hdf5=1.10.6=nompi_h89124ea_1110
+  - gettext=0.19.8.1=h1a89ca6_1005
+  - glib=2.66.3=h0e60522_1
+  - hdf4=4.2.13=h0e5069d_1004
+  - hdf5=1.10.6=nompi_h5268f04_1112
   - icu=67.1=h33f27b4_0
   - idna=2.10=pyh9f0ad1d_0
-  - intel-openmp=2020.2=254
+  - intel-openmp=2020.3=h57928b3_311
   - joblib=0.17.0=py_0
-  - jpeg=9d=he774522_0
-  - kealib=1.4.13=h3b59ab9_1
-  - kiwisolver=1.2.0=py37h1fb7aa8_1
-  - krb5=1.17.1=hc04afaa_3
-  - libblas=3.8.0=20_mkl
-  - libcblas=3.8.0=20_mkl
+  - jpeg=9d=h8ffe710_0
+  - kealib=1.4.14=ha3510f1_0
+  - kiwisolver=1.3.1=py37h8c56517_0
+  - krb5=1.17.2=hbae68bd_0
+  - libblas=3.8.0=21_mkl
+  - libcblas=3.8.0=21_mkl
   - libcurl=7.71.1=h4b64cdc_8
-  - libffi=3.2.1=ha925a31_1007
+  - libffi=3.3=h0e60522_2
   - libgdal=3.1.4=h0e5aa5a_0
-  - libglib=2.66.2=h31c07e1_0
+  - libglib=2.66.3=h8c8e623_1
   - libiconv=1.16=he774522_0
   - libkml=1.3.0=he9e54da_1012
-  - liblapack=3.8.0=20_mkl
+  - liblapack=3.8.0=21_mkl
   - libnetcdf=4.7.4=nompi_h2ee746f_106
-  - libpng=1.6.37=ha81a0f5_2
-  - libpq=12.3=hd9aa61d_2
+  - libpng=1.6.37=h1d00b33_2
+  - libpq=12.3=h4f54205_3
   - libspatialite=5.0.0=hf693123_0
   - libssh2=1.9.0=hb06d900_5
-  - libtiff=4.1.0=h885aae3_6
-  - libwebp-base=1.1.0=hfa6e2cd_3
+  - libtiff=4.1.0=hc10be44_6
+  - libwebp-base=1.1.0=h8ffe710_3
   - libxml2=2.9.10=h1006b36_2
   - lz4-c=1.9.2=h62dcd97_2
   - m2w64-gcc-libgfortran=5.3.0=6
@@ -63,44 +67,47 @@ dependencies:
   - m2w64-gcc-libs-core=5.3.0=7
   - m2w64-gmp=6.1.0=2
   - m2w64-libwinpthread-git=5.0.0.4634.697f757=2
-  - matplotlib-base=3.3.2=py37h64d6e1c_1
+  - matplotlib-base=3.3.3=py37h3379fd5_0
   - mercantile=1.1.6=pyh9f0ad1d_0
-  - mkl=2020.2=256
+  - mkl=2020.4=hb70f87d_311
   - msys2-conda-epoch=20160418=1
-  - numpy=1.19.2=py37he804e03_1
+  - numpy=1.19.4=py37hd20adf4_1
   - olefile=0.46=pyh9f0ad1d_1
-  - openjpeg=2.3.1=h57dd2e7_3
-  - openssl=1.1.1h=he774522_0
-  - pandas=1.1.3=py37ha925a31_0
+  - openjpeg=2.3.1=h48faf41_3
+  - openssl=1.1.1i=h8ffe710_0
+  - osqp=0.6.1=py37h3bbf574_2
+  - pandas=1.1.5=py37h08fd248_0
   - pcre=8.44=ha925a31_0
-  - pillow=8.0.1=py37hb71ed58_0
-  - pip=20.2.4=py37_0
-  - pixman=0.38.0=hfa6e2cd_1003
+  - pillow=8.0.1=py37hdec93a9_0
+  - pip=20.3.1=py37haa95532_0
+  - pixman=0.40.0=h8ffe710_0
   - poppler=0.89.0=h5d62644_1
   - poppler-data=0.4.10=0
-  - postgresql=12.3=he14cc48_2
+  - postgresql=12.3=h0f1a9bc_3
   - proj=7.1.1=h7d85306_3
   - pycparser=2.20=pyh9f0ad1d_2
-  - pyopenssl=19.1.0=py_1
+  - pyopenssl=20.0.0=pyhd8ed1ab_0
   - pyparsing=2.4.7=pyh9f0ad1d_0
   - pysocks=1.7.1=py37hf50a25e_2
   - python=3.7.9=h60c2a47_0
   - python-dateutil=2.8.1=py_0
   - python_abi=3.7=1_cp37m
-  - pytz=2020.1=py_0
-  - rasterio=1.1.7=py37hce843d0_1
-  - requests=2.24.0=pyh9f0ad1d_0
-  - setuptools=50.3.0=py37h9490d1a_1
+  - pytz=2020.4=pyhd8ed1ab_0
+  - rasterio=1.1.8=py37hc4b0cd6_0
+  - requests=2.25.0=pyhd3deb0d_0
+  - scipy=1.5.3=py37h6db1a17_0
+  - scs=2.1.2=py37hc76debe_2
+  - setuptools=51.0.0=py37haa95532_2
   - six=1.15.0=pyh9f0ad1d_0
   - snuggs=1.4.7=py_0
   - sqlite=3.33.0=h2a8f88b_0
-  - tiledb=2.1.2=hfabd47f_0
+  - tiledb=2.1.3=h968eb34_0
   - tk=8.6.10=he774522_1
-  - tornado=6.0.4=py37h4ab8f01_2
+  - tornado=6.1=py37hcc03f2d_0
   - urllib3=1.25.11=py_0
-  - vc=14.1=h0510ff6_4
-  - vs2015_runtime=14.16.27012=hf0eaf9b_3
-  - wheel=0.35.1=py_0
+  - vc=14.2=h21ff451_1
+  - vs2015_runtime=14.27.29016=h5e58377_2
+  - wheel=0.36.1=pyhd3eb1b0_0
   - win_inet_pton=1.1.0=py37hc8dfbb8_1
   - wincertstore=0.2=py37_0
   - xerces-c=3.2.3=ha925a31_1
@@ -112,29 +119,29 @@ dependencies:
     - colorcet==2.0.2
     - coolprop==6.2.1
     - decorator==4.4.2
-    - dill==0.3.2
-    - diskcache==5.0.3
+    - dill==0.3.3
+    - diskcache==5.1.0
     - dss-python==0.10.6
-    - future==0.18.2
-    - holoviews==1.13.5
-    - hvplot==0.6.0
-    - importlib-metadata==2.0.0
+    - gurobipy==9.1.0
+    - holoviews==1.14.0
+    - hvplot==0.7.0
+    - importlib-metadata==3.1.1
     - jinja2==2.11.2
-    - kaleido==0.0.3.post1
+    - kaleido==0.1.0.post1
     - markdown==3.3.3
     - markupsafe==1.1.1
     - multimethod==1.4
-    - multiprocess==0.70.10
-    - natsort==7.0.1
+    - multiprocess==0.70.11.1
+    - natsort==7.1.0
     - networkx==2.5
     - nose==1.3.7
-    - opencv-python==4.4.0.44
+    - opencv-python==4.4.0.46
     - opendssdirect-py==0.5.0
-    - packaging==20.4
-    - panel==0.10.0
+    - packaging==20.8
+    - panel==0.10.2
     - param==1.10.0
     - parameterized==0.7.4
-    - plotly==4.12.0
+    - plotly==4.14.1
     - ply==3.11
     - pvlib==0.8.0
     - pyct==0.4.8
@@ -143,8 +150,7 @@ dependencies:
     - pyviz-comms==0.7.6
     - pyyaml==5.3.1
     - retrying==1.3.3
-    - scipy==1.5.3
     - seaborn==0.11.0
-    - tqdm==4.51.0
+    - tqdm==4.54.1
     - typing-extensions==3.7.4.3
     - zipp==3.4.0

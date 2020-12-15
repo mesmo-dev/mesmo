@@ -1506,7 +1506,7 @@ class DERModelSet(object):
         self.der_models = (
             dict(zip(
                 self.der_names,
-                itertools.starmap(
+                fledge.utils.starmap(
                     make_der_model,
                     zip(itertools.repeat(der_data), self.der_names.to_list())
                 )

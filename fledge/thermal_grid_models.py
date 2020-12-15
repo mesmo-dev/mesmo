@@ -86,6 +86,19 @@ class ThermalGridModel(object):
             thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
         )
 
+        # Obtain nominal branch flow vector.
+        self.branch_flow_vector_reference = (
+            np.pi
+            * (thermal_grid_data.thermal_grid_lines.loc[:, 'diameter'].values / 2) ** 2
+            * thermal_grid_data.thermal_grid_lines.loc[:, 'maximum_velocity'].values
+        )
+
+        # Obtain nominal branch flow vector.
+        # TODO: Define proper node head reference vector.
+        self.node_head_vector_reference = (
+            np.ones(len(self.nodes))
+        )
+
         # Obtain line parameters.
         self.line_length_vector = thermal_grid_data.thermal_grid_lines['length'].values
         self.line_diameter_vector = thermal_grid_data.thermal_grid_lines['diameter'].values

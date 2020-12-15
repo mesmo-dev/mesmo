@@ -13,6 +13,7 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.plots
+import fledge.problems
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -246,7 +247,8 @@ def main(
     fledge.utils.log_time(f"baseline problem solution")
 
     # Get baseline results.
-    results_baseline = (
+    results_baseline = fledge.problems.Results()
+    results_baseline.update(
         linear_electric_grid_model.get_optimization_results(
             optimization_problem_baseline,
             power_flow_solution,
@@ -510,7 +512,8 @@ def main(
             )
 
             # Get aggregator sub-problem results.
-            results_aggregator = (
+            results_aggregator = fledge.problems.Results()
+            results_aggregator.update(
                 der_model_set.get_optimization_results(
                     optimization_problem_aggregator
                 )
@@ -537,7 +540,7 @@ def main(
                 )
             )
             results_aggregator.update(
-                fledge.data_interface.ResultsDict(
+                fledge.problems.Results(
                     der_active_power_vector=der_active_power_vector,
                     der_reactive_power_vector=der_reactive_power_vector,
                     der_thermal_power_vector=der_thermal_power_vector

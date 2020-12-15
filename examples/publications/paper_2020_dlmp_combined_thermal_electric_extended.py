@@ -12,6 +12,7 @@ import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.plots
+import fledge.problems
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -202,20 +203,18 @@ def main(
     optimization_problem.solve()
 
     # Obtain results.
-    in_per_unit = True
-    results = (
+    results = fledge.problems.Results()
+    results.update(
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
             power_flow_solution,
-            scenario_data.timesteps,
-            in_per_unit=in_per_unit
+            scenario_data.timesteps
         )
     )
     results.update(
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem,
-            scenario_data.timesteps,
-            in_per_unit=in_per_unit
+            scenario_data.timesteps
         )
     )
     results.update(
@@ -224,34 +223,15 @@ def main(
         )
     )
 
-    # Obtain additional results.
-    branch_power_vector_magnitude_per_unit = (
-        (
-            results['branch_power_magnitude_vector_1']
-            + results['branch_power_magnitude_vector_2']
-        ) / 2
-        # / electric_grid_model.branch_power_vector_magnitude_reference
-    )
-    branch_power_vector_magnitude_per_unit.loc['maximum', :] = branch_power_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit = (
-        np.abs(results['voltage_magnitude_vector'])
-        # / np.abs(electric_grid_model.node_voltage_vector_reference)
-    )
-    node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
-    results.update({
-        'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
-        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
-    })
-
     # Print results.
     print(results)
 
     # Store results as CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Obtain DLMPs.
-    dlmps = (
+    dlmps = fledge.problems.Results()
+    dlmps.update(
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
             price_data,
@@ -270,7 +250,11 @@ def main(
     print(dlmps)
 
     # Store DLMPs as CSV.
-    dlmps.to_csv(results_path)
+    dlmps.save(results_path)
+
+    # Plot results.
+    in_per_unit = False
+    results_suffix = '_per_unit' if in_per_unit else ''
 
     # Plot thermal grid DLMPs.
     thermal_grid_dlmp = (
@@ -329,7 +313,7 @@ def main(
         ax2 = plt.twinx(ax1)
         if der in thermal_grid_model.ders:
             ax2.plot(
-                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_thermal_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Thrm. pw.',
                 drawstyle='steps-post',
                 color='darkgrey',
@@ -337,7 +321,7 @@ def main(
             )
         if der in electric_grid_model.ders:
             ax2.plot(
-                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_active_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Active pw.',
                 drawstyle='steps-post',
                 color='black',
@@ -416,7 +400,7 @@ def main(
         ax2 = plt.twinx(ax1)
         if der in thermal_grid_model.ders:
             ax2.plot(
-                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_thermal_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Thrm. pw.',
                 drawstyle='steps-post',
                 color='darkgrey',
@@ -424,7 +408,7 @@ def main(
             )
         if der in electric_grid_model.ders:
             ax2.plot(
-                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_active_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Active pw.',
                 drawstyle='steps-post',
                 color='black',
@@ -558,14 +542,14 @@ def main(
     fledge.plots.plot_grid_line_utilization(
         electric_grid_model,
         electric_grid_graph,
-        branch_power_vector_magnitude_per_unit * 100.0,
+        results[f'branch_power_magnitude_vector_1{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
-        value_unit='%',
+        value_unit='%' if in_per_unit else 'kW',
     )
     fledge.plots.plot_grid_line_utilization(
         thermal_grid_model,
         thermal_grid_graph,
-        results['branch_flow_vector'] * (100.0 if in_per_unit else 1.0e-3),
+        results[f'branch_flow_vector{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
         value_unit='%' if in_per_unit else 'kW',
     )
@@ -574,7 +558,7 @@ def main(
     fledge.plots.plot_grid_node_utilization(
         electric_grid_model,
         electric_grid_graph,
-        node_voltage_vector_magnitude_per_unit,
+        results['node_voltage_magnitude_vector_per_unit'],
         results_path
     )
 

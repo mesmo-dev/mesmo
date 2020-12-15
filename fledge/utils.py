@@ -25,6 +25,81 @@ logger = fledge.config.get_logger(__name__)
 log_times = dict()
 
 
+class ObjectBase(object):
+    """FLEDGE object base class, which extends the Python object base class.
+
+    - Requires all attributes, i.e. parameters or object variables, to be defined with type declaration at the
+      beginning of the class definition. Setting a value to an attribute which has not been defined will raise an error.
+      This is to ensure consistent definition structure of FLEDGE classes.
+    - String representation of the object is the concatenation of the string representation of all its attributes.
+      Thus, printing the object will print all its attributes.
+
+    Example:
+
+        Attributes should be defined in the begging of the class definition as follows::
+
+            class ExampleClass(ObjectBase):
+
+                example_attribute1: str
+                example_attribute2: pd.DataFrame
+
+        In this case, ``example_attribute1`` and ``example_attribute2`` are valid attributes of the class.
+    """
+
+    def __setattr__(self, attribute_name, value):
+
+        # Assert that attribute name is valid.
+        # - Valid attributes are those which are defined as results class attributes with type declaration.
+        try:
+            assert attribute_name in typing.get_type_hints(type(self))
+        except AssertionError:
+            logger.error(
+                f"Cannot set invalid attribute '{attribute_name}'. "
+                f"Please ensure that the attribute has been defined with type declaration in the class definition."
+            )
+            raise
+
+        # Set attribute value.
+        super().__setattr__(attribute_name, value)
+
+    def __repr__(self) -> str:
+        """Obtain string representation."""
+
+        # Obtain attributes.
+        attributes = vars(self)
+
+        # Obtain representation string.
+        repr_string = ""
+        for attribute_name in attributes:
+            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
+
+        return repr_string
+
+
+class ResultsBase(ObjectBase):
+    """Results object base class."""
+
+    def __init__(
+            self,
+            **kwargs
+    ):
+
+        # Set all keyword arguments as attributes.
+        for attribute_name in kwargs:
+            self.__setattr__(attribute_name, kwargs[attribute_name])
+
+    def update(self, other_results):
+
+        # Obtain attributes of other results object.
+        attributes = vars(other_results)
+
+        # Update attributes.
+        # - Existing attributes are overwritten with values from the other results object.
+        for attribute_name in attributes:
+            if attributes[attribute_name] is not None:
+                self.__setattr__(attribute_name, attributes[attribute_name])
+
+
 class OptimizationProblem(object):
     """Optimization problem object for use with CVXPY."""
 
@@ -64,59 +139,6 @@ class OptimizationProblem(object):
         except AssertionError:
             logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
             raise
-
-
-class ResultsBase(object):
-    """Results object base class."""
-
-    def __init__(
-            self,
-            **kwargs
-    ):
-
-        # Set all keyword arguments as attributes.
-        for attribute_name in kwargs:
-            self.__setattr__(attribute_name, kwargs[attribute_name])
-
-    def __setattr__(self, attribute_name, value):
-
-        # Assert that attribute name is valid.
-        # - Valid attributes are those which are defined as results class attributes with type declaration.
-        try:
-            assert attribute_name in typing.get_type_hints(type(self))
-        except AssertionError:
-            logger.error(
-                f"Cannot set invalid results variable '{attribute_name}'. "
-                f"Please ensure that the variable has been defined as results class attribute."
-            )
-            raise
-
-        # Set attribute value.
-        super().__setattr__(attribute_name, value)
-
-    def __repr__(self) -> str:
-        """Obtain string representation of results."""
-
-        # Obtain attributes.
-        attributes = vars(self)
-
-        # Obtain representation string.
-        repr_string = ""
-        for attribute_name in attributes:
-            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
-
-        return repr_string
-
-    def update(self, other_results):
-
-        # Obtain attributes of other results object.
-        attributes = vars(other_results)
-
-        # Update attributes.
-        # - Existing attributes are overwritten with values from the other results object.
-        for attribute_name in attributes:
-            if attributes[attribute_name] is not None:
-                self.__setattr__(attribute_name, attributes[attribute_name])
 
 
 def starmap(

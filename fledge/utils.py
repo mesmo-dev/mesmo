@@ -94,6 +94,14 @@ class ResultsBase(ObjectBase):
         for attribute_name in kwargs:
             self.__setattr__(attribute_name, kwargs[attribute_name])
 
+    def __getitem__(self, key):
+        # Enable dict-like attribute getting.
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        # Enable dict-like attribute setting.
+        self.__setattr__(key, value)
+
     def update(
             self,
             other_results

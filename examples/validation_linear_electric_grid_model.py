@@ -8,6 +8,7 @@ import pandas as pd
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.problems
 import fledge.utils
 
 
@@ -295,36 +296,51 @@ def main():
     )
     linear_electric_grid_model_error = linear_electric_grid_model_error.round(2)
 
-    # Compile results.
-    results = fledge.data_interface.ResultsDict(
-        der_power_vector_active=der_power_vector_active,
-        der_power_vector_reactive=der_power_vector_reactive,
-        der_power_vector_active_change=der_power_vector_active_change,
-        der_power_vector_reactive_change=der_power_vector_reactive_change,
-        node_voltage_vector_power_flow=node_voltage_vector_power_flow,
-        node_voltage_vector_linear_model=node_voltage_vector_linear_model,
-        node_voltage_vector_magnitude_power_flow=node_voltage_vector_magnitude_power_flow,
-        node_voltage_vector_magnitude_linear_model=node_voltage_vector_magnitude_linear_model,
-        branch_power_vector_1_squared_power_flow=branch_power_vector_1_squared_power_flow,
-        branch_power_vector_1_squared_linear_model=branch_power_vector_1_squared_linear_model,
-        branch_power_vector_2_squared_power_flow=branch_power_vector_2_squared_power_flow,
-        branch_power_vector_2_squared_linear_model=branch_power_vector_2_squared_linear_model,
-        branch_power_vector_1_magnitude_power_flow=branch_power_vector_1_magnitude_power_flow,
-        branch_power_vector_1_magnitude_linear_model=branch_power_vector_1_magnitude_linear_model,
-        branch_power_vector_2_magnitude_power_flow=branch_power_vector_2_magnitude_power_flow,
-        branch_power_vector_2_magnitude_linear_model=branch_power_vector_2_magnitude_linear_model,
-        loss_active_power_flow=loss_active_power_flow,
-        loss_active_linear_model=loss_active_linear_model,
-        loss_reactive_power_flow=loss_reactive_power_flow,
-        loss_reactive_linear_model=loss_reactive_linear_model,
-        linear_electric_grid_model_error=linear_electric_grid_model_error
-    )
-
     # Print results.
-    print(results)
+    print(f"der_power_vector_active =\n{der_power_vector_active}")
+    print(f"der_power_vector_reactive =\n{der_power_vector_reactive}")
+    print(f"der_power_vector_active_change =\n{der_power_vector_active_change}")
+    print(f"der_power_vector_reactive_change =\n{der_power_vector_reactive_change}")
+    print(f"node_voltage_vector_power_flow =\n{node_voltage_vector_power_flow}")
+    print(f"node_voltage_vector_linear_model =\n{node_voltage_vector_linear_model}")
+    print(f"node_voltage_vector_magnitude_power_flow =\n{node_voltage_vector_magnitude_power_flow}")
+    print(f"node_voltage_vector_magnitude_linear_model =\n{node_voltage_vector_magnitude_linear_model}")
+    print(f"branch_power_vector_1_squared_power_flow =\n{branch_power_vector_1_squared_power_flow}")
+    print(f"branch_power_vector_1_squared_linear_model =\n{branch_power_vector_1_squared_linear_model}")
+    print(f"branch_power_vector_2_squared_power_flow =\n{branch_power_vector_2_squared_power_flow}")
+    print(f"branch_power_vector_2_squared_linear_model =\n{branch_power_vector_2_squared_linear_model}")
+    print(f"branch_power_vector_1_magnitude_power_flow =\n{branch_power_vector_1_magnitude_power_flow}")
+    print(f"branch_power_vector_1_magnitude_linear_model =\n{branch_power_vector_1_magnitude_linear_model}")
+    print(f"branch_power_vector_2_magnitude_power_flow =\n{branch_power_vector_2_magnitude_power_flow}")
+    print(f"branch_power_vector_2_magnitude_linear_model =\n{branch_power_vector_2_magnitude_linear_model}")
+    print(f"loss_active_power_flow =\n{loss_active_power_flow}")
+    print(f"loss_active_linear_model =\n{loss_active_linear_model}")
+    print(f"loss_reactive_power_flow =\n{loss_reactive_power_flow}")
+    print(f"loss_reactive_linear_model =\n{loss_reactive_linear_model}")
+    print(f"linear_electric_grid_model_error =\n{linear_electric_grid_model_error}")
 
     # Store results as CSV.
-    results.to_csv(results_path)
+    der_power_vector_active.to_csv(os.path.join(results_path, 'der_power_vector_active.csv'))
+    der_power_vector_reactive.to_csv(os.path.join(results_path, 'der_power_vector_reactive.csv'))
+    der_power_vector_active_change.to_csv(os.path.join(results_path, 'der_power_vector_active_change.csv'))
+    der_power_vector_reactive_change.to_csv(os.path.join(results_path, 'der_power_vector_reactive_change.csv'))
+    node_voltage_vector_power_flow.to_csv(os.path.join(results_path, 'node_voltage_vector_power_flow.csv'))
+    node_voltage_vector_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_linear_model.csv'))
+    node_voltage_vector_magnitude_power_flow.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_power_flow.csv'))
+    node_voltage_vector_magnitude_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_linear_model.csv'))
+    branch_power_vector_1_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_power_flow.csv'))
+    branch_power_vector_1_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_linear_model.csv'))
+    branch_power_vector_2_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_power_flow.csv'))
+    branch_power_vector_2_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_linear_model.csv'))
+    branch_power_vector_1_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_power_flow.csv'))
+    branch_power_vector_1_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_linear_model.csv'))
+    branch_power_vector_2_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_power_flow.csv'))
+    branch_power_vector_2_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_linear_model.csv'))
+    loss_active_power_flow.to_csv(os.path.join(results_path, 'loss_active_power_flow.csv'))
+    loss_active_linear_model.to_csv(os.path.join(results_path, 'loss_active_linear_model.csv'))
+    loss_reactive_power_flow.to_csv(os.path.join(results_path, 'loss_reactive_power_flow.csv'))
+    loss_reactive_linear_model.to_csv(os.path.join(results_path, 'loss_reactive_linear_model.csv'))
+    linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))
 
     # Plot results.
 

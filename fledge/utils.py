@@ -2,7 +2,9 @@
 
 import cvxpy as cp
 import datetime
+import dill
 import functools
+import glob
 import itertools
 import logging
 import numpy as np
@@ -23,6 +25,150 @@ logger = fledge.config.get_logger(__name__)
 
 # Instantiate dictionary for execution time logging.
 log_times = dict()
+
+
+class ObjectBase(object):
+    """FLEDGE object base class, which extends the Python object base class.
+
+    - Requires all attributes, i.e. parameters or object variables, to be defined with type declaration at the
+      beginning of the class definition. Setting a value to an attribute which has not been defined will raise an error.
+      This is to ensure consistent definition structure of FLEDGE classes.
+    - String representation of the object is the concatenation of the string representation of all its attributes.
+      Thus, printing the object will print all its attributes.
+
+    Example:
+
+        Attributes should be defined in the beginning of the class definition as follows::
+
+            class ExampleClass(ObjectBase):
+
+                example_attribute1: str
+                example_attribute2: pd.DataFrame
+
+        In this case, ``example_attribute1`` and ``example_attribute2`` are valid attributes of the class.
+    """
+
+    def __setattr__(
+            self,
+            attribute_name,
+            value
+    ):
+
+        # Assert that attribute name is valid.
+        # - Valid attributes are those which are defined as results class attributes with type declaration.
+        try:
+            assert attribute_name in typing.get_type_hints(type(self))
+        except AssertionError:
+            logger.error(
+                f"Cannot set invalid attribute '{attribute_name}'. "
+                f"Please ensure that the attribute has been defined with type declaration in the class definition."
+            )
+            raise
+
+        # Set attribute value.
+        super().__setattr__(attribute_name, value)
+
+    def __repr__(self) -> str:
+        """Obtain string representation."""
+
+        # Obtain attributes.
+        attributes = vars(self)
+
+        # Obtain representation string.
+        repr_string = ""
+        for attribute_name in attributes:
+            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
+
+        return repr_string
+
+
+class ResultsBase(ObjectBase):
+    """Results object base class."""
+
+    def __init__(
+            self,
+            **kwargs
+    ):
+
+        # Set all keyword arguments as attributes.
+        for attribute_name in kwargs:
+            self.__setattr__(attribute_name, kwargs[attribute_name])
+
+    def __getitem__(self, key):
+        # Enable dict-like attribute getting.
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        # Enable dict-like attribute setting.
+        self.__setattr__(key, value)
+
+    def update(
+            self,
+            other_results
+    ):
+
+        # Obtain attributes of other results object.
+        attributes = vars(other_results)
+
+        # Update attributes.
+        # - Existing attributes are overwritten with values from the other results object.
+        for attribute_name in attributes:
+            if attributes[attribute_name] is not None:
+                self.__setattr__(attribute_name, attributes[attribute_name])
+
+    def save(
+            self,
+            results_path: str
+    ):
+        """Store results to files at given results path.
+
+        - Each results variable / attribute will be stored as separate file with the attribute name as file name.
+        - Pandas Series / DataFrame are stored to CSV.
+        - Other objects are stored to pickle binary file (PKL).
+        """
+
+        # Obtain results attributes.
+        attributes = vars(self)
+
+        # Store each attribute to a separate file.
+        for attribute_name in attributes:
+            if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
+                # Pandas Series / DataFrame are stored to CSV.
+                attributes[attribute_name].to_csv(os.path.join(results_path, f'{attribute_name}.csv'))
+            else:
+                # Other objects are stored to pickle binary file (PKL).
+                with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
+                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+
+    def load(
+            self,
+            results_path: str
+    ):
+        """Load results from given path."""
+
+        # Obtain all CSV and PKL files at results path.
+        files = glob.glob(os.path.join(results_path, '*.csv')) + glob.glob(os.path.join(results_path, '*.pkl'))
+
+        # Load all files which correspond to valid attributes.
+        for file in files:
+
+            # Obtain file extension / attribute name.
+            file_extension = os.path.splitext(file)[1]
+            attribute_name = os.path.basename(os.path.splitext(file)[0])
+
+            # Load file and set attribute value.
+            if attribute_name in typing.get_type_hints(type(self)):
+                if file_extension.lower() == '.csv':
+                    value = pd.read_csv(file)
+                else:
+                    with open(file, 'rb') as input_file:
+                        value = dill.load(input_file)
+                self.__setattr__(attribute_name, value)
+            else:
+                # Files which do not match any valid results attribute are not loaded.
+                logger.debug(f"Skipping results file which does match any valid results attribute: {file}")
+
+        return self
 
 
 class OptimizationProblem(object):

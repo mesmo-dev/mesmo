@@ -9,6 +9,7 @@ import fledge.data_interface
 import fledge.electric_grid_models
 import fledge.utils
 
+import fledge.problems
 
 def main():
 
@@ -17,7 +18,7 @@ def main():
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    # fledge.data_interface.recreate_database()
 
     # Obtain electric grid model.
     # - The ElectricGridModelDefault object defines index sets for node names / branch names / der names / phases /

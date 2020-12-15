@@ -2,6 +2,7 @@
 
 import cvxpy as cp
 import datetime
+import dill
 import functools
 import itertools
 import logging
@@ -105,6 +106,30 @@ class ResultsBase(ObjectBase):
         for attribute_name in attributes:
             if attributes[attribute_name] is not None:
                 self.__setattr__(attribute_name, attributes[attribute_name])
+
+    def save(
+            self,
+            results_path: str
+    ):
+        """Store results to files at given results path.
+
+        - Each results variable / attribute will be stored as separate file with the attribute name as file name.
+        - Pandas Series / DataFrame are stored to CSV.
+        - Other objects are stored to pickle binary file (PKL).
+        """
+
+        # Obtain results attributes.
+        attributes = vars(self)
+
+        # Store each attribute to a separate file.
+        for attribute_name in attributes:
+            if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
+                # Pandas Series / DataFrame are stored to CSV.
+                attributes[attribute_name].to_csv(os.path.join(results_path, f'{attribute_name}.csv'))
+            else:
+                # Other objects are stored to pickle binary file (PKL).
+                with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
+                    dill.dump(attributes[attribute_name], output_file)
 
 
 class OptimizationProblem(object):

@@ -932,7 +932,11 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         )
         self.output_minimum_timeseries = (
             pd.concat([
-                pd.Series(0.0, index=self.timesteps, name='charged_energy'),
+                pd.Series((
+                    -1.0
+                    * der_data.der_definitions[der.at['bidirectional_definition_index']].loc[:, 'value'].copy()
+                    * der.at['vehicle_energy_demand']
+                ), index=self.timesteps, name='charged_energy'),
                 pd.Series(-1.0 * der.at['maximum_active_power'], index=self.timesteps, name='active_power'),
                 pd.Series(-np.inf, index=self.timesteps, name='reactive_power')
             ], axis='columns')

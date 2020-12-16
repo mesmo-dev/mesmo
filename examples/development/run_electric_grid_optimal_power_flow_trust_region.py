@@ -289,9 +289,7 @@ def main():
     results = (
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
-            power_flow_solutions[0],
-            in_per_unit=True,
-            with_mean=True
+            power_flow_solutions[0]
         )
     )
 
@@ -299,7 +297,7 @@ def main():
     print(results)
 
     # Store results to CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Print results path.
     fledge.utils.launch(results_path)

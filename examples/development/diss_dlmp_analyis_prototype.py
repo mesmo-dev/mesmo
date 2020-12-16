@@ -208,13 +208,12 @@ def run_centralized_problem(
         return [None, None, None]
 
     # Obtain results.
-    results = (
+    results = fledge.problems.Results()
+    results.update(
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
             power_flow_solution,
             scenario_data.timesteps,
-            in_per_unit=True,
-            with_mean=True
         )
     )
     results.update(
@@ -227,7 +226,7 @@ def run_centralized_problem(
     print(results)
 
     # Store results as CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Obtain DLMPs.
     dlmps = (
@@ -242,7 +241,7 @@ def run_centralized_problem(
     print(dlmps)
 
     # Store DLMPs as CSV.
-    dlmps.to_csv(results_path)
+    dlmps.save(results_path)
 
     # Print results path.
     # fledge.utils.launch(results_path)
@@ -345,16 +344,17 @@ def run_decentralized_problem(
         return [None, None]
 
     # Obtain results.
-    results = (
+    results = fledge.problems.Results()
+    results.update(
         der_model_set.get_optimization_results(
             optimization_problem
         )
     )
-
     # Print results.
     print(results)
-    # Store results as CSV.
-    results.to_csv(results_path)
+
+    # Store results to CSV.
+    results.save(results_path)
 
     # Print results path.
     # fledge.utils.launch(results_path)
@@ -411,7 +411,7 @@ def run_nominal_operation(
     # Print results.
     print(results)
     # Store results as CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     return results
 

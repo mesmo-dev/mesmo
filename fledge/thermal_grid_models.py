@@ -28,6 +28,8 @@ class ThermalGridModel(object):
     branch_node_incidence_matrix: scipy.sparse.spmatrix
     der_node_incidence_matrix: scipy.sparse.spmatrix
     der_thermal_power_vector_reference: np.ndarray
+    branch_flow_vector_reference: np.ndarray
+    node_head_vector_reference: np.ndarray
 
     def __init__(
             self,
@@ -84,6 +86,19 @@ class ThermalGridModel(object):
         # Obtain DER nominal thermal power vector.
         self.der_thermal_power_vector_reference = (
             thermal_grid_data.thermal_grid_ders.loc[:, 'thermal_power_nominal'].values
+        )
+
+        # Obtain nominal branch flow vector.
+        self.branch_flow_vector_reference = (
+            np.pi
+            * (thermal_grid_data.thermal_grid_lines.loc[:, 'diameter'].values / 2) ** 2
+            * thermal_grid_data.thermal_grid_lines.loc[:, 'maximum_velocity'].values
+        )
+
+        # Obtain nominal branch flow vector.
+        # TODO: Define proper node head reference vector.
+        self.node_head_vector_reference = (
+            np.ones(len(self.nodes))
         )
 
         # Obtain line parameters.
@@ -184,7 +199,7 @@ class ThermalPowerFlowSolution(object):
     branch_head_vector: np.ndarray
     source_head: np.float
     node_head_vector: np.ndarray
-    source_electric_power_secondary_pump: np.float
+    pump_power: np.float
     source_electric_power_cooling_plant: np.float
 
     @multimethod
@@ -340,7 +355,7 @@ class ThermalPowerFlowSolution(object):
         )
 
         # Obtain secondary pump / cooling plant electric power.
-        self.source_electric_power_secondary_pump = (
+        self.pump_power = (
             (
                 2.0 * self.source_head
                 + thermal_grid_model.energy_transfer_station_head_loss
@@ -356,6 +371,33 @@ class ThermalPowerFlowSolution(object):
             * fledge.config.water_density
             / thermal_grid_model.cooling_plant_efficiency
         )
+
+
+class ThermalGridOperationResults(fledge.utils.ResultsBase):
+
+    thermal_grid_model: ThermalGridModel
+    der_thermal_power_vector: pd.DataFrame
+    der_thermal_power_vector_per_unit: pd.DataFrame
+    node_head_vector: pd.DataFrame
+    node_head_vector_per_unit: pd.DataFrame
+    branch_flow_vector: pd.DataFrame
+    branch_flow_vector_per_unit: pd.DataFrame
+    pump_power: pd.DataFrame
+
+
+class ThermalGridDLMPResults(fledge.utils.ResultsBase):
+
+    thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_pump_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_node_thermal_power: pd.DataFrame
+    thermal_grid_energy_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_head_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_congestion_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_pump_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame
+    thermal_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
 class LinearThermalGridModel(object):
@@ -607,7 +649,7 @@ class LinearThermalGridModel(object):
             optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
             timesteps=pd.Index([0], name='timestep')
-    ) -> fledge.data_interface.ResultsDict:
+    ) -> ThermalGridDLMPResults:
 
         # Obtain duals.
         node_head_vector_minimum_dual = (
@@ -765,7 +807,7 @@ class LinearThermalGridModel(object):
             ]
         )
 
-        return fledge.data_interface.ResultsDict(
+        return ThermalGridDLMPResults(
             thermal_grid_energy_dlmp_node_thermal_power=thermal_grid_energy_dlmp_node_thermal_power,
             thermal_grid_head_dlmp_node_thermal_power=thermal_grid_head_dlmp_node_thermal_power,
             thermal_grid_congestion_dlmp_node_thermal_power=thermal_grid_congestion_dlmp_node_thermal_power,
@@ -782,10 +824,8 @@ class LinearThermalGridModel(object):
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            timesteps=pd.Index([0], name='timestep'),
-            in_per_unit=False,
-            with_mean=False,
-    ) -> fledge.data_interface.ResultsDict:
+            timesteps=pd.Index([0], name='timestep')
+    ) -> ThermalGridOperationResults:
 
         # Instantiate results variables.
         der_thermal_power_vector = (
@@ -818,38 +858,26 @@ class LinearThermalGridModel(object):
         )
 
         # Convert in per-unit values.
-        # TODO: Revise per unit references.
-        if in_per_unit:
-            der_thermal_power_vector = (
-                der_thermal_power_vector
-                / self.thermal_grid_model.der_thermal_power_vector_reference
-            )
-            branch_flow_vector = (
-                branch_flow_vector
-                / self.thermal_power_flow_solution.branch_flow_vector
-            )
-            node_head_vector = (
-                node_head_vector
-                / self.thermal_power_flow_solution.node_head_vector
-            )
-            node_head_vector.iloc[
-                :,
-                fledge.utils.get_index(self.thermal_grid_model.nodes, node_type='source')
-            ] = 0.0  # Reset source head.
-            pump_power = (
-                pump_power
-                / self.thermal_power_flow_solution.source_electric_power_secondary_pump
-            )
+        der_thermal_power_vector_per_unit = (
+            der_thermal_power_vector
+            / self.thermal_grid_model.der_thermal_power_vector_reference
+        )
+        node_head_vector_per_unit = (
+            node_head_vector
+            / self.thermal_grid_model.node_head_vector_reference
+        )
+        branch_flow_vector_per_unit = (
+            branch_flow_vector
+            / self.thermal_grid_model.branch_flow_vector_reference
+        )
 
-        # Add mean column.
-        if with_mean:
-            der_thermal_power_vector['mean'] = der_thermal_power_vector.mean(axis=1)
-            branch_flow_vector['mean'] = branch_flow_vector.mean(axis=1)
-            node_head_vector['mean'] = node_head_vector.mean(axis=1)
-
-        return fledge.data_interface.ResultsDict(
+        return ThermalGridOperationResults(
+            thermal_grid_model=self.thermal_grid_model,
             der_thermal_power_vector=der_thermal_power_vector,
+            der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit,
             node_head_vector=node_head_vector,
+            node_head_vector_per_unit=node_head_vector_per_unit,
             branch_flow_vector=branch_flow_vector,
+            branch_flow_vector_per_unit=branch_flow_vector_per_unit,
             pump_power=pump_power
         )

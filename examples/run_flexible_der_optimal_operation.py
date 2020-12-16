@@ -59,7 +59,7 @@ def main():
     )
 
     # Store results to CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Plot results.
     for output in flexible_der_model.outputs:

@@ -10,6 +10,7 @@ import fledge.config
 import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
+import fledge.problems
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -107,21 +108,18 @@ def main():
     optimization_problem.solve()
 
     # Obtain results.
-    results = (
+    results = fledge.problems.Results()
+    results.update(
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
             power_flow_solution,
-            scenario_data.timesteps,
-            in_per_unit=False,
-            with_mean=True
+            scenario_data.timesteps
         )
     )
     results.update(
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem,
-            scenario_data.timesteps,
-            in_per_unit=False,
-            with_mean=True
+            scenario_data.timesteps
         )
     )
     results.update(
@@ -134,10 +132,11 @@ def main():
     print(results)
 
     # Store results to CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Obtain DLMPs.
-    dlmps = (
+    dlmps = fledge.problems.Results()
+    dlmps.update(
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
             price_data,
@@ -156,7 +155,7 @@ def main():
     print(dlmps)
 
     # Store DLMPs to CSV.
-    dlmps.to_csv(results_path)
+    dlmps.save(results_path)
 
     # Print results path.
     fledge.utils.launch(results_path)

@@ -34,6 +34,14 @@ class DERModel(object):
     # TODO: Define method templates.
 
 
+class DERModelOperationResults(fledge.utils.ResultsBase):
+
+    der_model: DERModel
+    state_vector: pd.DataFrame
+    control_vector: pd.DataFrame
+    output_vector: pd.DataFrame
+
+
 class FixedDERModel(DERModel):
     """Fixed DER model object."""
 
@@ -146,10 +154,12 @@ class FixedDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
-    ) -> fledge.data_interface.ResultsDict:
+    ) -> DERModelOperationResults:
 
-        # Fixed DERs have no optimization variables, therefore return empty results.
-        return fledge.data_interface.ResultsDict()
+        # Fixed DERs have no optimization variables, therefore return empty results, except for DER model itself.
+        return DERModelOperationResults(
+            der_model=self
+        )
 
 
 class FixedLoadModel(FixedDERModel):
@@ -617,7 +627,7 @@ class FlexibleDERModel(DERModel):
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
-    ) -> fledge.data_interface.ResultsDict:
+    ) -> DERModelOperationResults:
 
         # Obtain results.
         state_vector = (
@@ -642,7 +652,8 @@ class FlexibleDERModel(DERModel):
             )
         )
 
-        return fledge.data_interface.ResultsDict(
+        return DERModelOperationResults(
+            der_model=self,
             state_vector=state_vector,
             control_vector=control_vector,
             output_vector=output_vector
@@ -1472,8 +1483,7 @@ class CoolingPlantModel(FlexibleDERModel):
         )
 
 
-class DERModelSet(object):
-    """DER model set object."""
+class DERModelSetBase:
 
     timesteps: pd.Index
     der_names: pd.Index
@@ -1485,6 +1495,19 @@ class DERModelSet(object):
     states: pd.Index
     controls: pd.Index
     outputs: pd.Index
+
+
+class DERModelSetOperationResults(fledge.utils.ResultsBase):
+
+    der_model_set: DERModelSetBase
+    state_vector: pd.DataFrame
+    control_vector: pd.DataFrame
+    output_vector: pd.DataFrame
+    # TODO: Add output constraint and disturbance timeseries.
+
+
+class DERModelSet(DERModelSetBase):
+    """DER model set object."""
 
     def __init__(
             self,
@@ -1624,7 +1647,7 @@ class DERModelSet(object):
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
-    ) -> fledge.data_interface.ResultsDict:
+    ) -> DERModelSetOperationResults:
 
         # Instantiate results variables.
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
@@ -1643,7 +1666,8 @@ class DERModelSet(object):
                 optimization_problem.output_vector[der_name].value
             )
 
-        return fledge.data_interface.ResultsDict(
+        return DERModelSetOperationResults(
+            der_model_set=self,
             state_vector=state_vector,
             control_vector=control_vector,
             output_vector=output_vector

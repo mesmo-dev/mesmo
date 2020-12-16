@@ -16,7 +16,7 @@ def run_nominal_operation_problem(
         print_results: bool = False,
         store_results: bool = True,
         results_path: str = None
-) -> fledge.data_interface.ResultsDict:
+) -> fledge.problems.Results:
     """Set up and solve a nominal operation problem for the given scenario."""
 
     # Instantiate results directory.
@@ -34,7 +34,7 @@ def run_nominal_operation_problem(
     operation_problem.solve()
 
     # Obtain results.
-    results = operation_problem.results
+    results = operation_problem.get_results()
 
     # Print results.
     if print_results:
@@ -42,7 +42,7 @@ def run_nominal_operation_problem(
 
     # Store results as CSV.
     if store_results:
-        results.to_csv(results_path)
+        results.save(results_path)
         logger.info(f"Results are stored in: {results_path}")
 
     return results
@@ -54,7 +54,7 @@ def run_optimal_operation_problem(
         print_results: bool = False,
         store_results: bool = True,
         results_path: str = None
-) -> fledge.data_interface.ResultsDict:
+) -> fledge.problems.Results:
     """Set up and solve an optimal operation problem for the given scenario."""
 
     # Instantiate results directory.
@@ -80,7 +80,7 @@ def run_optimal_operation_problem(
 
     # Store results as CSV.
     if store_results:
-        results.to_csv(results_path)
+        results.save(results_path)
         logger.info(f"Results are stored in: {results_path}")
 
     return results

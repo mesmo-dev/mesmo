@@ -14,14 +14,12 @@ import fledge.config
 path_to_data = fledge.config.config['paths']['data']
 
 
-def generate_der_input_data(
+def generate_fixed_load_der_input_data(
         scenario_name: str,
-        path_to_der_schedules_data: str
+        path_to_der_schedules_data: str,
+        num_of_loads=np.inf
 ):
-    num_of_loads = 12
-    der_type = 'fixed_load'
-    definition_type = 'schedule'
-    power_factor = 0.95
+    # per default, this function generates a load profile at every node (num_of_loads=inf)
 
     der_schedules = __load_data(path_to_der_schedules_data)
 
@@ -40,8 +38,12 @@ def generate_der_input_data(
     # Drop / remove all data from dataframe (if exist)
     der_data.ders.drop(der_data.ders.index, inplace=True)
     grid_data.electric_grid_ders.drop(grid_data.electric_grid_ders.index, inplace=True)
+    print('Note: All original DERs were deleted from the electric grid model scenario.')
 
     counter = 1
+    der_type = 'fixed_load'
+    definition_type = 'schedule'
+    power_factor = 0.95
     source_node_name = grid_data.electric_grid['source_node_name']
     for node_name in nodes['node_name']:
         if counter > num_of_loads:
@@ -585,4 +587,4 @@ def __export_der_data_to_csv(
         os.path.join(output_path, 'electric_grid_ders.csv'), index=False)
     der_data.ders.to_csv(
         os.path.join(output_path, 'der_models.csv'), index=False)
-    print('Note: Please copy the der_models.csv into the original der_models.csv and delete this file')
+    print(f'Done exporting to: {output_path}')

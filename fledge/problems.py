@@ -159,8 +159,8 @@ class NominalOperationProblem(object):
                 branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1
                 branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2
                 loss.loc[timestep, :] = power_flow_solution.loss
-            der_active_power_vector = np.real(der_power_vector)
-            der_reactive_power_vector = np.imag(der_power_vector)
+            der_active_power_vector = der_power_vector.apply(np.real)
+            der_reactive_power_vector = der_power_vector.apply(np.imag)
             node_voltage_magnitude_vector = np.abs(node_voltage_vector)
             branch_power_magnitude_vector_1 = np.abs(branch_power_vector_1)
             branch_power_magnitude_vector_2 = np.abs(branch_power_vector_2)

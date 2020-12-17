@@ -164,8 +164,8 @@ class NominalOperationProblem(object):
             node_voltage_magnitude_vector = np.abs(node_voltage_vector)
             branch_power_magnitude_vector_1 = np.abs(branch_power_vector_1)
             branch_power_magnitude_vector_2 = np.abs(branch_power_vector_2)
-            loss_active = np.real(loss)
-            loss_reactive = np.imag(loss)
+            loss_active = loss.apply(np.real)
+            loss_reactive = loss.apply(np.imag)
         if self.thermal_grid_model is not None:
             for timestep in self.timesteps:
                 thermal_power_flow_solution = thermal_power_flow_solutions[timestep]

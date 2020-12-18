@@ -209,7 +209,8 @@ class OptimizationProblem(object):
                 if fledge.config.config['optimization']['solver_name'] is not None
                 else None
             ),
-            verbose=fledge.config.config['optimization']['show_solver_output']
+            verbose=fledge.config.config['optimization']['show_solver_output'],
+            **fledge.config.solver_parameters
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.

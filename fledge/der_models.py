@@ -926,8 +926,13 @@ class FlexibleEVChargerModel(FlexibleDERModel):
                     der_data.der_definitions[der.at['occupancy_definition_index']].loc[:, 'value'].copy()
                     * der.at['vehicle_energy_demand']
                 ), index=self.timesteps, name='charged_energy'),
-                pd.Series(0.0, index=self.timesteps, name='active_power'),
-                pd.Series(0.0, index=self.timesteps, name='reactive_power')
+                pd.Series((
+                    # TODO: Revise unit / scaling for bidirectional timeseries.
+                    der_data.der_definitions[der.at['bidirectional_definition_index']].loc[:, 'value'].copy()
+                    * der.at['maximum_active_power']
+                    / der_data.der_definitions[der.at['bidirectional_definition_index']].loc[:, 'value'].max()
+                ), index=self.timesteps, name='active_power'),
+                pd.Series(+np.inf, index=self.timesteps, name='reactive_power')
             ], axis='columns')
         )
         self.output_minimum_timeseries = (

@@ -1,5 +1,6 @@
 """Utility functions module."""
 
+import copy
 import cvxpy as cp
 import datetime
 import dill
@@ -80,6 +81,13 @@ class ObjectBase(object):
             repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
 
         return repr_string
+
+    def copy(self):
+        """Return a copy of this object. A new object will be created with a copy of the calling object’s attributes.
+        Modifications to the attributes of the copy will not be reflected in the original object.
+        """
+
+        return copy.deepcopy(self)
 
 
 class ResultsBase(ObjectBase):

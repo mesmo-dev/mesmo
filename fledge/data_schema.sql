@@ -23,6 +23,8 @@ CREATE TABLE der_ev_chargers (
     departure_definition_name TEXT,
     occupancy_definition_type TEXT,
     occupancy_definition_name TEXT,
+    bidirectional_definition_type TEXT,
+    bidirectional_definition_name TEXT,
     vehicle_energy_demand TEXT,
     maximum_active_power TEXT,
     PRIMARY KEY(definition_name)

@@ -634,12 +634,17 @@ class DERData(object):
                     self.der_definitions[definition_index].at['occupancy_definition_type'],
                     self.der_definitions[definition_index].at['occupancy_definition_name']
                 )
+                self.der_definitions[definition_index].at['bidirectional_definition_index'] = (
+                    self.der_definitions[definition_index].at['bidirectional_definition_type'],
+                    self.der_definitions[definition_index].at['bidirectional_definition_name']
+                )
 
                 # Append arrival / occupancy timeseries / schedule to additional definitions.
                 additional_der_definitions.update({
                     self.der_definitions[definition_index].at['arrival_definition_index']: None,
                     self.der_definitions[definition_index].at['departure_definition_index']: None,
-                    self.der_definitions[definition_index].at['occupancy_definition_index']: None
+                    self.der_definitions[definition_index].at['occupancy_definition_index']: None,
+                    self.der_definitions[definition_index].at['bidirectional_definition_index']: None
                 })
 
         # Append additional DER definitions.

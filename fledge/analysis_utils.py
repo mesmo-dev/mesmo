@@ -15,7 +15,7 @@ path_to_data = fledge.config.config['paths']['data']
 
 
 def generate_fixed_load_der_input_data(
-        scenario_name: str,
+        scenario_names_list: list,
         path_to_der_schedules_data: str,
         num_of_loads=np.inf
 ):
@@ -24,68 +24,83 @@ def generate_fixed_load_der_input_data(
     der_schedules = __load_data(path_to_der_schedules_data)
 
     # load scenario data to get the relevant time period and grid data (nodes)
-    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+    for scenario_name in scenario_names_list:
+        print(f'Adding DERs to scenario {scenario_name}')
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
 
-    # in der_schedules, there is a unique timeseries for every week of the year with the week number as identifier
-    # and related to the season
-    [season, weeknums] = __get_season_of_scenario_data(scenario_data)
+        # in der_schedules, there is a unique timeseries for every week of the year with the week number as identifier
+        # and related to the season
+        [season, weeknums] = __get_season_of_scenario_data(scenario_data)
 
-    grid_data = fledge.data_interface.ElectricGridData(scenario_name)
-    nodes = grid_data.electric_grid_nodes
+        grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+        electric_grid_name = grid_data.electric_grid.electric_grid_name
+        nodes = grid_data.electric_grid_nodes
 
-    der_data = fledge.data_interface.DERData(scenario_name)
+        der_data = fledge.data_interface.DERData(scenario_name)
 
+        # Drop / remove all data from dataframe (if exist)
+        grid_data.electric_grid_ders.drop(grid_data.electric_grid_ders.index, inplace=True)
+        print('Note: All original DERs were deleted from the electric grid model scenario.')
+
+        counter = 1
+        der_type = 'fixed_load'
+        definition_type = 'schedule'
+        power_factor = 0.95
+        source_node_name = grid_data.electric_grid['source_node_name']
+        for node_name in nodes['node_name']:
+            if counter > num_of_loads:
+                break
+            # don't add a new der to the source node
+            if node_name == source_node_name:
+                continue
+
+            der_name = 'Load R' + node_name
+            # TODO: loop over all phases
+            der_model_name = __pick_random_consumer_type() + '_' + season + '_' + random.choice(weeknums) + '_phase_0'
+
+            active_power_vals = der_schedules.loc[der_schedules['definition_name'] == der_model_name, :]
+            active_power_vals_aggregated = []
+            for i in range(0, len(active_power_vals), 60):
+                for val in scenario_data.timesteps.weekday.unique():
+                    if (str(val) == active_power_vals[i:i+60]['time_period'].str[1:2]).any():
+                        active_power_vals_aggregated.append(np.mean(active_power_vals[i:i+60]['value']))
+
+            active_power_nominal = (-1) * max(active_power_vals_aggregated)
+            reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
+
+            # Add to electric grid ders dataframe
+            grid_data.electric_grid_ders = grid_data.electric_grid_ders.append({
+                'electric_grid_name': electric_grid_name,
+                'der_name': der_name,
+                'der_type': der_type,
+                'der_model_name': der_model_name,
+                'node_name': node_name,
+                'is_phase_1_connected': '1',
+                'is_phase_2_connected': '0',
+                'is_phase_3_connected': '0',
+                'connection': 'wye',
+                'active_power_nominal': active_power_nominal,
+                'reactive_power_nominal': reactive_power_nominal,
+                'in_service': '1'
+            }, ignore_index=True)
+
+            counter += 1
+
+        __export_electric_grid_der_to_csv(grid_data, output_path=os.path.join(path_to_data, scenario_name))
+
+    # Using the last scenario_name of the loop (it does not matter)
+    # der_models.csv is only generated once for all possible der_mode_names
     # Drop / remove all data from dataframe (if exist)
     der_data.ders.drop(der_data.ders.index, inplace=True)
-    grid_data.electric_grid_ders.drop(grid_data.electric_grid_ders.index, inplace=True)
-    print('Note: All original DERs were deleted from the electric grid model scenario.')
-
-    counter = 1
-    der_type = 'fixed_load'
-    definition_type = 'schedule'
-    power_factor = 0.95
-    source_node_name = grid_data.electric_grid['source_node_name']
-    for node_name in nodes['node_name']:
-        if counter > num_of_loads:
-            break
-        # don't add a new der to the source node
-        if node_name == source_node_name:
-            continue
-
-        der_name = 'Load R' + node_name
-        # TODO: loop over all phases
-        der_model_name = __pick_random_consumer_type() + '_' + season + '_' + random.choice(weeknums) + '_phase_0'
-
-        active_power_nominal = (-1) * max(der_schedules.loc[der_schedules['definition_name'] == der_model_name, 'value'])
-        reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
-
+    for definition_name in der_schedules['definition_name'].unique():
         # Add to ders data
         der_data.ders = der_data.ders.append({
-            'der_name': der_name,
-            'der_model_name': der_model_name,
+            'der_model_name': definition_name,
             'der_type': der_type,
-            'definition_name': der_model_name,
+            'definition_name': definition_name,
             'definition_type': definition_type
         }, ignore_index=True)
-        # Add to electric grid ders dataframe
-        grid_data.electric_grid_ders = grid_data.electric_grid_ders.append({
-            'electric_grid_name': scenario_name,
-            'der_name': der_name,
-            'der_type': der_type,
-            'der_model_name': der_model_name,
-            'node_name': node_name,
-            'is_phase_1_connected': '1',
-            'is_phase_2_connected': '0',
-            'is_phase_3_connected': '0',
-            'connection': 'wye',
-            'active_power_nominal': active_power_nominal,
-            'reactive_power_nominal': reactive_power_nominal,
-            'in_service': '1'
-        }, ignore_index=True)
-
-        counter += 1
-
-    __export_der_data_to_csv(grid_data, der_data, output_path=os.path.join(path_to_data, scenario_name))
+    __export_der_models_to_csv(der_data, output_path=os.path.join(path_to_data, scenario_name))
 
 
 def __pick_random_consumer_type() -> str:
@@ -111,7 +126,9 @@ def __get_season_of_scenario_data(
 ) -> [str, list]:
 
     # TODO: this is currently copied from notebook, there should be one central spot!
-    year = scenario_data.timesteps.year[0]
+    # TODO: should use the scenario's year --> will this always work?
+    # year = scenario_data.timesteps.year[0]
+    year = 2015
     # According to German seasons
     season_start_dates = {
         'spring': datetime.date(year, 3, 1),
@@ -154,8 +171,12 @@ def __get_season_of_scenario_data(
                 pd.date_range(start=season_start_dates['winter_1'], end=season_end_dates['winter_1'], freq='T'))
     season = None
     for season in seasons.keys():
-        if scenario_data.timesteps[0] in seasons[season]:
+        dates_in_season = np.array(seasons[season])
+        if scenario_data.timesteps[0] in dates_in_season:
             break
+
+    if season is None:
+        season = 'winter'
 
     time_format = '%W'
     weeknums = seasons[season].strftime(time_format).unique().to_list()
@@ -574,17 +595,25 @@ def __export_grid_data_to_csv(
     print(f'Done. The grid can be found in: {output_path}')
 
 
-def __export_der_data_to_csv(
+def __export_electric_grid_der_to_csv(
         grid_data: fledge.data_interface.ElectricGridData,
-        der_data: fledge.data_interface.DERData,
         output_path: str
 ):
     # Format all dataframes correctly for export
     __format_grid_data_tables(grid_data)
-    __format_der_data_tables(der_data)
-
+    filename = 'electric_grid_ders.csv'
     grid_data.electric_grid_ders.to_csv(
-        os.path.join(output_path, 'electric_grid_ders.csv'), index=False)
+        os.path.join(output_path, filename), index=False)
+    print(f'Done exporting {filename} to: {output_path}')
+
+
+def __export_der_models_to_csv(
+        der_data: fledge.data_interface.DERData,
+        output_path: str
+):
+    # Format all dataframes correctly for export
+    __format_der_data_tables(der_data)
+    filename = 'der_models.csv'
     der_data.ders.to_csv(
-        os.path.join(output_path, 'der_models.csv'), index=False)
-    print(f'Done exporting to: {output_path}')
+        os.path.join(output_path, filename), index=False)
+    print(f'Done exporting {filename} to: {output_path}')

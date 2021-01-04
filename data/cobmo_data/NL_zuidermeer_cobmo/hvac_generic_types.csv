@@ -1,0 +1,3 @@
+hvac_generic_type,generic_heating_efficiency,generic_cooling_efficiency
+hvac_generic_1,0.9,0.8
+hvac_generic_HP,2.22,1e-08

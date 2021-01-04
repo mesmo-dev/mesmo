@@ -1,0 +1,2 @@
+scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,timestep_start,timestep_end,timestep_interval
+kerber_landnetz_freileitung_2,kerber_landnetz_freileitung_2,,,EPEX SPOT Power DE Day Ahead,1e-12,2017-01-01T00:00:00,2017-01-02T00:00:00,01:00:00

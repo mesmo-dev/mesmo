@@ -1,0 +1,11 @@
+node_name,electric_grid_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+0,kerber_landnetz_freileitung_2,1,0,0,10000.0,,
+1,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+2,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+3,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+4,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+5,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+6,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+7,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+8,kerber_landnetz_freileitung_2,1,0,0,400.0,,
+9,kerber_landnetz_freileitung_2,1,0,0,400.0,,

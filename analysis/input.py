@@ -1,4 +1,5 @@
-"""Module with helper functions specifically for the DLMP analysis
+"""
+Module with helper functions for generating the necessary input files for the DLMP analysis
 """
 
 import pandas as pd
@@ -12,6 +13,9 @@ import fledge.data_interface
 import fledge.config
 
 path_to_data = fledge.config.config['paths']['data']
+
+# TODO: Summarize into several classes, e.g. InputDataFactory
+# TODO: Instead of reloading the database all the time, change some of the functions so that they use ScenarioData object instead of reloading based on scenario_name
 
 
 def generate_fixed_load_der_input_data(
@@ -567,6 +571,7 @@ def __format_der_data_tables(
     der_data.ders = der_data.ders[der_models_columns]
 
 
+# TODO: potentially make these export functions public
 def __export_grid_data_to_csv(
         grid_data: fledge.data_interface.ElectricGridData,
         output_path: str

@@ -3,7 +3,7 @@ This script generates input data, e.g. load profiles for the scnenarios. It is o
 part of the analysis script.
 """
 
-import fledge.analysis_utils as au
+import analysis.input
 
 path_to_der_schedules_data = 'data/kerber_dorfnetz/der_schedules.csv'
 
@@ -18,7 +18,7 @@ scenario_names = [
     # 'kerber_vorstadtnetz_kabel_2',
 ]
 
-au.generate_fixed_load_der_input_data(
+analysis.input.generate_fixed_load_der_input_data(
     scenario_names_list=scenario_names,
     path_to_der_schedules_data=path_to_der_schedules_data
 )

@@ -14,8 +14,8 @@ import fledge.utils
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.problems
-import fledge.analysis_utils as au
-
+import analysis.input
+import analysis.simulation
 
 # Global Settings
 voltage_min = 0.9
@@ -45,14 +45,14 @@ def main():
     if regenerate_scenario_data:
         # generate aggregated / combined grids
         path_to_grid_map = 'examples/electric_grid_mapping.csv'
-        au.combine_electric_grids(mv_grid_name, path_to_grid_map, high_granularity_scenario_name)
-        au.aggregate_electric_grids(mv_grid_name, path_to_grid_map, low_granularity_scenario_name)
+        analysis.input.combine_electric_grids(mv_grid_name, path_to_grid_map, high_granularity_scenario_name)
+        analysis.input.aggregate_electric_grids(mv_grid_name, path_to_grid_map, low_granularity_scenario_name)
         # generate scenario data for DER penetration scenarios
         path_to_der_data = 'examples/additional_electric_grid_ders.csv'
         grid_scenarios = [low_granularity_scenario_name, high_granularity_scenario_name]
         for scenario_name in grid_scenarios:
             for der_penetration in der_penetration_scenario_data.keys():
-                au.increase_der_penetration_of_scenario_on_lv_level(
+                analysis.input.increase_der_penetration_of_scenario_on_lv_level(
                     scenario_name=scenario_name,
                     path_to_der_data=path_to_der_data,
                     penetration_ratio=der_penetration_scenario_data[der_penetration],

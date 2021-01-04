@@ -1,10 +1,6 @@
 """Example script for setting up and solving an electric grid optimal operation problem."""
 
 import numpy as np
-import os
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 
 import fledge.config
 import fledge.data_interface
@@ -65,6 +61,13 @@ def main():
         optimization_problem,
         electric_grid_model=electric_grid_model
     )
+
+    # add constraint on electricity use of flex building
+    for der_name in der_model_set.der_models.keys():
+        der_model = der_model_set.der_models[der_name]
+        if type(der_model) is fledge.der_models.FlexibleBuildingModel:
+            der_model.output_maximum_timeseries['grid_electric_power'] \
+                = (-1) * der_model.active_power_nominal_timeseries
 
     # Define objective.
     linear_electric_grid_model.define_optimization_objective(

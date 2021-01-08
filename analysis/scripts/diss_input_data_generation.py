@@ -8,12 +8,13 @@ import analysis.input
 path_to_der_schedules_data = 'data/kerber_dorfnetz/der_schedules.csv'
 
 scenario_names = [
-    # 'NL_residential'
+    # 'nl_zuidermeer_manual_no_penetration',
+    # 'NL_residential',
     # 'kerber_landnetz_freileitung_1',
-    'kerber_landnetz_freileitung_2',
+    # 'kerber_landnetz_freileitung_2',
     # 'kerber_landnetz_kabel_1',
     # 'kerber_landnetz_kabel_2',
-    # 'kerber_dorfnetz',
+    'kerber_dorfnetz',
     # 'kerber_vorstadtnetz_kabel_1',
     # 'kerber_vorstadtnetz_kabel_2',
 ]

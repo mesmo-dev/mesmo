@@ -18,15 +18,15 @@ logger = fledge.config.get_logger(__name__)
 
 class Controller(object):
     results_dict: dict
-    granularity_scenario_data: dict
+    simulation_scenarios: dict
     der_penetration_scenario_data: dict
 
     def __init__(
             self,
-            granularity_scenario_data: dict,
+            simulation_scenarios: dict,
     ):
         self.results_dict = {}
-        self.granularity_scenario_data = granularity_scenario_data
+        self.simulation_scenarios = simulation_scenarios
         pass
 
     def run(
@@ -35,11 +35,12 @@ class Controller(object):
 
         optimization_results_dict = {}
         # Run decentralized problem based on wholesale market price (no granularity)
+        # TODO: make this more general like in the prototype
         granularity_level = 'no_granularity'
         problem_type = 'decentral'
         results_path = fledge.utils.get_results_path(
             'optimal_operation', granularity_level + '_' + problem_type)
-        scenario_name = self.granularity_scenario_data[granularity_level]
+        scenario_name = self.simulation_scenarios[granularity_level]
         opt_objective, opt_results = SolutionEngine.run_optimal_operation_problem(
                 scenario_name=scenario_name,
                 results_path=results_path,
@@ -53,9 +54,10 @@ class Controller(object):
         # Get the set points from decentralized problems and calculate nominal power flow
         # now using the entire grid again
         granularity_level = 'high_granularity'
-        scenario_name = self.granularity_scenario_data[granularity_level]
+        scenario_name = self.simulation_scenarios[granularity_level]
         for key in optimization_results_dict:
             if not(('decentral' in key) and ('results' in key)):
+                # only use solution from decentral optimization, central optimization will yield the same
                 continue
             results_path = fledge.utils.get_results_path('electric_grid_nominal_operation', 'wholesale')
             # change the set points of the DERs
@@ -80,7 +82,7 @@ class Controller(object):
     def get_results(
             self
     ) -> dict:
-        return self.results
+        return self.results_dict
 
 
 class SolutionEngine(object):
@@ -209,11 +211,12 @@ class ScenarioHandler(object):
         der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
         for der_name in der_model_set.der_names:
-            if der_name in results['output_vector']:
-                der_model_set.der_models[der_name].active_power_nominal_timeseries = \
-                    results['output_vector'].loc[:, (der_name, 'active_power')]
-                der_model_set.der_models[der_name].reactive_power_nominal_timeseries = \
-                    results['output_vector'].loc[:, (der_name, 'reactive_power')]
+            der_model = der_model_set.der_models[der_name]
+            der_type = der_model.der_type
+            der_model.active_power_nominal_timeseries = \
+                results.der_active_power_vector[der_type, der_name]
+            der_model.reactive_power_nominal_timeseries = \
+                results.der_reactive_power_vector[der_type, der_name]
 
         return der_model_set
 
@@ -310,6 +313,15 @@ class OptimalOperationProblem(object):
             self.optimization_problem,
             electric_grid_model=self.electric_grid_model
         )
+
+        for der_name in self.der_model_set.der_models.keys():
+            der_model = self.der_model_set.der_models[der_name]
+            if type(der_model) is fledge.der_models.FlexibleBuildingModel:
+                # Limit loads to their nominal power consumption
+                der_model.output_maximum_timeseries['grid_electric_power'] = \
+                    (-1) * der_model.active_power_nominal_timeseries
+                # Put a constraint on cooling power (= 0) to effectively disable cooling in the HVAC system
+                der_model.output_maximum_timeseries['zone_generic_cool_thermal_power_cooling'] = 0
 
         if self.electric_grid_model is not None:
             self.linear_electric_grid_model.define_optimization_objective(

@@ -1,2 +1,2 @@
 der_name,electric_grid_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal,in_service
-Heat Pump,dummy_network,flexible_load,cigre_commercial,1,1,0,0,wye,-15000.0,-4800.0,1.0
+Heat Pump,dummy_network,flexible_building,NL_1598100000016986,1,1,0,0,wye,-5000,-1643.4205258943161,1

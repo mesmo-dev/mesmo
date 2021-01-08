@@ -70,6 +70,7 @@ def generate_fixed_load_der_input_data(
                         active_power_vals_aggregated.append(np.mean(active_power_vals[i:i+60]['value']))
 
             active_power_nominal = (-1) * max(active_power_vals_aggregated)
+            # active_power_nominal = (-1) * max(active_power_vals['value'])
             reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
 
             # Add to electric grid ders dataframe
@@ -207,21 +208,22 @@ def increase_der_penetration_of_scenario_on_lv_level(
     # Loop through der data and add to the scenario
     for new_der_index, new_der_row in der_data.iterrows():
         additional_der_name = str(new_der_row['der_name'])
-        num_of_lv_nodes = len(grid_data.electric_grid_ders[grid_data.electric_grid_ders['der_name'].str.contains('_')])
+        # num_of_lv_nodes = len(grid_data.electric_grid_ders[grid_data.electric_grid_ders['der_name'].str.contains('_')])
+        num_of_lv_nodes = len(grid_data.electric_grid_nodes)
         count = 1
         for der_index, der_row in grid_data.electric_grid_ders.iterrows():
             if count > int(num_of_lv_nodes * penetration_ratio):
                 break
             der_name = der_row['der_name']
-            if '_' in der_name:
-                node = der_row['node_name']
-                print(f'Adding DER {additional_der_name} to node {node} in scenario {scenario_name}.')
-                new_der_row['node_name'] = str(node)
-                new_der_row['der_name'] = str(der_name) + '_' + additional_der_name + '_' + str(count)
-                # Add the DER to the main DER table
-                grid_data.electric_grid_ders = \
-                    grid_data.electric_grid_ders.append(new_der_row).reset_index(drop=True)
-                count += 1
+            # if '_' in der_name:
+            node = der_row['node_name']
+            print(f'Adding DER {additional_der_name} to node {node} in scenario {scenario_name}.')
+            new_der_row['node_name'] = str(node)
+            new_der_row['der_name'] = str(der_name) + '_' + additional_der_name + '_' + str(count)
+            # Add the DER to the main DER table
+            grid_data.electric_grid_ders = \
+                grid_data.electric_grid_ders.append(new_der_row).reset_index(drop=True)
+            count += 1
 
     # Change electric grid name to new name
     __change_electric_grid_name(grid_data, new_scenario_name)
@@ -245,6 +247,9 @@ def aggregate_electric_grids(
     :param aggregated_scenario_name: optional, name of the aggregated scenario (will also be returned by the function)
     :return: the name of the exported scenario
     """
+    if mv_scenario_name is None:
+        return ''
+
     # Load csv-file as dataframe that contains the mapping of LV grids to MV nodes
     map_grids = __load_data(path_to_map_grids)
 
@@ -302,6 +307,8 @@ def combine_electric_grids(
         map_grids_filename: str,
         combined_scenario_name: str = None
 ) -> str:
+    if mv_scenario_name is None:
+        return ''
     """
     Method to combine multiple grids to one large grids based on a mapping table
     :param mv_scenario_name: name of the scenario for the medium voltage electric grid

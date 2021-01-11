@@ -529,7 +529,7 @@ class LinearThermalGridModel(object):
             cp.Variable((len(timesteps), len(self.thermal_grid_model.branches)))
         )
         optimization_problem.pump_power = (
-            cp.Variable((len(timesteps), 1), nonneg=True)
+            cp.Variable((len(timesteps), 1))
         )
 
     def define_optimization_constraints(

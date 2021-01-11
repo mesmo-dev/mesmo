@@ -429,16 +429,14 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.constraints.append(
                     optimization_problem.der_active_power_vector[:, der_index]
                     ==
-                    -1.0
-                    * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                    self.mapping_active_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
                 optimization_problem.constraints.append(
                     optimization_problem.der_reactive_power_vector[:, der_index]
                     ==
-                    -1.0 * (
-                        optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
-                        * np.tan(np.arccos(self.power_factor_nominal))
-                    )
+                    self.mapping_reactive_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
             else:
                 optimization_problem.constraints.append(
@@ -459,8 +457,8 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.constraints.append(
                     optimization_problem.der_thermal_power_vector[:, der_index]
                     ==
-                    -1.0
-                    * optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                    self.mapping_thermal_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
             elif type(self) is CoolingPlantModel:
                 optimization_problem.constraints.append(
@@ -493,13 +491,17 @@ class FlexibleDERModel(DERModel):
                     (
                         price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
                         * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                        @ (
+                            self.mapping_active_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                        )
                     )
                     + (
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
+                            self.mapping_active_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )
                 )
@@ -510,15 +512,17 @@ class FlexibleDERModel(DERModel):
                     (
                         price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
                         * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
-                        * np.tan(np.arccos(self.power_factor_nominal))
+                        @ (
+                            self.mapping_reactive_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                        )
                     )
                     + (
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_electric_power')]
-                            * np.tan(np.arccos(self.power_factor_nominal))
+                            self.mapping_reactive_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )
                 )
@@ -577,13 +581,17 @@ class FlexibleDERModel(DERModel):
                     (
                         price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
                         * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                        @ (
+                            self.mapping_thermal_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                        )
                     )
                     + (
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('grid_thermal_power_cooling')]
+                            self.mapping_thermal_power_by_output.values
+                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )
                 )
@@ -1294,6 +1302,23 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.controls = flexible_building_model.controls
         self.disturbances = flexible_building_model.disturbances
         self.outputs = flexible_building_model.outputs
+
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.Series(0.0, index=self.outputs, name='active_power')
+        if self.is_thermal_grid_connected:
+            self.mapping_active_power_by_output.at['grid_electric_power'] = (
+                -1.0
+            )
+        self.mapping_reactive_power_by_output = pd.Series(0.0, index=self.outputs, name='reactive_power')
+        if self.is_thermal_grid_connected:
+            self.mapping_reactive_power_by_output.at['grid_electric_power'] = (
+                -1.0 * np.tan(np.arccos(self.power_factor_nominal))
+            )
+        self.mapping_thermal_power_by_output = pd.Series(0.0, index=self.outputs, name='thermal_power')
+        if self.is_thermal_grid_connected:
+            self.mapping_thermal_power_by_output.at['grid_thermal_power_cooling'] = (
+                -1.0
+            )
 
         # Obtain initial state.
         self.state_vector_initial = flexible_building_model.state_vector_initial

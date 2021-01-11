@@ -189,6 +189,7 @@ class ScenarioData(object):
             column: np.ndarray
     ):
         """Parse parameters into one column of a dataframe.
+
         - Replace strings that match `parameter_name` with `parameter_value`.
         - Other strings are are directly parsed into numbers.
         - If a string doesn't match any match `parameter_name` and cannot be parsed, it is replaced with NaN.
@@ -218,6 +219,7 @@ class ScenarioData(object):
             excluded_columns: list = None
     ):
         """Parse parameters into a dataframe.
+
         - Applies `parse_parameters_column` for all string columns.
         - Columns in `excluded_columns` are not parsed. By default this includes `_name`, `_type`, `connection` columns.
         """

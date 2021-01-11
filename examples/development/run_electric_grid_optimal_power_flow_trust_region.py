@@ -91,6 +91,11 @@ def main():
             # Get the node voltage reference vector based on the accepted candidate
             node_voltage_vector_reference = get_node_voltage_vector_per_timestep(power_flow_solutions_per_timestep)
             # TODO: get other values for trust-region constraints if needed
+            # branch_power_magnitude_vector_1_reference = get_branch_power_vector_per_timestep(
+            #     power_flow_solutions_per_timestep, 1)
+            # branch_power_magnitude_vector_2_reference = get_branch_power_vector_per_timestep(
+            #     power_flow_solutions_per_timestep, 2)
+
 
             # TODO: adapt to LinearElectricGridModelLocal
             # Get linear electric grid model for all timesteps
@@ -127,6 +132,7 @@ def main():
         else:
             print('sigma <= tau -> Rejecting iteration. Repeating iteration using the modified region (delta).')
 
+        print('Formulating optimization problem...')
         # Instantiate / reset optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
 
@@ -169,7 +175,6 @@ def main():
         # We redefine the approximate state and dispatch quantities as the measure of change in their
         # operating state at the current iteration
         # DERs.
-        # TODO: DERs are currently assumed to be only loads, hence negative power values.
         for der_index, der in enumerate(electric_grid_model.ders):
             # Check if load (negative nominal power value) or generator (positive...)
             if np.real(electric_grid_model.der_power_vector_reference[der_index]) < 0:
@@ -202,9 +207,9 @@ def main():
                 factor * delta * np.imag(der_power_vector_reference[der])
             )
 
-        # Voltage.
         for timestep in timesteps:
             time_index = fledge.utils.get_index(timesteps, timestep=timestep)
+            # Voltage.
             for node_index, node in enumerate(electric_grid_model.nodes):
                 optimization_problem.constraints.append(
                     optimization_problem.node_voltage_magnitude_vector[time_index, node_index]
@@ -219,38 +224,36 @@ def main():
                     delta * np.abs(node_voltage_vector_reference[timestep][node_index])
                 )
 
-        # Branch flows.
-        # TODO: branch power vector is not defined as "change" anymore! --> build helper!
-        # TODO: Do we need the "squared" value or does it also work with the "regular" change?
-        # In Hanif's implementation this is actually not represented
-
-        # for branch_index, branch in enumerate(electric_grid_model.branches):
-        #     optimization_problem.constraints.append(
-        #         optimization_problem.branch_power_magnitude_vector_1[0, branch_index]
-        #         - np.abs(electric_grid_model.branch_power_vector_magnitude_reference[branch_index])
-        #         >=
-        #         -delta * np.abs(power_flow_solutions[0].branch_power_vector_1[branch_index])
-        #     )
-        #     optimization_problem.constraints.append(
-        #         optimization_problem.branch_power_magnitude_vector_1[0, branch_index]
-        #         - np.abs(electric_grid_model.branch_power_vector_magnitude_reference[branch_index])
-        #         <=
-        #         delta * np.abs(power_flow_solutions[0].branch_power_vector_1[branch_index])
-        #     )
-        #     optimization_problem.constraints.append(
-        #         optimization_problem.branch_power_magnitude_vector_2[0, branch_index]
-        #         - np.abs(electric_grid_model.branch_power_vector_magnitude_reference[branch_index])
-        #         >=
-        #         -delta * np.abs(power_flow_solutions[0].branch_power_vector_2[branch_index])
-        #     )
-        #     optimization_problem.constraints.append(
-        #         optimization_problem.branch_power_magnitude_vector_2[0, branch_index]
-        #         - np.abs(electric_grid_model.branch_power_vector_magnitude_reference[branch_index])
-        #         <=
-        #         delta * np.abs(power_flow_solutions[0].branch_power_vector_2[branch_index])
-        #     )
+            # Branch flows.
+            # TODO: needed or is voltage and DER active power constraint for trust region enough?
+            # for branch_index, branch in enumerate(electric_grid_model.branches):
+            #     optimization_problem.constraints.append(
+            #         optimization_problem.branch_power_magnitude_vector_1[time_index, branch_index]
+            #         - np.abs(branch_power_magnitude_vector_1_reference[timestep][branch_index])
+            #         >=
+            #         -delta * np.abs(branch_power_magnitude_vector_1_reference[timestep][branch_index])
+            #     )
+            #     optimization_problem.constraints.append(
+            #         optimization_problem.branch_power_magnitude_vector_1[time_index, branch_index]
+            #         - np.abs(branch_power_magnitude_vector_1_reference[timestep][branch_index])
+            #         <=
+            #         delta * np.abs(branch_power_magnitude_vector_1_reference[timestep][branch_index])
+            #     )
+            #     optimization_problem.constraints.append(
+            #         optimization_problem.branch_power_magnitude_vector_2[time_index, branch_index]
+            #         - np.abs(branch_power_magnitude_vector_2_reference[timestep][branch_index])
+            #         >=
+            #         -delta * np.abs(branch_power_magnitude_vector_2_reference[timestep][branch_index])
+            #     )
+            #     optimization_problem.constraints.append(
+            #         optimization_problem.branch_power_magnitude_vector_2[time_index, branch_index]
+            #         - np.abs(branch_power_magnitude_vector_2_reference[timestep][branch_index])
+            #         <=
+            #         delta * np.abs(branch_power_magnitude_vector_2_reference[timestep][branch_index])
+            #     )
 
         # Loss.
+        # TODO: does it really make sense to represnt losses in here?
         # TODO: find out why sum of losses from pf solution?
         # In Hanif's implementation this is actually not represented
         # optimization_problem.constraints.append(
@@ -454,8 +457,6 @@ def get_power_flow_solutions_per_timestep(
         der_model_set_new_setpoints: fledge.der_models.DERModelSet,
         timesteps: pd.Index
 ):
-    print('Solving power flow for all timesteps...')
-
     der_power_vector = get_der_power_vector(electric_grid_model, der_model_set_new_setpoints, timesteps)
     # use DER power vector to calculate power flow per timestep
     power_flow_solutions = (
@@ -495,6 +496,24 @@ def get_node_voltage_vector_per_timestep(
         node_voltage_vector_per_timestep[timestep] = power_flow_solutions_per_timestep[timestep].node_voltage_vector
 
     return node_voltage_vector_per_timestep
+
+
+def get_branch_power_vector_per_timestep(
+        power_flow_solutions_per_timestep: dict,
+        direction: int
+) -> dict:
+
+    branch_power_vector_per_timestep = {}
+    for timestep in power_flow_solutions_per_timestep.keys():
+        if direction == 1:
+            branch_power_vector_per_timestep[timestep] = power_flow_solutions_per_timestep[timestep].branch_power_vector_1
+        elif direction == 2:
+            branch_power_vector_per_timestep[timestep] = power_flow_solutions_per_timestep[timestep].branch_power_vector_2
+        else:
+            print(f'No valid branch flow direction provided. Possible values: 1 or 2, provided value: {direction}')
+            raise ValueError
+
+    return branch_power_vector_per_timestep
 
 
 def get_linear_electric_grid_models_per_timestep(

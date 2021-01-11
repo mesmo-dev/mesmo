@@ -39,8 +39,8 @@ def main():
     optimization_problems_iter = []
 
     # Define trust-region parameters according to [2].
-    delta = 0.8  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
-    delta_max = 1.0  # 4.0 / 1.0
+    delta = 0.9  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
+    delta_max = 2.0  # 4.0 / 1.0
     gamma = 0.5  # 0.5 / range: (0, 1)
     eta = 0.1  # 0.1 / range: (0, 0.5]
     tau = 0.1  # 0.1 / range: [0, 0.25)
@@ -171,29 +171,35 @@ def main():
         # DERs.
         # TODO: DERs are currently assumed to be only loads, hence negative power values.
         for der_index, der in enumerate(electric_grid_model.ders):
+            # Check if load (negative nominal power value) or generator (positive...)
+            if np.real(electric_grid_model.der_power_vector_reference[der_index]) < 0:
+                factor = 1
+            else:
+                factor = -1
+
             optimization_problem.constraints.append(
                 optimization_problem.der_active_power_vector[:, der_index]
                 - np.real(der_power_vector_reference[der])
                 <=
-                -delta * np.real(der_power_vector_reference[der])
+                -factor * delta * np.real(der_power_vector_reference[der])
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_active_power_vector[:, der_index]
                 - np.real(der_power_vector_reference[der])
                 >=
-                delta * np.real(der_power_vector_reference[der])
+                factor * delta * np.real(der_power_vector_reference[der])
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, der_index]
                 - np.imag(der_power_vector_reference[der])
                 <=
-                -delta * np.imag(der_power_vector_reference[der])
+                -factor * delta * np.imag(der_power_vector_reference[der])
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, der_index]
                 - np.imag(der_power_vector_reference[der])
                 >=
-                delta * np.imag(der_power_vector_reference[der])
+                factor * delta * np.imag(der_power_vector_reference[der])
             )
 
         # Voltage.
@@ -305,6 +311,7 @@ def main():
         # Change to p.u. value
         der_active_power_vector_change_per_unit = der_active_power_vector_change \
                                          / np.real(electric_grid_model.der_power_vector_reference)
+        # TODO: for DERs with 0 reactive nominal power, we divide by zero here!
         der_reactive_power_vector_change_per_unit = der_reactive_power_vector_change \
                                          / np.imag(electric_grid_model.der_power_vector_reference)
 
@@ -357,6 +364,10 @@ def main():
             )
 
             # Check trust-region range conditions.
+            # sigma represents the ratio between the cost improvement of approximated system to the actual one. A
+            # smaller value of sigma shows that the current approximation does not represent the actual system and hence
+            # the the optimization region must be reduced. For a considerably higher value of sigma, the linear
+            # approximation is accurate and the system can move to a new operating point. [1]
             sigma = float(
                 (objective_power_flows_iter[-1] - objective_power_flow)
                 / (objective_power_flows_iter[-1] - objective_linear_model)

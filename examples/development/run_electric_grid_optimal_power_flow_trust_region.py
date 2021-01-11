@@ -32,15 +32,14 @@ def main():
 
     # Instantiate iteration variables.
     sigma = 0.0
-    der_power_vector_change_max = np.inf
+    der_power_vector_change_per_unit_max = np.inf
     trust_region_iteration_count = 0
     power_flow_solutions_iter = []
-    # linear_electric_grid_models_iter = []
     objective_power_flows_iter = []
     optimization_problems_iter = []
 
     # Define trust-region parameters according to [2].
-    delta = 0.2  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
+    delta = 0.8  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
     delta_max = 1.0  # 4.0 / 1.0
     gamma = 0.5  # 0.5 / range: (0, 1)
     eta = 0.1  # 0.1 / range: (0, 0.5]
@@ -70,7 +69,7 @@ def main():
     der_model_set_candidate = der_model_set_reference
 
     while (
-            (der_power_vector_change_max > epsilon)
+            (der_power_vector_change_per_unit_max > epsilon)
             and (trust_region_iteration_count < trust_region_iteration_limit)
     ):
 
@@ -79,7 +78,8 @@ def main():
 
         # Check trust-region solution acceptance conditions.
         if (trust_region_iteration_count == 0) or (sigma > tau):
-
+            if trust_region_iteration_count != 0:
+                print('sigma > tau -> Accepting iteration, setting new states.')
             # Accept der power vector and power flow solution candidate.
             # DER power vector is stored in the der_model_set for every DER and every timestep
             der_model_set_reference = der_model_set_candidate
@@ -98,9 +98,6 @@ def main():
                 electric_grid_model,
                 power_flow_solutions_per_timestep,
                 timesteps)
-
-            # Currently not needed
-            # linear_electric_grid_models_iter.append(linear_electric_grid_model)
 
             # Instantiate optimization problem to evaluate the objective based on power flow solution setpoints
             optimization_problem = fledge.utils.OptimizationProblem()
@@ -127,6 +124,8 @@ def main():
                 power_flow_solutions=power_flow_solutions_per_timestep,
                 timesteps=timesteps
             ))
+        else:
+            print('sigma <= tau -> Rejecting iteration. Repeating iteration using the modified region (delta).')
 
         # Instantiate / reset optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
@@ -145,9 +144,9 @@ def main():
 
         # Define linear electric grid model constraints.
         # TODO: adapt to what we actually want as limits
-        node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-        node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-        branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
+        node_voltage_magnitude_vector_minimum = 0.8 * np.abs(electric_grid_model.node_voltage_vector_reference)
+        node_voltage_magnitude_vector_maximum = 1.2 * np.abs(electric_grid_model.node_voltage_vector_reference)
+        branch_power_magnitude_vector_maximum = 1.0 * electric_grid_model.branch_power_vector_magnitude_reference
         # The linear electric grid model is different for every timestep
         for timestep in timesteps:
             linear_electric_grid_models_per_timestep[timestep].define_optimization_constraints(
@@ -183,6 +182,18 @@ def main():
                 - np.real(der_power_vector_reference[der])
                 >=
                 delta * np.real(der_power_vector_reference[der])
+            )
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector[:, der_index]
+                - np.imag(der_power_vector_reference[der])
+                <=
+                -delta * np.imag(der_power_vector_reference[der])
+            )
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector[:, der_index]
+                - np.imag(der_power_vector_reference[der])
+                >=
+                delta * np.imag(der_power_vector_reference[der])
             )
 
         # Voltage.
@@ -269,9 +280,11 @@ def main():
             timesteps
         )
         # Solve optimization problem.
+        print('Solving optimal power flow...')
         optimization_problem.solve()
         optimization_problems_iter.append(optimization_problem)
 
+        print('Evaluating solution progress...')
         # Obtain der power change value.
         der_active_power_vector_change = (
             np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=np.float)
@@ -289,21 +302,27 @@ def main():
                 optimization_problem.der_reactive_power_vector[:, der_index].value
                 - np.imag(der_power_vector_reference[der])
             )
-        der_power_vector_change_max = (
+        # Change to p.u. value
+        der_active_power_vector_change_per_unit = der_active_power_vector_change \
+                                         / np.real(electric_grid_model.der_power_vector_reference)
+        der_reactive_power_vector_change_per_unit = der_reactive_power_vector_change \
+                                         / np.imag(electric_grid_model.der_power_vector_reference)
+
+        der_power_vector_change_per_unit_max = (
             max(
-                np.max(abs(der_active_power_vector_change)),
-                np.max(abs(der_reactive_power_vector_change))
+                np.max(abs(der_active_power_vector_change_per_unit)),
+                np.max(abs(der_reactive_power_vector_change_per_unit))
             )
         )
 
         # Print change variables.
         # print(f"der_active_power_vector_change = {der_active_power_vector_change}")
         # print(f"der_reactive_power_vector_change = {der_reactive_power_vector_change}")
-        print(f"der_power_vector_change_max = {der_power_vector_change_max}")
+        print(f"der_power_vector_change_per_unit_max = {der_power_vector_change_per_unit_max}")
 
         # Check trust-region conditions and obtain DER power vector / power flow solution candidates for next iteration.
         # - Only if termination condition is not met, otherwise risk of division by zero.
-        if der_power_vector_change_max > epsilon:
+        if der_power_vector_change_per_unit_max > epsilon:
             # Get new der vector and power flow solution candidate.
             results = fledge.problems.Results()
             results.update(der_model_set_reference.get_optimization_results(optimization_problem))
@@ -338,7 +357,7 @@ def main():
             )
 
             # Check trust-region range conditions.
-            sigma = (
+            sigma = float(
                 (objective_power_flows_iter[-1] - objective_power_flow)
                 / (objective_power_flows_iter[-1] - objective_linear_model)
             )
@@ -356,6 +375,9 @@ def main():
 
         # Iterate counter.
         trust_region_iteration_count += 1
+
+    print('----------------------------------------------------------')
+    print('Found solution, exiting the trust region iterations.')
 
     # Obtain results.
     # NOTE: which lin electric grid model and power flow solution is the correct one to pass to the results?
@@ -421,6 +443,8 @@ def get_power_flow_solutions_per_timestep(
         der_model_set_new_setpoints: fledge.der_models.DERModelSet,
         timesteps: pd.Index
 ):
+    print('Solving power flow for all timesteps...')
+
     der_power_vector = get_der_power_vector(electric_grid_model, der_model_set_new_setpoints, timesteps)
     # use DER power vector to calculate power flow per timestep
     power_flow_solutions = (
@@ -466,7 +490,9 @@ def get_linear_electric_grid_models_per_timestep(
         electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
         power_flow_solutions: dict,
         timesteps
-):
+) -> dict:
+    print('Obtaining linear electric grid model for all timesteps...')
+
     # TODO: adapt to Local Approx: LinearElectricGridModelLocal
     linear_electric_grid_models = (
         fledge.utils.starmap(

@@ -13,6 +13,7 @@ in North American Power Symposium 2010, Arlington, TX, USA, Sep. 2010, pp. 1–6
 import numpy as np
 import pandas as pd
 import itertools
+from datetime import datetime
 
 import fledge.config
 import fledge.data_interface
@@ -21,6 +22,8 @@ import fledge.utils
 
 
 def main():
+
+    startTime = datetime.now()
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
@@ -435,6 +438,7 @@ def main():
     # Print results path.
     fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
+    print(f'Time elapsed: {(datetime.now() - startTime)/60} minutes.')
 
 
 def change_der_set_points_based_on_results(

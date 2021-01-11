@@ -282,7 +282,23 @@ def log_time(
         label: str,
         logger_object: logging.Logger = logger
 ):
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
+    """Log start / end message and time duration for given label.
+
+    - When called with given label for the first time, will log start message.
+    - When called subsequently with the same / previously used label, will log end message and time duration since
+      logging the start message.
+    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
+      By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting `label`."
+    - End message: "Completed `label` in `duration` seconds."
+
+    Arguments:
+        label (str): Label for the start / end message.
+
+    Keyword Arguments:
+        logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
+            ``utils.logger``.
+    """
 
     time_now = time.time()
 

@@ -21,6 +21,7 @@ path_to_data = fledge.config.config['paths']['data']
 def generate_fixed_load_der_input_data(
         scenario_names_list: list,
         path_to_der_schedules_data: str,
+        generate_der_models_csv: bool = True,
         num_of_loads=np.inf
 ):
     # per default, this function generates a load profile at every node (num_of_loads=inf)
@@ -93,19 +94,20 @@ def generate_fixed_load_der_input_data(
 
         __export_electric_grid_der_to_csv(grid_data, output_path=os.path.join(path_to_data, scenario_name))
 
-    # Using the last scenario_name of the loop (it does not matter)
-    # der_models.csv is only generated once for all possible der_mode_names
-    # Drop / remove all data from dataframe (if exist)
-    der_data.ders.drop(der_data.ders.index, inplace=True)
-    for definition_name in der_schedules['definition_name'].unique():
-        # Add to ders data
-        der_data.ders = der_data.ders.append({
-            'der_model_name': definition_name,
-            'der_type': der_type,
-            'definition_name': definition_name,
-            'definition_type': definition_type
-        }, ignore_index=True)
-    __export_der_models_to_csv(der_data, output_path=os.path.join(path_to_data, scenario_name))
+    if generate_der_models_csv:
+        # Using the last scenario_name of the loop (it does not matter)
+        # der_models.csv is only generated once for all possible der_mode_names
+        # Drop / remove all data from dataframe (if exist)
+        der_data.ders.drop(der_data.ders.index, inplace=True)
+        for definition_name in der_schedules['definition_name'].unique():
+            # Add to ders data
+            der_data.ders = der_data.ders.append({
+                'der_model_name': definition_name,
+                'der_type': der_type,
+                'definition_name': definition_name,
+                'definition_type': definition_type
+            }, ignore_index=True)
+        __export_der_models_to_csv(der_data, output_path=os.path.join(path_to_data, scenario_name))
 
 
 def __pick_random_consumer_type() -> str:

@@ -93,9 +93,9 @@ class SolutionEngine(object):
         results_path: str,
         problem_type: str
     ) -> [float, fledge.problems.Results]:
-        if problem_type is 'central':
+        if problem_type is 'decentral':
             problem = DEROptimalOperationProblem(scenario_name)
-        elif problem_type is 'decentral':
+        elif problem_type is 'central':
             problem = ElectricGridOptimalOperationProblem(scenario_name)
         else:
             raise ValueError(f'Unknown problem type: {problem_type}.')
@@ -309,11 +309,13 @@ class OptimalOperationProblem(object):
         self.der_model_set.define_optimization_variables(
             self.optimization_problem
         )
+
         self.der_model_set.define_optimization_constraints(
             self.optimization_problem,
             electric_grid_model=self.electric_grid_model
         )
 
+        # Additional constraint for flexible buildings
         for der_name in self.der_model_set.der_models.keys():
             der_model = self.der_model_set.der_models[der_name]
             if type(der_model) is fledge.der_models.FlexibleBuildingModel:

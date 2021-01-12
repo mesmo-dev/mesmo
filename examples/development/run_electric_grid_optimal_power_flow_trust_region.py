@@ -33,6 +33,7 @@ def main():
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
+    print('Loading data...', end='\r')
     fledge.data_interface.recreate_database()
 
     # Instantiate iteration variables.
@@ -44,8 +45,8 @@ def main():
     optimization_problems_iter = []
 
     # Define trust-region parameters according to [2].
-    delta = 1.0  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
-    delta_max = 2.0  # 4.0 / 1.0
+    delta = 0.3  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
+    delta_max = 1.0  # 4.0 / 1.0
     gamma = 0.5  # 0.5 / range: (0, 1)
     eta = 0.1  # 0.1 / range: (0, 0.5]
     tau = 0.1  # 0.1 / range: [0, 0.25)
@@ -62,10 +63,16 @@ def main():
     timesteps = scenario_data.timesteps
 
     # ---------------------------------------------------------------------------------------------------------
+    # Pre-solve optimal operation problem without underlying electric grid to get realistic initial values
+    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    presolve_results = run_presolve_with_der_models(der_model_set, price_data)
+    der_model_set_candidate = change_der_set_points_based_on_results(der_model_set, presolve_results)
+    # der_model_set_candidate = fledge.der_models.DERModelSet(scenario_name)
+
+    # ---------------------------------------------------------------------------------------------------------
     # Obtain the base case power flow, using the active_power_nominal values given as input as initial dispatch
     # quantities. This represents the initial solution candidate.
     # For the base power flow, we use the nominal power flow results
-    der_model_set_candidate = fledge.der_models.DERModelSet(scenario_name)
     power_flow_solutions_per_timestep_candidate = get_power_flow_solutions_per_timestep(
         electric_grid_model=electric_grid_model,
         der_model_set_new_setpoints=der_model_set_candidate,
@@ -81,7 +88,7 @@ def main():
     ):
 
         # Print progress.
-        print('--------------------------------------------------------------------------------')
+        print('------------------------------------------------------------------')
         print(f"Starting trust-region iteration #{trust_region_iteration_count}")
 
         # Check trust-region solution acceptance conditions.
@@ -204,6 +211,8 @@ def main():
                 der_model.output_maximum_timeseries['grid_electric_power'] = (
                     (-1) * der_model.active_power_nominal_timeseries
                 )
+                # # Put a constraint on cooling power (= 0) to effectively disable cooling in the HVAC system
+                # der_model.output_maximum_timeseries['zone_generic_cool_thermal_power_cooling'] = 0
 
         # ---------------------------------------------------------------------------------------------------------
         # Define trust region constraints.
@@ -261,7 +270,7 @@ def main():
         # DERs.
         for der_index, der in enumerate(electric_grid_model.ders):
             der_model = der_model_set_reference.der_models[der[1]]
-            if type(der_model) is not fledge.der_models.FlexibleDERModel:
+            if not issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
                 # If not flexible, then there should not be a trust-region constraint on it
                 continue
             # Check if load (negative nominal power value) or generator (positive...)
@@ -309,8 +318,8 @@ def main():
         optimization_problems_iter.append(optimization_problem)
 
         # ---------------------------------------------------------------------------------------------------------
-        # Evaluate solution progress.
-        print('Evaluating solution progress...', end='\r')
+        # Trust-region evaluation and update
+        print('Trust-region evaluation and update...', end='\r')
         # Obtain der power change value.
         der_active_power_vector_change = (
             np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=np.float)
@@ -406,7 +415,7 @@ def main():
                            - branch_power_magnitude_vector_2_candidate) < 0).any(axis=None)
 
             # ---------------------------------------------------------------------------------------------------------
-            # Check trust-region range conditions.
+            # Evaluate solution progress.
             # sigma represents the ratio between the cost improvement of approximated system to the actual one. A
             # smaller value of sigma shows that the current approximation does not represent the actual system and hence
             # the the optimization region must be reduced. For a considerably higher value of sigma, the linear
@@ -484,21 +493,99 @@ def main():
     fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
     print(f'Time elapsed for trust region: {(end_time - start_time)}')
+    print(f'Trust region iterations: {trust_region_iteration_count}')
+
+
+def run_presolve_with_der_models(
+        der_model_set: fledge.der_models.DERModelSet,
+        price_data: fledge.data_interface.PriceData
+) -> fledge.problems.Results:
+    # Pre-solve optimal operation problem without underlying electric grid to get realistic initial values
+    # Obtain all DERs
+    print('Running pre-solve for der models only...', end='\r')
+
+    # Instantiate decentralized DER optimization problem.
+    optimization_problem = fledge.utils.OptimizationProblem()
+
+    # Define DER variables.
+    der_model_set.define_optimization_variables(
+        optimization_problem
+    )
+
+    # Define DER constraints.
+    der_model_set.define_optimization_constraints(
+        optimization_problem
+    )
+    # Add constraint on electricity use of flex building
+    for der_name in der_model_set.der_models.keys():
+        der_model = der_model_set.der_models[der_name]
+        if type(der_model) is fledge.der_models.FlexibleBuildingModel:
+            der_model.output_maximum_timeseries['grid_electric_power'] = (
+                    (-1) * der_model.active_power_nominal_timeseries
+            )
+            # # Put a constraint on cooling power (= 0) to effectively disable cooling in the HVAC system
+            # der_model.output_maximum_timeseries['zone_generic_cool_thermal_power_cooling'] = 0
+
+    # Define objective (DER operation cost minimization).
+    der_model_set.define_optimization_objective(
+        optimization_problem,
+        price_data
+    )
+
+    # Solve decentralized DER optimization problem.
+    optimization_problem.solve()
+
+    # Obtain results.
+    results = fledge.problems.Results()
+    results.update(
+        der_model_set.get_optimization_results(
+            optimization_problem
+        )
+    )
+    return results
 
 
 def change_der_set_points_based_on_results(
         der_model_set: fledge.der_models.DERModelSet,
         results: fledge.problems.Results
 ) -> fledge.der_models.DERModelSet:
-    for der_name in der_model_set.der_names:
-        der_model = der_model_set.der_models[der_name]
-        der_type = der_model.der_type
-        der_model.active_power_nominal_timeseries = (
-            results.der_active_power_vector[der_type, der_name]
-        )
-        der_model.reactive_power_nominal_timeseries = (
-            results.der_reactive_power_vector[der_type, der_name]
-        )
+    attributes = dir(results)
+    if 'der_active_power_vector' in attributes:
+        for der_name in der_model_set.der_names:
+            der_model = der_model_set.der_models[der_name]
+            der_type = der_model.der_type
+            der_model.active_power_nominal_timeseries = (
+                results.der_active_power_vector[der_type, der_name]
+            )
+            der_model.reactive_power_nominal_timeseries = (
+                results.der_reactive_power_vector[der_type, der_name]
+            )
+    # If there was no electric grid model in the optimization, get the results based on the output vector
+    elif 'output_vector' in attributes:
+        for der_name in der_model_set.der_names:
+            der_model = der_model_set.der_models[der_name]
+            if issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
+                if 'active_power' in results.output_vector[der_name].columns:
+                    der_model.active_power_nominal_timeseries = (
+                        results.output_vector[(der_name, 'active_power')]
+                    )
+                    der_model.reactive_power_nominal_timeseries = (
+                        results.output_vector[(der_name, 'reactive_power')]
+                    )
+                elif 'grid_electric_power' in results.output_vector[der_name].columns:
+                    der_model.active_power_nominal_timeseries = (
+                        results.output_vector[(der_name, 'grid_electric_power')]
+                    ) * (-1)
+                    if type(der_model) is fledge.der_models.FlexibleBuildingModel:
+                        power_factor = der_model.power_factor_nominal
+                    else:
+                        power_factor = 0.95
+                    der_model.reactive_power_nominal_timeseries = (
+                        results.output_vector[(der_name, 'grid_electric_power')] * np.tan(np.arccos(power_factor))
+                    ) * (-1)
+    else:
+        print('Results object does not contain any data on active power output. ')
+        raise ValueError
 
     return der_model_set
 

@@ -1311,13 +1311,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Define power mapping matrices.
         self.mapping_active_power_by_output = pd.Series(0.0, index=self.outputs, name='active_power')
-        if self.is_thermal_grid_connected:
+        if self.is_electric_grid_connected:
             self.mapping_active_power_by_output.at['grid_electric_power'] = (
                 -1.0
                 * flexible_building_model.zone_area_total
             )
         self.mapping_reactive_power_by_output = pd.Series(0.0, index=self.outputs, name='reactive_power')
-        if self.is_thermal_grid_connected:
+        if self.is_electric_grid_connected:
             self.mapping_reactive_power_by_output.at['grid_electric_power'] = (
                 -1.0
                 * np.tan(np.arccos(self.power_factor_nominal))

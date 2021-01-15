@@ -427,16 +427,20 @@ class FlexibleDERModel(DERModel):
 
             if type(self) is FlexibleBuildingModel:
                 optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, der_index]
+                    optimization_problem.der_active_power_vector[:, [der_index]]
                     ==
-                    self.mapping_active_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    cp.transpose(
+                        np.array([self.mapping_active_power_by_output.values])
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
                 )
                 optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, der_index]
+                    optimization_problem.der_reactive_power_vector[:, [der_index]]
                     ==
-                    self.mapping_reactive_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    cp.transpose(
+                        np.array([self.mapping_reactive_power_by_output.values])
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
                 )
             else:
                 optimization_problem.constraints.append(
@@ -455,10 +459,12 @@ class FlexibleDERModel(DERModel):
 
             if type(self) is FlexibleBuildingModel:
                 optimization_problem.constraints.append(
-                    optimization_problem.der_thermal_power_vector[:, der_index]
+                    optimization_problem.der_thermal_power_vector[:, [der_index]]
                     ==
-                    self.mapping_thermal_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    cp.transpose(
+                        np.array([self.mapping_thermal_power_by_output.values])
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
                 )
             elif type(self) is CoolingPlantModel:
                 optimization_problem.constraints.append(
@@ -490,9 +496,9 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     (
                         price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                        * timestep_interval_hours  # In Wh.
-                        @ (
-                            self.mapping_active_power_by_output.values
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ cp.transpose(
+                            np.array([self.mapping_active_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         )
                     )
@@ -500,7 +506,7 @@ class FlexibleDERModel(DERModel):
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            self.mapping_active_power_by_output.values
+                            np.array([self.mapping_active_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )
@@ -511,9 +517,9 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     (
                         price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                        * timestep_interval_hours  # In Wh.
-                        @ (
-                            self.mapping_reactive_power_by_output.values
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ cp.transpose(
+                            np.array([self.mapping_reactive_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         )
                     )
@@ -521,7 +527,7 @@ class FlexibleDERModel(DERModel):
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            self.mapping_reactive_power_by_output.values
+                            np.array([self.mapping_reactive_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )
@@ -580,9 +586,9 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     (
                         price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
-                        * timestep_interval_hours  # In Wh.
-                        @ (
-                            self.mapping_thermal_power_by_output.values
+                        * -1.0 * timestep_interval_hours  # In Wh.
+                        @ cp.transpose(
+                            np.array([self.mapping_thermal_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         )
                     )
@@ -590,7 +596,7 @@ class FlexibleDERModel(DERModel):
                         price_data.price_sensitivity_coefficient
                         * timestep_interval_hours  # In Wh.
                         * cp.sum((
-                            self.mapping_thermal_power_by_output.values
+                            np.array([self.mapping_thermal_power_by_output.values])
                             @ cp.transpose(optimization_problem.output_vector[self.der_name])
                         ) ** 2)
                     )

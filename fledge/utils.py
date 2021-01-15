@@ -193,7 +193,8 @@ class OptimizationProblem(object):
 
     def solve(
             self,
-            keep_problem=False
+            keep_problem=False,
+            **kwargs
     ):
 
         # Instantiate CVXPY problem object.
@@ -210,6 +211,7 @@ class OptimizationProblem(object):
                 else None
             ),
             verbose=fledge.config.config['optimization']['show_solver_output'],
+            **kwargs,
             **fledge.config.solver_parameters
         )
 

@@ -1308,16 +1308,20 @@ class FlexibleBuildingModel(FlexibleDERModel):
         if self.is_thermal_grid_connected:
             self.mapping_active_power_by_output.at['grid_electric_power'] = (
                 -1.0
+                * flexible_building_model.zone_area_total
             )
         self.mapping_reactive_power_by_output = pd.Series(0.0, index=self.outputs, name='reactive_power')
         if self.is_thermal_grid_connected:
             self.mapping_reactive_power_by_output.at['grid_electric_power'] = (
-                -1.0 * np.tan(np.arccos(self.power_factor_nominal))
+                -1.0
+                * np.tan(np.arccos(self.power_factor_nominal))
+                * flexible_building_model.zone_area_total
             )
         self.mapping_thermal_power_by_output = pd.Series(0.0, index=self.outputs, name='thermal_power')
         if self.is_thermal_grid_connected:
             self.mapping_thermal_power_by_output.at['grid_thermal_power_cooling'] = (
                 -1.0
+                * flexible_building_model.zone_area_total
             )
 
         # Obtain initial state.
@@ -1335,8 +1339,8 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.disturbance_timeseries = flexible_building_model.disturbance_timeseries
 
         # Obtain output constraint timeseries.
-        self.output_maximum_timeseries = flexible_building_model.output_constraint_timeseries_maximum
-        self.output_minimum_timeseries = flexible_building_model.output_constraint_timeseries_minimum
+        self.output_minimum_timeseries = flexible_building_model.output_minimum_timeseries
+        self.output_maximum_timeseries = flexible_building_model.output_maximum_timeseries
 
 
 class CoolingPlantModel(FlexibleDERModel):

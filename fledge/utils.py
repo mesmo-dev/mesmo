@@ -479,7 +479,12 @@ def write_figure_plotly(
     """
 
     if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
-        pio.write_image(figure, f"{results_path}.{file_format}")
+        pio.write_image(
+            figure,
+            f"{results_path}.{file_format}",
+            width=fledge.config.config['plots']['plotly_figure_width'],
+            height=fledge.config.config['plots']['plotly_figure_height']
+        )
     elif file_format in ['html']:
         pio.write_html(figure, f"{results_path}.{file_format}")
     elif file_format in ['json']:

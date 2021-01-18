@@ -18,6 +18,91 @@ path_to_data = fledge.config.config['paths']['data']
 # TODO: Instead of reloading the database all the time, change some of the functions so that they use ScenarioData object instead of reloading based on scenario_name
 
 
+class Calendar(object):
+    seasons: dict = {}
+
+    def __init__(self):
+
+        # TODO: this is currently copied from notebook, there should be one central spot!
+        # TODO: should use the scenario's year --> will this always work?
+        # year = scenario_data.timesteps.year[0]
+        year = 2015
+        # According to German seasons
+        season_start_dates = {
+            'spring': datetime.date(year, 3, 1),
+            'summer': datetime.date(year, 6, 1),
+            'fall': datetime.date(year, 9, 1),
+            'winter_1': datetime.date(year, 12, 1),
+            'winter_2': datetime.date(year, 1, 1)
+        }
+        season_end_dates = {
+            'spring': datetime.datetime(year, 5, 31, 23, 59, 59),
+            'summer': datetime.datetime(year, 8, 31, 23, 59, 59),
+            'fall': datetime.datetime(year, 11, 30, 23, 59, 59),
+            'winter_1': datetime.datetime(year, 12, 31, 23, 59, 59),
+            'winter_2': datetime.datetime(year, 2, 28, 23, 59, 59)
+        }
+
+        # Adjust all dates so that every season starts on a Monday (for compatibility with fledge)
+        for date in season_start_dates:
+            if 'winter_2' not in date:
+                season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
+                    days=-season_start_dates[date].weekday())
+            else:
+                # Here we have to cut the first days of the year before the first Monday
+                season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
+                    days=-season_start_dates[date].weekday(), weeks=1)
+
+        for date in season_end_dates:
+            if season_end_dates[date].weekday() != 6:
+                season_end_dates[date] = season_end_dates[date] + datetime.timedelta(
+                    days=-season_end_dates[date].weekday() - 1)
+
+        for season in season_start_dates:
+            if 'winter' not in season:
+                self.seasons[season] = pd.date_range(start=season_start_dates[season], end=season_end_dates[season],
+                                                freq='T'),  # 'T' for minutely intervals
+            else:
+                self.seasons['winter'] = pd.date_range(start=season_start_dates['winter_2'],
+                                                  end=season_end_dates['winter_2'],
+                                                  freq='T').append(
+                    pd.date_range(start=season_start_dates['winter_1'], end=season_end_dates['winter_1'], freq='T'))
+
+    @staticmethod
+    def get_season(date_time):
+        # dummy leap year to include leap days(year-02-29) in our range
+        leap_year = 2000
+        seasons = [('winter', (datetime.date(leap_year, 1, 1), datetime.date(leap_year, 3, 20))),
+                   ('spring', (datetime.date(leap_year, 3, 21), datetime.date(leap_year, 6, 20))),
+                   ('summer', (datetime.date(leap_year, 6, 21), datetime.date(leap_year, 9, 22))),
+                   ('fall', (datetime.date(leap_year, 9, 23), datetime.date(leap_year, 12, 20))),
+                   ('winter', (datetime.date(leap_year, 12, 21), datetime.date(leap_year, 12, 31)))]
+
+        date_time = date_time.date()
+        # we don't really care about the actual year so replace it with our dummy leap_year
+        date_time = date_time.replace(year=leap_year)
+        # return season our date falls in.
+        return next(season for season, (start, end) in seasons if start <= date_time <= end)
+
+    def get_season_of_scenario_data(
+            self,
+            scenario_data: fledge.data_interface.ScenarioData
+    ) -> [str, list]:
+
+        for season in self.seasons.keys():
+            dates_in_season = np.array(self.seasons[season])
+            if scenario_data.timesteps[0] in dates_in_season:
+                break
+
+        if season is None:
+            season = 'winter'
+
+        time_format = '%W'
+        weeknums = self.seasons[season].strftime(time_format).unique().to_list()
+
+        return [season, weeknums]
+
+
 def generate_fixed_load_der_input_data(
         scenario_names_list: list,
         path_to_der_schedules_data: str,
@@ -35,7 +120,8 @@ def generate_fixed_load_der_input_data(
 
         # in der_schedules, there is a unique timeseries for every week of the year with the week number as identifier
         # and related to the season
-        [season, weeknums] = __get_season_of_scenario_data(scenario_data)
+        calendar = Calendar()
+        [season, weeknums] = calendar.get_season_of_scenario_data(scenario_data)
 
         grid_data = fledge.data_interface.ElectricGridData(scenario_name)
         electric_grid_name = grid_data.electric_grid.electric_grid_name
@@ -126,69 +212,6 @@ def __pick_random_consumer_type() -> str:
     }
     key_list = list(consumer_types.keys())
     return consumer_types[random.choice(key_list)]
-
-
-def __get_season_of_scenario_data(
-        scenario_data: fledge.data_interface.ScenarioData
-) -> [str, list]:
-
-    # TODO: this is currently copied from notebook, there should be one central spot!
-    # TODO: should use the scenario's year --> will this always work?
-    # year = scenario_data.timesteps.year[0]
-    year = 2015
-    # According to German seasons
-    season_start_dates = {
-        'spring': datetime.date(year, 3, 1),
-        'summer': datetime.date(year, 6, 1),
-        'fall': datetime.date(year, 9, 1),
-        'winter_1': datetime.date(year, 12, 1),
-        'winter_2': datetime.date(year, 1, 1)
-    }
-    season_end_dates = {
-        'spring': datetime.datetime(year, 5, 31, 23, 59, 59),
-        'summer': datetime.datetime(year, 8, 31, 23, 59, 59),
-        'fall': datetime.datetime(year, 11, 30, 23, 59, 59),
-        'winter_1': datetime.datetime(year, 12, 31, 23, 59, 59),
-        'winter_2': datetime.datetime(year, 2, 28, 23, 59, 59)
-    }
-
-    # Adjust all dates so that every season starts on a Monday (for compatibility with fledge)
-    for date in season_start_dates:
-        if 'winter_2' not in date:
-            season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
-                days=-season_start_dates[date].weekday())
-        else:
-            # Here we have to cut the first days of the year before the first Monday
-            season_start_dates[date] = season_start_dates[date] + datetime.timedelta(
-                days=-season_start_dates[date].weekday(), weeks=1)
-
-    for date in season_end_dates:
-        if season_end_dates[date].weekday() != 6:
-            season_end_dates[date] = season_end_dates[date] + datetime.timedelta(
-                days=-season_end_dates[date].weekday() - 1)
-
-    seasons = {}
-    for season in season_start_dates:
-        if 'winter' not in season:
-            seasons[season] = pd.date_range(start=season_start_dates[season], end=season_end_dates[season],
-                                            freq='T'),  # 'T' for minutely intervals
-        else:
-            seasons['winter'] = pd.date_range(start=season_start_dates['winter_2'], end=season_end_dates['winter_2'],
-                                              freq='T').append(
-                pd.date_range(start=season_start_dates['winter_1'], end=season_end_dates['winter_1'], freq='T'))
-    season = None
-    for season in seasons.keys():
-        dates_in_season = np.array(seasons[season])
-        if scenario_data.timesteps[0] in dates_in_season:
-            break
-
-    if season is None:
-        season = 'winter'
-
-    time_format = '%W'
-    weeknums = seasons[season].strftime(time_format).unique().to_list()
-
-    return [season, weeknums]
 
 
 def increase_der_penetration_of_scenario_on_lv_level(

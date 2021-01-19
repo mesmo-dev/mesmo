@@ -73,6 +73,7 @@ class DERModel(object):
             else:
                 self.active_power_nominal_timeseries *= (
                     np.sign(der.at['active_power_nominal'])
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
                     np.sign(der.at['reactive_power_nominal'])
@@ -81,6 +82,7 @@ class DERModel(object):
                         if der.at['active_power_nominal'] != 0.0
                         else 1.0
                     )
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
         else:
             self.active_power_nominal_timeseries = (
@@ -1104,6 +1106,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             self.mapping_active_power_by_output.at['active_power', 'grid_electric_power'] = (
                 -1.0
                 * flexible_building_model.zone_area_total
+                / der_data.scenario_data.scenario.at['base_apparent_power']
             )
         self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
@@ -1111,6 +1114,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
                 -1.0
                 * np.tan(np.arccos(power_factor_nominal))
                 * flexible_building_model.zone_area_total
+                / der_data.scenario_data.scenario.at['base_apparent_power']
             )
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:

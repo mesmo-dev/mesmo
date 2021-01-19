@@ -247,6 +247,44 @@ class ScenarioData(object):
         if 'in_service' in dataframe.columns:
             dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
 
+        # Apply scaling.
+        if 'active_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'active_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'reactive_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'reactive_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'resistance' in dataframe.columns:
+            dataframe.loc[:, 'resistance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'reactance' in dataframe.columns:
+            dataframe.loc[:, 'reactance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'capacitance' in dataframe.columns:
+            dataframe.loc[:, 'capacitance'] *= (
+                self.scenario.at['base_voltage'] ** 2
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'maximum_current' in dataframe.columns:
+            dataframe.loc[:, 'maximum_current'] *= (
+                self.scenario.at['base_voltage']
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'voltage' in dataframe.columns:
+            dataframe.loc[:, 'voltage'] /= (
+                self.scenario.at['base_voltage']
+            )
+        if 'apparent_power' in dataframe.columns:
+            dataframe.loc[:, 'apparent_power'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+
         return dataframe
 
 
@@ -984,6 +1022,7 @@ class PriceData(object):
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]
+            * scenario_data.scenario.at['base_apparent_power']
         )
         # TODO: Proper thermal power price definition.
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (

@@ -31,7 +31,50 @@ class DERModel(object):
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
 
-    # TODO: Define method templates.
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData,
+            der_name: str
+    ):
+
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[der_name, :]
+
+        # Store DER name.
+        self.der_name = der_name
+
+        # Obtain grid connection flags.
+        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
+        self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
+
+        # Obtain timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem
+    ):
+
+        raise NotImplementedError
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
+    ):
+
+        raise NotImplementedError
+
+    def define_optimization_objective(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+    ):
+
+        raise NotImplementedError
 
 
 class DERModelOperationResults(fledge.utils.ResultsBase):
@@ -174,19 +217,15 @@ class FixedLoadModel(FixedDERModel):
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Fixed loads are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -228,19 +267,15 @@ class FixedEVChargerModel(FixedDERModel):
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - EV chargers are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -282,19 +317,15 @@ class FixedGeneratorModel(FixedDERModel):
             der_name: str
     ):
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Fixed generators are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
         self.marginal_cost = der.at['marginal_cost']
@@ -551,7 +582,10 @@ class FlexibleDERModel(DERModel):
                 optimization_problem.objective += (
                     self.marginal_cost
                     * timestep_interval_hours  # In Wh.
-                    * cp.sum(optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')])
+                    * cp.sum(
+                        self.mapping_active_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
                 )
 
         # TODO: Define objective for thermal generators.
@@ -607,19 +641,15 @@ class FlexibleLoadModel(FlexibleDERModel):
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Flexible loads are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -755,8 +785,8 @@ class FlexibleEVChargerModel(FlexibleDERModel):
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -764,11 +794,7 @@ class FlexibleEVChargerModel(FlexibleDERModel):
 
         # Obtain grid connection flags.
         # - Flexible loads are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # # Construct active and reactive power timeseries.
         # self.active_power_nominal_timeseries = (
@@ -909,19 +935,15 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             der_name: str
     ):
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Flexible generators are currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain levelized cost of energy.
         self.marginal_cost = der.at['marginal_cost']
@@ -1030,19 +1052,15 @@ class StorageModel(FlexibleDERModel):
             der_name: str
     ):
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # Obtain grid connection flags.
         # - Currently only implemented for electric grids.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = False
-
-        # Store timesteps index.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Construct nominal active and reactive power timeseries.
         self.active_power_nominal_timeseries = (
@@ -1194,18 +1212,11 @@ class FlexibleBuildingModel(FlexibleDERModel):
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
-
-        # Obtain grid connection flags.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
-        self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
-
-        # Store timesteps.
-        self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain CoBMo building model.
         flexible_building_model = (
@@ -1319,16 +1330,13 @@ class CoolingPlantModel(FlexibleDERModel):
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
-        # Store DER name.
-        self.der_name = der_name
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :].copy()
         der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
-        # Obtain grid connection flags.
-        self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
-        self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
         # Cooling plant must be connected to both thermal grid and electric grid.
         try:
             assert self.is_electric_grid_connected and self.is_thermal_grid_connected
@@ -1689,7 +1697,7 @@ def make_der_model(
     """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
 
     # Obtain DER type.
-    der_type = der_data.ders.loc[der_name, 'der_type']
+    der_type = der_data.ders.at[der_name, 'der_type']
 
     # Obtain DER model classes.
     der_model_classes = (

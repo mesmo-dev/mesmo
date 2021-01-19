@@ -31,7 +31,7 @@ granularity_levels = {
 
 der_penetration_levels = {
     'no_penetration': 0.0,
-    'low_penetration': 0.5,
+    'low_penetration': 0.3,
     # 'high_penetration': 1.0,
 }
 
@@ -54,6 +54,7 @@ if regenerate_scenario_data:
             )
 
 # Recreate / overwrite database, to incorporate the new grids that we created
+print('Re-loading data to incorporate the new grid data...', end='\r')
 fledge.data_interface.recreate_database()
 results_dict = {}
 simulation_scenarios = granularity_levels.copy()

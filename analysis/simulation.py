@@ -14,74 +14,7 @@ import fledge.der_models
 import fledge.electric_grid_models
 import fledge.problems
 
-
-class Controller(object):
-    results_dict: dict
-    simulation_scenarios: dict
-    der_penetration_scenario_data: dict
-
-    def __init__(
-            self,
-            simulation_scenarios: dict,
-    ):
-        self.results_dict = {}
-        self.simulation_scenarios = simulation_scenarios
-        pass
-
-    def run(
-            self
-    ) -> dict:
-
-        optimization_results_dict = {}
-        # Run decentralized problem based on wholesale market price (no granularity)
-        # TODO: make this more general like in the prototype
-        granularity_level = 'no_granularity'
-        problem_type = 'decentral'
-        results_path = fledge.utils.get_results_path(
-            'optimal_operation', granularity_level + '_' + problem_type)
-        scenario_name = self.simulation_scenarios[granularity_level]
-        opt_objective, opt_results = SolutionEngine.run_optimal_operation_problem(
-                scenario_name=scenario_name,
-                results_path=results_path,
-                problem_type=problem_type
-            )
-        optimization_results_dict['opt_objective_' + granularity_level + '_' + problem_type] = opt_objective
-        optimization_results_dict['results_' + granularity_level + '_' + problem_type] = opt_results
-
-        power_flow_results_dict = {}
-        # Run nominal operation of electric grid and check for violations
-        # Get the set points from decentralized problems and calculate nominal power flow
-        # now using the entire grid again
-        granularity_level = 'high_granularity'
-        scenario_name = self.simulation_scenarios[granularity_level]
-        for key in optimization_results_dict:
-            if not(('decentral' in key) and ('results' in key)):
-                # only use solution from decentral optimization, central optimization will yield the same
-                continue
-            results_path = fledge.utils.get_results_path('electric_grid_nominal_operation', 'wholesale')
-            # change the set points of the DERs
-            try:
-                der_model_set_new_setpoints = ScenarioHandler.change_der_set_points_based_on_results(
-                    scenario_name,
-                    optimization_results_dict[key])
-            except KeyError:
-                raise
-            # run the nominal power flow and store results in dictionary
-            power_flow_results_dict[scenario_name] = SolutionEngine.run_nominal_operation(
-                scenario_name,
-                der_model_set_new_setpoints,
-                results_path)
-
-        self.results_dict = {
-            'optimization_results': optimization_results_dict,
-            'power_flow_results': power_flow_results_dict
-        }
-        return self.results_dict
-
-    def get_results(
-            self
-    ) -> dict:
-        return self.results_dict
+logger = fledge.config.get_logger(__name__)
 
 
 class SolutionEngine(object):
@@ -135,8 +68,8 @@ class SolutionEngine(object):
         fledge.config.config['optimization']['show_solver_output'] = show_solver_output_original
         return results
 
-    @staticmethod
     def run_optimal_operation_problem(
+        self,
         scenario_name: str,
         problem_type: str,
         results_path: str = None,
@@ -148,7 +81,7 @@ class SolutionEngine(object):
             problem = ElectricGridOptimalOperationProblem(scenario_name)
             # run pre-solve and change initial DER setpoints for more accurate linearization
             der_model_set = fledge.der_models.DERModelSet(scenario_name)
-            presolve_results = SolutionEngine.run_presolve_with_der_models(scenario_name=scenario_name)
+            presolve_results = self.__run_presolve(scenario_name=scenario_name)
             problem.der_model_set = ScenarioHandler.change_der_set_points_based_on_results(
                 der_model_set, presolve_results
             )
@@ -395,20 +328,21 @@ class OptimalOperationProblem(object):
         if self.electric_grid_model is not None:
             # ---------------------------------------------------------------------------------------------------------
             # POWER FLOW AND LINEAR ELECTRIC GRID MODEL
-            # Obtain the base power flow, using the values from the presolved optmization given as input as initial dispatch
-            # quantities.
-            self.power_flow_solutions_per_timestep = SolutionEngine.get_power_flow_solutions_per_timestep(
+            # Obtain the base power flow, using the values from the presolved optmization given as input as initial
+            # dispatch quantities.
+            solution_engine = SolutionEngine()
+            self.power_flow_solutions_per_timestep = solution_engine.get_power_flow_solutions_per_timestep(
                 electric_grid_model=self.electric_grid_model,
                 der_model_set_new_setpoints=self.der_model_set,
                 timesteps=self.timesteps
             )
             # Get linear electric grid model for all timesteps
-            linear_electric_grid_models_per_timestep = SolutionEngine.get_linear_electric_grid_models_per_timestep(
+            linear_electric_grid_models_per_timestep = solution_engine.get_linear_electric_grid_models_per_timestep(
                 electric_grid_model=self.electric_grid_model,
                 power_flow_solutions=self.power_flow_solutions_per_timestep,
                 timesteps=self.timesteps)
             # Get the first linear electric grid model for the next function calls
-            linear_electric_grid_model = linear_electric_grid_models_per_timestep[self.timesteps[0]]
+            self.linear_electric_grid_model = linear_electric_grid_models_per_timestep[self.timesteps[0]]
 
             # Define linear electric grid model variables and constraints.
             self.linear_electric_grid_model.define_optimization_variables(
@@ -560,3 +494,75 @@ class ElectricGridOptimalOperationProblem(OptimalOperationProblem):
             scenario_name=scenario_name,
             central=True
         )
+
+
+class Controller(object):
+    results_dict: dict
+    simulation_scenarios: dict
+    der_penetration_scenario_data: dict
+    solution_engine: SolutionEngine
+
+    def __init__(
+            self,
+            simulation_scenarios: dict,
+    ):
+        self.results_dict = {}
+        self.simulation_scenarios = simulation_scenarios
+        pass
+
+    def run(
+            self
+    ) -> dict:
+
+        optimization_results_dict = {}
+        # Run decentralized problem based on wholesale market price (no granularity)
+        # TODO: make this more general like in the prototype
+        granularity_level = 'no_granularity'
+        problem_type = 'decentral'
+        results_path = fledge.utils.get_results_path(
+            'optimal_operation', granularity_level + '_' + problem_type)
+        scenario_name = self.simulation_scenarios[granularity_level]
+        self.solution_engine = SolutionEngine()
+        opt_objective, opt_results = self.solution_engine.run_optimal_operation_problem(
+                scenario_name=scenario_name,
+                results_path=results_path,
+                problem_type=problem_type
+            )
+        optimization_results_dict['opt_objective_' + granularity_level + '_' + problem_type] = opt_objective
+        optimization_results_dict['results_' + granularity_level + '_' + problem_type] = opt_results
+
+        power_flow_results_dict = {}
+        # Run nominal operation of electric grid and check for violations
+        # Get the set points from decentralized problems and calculate nominal power flow
+        # now using the entire grid again
+        granularity_level = 'high_granularity'
+        scenario_name = self.simulation_scenarios[granularity_level]
+        for key in optimization_results_dict:
+            if not(('decentral' in key) and ('results' in key)):
+                # only use solution from decentral optimization, central optimization will yield the same
+                continue
+            results_path = fledge.utils.get_results_path('electric_grid_nominal_operation', 'wholesale')
+            # change the set points of the DERs
+            try:
+                der_model_set = fledge.der_models.DERModelSet(scenario_name)
+                der_model_set_new_setpoints = ScenarioHandler.change_der_set_points_based_on_results(
+                    der_model_set,
+                    optimization_results_dict[key])
+            except KeyError:
+                raise
+            # run the nominal power flow and store results in dictionary
+            power_flow_results_dict[scenario_name] = self.solution_engine.run_nominal_operation(
+                scenario_name,
+                der_model_set_new_setpoints,
+                results_path)
+
+        self.results_dict = {
+            'optimization_results': optimization_results_dict,
+            'power_flow_results': power_flow_results_dict
+        }
+        return self.results_dict
+
+    def get_results(
+            self
+    ) -> dict:
+        return self.results_dict

@@ -335,6 +335,9 @@ class FlexibleDERModel(DERModel):
     controls: pd.Index
     disturbances: pd.Index
     outputs: pd.Index
+    mapping_active_power_by_output: pd.DataFrame
+    mapping_reactive_power_by_output: pd.DataFrame
+    mapping_thermal_power_by_output: pd.DataFrame
     state_vector_initial: pd.Series
     state_matrix: pd.DataFrame
     control_matrix: pd.DataFrame
@@ -424,54 +427,33 @@ class FlexibleDERModel(DERModel):
         # Define connection constraints.
         if (electric_grid_model is not None) and self.is_electric_grid_connected:
             der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
-
-            if type(self) is FlexibleBuildingModel:
-                optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, [der_index]]
-                    ==
-                    cp.transpose(
-                        np.array([self.mapping_active_power_by_output.values])
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector[:, [der_index]]
+                ==
+                cp.transpose(
+                    self.mapping_active_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
-                optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, [der_index]]
-                    ==
-                    cp.transpose(
-                        np.array([self.mapping_reactive_power_by_output.values])
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
+            )
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector[:, [der_index]]
+                ==
+                cp.transpose(
+                    self.mapping_reactive_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
-            else:
-                optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, der_index]
-                    ==
-                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
-                )
-                optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, der_index]
-                    ==
-                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
-                )
+            )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
             der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
-
-            if type(self) is FlexibleBuildingModel:
-                optimization_problem.constraints.append(
-                    optimization_problem.der_thermal_power_vector[:, [der_index]]
-                    ==
-                    cp.transpose(
-                        np.array([self.mapping_thermal_power_by_output.values])
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
+            optimization_problem.constraints.append(
+                optimization_problem.der_thermal_power_vector[:, [der_index]]
+                ==
+                cp.transpose(
+                    self.mapping_thermal_power_by_output.values
+                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
-            elif type(self) is CoolingPlantModel:
-                optimization_problem.constraints.append(
-                    optimization_problem.der_thermal_power_vector[:, der_index]
-                    ==
-                    optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
-                )
+            )
 
     def define_optimization_objective(
             self,
@@ -489,89 +471,48 @@ class FlexibleDERModel(DERModel):
         # - Otherwise, defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
-            if type(self) is FlexibleBuildingModel:
 
-                # Active power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ cp.transpose(
-                            np.array([self.mapping_active_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        )
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            np.array([self.mapping_active_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        ) ** 2)
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ cp.transpose(
+                        self.mapping_active_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
+                + (
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum((
+                        self.mapping_active_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    ) ** 2)
+                )
+            )
 
-                # Reactive power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ cp.transpose(
-                            np.array([self.mapping_reactive_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        )
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            np.array([self.mapping_reactive_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        ) ** 2)
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ cp.transpose(
+                        self.mapping_reactive_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
-
-            else:
-
-                # Active power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                        * timestep_interval_hours  # In Wh.
-                        @ (-1.0 * (
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
-                        ))
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('active_power')]
-                        ) ** 2)
-                    )
+                + (
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum((
+                        self.mapping_reactive_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    ) ** 2)
                 )
-
-                # Reactive power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                        * timestep_interval_hours  # In Wh.
-                        @ (-1.0 * (
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
-                        ))
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('reactive_power')]
-                        ) ** 2)
-                    )
-                )
+            )
 
         # Define objective for thermal loads.
         # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
@@ -579,47 +520,27 @@ class FlexibleDERModel(DERModel):
         #   in `LinearThermalGridModel.define_optimization_objective`.
         # - This enables proper calculation of the DLMPs.
         if (thermal_grid_model is None) and self.is_thermal_grid_connected:
-            if type(self) is FlexibleBuildingModel:
 
-                # Thermal power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ cp.transpose(
-                            np.array([self.mapping_thermal_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        )
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            np.array([self.mapping_thermal_power_by_output.values])
-                            @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                        ) ** 2)
+            # Thermal power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ cp.transpose(
+                        self.mapping_thermal_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
-
-            else:
-
-                # Thermal power cost / revenue.
-                # - Cost for load / demand, revenue for generation / supply.
-                optimization_problem.objective += (
-                    (
-                        price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
-                        * -1.0 * timestep_interval_hours  # In Wh.
-                        @ optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
-                    )
-                    + (
-                        price_data.price_sensitivity_coefficient
-                        * timestep_interval_hours  # In Wh.
-                        * cp.sum((
-                            optimization_problem.output_vector[self.der_name][:, self.outputs.get_loc('thermal_power')]
-                        ) ** 2)
-                    )
+                + (
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum((
+                        self.mapping_thermal_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    ) ** 2)
                 )
+            )
 
         # Define objective for electric generators.
         # - Always defined here as the cost of electric power generation at the DER node.
@@ -733,6 +654,15 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index(['active_power'])
         self.outputs = pd.Index(['state_of_charge', 'active_power', 'reactive_power'])
+
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
 
         # Instantiate initial state.
         # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
@@ -882,6 +812,15 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.disturbances = pd.Index(['departing_vehicle_energy'])
         self.outputs = pd.Index(['charged_energy', 'active_power', 'reactive_power'])
 
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
+
         # Instantiate initial state.
         # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
         self.state_vector_initial = (
@@ -1020,6 +959,15 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         self.disturbances = pd.Index([])
         self.outputs = pd.Index(['active_power', 'reactive_power'])
 
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
+
         # Instantiate initial state.
         self.state_vector_initial = (
             pd.Series(0.0, index=self.states)
@@ -1120,6 +1068,15 @@ class StorageModel(FlexibleDERModel):
                 'active_power', 'reactive_power'
             ])
         )
+
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
 
         # Instantiate initial state.
         # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
@@ -1310,22 +1267,22 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.outputs = flexible_building_model.outputs
 
         # Define power mapping matrices.
-        self.mapping_active_power_by_output = pd.Series(0.0, index=self.outputs, name='active_power')
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
-            self.mapping_active_power_by_output.at['grid_electric_power'] = (
+            self.mapping_active_power_by_output.at['active_power', 'grid_electric_power'] = (
                 -1.0
                 * flexible_building_model.zone_area_total
             )
-        self.mapping_reactive_power_by_output = pd.Series(0.0, index=self.outputs, name='reactive_power')
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
-            self.mapping_reactive_power_by_output.at['grid_electric_power'] = (
+            self.mapping_reactive_power_by_output.at['reactive_power', 'grid_electric_power'] = (
                 -1.0
                 * np.tan(np.arccos(self.power_factor_nominal))
                 * flexible_building_model.zone_area_total
             )
-        self.mapping_thermal_power_by_output = pd.Series(0.0, index=self.outputs, name='thermal_power')
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_thermal_power_by_output.at['grid_thermal_power_cooling'] = (
+            self.mapping_thermal_power_by_output.at['thermal_power', 'grid_thermal_power_cooling'] = (
                 -1.0
                 * flexible_building_model.zone_area_total
             )
@@ -1468,6 +1425,17 @@ class CoolingPlantModel(FlexibleDERModel):
         self.controls = pd.Index(['active_power'])
         self.disturbances = pd.Index([])
         self.outputs = pd.Index(['active_power', 'reactive_power', 'thermal_power'])
+
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+        self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
+        if self.is_thermal_grid_connected:
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
 
         # Instantiate initial state.
         self.state_vector_initial = (

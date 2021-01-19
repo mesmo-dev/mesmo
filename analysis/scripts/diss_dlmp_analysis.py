@@ -36,17 +36,18 @@ der_penetration_levels = {
 }
 
 # Generate the grids that are needed for different granularity levels (comment out if not needed)
+scenario_factory = analysis.input.ScenarioFactory()
 if regenerate_scenario_data:
     for scenario in granularity_levels:
         # generate aggregated / combined grids
         if 'high_granularity' in scenario:
-            analysis.input.combine_electric_grids(mv_grid_name, path_to_grid_map, granularity_levels[scenario])
+            scenario_factory.combine_electric_grids(mv_grid_name, path_to_grid_map, granularity_levels[scenario])
         elif 'low_granularity' in scenario:
-            analysis.input.aggregate_electric_grids(mv_grid_name, path_to_grid_map, granularity_levels[scenario])
+            scenario_factory.aggregate_electric_grids(mv_grid_name, path_to_grid_map, granularity_levels[scenario])
 
         # generate scenario data for DER penetration scenarios
         for der_penetration in der_penetration_levels:
-            analysis.input.increase_der_penetration_of_scenario_on_lv_level(
+            scenario_factory.increase_der_penetration_of_scenario_on_lv_level(
                 scenario_name=granularity_levels[scenario],
                 path_to_der_data=path_to_der_data,
                 penetration_ratio=der_penetration_levels[der_penetration],

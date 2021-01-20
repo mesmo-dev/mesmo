@@ -26,16 +26,19 @@ der_penetration_levels = {
     # 'high_penetration': 1.0,
 }
 
-analysis.input.generate_fixed_load_der_input_data(
-    scenario_names_list=scenario_names,
-    path_to_der_schedules_data=path_to_der_schedules_data,
-    generate_der_models_csv=False
-)
-
+scenario_factory = analysis.input.ScenarioFactory()
+scenario_factory.reload_database()
+for scenario_name in scenario_names:
+    scenario_factory.generate_fixed_load_der_input_data(
+        scenario_name=scenario_name,
+        path_to_der_schedules_data=path_to_der_schedules_data,
+        replace_ders=True
+    )
+scenario_factory.reload_database()
 # generate scenario data for DER penetration scenarios
 for scenario_name in scenario_names:
     for der_penetration in der_penetration_levels:
-        analysis.input.increase_der_penetration_of_scenario_on_lv_level(
+        scenario_factory.increase_der_penetration_of_scenario(
             scenario_name=scenario_name,
             path_to_der_data=path_to_der_data,
             penetration_ratio=der_penetration_levels[der_penetration],

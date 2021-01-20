@@ -401,15 +401,21 @@ class FlexibleDERModel(DERModel):
         )
 
         # Output limits.
-        optimization_problem.constraints.append(
-            optimization_problem.output_vector[self.der_name]
-            >=
-            self.output_minimum_timeseries.values
+        outputs_minimum_infinite = (
+            (self.output_minimum_timeseries == -np.inf).all()
         )
         optimization_problem.constraints.append(
-            optimization_problem.output_vector[self.der_name]
+            optimization_problem.output_vector[self.der_name][:, ~outputs_minimum_infinite]
+            >=
+            self.output_minimum_timeseries.loc[:, ~outputs_minimum_infinite].values
+        )
+        outputs_maximum_infinite = (
+            (self.output_maximum_timeseries == np.inf).all()
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.output_vector[self.der_name][:, ~outputs_maximum_infinite]
             <=
-            self.output_maximum_timeseries.values
+            self.output_maximum_timeseries.loc[:, ~outputs_maximum_infinite].values
         )
 
         # Define connection constraints.

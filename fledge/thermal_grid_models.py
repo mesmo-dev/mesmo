@@ -619,14 +619,14 @@ class LinearThermalGridModel(object):
                     / self.thermal_grid_model.cooling_plant_efficiency
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + (
+            + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_thermal_power_vector
                     / self.thermal_grid_model.cooling_plant_efficiency
                 ) ** 2)
-            )
+            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
         # Pump cost.
@@ -637,11 +637,11 @@ class LinearThermalGridModel(object):
                 * timestep_interval_hours  # In Wh.
                 @ optimization_problem.pump_power
             )
-            + (
+            + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum(optimization_problem.pump_power ** 2)
-            )
+            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
     def get_optimization_dlmps(

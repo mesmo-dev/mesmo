@@ -195,11 +195,11 @@ class FixedDERModel(DERModel):
                     * timestep_interval_hours  # In Wh.
                     @ np.transpose([-1.0 * self.active_power_nominal_timeseries.values])
                 )
-                + (
+                + ((
                     price_data.price_sensitivity_coefficient
                     * timestep_interval_hours  # In Wh.
                     * cp.sum(np.transpose([self.active_power_nominal_timeseries.values]) ** 2)
-                )
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
 
             # Reactive power cost / revenue.
@@ -210,11 +210,11 @@ class FixedDERModel(DERModel):
                     * timestep_interval_hours  # In Wh.
                     @ np.transpose([-1.0 * self.reactive_power_nominal_timeseries.values])
                 )
-                + (
+                + ((
                     price_data.price_sensitivity_coefficient
                     * timestep_interval_hours  # In Wh.
                     * cp.sum(np.transpose([self.reactive_power_nominal_timeseries.values]) ** 2)
-                )
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
 
         # TODO: Define objective for thermal loads.
@@ -471,14 +471,14 @@ class FlexibleDERModel(DERModel):
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
-                + (
+                + ((
                     price_data.price_sensitivity_coefficient
                     * timestep_interval_hours  # In Wh.
                     * cp.sum((
                         self.mapping_active_power_by_output.values
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     ) ** 2)
-                )
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
 
             # Reactive power cost / revenue.
@@ -492,14 +492,14 @@ class FlexibleDERModel(DERModel):
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
-                + (
+                + ((
                     price_data.price_sensitivity_coefficient
                     * timestep_interval_hours  # In Wh.
                     * cp.sum((
                         self.mapping_reactive_power_by_output.values
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     ) ** 2)
-                )
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
 
         # Define objective for thermal loads.
@@ -520,14 +520,14 @@ class FlexibleDERModel(DERModel):
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     )
                 )
-                + (
+                + ((
                     price_data.price_sensitivity_coefficient
                     * timestep_interval_hours  # In Wh.
                     * cp.sum((
                         self.mapping_thermal_power_by_output.values
                         @ cp.transpose(optimization_problem.output_vector[self.der_name])
                     ) ** 2)
-                )
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
 
         # Define objective for electric generators.

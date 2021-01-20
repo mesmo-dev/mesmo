@@ -2526,13 +2526,13 @@ class LinearElectricGridModel(object):
                     optimization_problem.der_active_power_vector
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + (
+            + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_active_power_vector
                 ) ** 2)
-            )
+            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
         # Reactive power cost / revenue.
@@ -2545,13 +2545,13 @@ class LinearElectricGridModel(object):
                     optimization_problem.der_reactive_power_vector
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
-            + (
+            + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.der_reactive_power_vector
                 ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
-            )
+            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
         # Active loss cost.
@@ -2563,13 +2563,13 @@ class LinearElectricGridModel(object):
                     optimization_problem.loss_active
                 )
             )
-            + (
+            + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
                     optimization_problem.loss_active
                 ) ** 2)
-            )
+            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
     def get_optimization_dlmps(

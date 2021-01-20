@@ -9,6 +9,7 @@ import pandas as pd
 
 import fledge.data_interface
 
+
 class Random(object):
 
     @staticmethod
@@ -17,7 +18,9 @@ class Random(object):
             num_of_samples: int = 1
     ) -> [list, list]:
         samples = random.sample(population_list, k=num_of_samples)
-        new_population_list = population_list.copy().remove(samples)
+        new_population_list = population_list.copy()
+        for i in range(0, len(samples)):
+            new_population_list.remove(samples[i])
         return [samples, new_population_list]
 
     @staticmethod
@@ -33,22 +36,29 @@ class Calendar(object):
     leap_year = 2000  # Dummy leap_year to include 29 of Feb
     seasons: list
 
-    def __init__(self):
+    # TODO: currently does not support leap year!
+
+    def __init__(
+            self,
+            year: int = None
+    ):
+        if year is None:
+            year = self.leap_year
 
         # According to German seasons
         season_start_dates = {
-            'spring': datetime.date(self.leap_year, 3, 1),
-            'summer': datetime.date(self.leap_year, 6, 1),
-            'fall': datetime.date(self.leap_year, 9, 1),
-            'winter_1': datetime.date(self.leap_year, 12, 1),
-            'winter_2': datetime.date(self.leap_year, 1, 1)
+            'spring': datetime.date(year, 3, 1),
+            'summer': datetime.date(year, 6, 1),
+            'fall': datetime.date(year, 9, 1),
+            'winter_1': datetime.date(year, 12, 1),
+            'winter_2': datetime.date(year, 1, 1)
         }
         season_end_dates = {
-            'spring': datetime.datetime(self.leap_year, 5, 31, 23, 59, 59),
-            'summer': datetime.datetime(self.leap_year, 8, 31, 23, 59, 59),
-            'fall': datetime.datetime(self.leap_year, 11, 30, 23, 59, 59),
-            'winter_1': datetime.datetime(self.leap_year, 12, 31, 23, 59, 59),
-            'winter_2': datetime.datetime(self.leap_year, 2, 29, 23, 59, 59)
+            'spring': datetime.datetime(year, 5, 31, 23, 59, 59),
+            'summer': datetime.datetime(year, 8, 31, 23, 59, 59),
+            'fall': datetime.datetime(year, 11, 30, 23, 59, 59),
+            'winter_1': datetime.datetime(year, 12, 31, 23, 59, 59),
+            'winter_2': datetime.datetime(year, 2, 28, 23, 59, 59)
         }
 
         self.seasons = [('winter', (season_start_dates['winter_2'], season_end_dates['winter_2'].date())),
@@ -100,8 +110,8 @@ class Calendar(object):
         # a Monday so scenario data is not split between seasons
         # TODO: there is probably a more performant solution than this (compare to get_season())
 
-        for season in self.seasons.keys():
-            dates_in_season = np.array(self.seasons[season])
+        for season in self.seasons_monday_start.keys():
+            dates_in_season = np.array(self.seasons_monday_start[season])
             if scenario_data.timesteps[0] in dates_in_season:
                 break
 
@@ -109,6 +119,6 @@ class Calendar(object):
             season = 'winter'
 
         time_format = '%W'
-        weeknums = self.seasons[season].strftime(time_format).unique().to_list()
+        weeknums = self.seasons_monday_start[season].strftime(time_format).unique().to_list()
 
         return [season, weeknums]

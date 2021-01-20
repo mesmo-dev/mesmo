@@ -1,5 +1,5 @@
 """
-Module with helper functions for generating the necessary input files for the DLMP analysis
+Module with helper classes and functions for generating the necessary input files for the DLMP analysis
 """
 
 import pandas as pd
@@ -14,7 +14,7 @@ import analysis.utils
 
 
 class DataFactory(object):
-    """Base class of all factor objects that can generate the csv-files (see below)"""
+    """Base class of all factory objects that can generate the csv-files (see below)"""
     data: object  # This is DERData, ElectricGridData, etc.
     csv_columns: dict
     csv_filenames: dict
@@ -22,14 +22,14 @@ class DataFactory(object):
     def format_data_tables(
             self,
             table_name: str = None
-    ):
+    ) -> pd.DataFrame:
         # Get the tables data
         if table_name is None:
             data_tables = vars(self.data)
         else:
             # If function is called with individual table request, instead of all
             data_tables = [table_name]
-
+        table = None
         for table_name in data_tables:
             if table_name in self.csv_filenames.keys():
                 if table_name is 'scenario_data':
@@ -48,6 +48,9 @@ class DataFactory(object):
                     self.data.scenario_data.scenario = table
                 else:
                     setattr(self.data, table_name, table)
+
+        # return the last table (or the table the was formatted based on argument table_name
+        return table
 
     def export_data_to_csv(
             self,
@@ -73,12 +76,106 @@ class DataFactory(object):
                     index=False,
                     date_format='%Y-%m-%dT%H:%M:%S'
                 )
+                print(f'Successfully exported {self.csv_filenames[table_name]} data to {output_path}')
+
+    def add_row_with_new_values(
+            self,
+            key_value_pairs: dict,
+            row_index: pd.Index = None,
+            table_name: str = None
+    ):
+        """
+        Copies last row of table or row provided by index (either all tables or specified by table_name) and edits the
+        value if key in table column.
+        :param key_value_pairs:
+        :param row_index:
+        :param table_name:
+        :return:
+        """
+        # Get the tables data
+        if table_name is None:
+            data_tables = vars(self.data)
+        else:
+            # If function is called with individual table request, instead of all
+            data_tables = [table_name]
+
+        for table_name in data_tables:
+            if table_name is 'scenario_data':
+                table = self.data.scenario_data.scenario
+            else:
+                table = getattr(self.data, table_name)
+
+            if type(table) is pd.Series:
+                # Format the data_table, so we can actually add to it if it is a series
+                table = self.format_data_tables(table_name=table_name)
+
+            if row_index is not None:
+                copy_row = table.loc[row_index, :].copy()
+            else:
+                # Get last row and append
+                copy_row = table.tail(1).copy()
+            value_changed = False
+            for key in key_value_pairs:
+                if key in table.keys():
+                    copy_row[key] = key_value_pairs[key]
+                    value_changed = True
+
+            if value_changed:
+                # Add the new row
+                table = table.append(copy_row, ignore_index=True)
+                if table_name is 'scenario_data':
+                    self.data.scenario_data.scenario = table
+                else:
+                    setattr(self.data, table_name, table)
+
+    def remove_entry_from_tables(
+            self,
+            entry_name: str,
+            attribute_name: str,
+            table_name: str = None
+    ):
+        # TODO needs proper testing
+        raise NotImplementedError
+        # Get the tables data
+        # if table_name is None:
+        #     data_tables = vars(self.data)
+        # else:
+        #     # If function is called with individual table request, instead of all
+        #     data_tables = [table_name]
+        #
+        # for table_name in data_tables:
+        #     if table_name is 'scenario_data':
+        #         table = self.data.scenario_data.scenario
+        #     else:
+        #         table = getattr(self.data, table_name)
+        #     if attribute_name in table.keys():
+        #         if type(table) is pd.DataFrame:
+        #                 table = table.drop(table.loc[table[attribute_name] == entry_name].index)
+        #         elif type(table) is pd.Series:
+        #             table.loc[attribute_name] = None
+        #         else:
+        #             print(f'{type(table)} not supported')
+        #
+        #         if table_name is 'scenario_data':
+        #             self.data.scenario_data.scenario = table
+        #         else:
+        #             setattr(self.data, table_name, table)
 
     def add_data_to_tables(
             self,
             add_data: object,
             table_name: str = None
     ):
+        """
+        Adds data of the same type of data and table to the data object (of type DERData, etc.) stored in self
+        :param add_data:
+        :param table_name:
+        :return:
+        """
+        if type(add_data) != type(self.data):
+            print(f'Cannot add data of type {type(add_data)} to data of type {type(self.data)}')
+            raise ValueError
+
         # Get the tables data
         if table_name is None:
             data_tables = vars(self.data)
@@ -195,6 +292,20 @@ class ElectricGridDataFactory(DataFactory):
                 'connection',
                 'apparent_power'
             ],
+            'electric_grid_ders': [
+                'electric_grid_name',
+                'der_name',
+                'der_type',
+                'der_model_name',
+                'node_name',
+                'is_phase_1_connected',
+                'is_phase_2_connected',
+                'is_phase_3_connected',
+                'connection',
+                'active_power_nominal',
+                'reactive_power_nominal',
+                'in_service'
+            ]
         }
 
         self.csv_filenames = {
@@ -220,6 +331,26 @@ class ElectricGridDataFactory(DataFactory):
                                                       self.data.electric_grid_ders[
                                                           'node_name'] == mv_node_name].index)
             print(f'CAUTION: All DERs at MV node {mv_node_name} have been removed and will be replaced with LV grid.')
+
+    def add_der_data_to_grid_data(
+            self,
+            der_data: fledge.data_interface.DERData
+    ):
+        # TODO: this function should do something more, like renaming the electric_grid_name attribute
+        # This function adds all DERs in der_data to electric_grid_ders table
+        table = der_data.ders.copy()
+        # Drop some of columns that are not part of final csv
+        der_data.electric_grid_ders = table[self.csv_columns['electric_grid_ders']]
+        self.add_data_to_tables(der_data, table_name='electric_grid_ders')
+
+    def add_der_to_electric_grid_data(
+            self,
+            der_table_row: pd.Series
+    ):
+        # Add the DER to the main DER table
+        self.data.electric_grid_ders = (
+            self.data.electric_grid_ders.append(der_table_row).reset_index(drop=True)
+        )
 
 
 class DERDataFactory(DataFactory):
@@ -249,6 +380,33 @@ class DERDataFactory(DataFactory):
         self.csv_filenames = {
             'ders': 'der_models.csv'
         }
+
+    def generate_der_data_for_der_type(
+            self,
+            der_type: str
+    ):
+        # Function adds a new der to existing DERData in self.data
+        raise NotImplementedError
+
+    # def generate_der_models_csv(
+    #         self,
+    #         der_schedules: pd.DataFrame,
+    #         output_path: str
+    # ):
+    #     # Using the last scenario_name of the loop (it does not matter)
+    #     # der_models.csv is only generated once for all possible der_model_names
+    #     # Drop / remove all data from dataframe (if exist)
+    #     ders = self.ders.copy()
+    #     ders.drop(self.ders.index, inplace=True)
+    #     for definition_name in der_schedules['definition_name'].unique():
+    #         # Add to ders data
+    #         der_data.ders = der_data.ders.append({
+    #             'der_model_name': definition_name,
+    #             'der_type': der_type,
+    #             'definition_name': definition_name,
+    #             'definition_type': definition_type
+    #         }, ignore_index=True)
+    #     self.export_data_to_csv(output_path=output_path, table_name='ders')
 
 
 class ScenarioDataFactory(DataFactory):
@@ -280,13 +438,14 @@ class ScenarioDataFactory(DataFactory):
 class ScenarioFactory(object):
     path_to_data: str
     calendar: analysis.utils.Calendar
+    der_schedules: pd.DataFrame = None
 
     # TODO: Instead of reloading the database all the time, change some of the functions so that they use ScenarioData
     #  object instead of reloading based on scenario_name
 
     def __init__(self):
         self.path_to_data = fledge.config.config['paths']['data']
-        self.calendar = analysis.utils.Calendar()
+        self.calendar = analysis.utils.Calendar(2015)  # year 2015 as input data is from that year
 
     def aggregate_electric_grids(
             self,
@@ -314,8 +473,9 @@ class ScenarioFactory(object):
         output_path = self.create_output_folder(scenario_name=aggregated_scenario_name)
 
         # Load data of MV grid which is the underlying grid for our new
-        aggregated_electric_grid_data = fledge.data_interface.ElectricGridData(mv_scenario_name)
-        aggregated_electric_grid_data_factory = ElectricGridDataFactory(aggregated_electric_grid_data)
+        aggregated_electric_grid_data_factory = ElectricGridDataFactory(
+            fledge.data_interface.ElectricGridData(mv_scenario_name)
+        )
 
         new_values_dict = {
             'scenario_name': aggregated_scenario_name,
@@ -491,134 +651,20 @@ class ScenarioFactory(object):
 
         return combined_scenario_name
 
-    def generate_fixed_load_der_input_data(
-            self,
-            scenario_names_list: list,
-            path_to_der_schedules_data: str,
-            generate_der_models_csv: bool = True,
-            num_of_loads: int = np.inf
-    ):
-        # per default, this function generates a load profile at every node (num_of_loads=inf)
-
-        der_schedules = self.load_data(path_to_der_schedules_data)
-
-        # load scenario data to get the relevant time period and grid data (nodes)
-        for scenario_name in scenario_names_list:
-            print(f'Adding DERs to scenario {scenario_name}')
-            scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-
-            # in der_schedules, there is a unique timeseries for every week of the year with the week number as identifier
-            # and related to the season
-            [season, weeknums] = self.calendar.get_season_of_scenario_data(scenario_data)
-
-            grid_data = fledge.data_interface.ElectricGridData(scenario_name)
-            electric_grid_name = grid_data.electric_grid.electric_grid_name
-            nodes = grid_data.electric_grid_nodes
-
-            der_data = fledge.data_interface.DERData(scenario_name)
-
-            # Drop / remove all data from dataframe (if exist)
-            grid_data.electric_grid_ders.drop(grid_data.electric_grid_ders.index, inplace=True)
-            print('Note: All original DERs were deleted from the electric grid model scenario.')
-
-            counter = 1
-            der_type = 'fixed_load'
-            definition_type = 'schedule'
-            power_factor = 0.95
-            source_node_name = grid_data.electric_grid['source_node_name']
-            for node_name in nodes['node_name']:
-                if counter > num_of_loads:
-                    break
-                # don't add a new der to the source node
-                if node_name == source_node_name:
-                    continue
-
-                der_name = 'Load R' + node_name
-                # TODO: loop over all phases
-                der_model_name = self.__pick_random_consumer_type() + '_' + season + '_' + random.choice(
-                    weeknums) + '_phase_0'
-
-                active_power_vals = der_schedules.loc[der_schedules['definition_name'] == der_model_name, :]
-                active_power_vals_aggregated = []
-                for i in range(0, len(active_power_vals), 60):
-                    for val in scenario_data.timesteps.weekday.unique():
-                        if (str(val) == active_power_vals[i:i + 60]['time_period'].str[1:2]).any():
-                            active_power_vals_aggregated.append(np.mean(active_power_vals[i:i + 60]['value']))
-
-                active_power_nominal = (-1) * max(active_power_vals_aggregated)
-                # active_power_nominal = (-1) * max(active_power_vals['value'])
-                reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
-
-                # Add to electric grid ders dataframe
-                grid_data.electric_grid_ders = grid_data.electric_grid_ders.append({
-                    'electric_grid_name': electric_grid_name,
-                    'der_name': der_name,
-                    'der_type': der_type,
-                    'der_model_name': der_model_name,
-                    'node_name': node_name,
-                    'is_phase_1_connected': '1',
-                    'is_phase_2_connected': '0',
-                    'is_phase_3_connected': '0',
-                    'connection': 'wye',
-                    'active_power_nominal': active_power_nominal,
-                    'reactive_power_nominal': reactive_power_nominal,
-                    'in_service': '1'
-                }, ignore_index=True)
-
-                counter += 1
-
-            self.exporter.export_electric_grid_der_to_csv(
-                grid_data, output_path=os.path.join(self.path_to_data, scenario_name)
-            )
-
-        if generate_der_models_csv:
-            # Using the last scenario_name of the loop (it does not matter)
-            # der_models.csv is only generated once for all possible der_mode_names
-            # Drop / remove all data from dataframe (if exist)
-            der_data.ders.drop(der_data.ders.index, inplace=True)
-            for definition_name in der_schedules['definition_name'].unique():
-                # Add to ders data
-                der_data.ders = der_data.ders.append({
-                    'der_model_name': definition_name,
-                    'der_type': der_type,
-                    'definition_name': definition_name,
-                    'definition_type': definition_type
-                }, ignore_index=True)
-            self.exporter.export_der_models_to_csv(
-                der_data, output_path=os.path.join(self.path_to_data, scenario_name)
-            )
-
-    @staticmethod
-    def __pick_random_consumer_type() -> str:
-        # TODO: this must go somewhere else
-        consumer_types = {
-            1: 'One_full-time_working_person',
-            2: 'One_pensioneer',
-            3: 'Two_full-time_working_persons',
-            4: 'Two_pensioneers',
-            5: 'One_full-time_and_one_part-time_working_person',
-            6: 'Two_full-time_working_persons_one_child',
-            7: 'One_full-time_and_one_part-time_working_person_one_child',
-            8: 'Two_full-time_working_persons_two_children',
-            9: 'One_full-time_and_one_part-time_working_person_two_children',
-            10: 'Two_full-time_working_persons_three_children',
-            11: 'One_full-time_and_one_part-time_working_person_three_children'
-        }
-        key_list = list(consumer_types.keys())
-        return consumer_types[random.choice(key_list)]
-
-    def increase_der_penetration_of_scenario_on_lv_level(
+    def increase_der_penetration_of_scenario(
             self,
             scenario_name: str,
             path_to_der_data: str,
             penetration_ratio: float = 1.0,
             new_scenario_name: str = None
     ) -> str:
-        # TODO: must be adapted to not rely on '_' in der_names but rather check voltage level of corresponding node
-        der_data = self.load_csv_into_dataframe(path_to_der_data)
+
+        additional_der_data = self.load_csv_into_dataframe(path_to_der_data)
 
         if new_scenario_name is None:
-            new_scenario_name = scenario_name + '_increased_der_penetration'
+            new_scenario_name = scenario_name + f'_increased_der_penetration_{str(penetration_ratio)}'
+
+        new_scenario_name = new_scenario_name.replace('.', '_')  # to not have naming issues
 
         # Create output folder for the new grid
         output_path = self.create_output_folder(scenario_name=new_scenario_name)
@@ -627,23 +673,28 @@ class ScenarioFactory(object):
         grid_data_factory = ElectricGridDataFactory(grid_data)
 
         # Loop through der data and add to the scenario
-        for new_der_index, new_der_row in der_data.iterrows():
+        # Only nodes with existing loads get assigned an additional load
+        der_population = grid_data.electric_grid_ders['der_name'].to_list()
+        num_of_ders = len(der_population)
+        for new_der_index, new_der_row in additional_der_data.iterrows():
             additional_der_name = str(new_der_row['der_name'])
-            # num_of_lv_nodes = len(grid_data.electric_grid_ders[grid_data.electric_grid_ders['der_name'].str.contains('_')])
-            num_of_lv_nodes = len(grid_data.electric_grid_nodes)
             count = 1
-            for der_index, der_row in grid_data.electric_grid_ders.iterrows():
-                if count > int(num_of_lv_nodes * penetration_ratio):
-                    break
-                der_name = der_row['der_name']
-                # if '_' in der_name:
-                node = der_row['node_name']
-                print(f'Adding DER {additional_der_name} to node {node} in scenario {scenario_name}.')
+            while count < int(num_of_ders * penetration_ratio):
+                # Randomly sample a DER from the der_population and remove it from population
+                [der_name, der_population] = analysis.utils.Random.sample_and_remove(
+                    population_list=der_population,
+                    num_of_samples=1
+                )
+                der_name = der_name[0]  # sampling returns a list object
+                node = grid_data.electric_grid_ders.loc[
+                    grid_data.electric_grid_ders['der_name'] == der_name,
+                    'node_name'
+                ].to_list()[0]
+                print(f'Adding DER {additional_der_name} to node {node} in scenario {new_scenario_name}.')
                 new_der_row['node_name'] = str(node)
-                new_der_row['der_name'] = str(der_name) + '_' + additional_der_name + '_' + str(count)
+                new_der_row['der_name'] = str(der_name) + '_' + additional_der_name
                 # Add the DER to the main DER table
-                grid_data.electric_grid_ders = \
-                    grid_data.electric_grid_ders.append(new_der_row).reset_index(drop=True)
+                grid_data_factory.add_der_to_electric_grid_data(der_table_row=new_der_row)
                 count += 1
 
         new_values_dict = {
@@ -664,6 +715,167 @@ class ScenarioFactory(object):
 
         return new_scenario_name
 
+    def add_price_type_scenario_to_scenario(
+            self,
+            scenario_name: str,
+            price_type: str,
+            new_scenario_name: str = None,
+            price_sensitivity_coefficient: float = None
+    ):
+        scenario_data_factory = ScenarioDataFactory(fledge.data_interface.ScenarioData(scenario_name))
+        if new_scenario_name is None:
+            new_scenario_name = scenario_name + '_' + price_type
+
+        key_value_pairs = {
+            'price_type': price_type,
+            'scenario_name': new_scenario_name
+        }
+        if price_sensitivity_coefficient is not None:
+            key_value_pairs['price_sensitivity_coefficient'] = price_sensitivity_coefficient
+
+        scenario_data_factory.add_row_with_new_values(
+            key_value_pairs=key_value_pairs,
+            table_name='scenario'
+        )
+
+        output_path = self.get_scenario_folder(scenario_name=scenario_name)
+        scenario_data_factory.export_data_to_csv(
+            output_path=output_path,
+            table_name='scenario'
+        )
+
+    def generate_fixed_load_der_input_data(
+            self,
+            scenario_name: str,
+            path_to_der_schedules_data: str,
+            replace_ders: bool = True,
+            node_names: list = None
+    ):
+        # per default, this function generates a load profile at every node with a DER (node_names = None)
+        if self.der_schedules is None:
+            self.der_schedules = self.load_csv_into_dataframe(path_to_der_schedules_data)
+
+        # load scenario data to get the relevant time period and grid data (nodes)
+        print(f'Adding DERs to scenario {scenario_name}')
+
+        # Get scenario data
+        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+        # in der_schedules, there is a unique timeseries for every week of the year with the week number as
+        # identifier and related to the season
+        [season, weeknums] = self.calendar.get_season_of_scenario_data(scenario_data)
+
+        grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+        grid_data_factory = ElectricGridDataFactory(grid_data)
+
+        electric_grid_name = grid_data.electric_grid.electric_grid_name
+        nodes = grid_data.electric_grid_nodes
+
+        der_type = 'fixed_load'
+        power_factor = 0.95
+        source_node_name = grid_data.electric_grid['source_node_name']
+        nodes = node_names if node_names is not None else nodes['node_name']
+        for node_name in nodes:
+            # Don't add a new der to the source node
+            if node_name == source_node_name:
+                continue
+
+            der_index = grid_data.electric_grid_ders[grid_data.electric_grid_ders['node_name'] == node_name].index
+            if len(der_index) == 0:
+                # Only add DERs at nodes where a DER is already existent
+                continue
+
+            # Define the DER attributes
+            # TODO this part should be a separate method (or from DERDataFactory)
+            der_name = 'Load R' + node_name
+            # TODO: loop over all phases
+            der_model_name = (
+                self.pick_random_consumer_type() + '_' + season + '_' + random.choice(weeknums) + '_phase_0'
+            )
+            # TODO use fledge's capacilities to calculate the mean over for timestep of 60 minutes
+            active_power_vals = self.der_schedules.loc[self.der_schedules['definition_name'] == der_model_name, :]
+            active_power_vals_aggregated = []
+            for i in range(0, len(active_power_vals), 60):
+                for val in scenario_data.timesteps.weekday.unique():
+                    if (str(val) == active_power_vals[i:i + 60]['time_period'].str[1:2]).any():
+                        active_power_vals_aggregated.append(np.mean(active_power_vals[i:i + 60]['value']))
+            active_power_nominal = (-1) * max(active_power_vals_aggregated)
+            # active_power_nominal = (-1) * max(active_power_vals['value'])
+            reactive_power_nominal = active_power_nominal * np.tan(np.arccos(power_factor))
+
+            key_value_pairs = {
+                'electric_grid_name': electric_grid_name,
+                'der_name': der_name,
+                'der_type': der_type,
+                'der_model_name': der_model_name,
+                'node_name': node_name,
+                'active_power_nominal': active_power_nominal,
+                'reactive_power_nominal': reactive_power_nominal,
+            }
+
+            if replace_ders:
+                # Get the DERs at the node and change their values
+                print(f'Replacing DERs at node {node_name} with DER {der_name} of type {der_type}', end='\r')
+                for attribute in key_value_pairs:
+                    grid_data_factory.change_attribute_value(
+                        new_value=key_value_pairs[attribute],
+                        attribute_name=attribute,
+                        row_index=der_index,
+                        table_name='electric_grid_ders'
+                    )
+            else:
+                print(f'Adding DER {der_name} of type {der_type} to node {node_name}', end='\r')
+                # Copy DER and add a changed version to the end of the table
+                # Add to electric grid ders dataframe
+                grid_data_factory.add_row_with_new_values(
+                    key_value_pairs=key_value_pairs,
+                    table_name='electric_grid_ders'
+                )
+
+        grid_data_factory.export_data_to_csv(
+            output_path=os.path.join(self.path_to_data, scenario_name),
+            table_name='electric_grid_ders')
+
+    def generate_der_models_csv(
+            self,
+            scenario_name: str,
+            der_type: str = 'fixed_load',
+            definition_type: str = 'schedule'
+    ):
+        # Using the last scenario_name of the loop (it does not matter)
+        # der_models.csv is only generated once for all possible der_model_names
+        # Drop / remove all data from dataframe (if exist)
+        der_data = fledge.data_interface.DERData(scenario_name)
+        der_data.ders.drop(der_data.ders.index, inplace=True)
+        for definition_name in self.der_schedules['definition_name'].unique():
+            # Add to ders data
+            der_data.ders = der_data.ders.append({
+                'der_model_name': definition_name,
+                'der_type': der_type,
+                'definition_name': definition_name,
+                'definition_type': definition_type
+            }, ignore_index=True)
+        der_data_factory = DERDataFactory(der_data)
+        der_data_factory.export_data_to_csv(output_path=os.path.join(self.path_to_data, scenario_name))
+
+    @staticmethod
+    def pick_random_consumer_type() -> str:
+        # TODO: this must go somewhere else
+        consumer_types = {
+            1: 'One_full-time_working_person',
+            2: 'One_pensioneer',
+            3: 'Two_full-time_working_persons',
+            4: 'Two_pensioneers',
+            5: 'One_full-time_and_one_part-time_working_person',
+            6: 'Two_full-time_working_persons_one_child',
+            7: 'One_full-time_and_one_part-time_working_person_one_child',
+            8: 'Two_full-time_working_persons_two_children',
+            9: 'One_full-time_and_one_part-time_working_person_two_children',
+            10: 'Two_full-time_working_persons_three_children',
+            11: 'One_full-time_and_one_part-time_working_person_three_children'
+        }
+        key_list = list(consumer_types.keys())
+        return consumer_types[random.choice(key_list)]
+
     @staticmethod
     def reload_database():
         print('Reloading database...')
@@ -681,10 +893,16 @@ class ScenarioFactory(object):
         os.mkdir(output_path)
         return output_path
 
-    @staticmethod
+    def get_scenario_folder(
+            self,
+            scenario_name: str
+    ) -> str:
+        print(f'Assuming dedicated folder for scenario {scenario_name}')
+        return os.path.join(self.path_to_data, scenario_name)
+
     def load_csv_into_dataframe(
+            self,
             path_to_csv_data: str,
     ) -> pd.DataFrame:
-        path_to_data = fledge.config.config['paths']['data']
         print(f'Loading data from {path_to_csv_data}...')
-        return pd.read_csv(os.path.join(os.path.dirname(path_to_data), path_to_csv_data))
+        return pd.read_csv(os.path.join(os.path.dirname(self.path_to_data), path_to_csv_data))

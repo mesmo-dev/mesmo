@@ -1,2 +1,2 @@
-electric_grid_name,source_node_name,base_frequency
-kerber_landnetz_freileitung_1,0,50.0
+electric_grid_name,source_node_name,base_frequency,is_single_phase_equivalent
+kerber_landnetz_freileitung_1,0,50.0,1

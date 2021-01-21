@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 
 import fledge.problems
 import fledge.plots
@@ -33,7 +32,7 @@ class AnalysisManager(object):
     ):
 
         power_flow_results = self.results_dict[der_penetration]['power_flow_results']
-        optimization_results =  self.results_dict[der_penetration]['optimization_results']
+        # optimization_results = self.results_dict[der_penetration]['optimization_results']
         # price_timeseries =
         # system_costs = results_dict['system_costs']
         scenarios = self.get_list_of_scenario_strings(power_flow_results)
@@ -99,14 +98,14 @@ class Plots(object):
 
     # [x] branch power magnitude,
     # [x] node voltage magnitude
-    # [ ] total losses
-    # [ ] reactive losses
+    # [x] total losses
+    # [x] reactive losses
     # [x] der dispatch
     # [ ] objective result / system costs
     # [ ] prices over time
-    # [ ] branch power magnitude over time per branch
-    # [ ] node voltage magnitude over time per node
-    # [ ] der output over time
+    # [x] branch power magnitude over time per branch
+    # [x] node voltage magnitude over time per node
+    # [x] der output over time
     # [ ] dlmp validation
     # TODO: [ ] load flow calculation comparison --> ask Sebastian
 
@@ -122,12 +121,27 @@ class Plots(object):
             maximum = None
             if 'Node voltage' in plot:
                 assets = self.electric_grid_model.nodes
-                # minimum = voltage_min
-                # maximum = voltage_max
+                minimum = (
+                    np.min(self.scenario_data.scenario['voltage_per_unit_minimum']
+                    * np.abs(self.electric_grid_model.node_voltage_vector_reference))
+                    if pd.notnull(self.scenario_data.scenario['voltage_per_unit_minimum'])
+                    else None
+                )
+                maximum = (
+                    np.max(self.scenario_data.scenario['voltage_per_unit_maximum']
+                    * np.abs(self.electric_grid_model.node_voltage_vector_reference))
+                    if pd.notnull(self.scenario_data.scenario['voltage_per_unit_maximum'])
+                    else None
+                )
             elif 'Branch power' in plot:
                 assets = self.electric_grid_model.branches
                 minimum = 0.0
-                maximum = 1.0
+                maximum = (
+                    np.max(self.scenario_data.scenario['branch_flow_per_unit_maximum']
+                    * self.electric_grid_model.branch_power_vector_magnitude_reference)
+                    if pd.notnull(self.scenario_data.scenario['branch_flow_per_unit_maximum'])
+                    else None
+                )
             elif 'DER active power' in plot:
                 assets = self.electric_grid_model.ders
                 minimum = 0.0
@@ -142,7 +156,7 @@ class Plots(object):
                 for x_label in plot_types[type]:
                     plt.figure()
                     if type is 'time':
-                        title_label = ' at: ' + x_label.strftime("%H-%M-%S")
+                        title_label = 'at: ' + x_label.strftime("%H-%M-%S")
                     else:
                         title_label = x_label[0] + ': ' + x_label[1]
                     plt.title(plot + ' ' + title_label)

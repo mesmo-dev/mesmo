@@ -25,6 +25,11 @@ Scenario definition.
 | `timestep_start` | | Start timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `timestep_end` | | End timestep in format `yyyy-mm-ddTHH:MM:SS` (according to ISO 8601). |
 | `timestep_interval` | | Time interval in format `HH:MM:SS` |
+| `base_apparent_power` | W | Normalization / scaling factor¹ for apparent / active / reactive power variables. Optional column, which defaults to `1` if not explicitly defined. |
+| `base_voltage` | W | Normalization / scaling factor¹ for voltage variables. Optional column, which defaults to `1` if not explicitly defined. |
+| `base_thermal_power` | W | Normalization / scaling factor¹ for voltage variables. Optional column, which defaults to `1` if not explicitly defined. |
+
+¹ Normalization / scaling factors are used internally to reduce the order of magnitude of variable values. Appropriate scaling significantly improves numerical performance, especially in numerical optimization problems. Note that this only applies internally to variables and models, but inputs and outputs are reported unscaled in SI units.
 
 ### `parameters`
 

@@ -427,6 +427,8 @@ class ScenarioDataFactory(DataFactory):
                 "timestep_start",
                 "timestep_end",
                 "timestep_interval"
+                "base_apparent_power",
+                "base_voltage"
             ]
         }
 

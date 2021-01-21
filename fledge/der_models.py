@@ -1343,17 +1343,27 @@ class DERModelSetOperationResults(fledge.utils.ResultsBase):
 class DERModelSet(DERModelSetBase):
     """DER model set object."""
 
+    @multimethod
     def __init__(
             self,
             scenario_name: str
     ):
 
         # Obtain data.
-        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
         der_data = fledge.data_interface.DERData(scenario_name)
 
+        self.__init__(
+            der_data
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            der_data: fledge.data_interface.DERData
+    ):
+
         # Obtain timesteps.
-        self.timesteps = scenario_data.timesteps
+        self.timesteps = der_data.scenario_data.timesteps
 
         # Obtain DER names.
         self.der_names = der_data.ders.index

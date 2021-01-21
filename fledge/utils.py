@@ -193,7 +193,8 @@ class OptimizationProblem(object):
 
     def solve(
             self,
-            keep_problem=False
+            keep_problem=False,
+            **kwargs
     ):
 
         # Instantiate CVXPY problem object.
@@ -209,7 +210,9 @@ class OptimizationProblem(object):
                 if fledge.config.config['optimization']['solver_name'] is not None
                 else None
             ),
-            verbose=fledge.config.config['optimization']['show_solver_output']
+            verbose=fledge.config.config['optimization']['show_solver_output'],
+            **kwargs,
+            **fledge.config.solver_parameters
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
@@ -281,7 +284,23 @@ def log_time(
         label: str,
         logger_object: logging.Logger = logger
 ):
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
+    """Log start / end message and time duration for given label.
+
+    - When called with given label for the first time, will log start message.
+    - When called subsequently with the same / previously used label, will log end message and time duration since
+      logging the start message.
+    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
+      By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting `label`."
+    - End message: "Completed `label` in `duration` seconds."
+
+    Arguments:
+        label (str): Label for the start / end message.
+
+    Keyword Arguments:
+        logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
+            ``utils.logger``.
+    """
 
     time_now = time.time()
 
@@ -460,7 +479,12 @@ def write_figure_plotly(
     """
 
     if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
-        pio.write_image(figure, f"{results_path}.{file_format}")
+        pio.write_image(
+            figure,
+            f"{results_path}.{file_format}",
+            width=fledge.config.config['plots']['plotly_figure_width'],
+            height=fledge.config.config['plots']['plotly_figure_height']
+        )
     elif file_format in ['html']:
         pio.write_html(figure, f"{results_path}.{file_format}")
     elif file_format in ['json']:

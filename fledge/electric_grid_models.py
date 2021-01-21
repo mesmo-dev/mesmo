@@ -2357,19 +2357,22 @@ class LinearElectricGridModel(object):
         optimization_problem.constraints.append(
             optimization_problem.node_voltage_magnitude_vector
             ==
-            cp.transpose(
-                self.sensitivity_voltage_magnitude_by_der_power_active
-                @ cp.transpose(
-                    optimization_problem.der_active_power_vector
-                    - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
+            (
+                cp.transpose(
+                    self.sensitivity_voltage_magnitude_by_der_power_active
+                    @ cp.transpose(
+                        optimization_problem.der_active_power_vector
+                        - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
+                    )
+                    + self.sensitivity_voltage_magnitude_by_der_power_reactive
+                    @ cp.transpose(
+                        optimization_problem.der_reactive_power_vector
+                        - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
+                    )
                 )
-                + self.sensitivity_voltage_magnitude_by_der_power_reactive
-                @ cp.transpose(
-                    optimization_problem.der_reactive_power_vector
-                    - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                )
+                + np.array([np.abs(self.power_flow_solution.node_voltage_vector.ravel())])
             )
-            + np.array([np.abs(self.power_flow_solution.node_voltage_vector.ravel())])
+            / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
         )
 
         # Branch flow equation.
@@ -2444,12 +2447,15 @@ class LinearElectricGridModel(object):
             + np.imag(self.power_flow_solution.loss)
         )
 
+        # TODO: Bring all limit constraints to g(x)<=0 form.
+
         # Voltage limits.
         # - Add dedicated constraints variables to enable retrieving dual variables.
         if node_voltage_magnitude_vector_minimum is not None:
             optimization_problem.voltage_magnitude_vector_minimum_constraint = (
                 optimization_problem.node_voltage_magnitude_vector
                 - np.array([node_voltage_magnitude_vector_minimum.ravel()])
+                / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                 >=
                 0.0
             )
@@ -2458,6 +2464,7 @@ class LinearElectricGridModel(object):
             optimization_problem.voltage_magnitude_vector_maximum_constraint = (
                 optimization_problem.node_voltage_magnitude_vector
                 - np.array([node_voltage_magnitude_vector_maximum.ravel()])
+                / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                 <=
                 0.0
             )
@@ -2584,6 +2591,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.voltage_magnitude_vector_minimum_constraint.dual_value
+                    * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                     if hasattr(optimization_problem, 'voltage_magnitude_vector_minimum_constraint')
                     else 0.0
                 ),
@@ -2595,6 +2603,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     -1.0 * optimization_problem.voltage_magnitude_vector_maximum_constraint.dual_value
+                    * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                     if hasattr(optimization_problem, 'voltage_magnitude_vector_maximum_constraint')
                     else 0.0
                 ),
@@ -2953,7 +2962,10 @@ class LinearElectricGridModel(object):
         )
         node_voltage_magnitude_vector = (
             pd.DataFrame(
-                optimization_problem.node_voltage_magnitude_vector.value,
+                (
+                    optimization_problem.node_voltage_magnitude_vector.value
+                    * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
+                ),
                 columns=self.electric_grid_model.nodes,
                 index=timesteps
             )

@@ -171,6 +171,8 @@ CREATE TABLE scenarios (
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,
+    base_apparent_power REAL DEFAULT 1,
+    base_voltage REAL DEFAULT 1,
     PRIMARY KEY(scenario_name)
 );
 CREATE TABLE thermal_grid_ders (

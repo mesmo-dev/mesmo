@@ -189,6 +189,7 @@ class ScenarioData(object):
             column: np.ndarray
     ):
         """Parse parameters into one column of a dataframe.
+
         - Replace strings that match `parameter_name` with `parameter_value`.
         - Other strings are are directly parsed into numbers.
         - If a string doesn't match any match `parameter_name` and cannot be parsed, it is replaced with NaN.
@@ -218,6 +219,7 @@ class ScenarioData(object):
             excluded_columns: list = None
     ):
         """Parse parameters into a dataframe.
+
         - Applies `parse_parameters_column` for all string columns.
         - Columns in `excluded_columns` are not parsed. By default this includes `_name`, `_type`, `connection` columns.
         """
@@ -244,6 +246,44 @@ class ScenarioData(object):
         # If dataframe contains `in_service` column, remove all not-in-service elements.
         if 'in_service' in dataframe.columns:
             dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
+
+        # Apply scaling.
+        if 'active_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'active_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'reactive_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'reactive_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'resistance' in dataframe.columns:
+            dataframe.loc[:, 'resistance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'reactance' in dataframe.columns:
+            dataframe.loc[:, 'reactance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'capacitance' in dataframe.columns:
+            dataframe.loc[:, 'capacitance'] *= (
+                self.scenario.at['base_voltage'] ** 2
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'maximum_current' in dataframe.columns:
+            dataframe.loc[:, 'maximum_current'] *= (
+                self.scenario.at['base_voltage']
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'voltage' in dataframe.columns:
+            dataframe.loc[:, 'voltage'] /= (
+                self.scenario.at['base_voltage']
+            )
+        if 'apparent_power' in dataframe.columns:
+            dataframe.loc[:, 'apparent_power'] /= (
+                self.scenario.at['base_apparent_power']
+            )
 
         return dataframe
 
@@ -982,6 +1022,7 @@ class PriceData(object):
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]
+            * scenario_data.scenario.at['base_apparent_power']
         )
         # TODO: Proper thermal power price definition.
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (

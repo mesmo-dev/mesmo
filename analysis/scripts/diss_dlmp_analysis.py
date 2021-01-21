@@ -47,7 +47,7 @@ if regenerate_scenario_data:
 
         # generate scenario data for DER penetration scenarios
         for der_penetration in der_penetration_levels:
-            scenario_factory.increase_der_penetration_of_scenario_on_lv_level(
+            scenario_factory.increase_der_penetration_of_scenario(
                 scenario_name=granularity_levels[scenario],
                 path_to_der_data=path_to_der_data,
                 penetration_ratio=der_penetration_levels[der_penetration],

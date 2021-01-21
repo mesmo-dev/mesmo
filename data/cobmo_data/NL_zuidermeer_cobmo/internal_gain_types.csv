@@ -1,6 +1,0 @@
-internal_gain_type,internal_gain_definition_type,internal_gain_occupancy_factor,internal_gain_appliances_factor
-industrial_internal_gains,schedule,0,0
-office_internal_gains,schedule,0,0
-generic_internal_gains,schedule,0,0
-residential_internal_gains,schedule,0,0
-retail_internal_gains,schedule,0,0

@@ -1,9 +1,0 @@
-zone_type,heat_capacity,infiltration_rate,internal_gain_type,window_type,blind_type,hvac_generic_type,hvac_radiator_type,hvac_ahu_type,hvac_tu_type,constraint_type
-industrial_zone_type,64800.0,0,industrial_internal_gains,yes,,hvac_generic_1,,,,NL_industrial_constraints
-office_zone_type,64800.0,0,office_internal_gains,yes,,hvac_generic_1,,,,NL_office_constraints
-other_zone_type,64800.0,0,generic_internal_gains,yes,,hvac_generic_1,,,,NL_generic_constraints
-residential_zone_type,64800.0,0,residential_internal_gains,yes,,hvac_generic_1,,,,NL_residential_constraints
-residential_zone_type_003,64800.0,0,residential_internal_gains,yes,,hvac_generic_1,,,,NL_residential_constraints
-residential_zone_type_HP,64800.0,0,residential_internal_gains,yes,,hvac_generic_HP,,,,NL_residential_constraints
-residential_zone_type_HP_003,64800.0,0,residential_internal_gains,yes,,hvac_generic_HP,,,,NL_residential_constraints
-retail_zone_type,64800.0,0,retail_internal_gains,yes,,hvac_generic_1,,,,NL_retail_constraints

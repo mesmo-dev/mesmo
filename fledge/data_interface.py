@@ -284,6 +284,14 @@ class ScenarioData(object):
             dataframe.loc[:, 'apparent_power'] /= (
                 self.scenario.at['base_apparent_power']
             )
+        if 'enthalpy_difference_distribution_water' in dataframe.columns:
+            dataframe.loc[:, 'enthalpy_difference_distribution_water'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'thermal_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'thermal_power_nominal'] /= (
+                self.scenario.at['base_thermal_power']
+            )
 
         return dataframe
 

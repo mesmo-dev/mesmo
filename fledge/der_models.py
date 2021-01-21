@@ -1127,6 +1127,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
             self.mapping_thermal_power_by_output.at['thermal_power', 'grid_thermal_power_cooling'] = (
                 -1.0
                 * flexible_building_model.zone_area_total
+                / der_data.scenario_data.scenario.at['base_thermal_power']
             )
 
         # Obtain initial state.

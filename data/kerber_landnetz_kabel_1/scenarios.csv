@@ -1,2 +1,2 @@
-scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,timestep_start,timestep_end,timestep_interval
-kerber_landnetz_kabel_1,kerber_landnetz_kabel_1,,,EPEX SPOT Power DE Day Ahead,1e-12,2017-01-01T00:00:00,2017-01-02T00:00:00,01:00:00
+scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,timestep_start,timestep_end,timestep_interval,base_apparent_power,base_voltage
+kerber_landnetz_kabel_1,kerber_landnetz_kabel_1,,,EPEX SPOT Power DE Day Ahead,1e-12,2017-01-01T00:00:00,2017-01-02T00:00:00,01:00:00,1e3,1e3

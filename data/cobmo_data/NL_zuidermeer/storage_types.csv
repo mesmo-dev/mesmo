@@ -1,0 +1,2 @@
+storage_type,storage_commodity_type,storage_capacity,storage_round_trip_efficiency,storage_battery_depth_of_discharge,storage_sensible_temperature_delta,storage_self_discharge_rate
+NL_heat_storage,sensible_heating,0.05,0.9,0.8,40.0,0.05

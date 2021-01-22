@@ -27,6 +27,9 @@ class DERModel(object):
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
     timesteps: pd.Index
+    active_power_nominal: np.float
+    reactive_power_nominal: np.float
+    thermal_power_nominal: np.float
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
@@ -49,6 +52,17 @@ class DERModel(object):
 
         # Obtain timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
+
+        # Obtain nominal power values.
+        self.active_power_nominal = (
+            der.at['active_power_nominal'] if pd.notnull(der.at['active_power_nominal']) else 0.0
+        )
+        self.reactive_power_nominal = (
+            der.at['reactive_power_nominal'] if pd.notnull(der.at['reactive_power_nominal']) else 0.0
+        )
+        self.thermal_power_nominal = (
+            der.at['thermal_power_nominal'] if pd.notnull(der.at['thermal_power_nominal']) else 0.0
+        )
 
         # Construct nominal active and reactive power timeseries.
         if (
@@ -159,11 +173,13 @@ class FixedDERModel(DERModel):
                 optimization_problem.der_active_power_vector[:, der_index]
                 ==
                 self.active_power_nominal_timeseries.values
+                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, der_index]
                 ==
                 self.reactive_power_nominal_timeseries.values
+                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
@@ -428,6 +444,7 @@ class FlexibleDERModel(DERModel):
                     self.mapping_active_power_by_output.values
                     @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
+                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, [der_index]]
@@ -436,6 +453,7 @@ class FlexibleDERModel(DERModel):
                     self.mapping_reactive_power_by_output.values
                     @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
+                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:

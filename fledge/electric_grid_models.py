@@ -2360,15 +2360,15 @@ class LinearElectricGridModel(object):
             (
                 cp.transpose(
                     self.sensitivity_voltage_magnitude_by_der_power_active
-                    @ cp.transpose(
-                        optimization_problem.der_active_power_vector
-                        - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_active_power_vector,
+                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())]))
                     + self.sensitivity_voltage_magnitude_by_der_power_reactive
-                    @ cp.transpose(
-                        optimization_problem.der_reactive_power_vector
-                        - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_reactive_power_vector,
+                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())]))
                 )
                 + np.array([np.abs(self.power_flow_solution.node_voltage_vector.ravel())])
             )
@@ -2382,15 +2382,15 @@ class LinearElectricGridModel(object):
             (
                 cp.transpose(
                     self.sensitivity_branch_power_1_magnitude_by_der_power_active
-                    @ cp.transpose(
-                        optimization_problem.der_active_power_vector
-                        - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_active_power_vector,
+                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())]))
                     + self.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                    @ cp.transpose(
-                        optimization_problem.der_reactive_power_vector
-                        - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_reactive_power_vector,
+                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())]))
                 )
                 + np.array([np.abs(self.power_flow_solution.branch_power_vector_1.ravel())])
             )
@@ -2402,15 +2402,15 @@ class LinearElectricGridModel(object):
             (
                 cp.transpose(
                     self.sensitivity_branch_power_2_magnitude_by_der_power_active
-                    @ cp.transpose(
-                        optimization_problem.der_active_power_vector
-                        - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_active_power_vector,
+                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())]))
                     + self.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                    @ cp.transpose(
-                        optimization_problem.der_reactive_power_vector
-                        - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                    )
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_reactive_power_vector,
+                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())]))
                 )
                 + np.array([np.abs(self.power_flow_solution.branch_power_vector_2.ravel())])
             )
@@ -2423,15 +2423,15 @@ class LinearElectricGridModel(object):
             ==
             cp.transpose(
                 self.sensitivity_loss_active_by_der_power_active
-                @ cp.transpose(
-                    optimization_problem.der_active_power_vector
-                    - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                )
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_active_power_vector,
+                    np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                ) - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())]))
                 + self.sensitivity_loss_active_by_der_power_reactive
-                @ cp.transpose(
-                    optimization_problem.der_reactive_power_vector
-                    - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                )
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_reactive_power_vector,
+                    np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                ) - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())]))
             )
             + np.real(self.power_flow_solution.loss)
         )
@@ -2440,15 +2440,15 @@ class LinearElectricGridModel(object):
             ==
             cp.transpose(
                 self.sensitivity_loss_reactive_by_der_power_active
-                @ cp.transpose(
-                    optimization_problem.der_active_power_vector
-                    - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())])
-                )
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_active_power_vector,
+                    np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                ) - np.array([np.real(self.power_flow_solution.der_power_vector.ravel())]))
                 + self.sensitivity_loss_reactive_by_der_power_reactive
-                @ cp.transpose(
-                    optimization_problem.der_reactive_power_vector
-                    - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())])
-                )
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_reactive_power_vector,
+                    np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                ) - np.array([np.imag(self.power_flow_solution.der_power_vector.ravel())]))
             )
             + np.imag(self.power_flow_solution.loss)
         )
@@ -2540,14 +2540,20 @@ class LinearElectricGridModel(object):
                 price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T
                 * timestep_interval_hours  # In Wh.
                 @ cp.sum(-1.0 * (
-                    optimization_problem.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem.der_active_power_vector,
+                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                    )
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
             + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
-                    optimization_problem.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem.der_active_power_vector,
+                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                    )
                 ) ** 2)
             ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
@@ -2559,14 +2565,20 @@ class LinearElectricGridModel(object):
                 price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.T
                 * timestep_interval_hours  # In Wh.
                 @ cp.sum(-1.0 * (
-                    optimization_problem.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem.der_reactive_power_vector,
+                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                    )
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
             + ((
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
-                    optimization_problem.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem.der_reactive_power_vector,
+                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                    )
                 ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
             ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
@@ -2962,14 +2974,20 @@ class LinearElectricGridModel(object):
         # Obtain results.
         der_active_power_vector = (
             pd.DataFrame(
-                optimization_problem.der_active_power_vector.value,
+                (
+                    optimization_problem.der_active_power_vector.value
+                    * np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                ),
                 columns=self.electric_grid_model.ders,
                 index=timesteps
             )
         )
         der_reactive_power_vector = (
             pd.DataFrame(
-                optimization_problem.der_reactive_power_vector.value,
+                (
+                    optimization_problem.der_reactive_power_vector.value
+                    * np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                ),
                 columns=self.electric_grid_model.ders,
                 index=timesteps
             )

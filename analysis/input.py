@@ -426,7 +426,7 @@ class ScenarioDataFactory(DataFactory):
                 "price_sensitivity_coefficient",
                 "timestep_start",
                 "timestep_end",
-                "timestep_interval"
+                "timestep_interval",
                 "base_apparent_power",
                 "base_voltage"
             ]
@@ -657,6 +657,7 @@ class ScenarioFactory(object):
             self,
             scenario_name: str,
             path_to_der_data: str,
+            assign_ders_from_list: bool = False,
             penetration_ratio: float = 1.0,
             new_scenario_name: str = None
     ) -> str:
@@ -678,10 +679,15 @@ class ScenarioFactory(object):
         # Only nodes with existing loads get assigned an additional load
         der_population = grid_data.electric_grid_ders['der_name'].to_list()
         num_of_ders = len(der_population)
+        if assign_ders_from_list:
+            # Assign every DER from additional_der_data to one existing DER node
+            penetration_ratio = 0  # this will prevent the while loop from repeating
         for new_der_index, new_der_row in additional_der_data.iterrows():
+            if len(der_population) == 0:
+                break
             additional_der_name = str(new_der_row['der_name'])
             count = 1
-            while count < int(num_of_ders * penetration_ratio):
+            while True:
                 # Randomly sample a DER from the der_population and remove it from population
                 [der_name, der_population] = analysis.utils.Random.sample_and_remove(
                     population_list=der_population,
@@ -698,6 +704,8 @@ class ScenarioFactory(object):
                 # Add the DER to the main DER table
                 grid_data_factory.add_der_to_electric_grid_data(der_table_row=new_der_row)
                 count += 1
+                if (count > int(num_of_ders * penetration_ratio)) or (len(der_population) == 0):
+                    break
 
         new_values_dict = {
             'scenario_name': new_scenario_name,
@@ -837,7 +845,7 @@ class ScenarioFactory(object):
             output_path=os.path.join(self.path_to_data, scenario_name),
             table_name='electric_grid_ders')
 
-    def generate_der_models_csv(
+    def generate_der_models_csv_for_scenario(
             self,
             scenario_name: str,
             der_type: str = 'fixed_load',

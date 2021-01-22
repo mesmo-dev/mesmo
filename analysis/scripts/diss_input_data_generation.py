@@ -8,6 +8,9 @@ import analysis.input
 path_to_der_schedules_data = 'data/kerber_dorfnetz/der_schedules.csv'
 path_to_der_data = 'analysis/res/additional_electric_grid_ders.csv'
 
+# Settings
+replace_original_ders = True  # All DERs is electric_grid_ders.csv will be replaced by new fixed loads
+assign_ders_from_list = True  # Will ignore der_penetration value and only assign what is DER data csv (see above)
 scenario_names = [
     # 'nl_zuidermeer_manual',
     # 'NL_residential',
@@ -27,20 +30,25 @@ der_penetration_levels = {
 }
 
 scenario_factory = analysis.input.ScenarioFactory()
-scenario_factory.reload_database()
-for scenario_name in scenario_names:
-    scenario_factory.generate_fixed_load_der_input_data(
-        scenario_name=scenario_name,
-        path_to_der_schedules_data=path_to_der_schedules_data,
-        replace_ders=True
-    )
-scenario_factory.reload_database()
+# scenario_factory.reload_database()
+# for scenario_name in scenario_names:
+#     scenario_factory.generate_fixed_load_der_input_data(
+#         scenario_name=scenario_name,
+#         path_to_der_schedules_data=path_to_der_schedules_data,
+#         replace_ders=replace_original_ders
+#     )
+#     scenario_factory.generate_der_models_csv_for_scenario(
+#         scenario_name=scenario_name
+#     )
+
+# scenario_factory.reload_database()
 # generate scenario data for DER penetration scenarios
 for scenario_name in scenario_names:
     for der_penetration in der_penetration_levels:
         scenario_factory.increase_der_penetration_of_scenario(
             scenario_name=scenario_name,
             path_to_der_data=path_to_der_data,
+            assign_ders_from_list=assign_ders_from_list,
             penetration_ratio=der_penetration_levels[der_penetration],
             new_scenario_name=scenario_name + '_' + der_penetration
         )

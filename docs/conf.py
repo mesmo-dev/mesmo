@@ -33,6 +33,7 @@ autodoc_mock_imports = [
     'cobmo',
     'cv2',
     'diskcache',
+    'dill',
     'kaleido',
     'matplotlib',
     'multimethod',

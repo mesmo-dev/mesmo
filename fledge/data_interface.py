@@ -122,8 +122,12 @@ class ScenarioData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain parameters.
         self.parameters = (
@@ -284,6 +288,14 @@ class ScenarioData(object):
             dataframe.loc[:, 'apparent_power'] /= (
                 self.scenario.at['base_apparent_power']
             )
+        if 'enthalpy_difference_distribution_water' in dataframe.columns:
+            dataframe.loc[:, 'enthalpy_difference_distribution_water'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'thermal_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'thermal_power_nominal'] /= (
+                self.scenario.at['base_thermal_power']
+            )
 
         return dataframe
 
@@ -303,9 +315,12 @@ class ElectricGridData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
-        """Load electric grid data from database for given `scenario_name`."""
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -442,9 +457,12 @@ class ThermalGridData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
-        """Load thermal grid data from database for given `scenario_name`."""
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -528,8 +546,12 @@ class DERData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -924,8 +946,12 @@ class PriceData(object):
             self,
             scenario_name: str,
             price_type='',
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         scenario_data = ScenarioData(scenario_name)

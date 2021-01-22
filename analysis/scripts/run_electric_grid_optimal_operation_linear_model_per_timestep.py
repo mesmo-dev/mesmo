@@ -14,6 +14,8 @@ import fledge.electric_grid_models
 import fledge.problems
 import fledge.utils
 
+power_factor = 0.9
+
 
 def main():
 
@@ -23,9 +25,9 @@ def main():
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Power flow voltage and branch flow limits
-    voltage_max = 1.1
-    voltage_min = 0.9
-    branch_flow_max = 1.0
+    voltage_max = 1.2
+    voltage_min = 0.8
+    branch_flow_max = 2.0
     # Custom constrained branches, branch_name and factor for branch
     constrained_branches = {
         # '2': 0.8
@@ -33,7 +35,7 @@ def main():
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     print('Loading data...', end='\r')
-    # fledge.data_interface.recreate_database()
+    fledge.data_interface.recreate_database()
 
     # ---------------------------------------------------------------------------------------------------------
     # OBTAIN DATA
@@ -260,10 +262,6 @@ def change_der_set_points_based_on_results(
                     der_model.active_power_nominal_timeseries = (
                         results.output_vector[(der_name, 'grid_electric_power')]
                     ) * (-1)
-                    if type(der_model) is fledge.der_models.FlexibleBuildingModel:
-                        power_factor = der_model.power_factor_nominal
-                    else:
-                        power_factor = 0.95
                     der_model.reactive_power_nominal_timeseries = (
                         results.output_vector[(der_name, 'grid_electric_power')] * np.tan(np.arccos(power_factor))
                     ) * (-1)

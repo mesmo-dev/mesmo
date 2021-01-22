@@ -228,8 +228,10 @@ class SolutionEngine(object):
 
 
 class ScenarioHandler(object):
-    @staticmethod
+    default_power_factor = 0.8
+
     def change_der_set_points_based_on_results(
+            self,
             der_model_set: fledge.der_models.DERModelSet,
             results: fledge.problems.Results
     ) -> fledge.der_models.DERModelSet:
@@ -257,19 +259,16 @@ class ScenarioHandler(object):
                             results.output_vector[(der_name, 'reactive_power')]
                         )
                     elif 'grid_electric_power' in results.output_vector[der_name].columns:
+                        logger.warning(
+                            f'FlexibleBuildingModel detected, using default power factor {self.default_power_factor}'
+                        )
                         der_model.active_power_nominal_timeseries = (
-                                                                        results.output_vector[
-                                                                            (der_name, 'grid_electric_power')]
-                                                                    ) * (-1)
-                        if type(der_model) is fledge.der_models.FlexibleBuildingModel:
-                            power_factor = der_model.power_factor_nominal
-                        else:
-                            power_factor = 0.95
+                            results.output_vector[(der_name, 'grid_electric_power')]
+                        ) * (-1)
                         der_model.reactive_power_nominal_timeseries = (
-                                                                              results.output_vector[(der_name,
-                                                                                                     'grid_electric_power')] * np.tan(
-                                                                          np.arccos(power_factor))
-                                                                      ) * (-1)
+                            results.output_vector[(der_name, 'grid_electric_power')]
+                            * np.tan(np.arccos(self.default_power_factor))
+                        ) * (-1)
         else:
             print('Results object does not contain any data on active power output. ')
             raise ValueError

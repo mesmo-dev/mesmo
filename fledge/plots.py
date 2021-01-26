@@ -1159,8 +1159,129 @@ def plot_line_utilization_histogram_cumulative(
     figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
 
 
+# def plot_transformer_utilization_histogram(
+#         values_dict: dict,
+#         results_path: str,
+#         selected_columns=None,
+#         histogram_minimum=0.0,
+#         histogram_maximum=1.0,
+#         histogram_bin_count=100
+# ):
+
+#     # Obtain histogram bins.
+#     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+#     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+#     # Pre-process values.
+#     for key in values_dict:
+#         # Only use selected columns.
+#         values_dict[key] = (
+#             values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
+#         )
+#         # Obtain maximum utilization for all transformers.
+#         values_dict[key] = (
+#             values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+#         )
+#         # Set over-utilized transformers to 1 p.u. for better visualization.
+#         values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+#         # Obtain histogram values.
+#         values_dict[key] = (
+#             pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
+#             / len(values_dict[key])
+#         )
+
+#     # Obtain plot title / labels / filename.
+#     title = '1MVA Transformers'
+#     filename = 'transformer_utilization_histogram'
+#     y_label = 'Peak utilization'
+#     value_unit = 'p.u.'
+
+#     # Create plot.
+#     figure = go.Figure()
+#     for key in values_dict:
+#         figure.add_trace(go.Bar(
+#             x=values_dict[key].index,
+#             y=values_dict[key].values,
+#             name=key
+#         ))
+#     figure.update_layout(
+#         title=title,
+#         xaxis_title=f'{y_label} [{value_unit}]',
+#         yaxis_title='Frequency',
+#         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
+#     )
+#     # figure.show()
+#     figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+# def plot_transformer_utilization_histogram_cumulative(
+#         values_dict: dict,
+#         results_path: str,
+#         selected_columns=None,
+#         histogram_minimum=0.0,
+#         histogram_maximum=1.0,
+#         histogram_bin_count=100
+# ):
+
+#     # Obtain histogram bins.
+#     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+#     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+#     # Pre-process values.
+#     for key in values_dict:
+#         # Only use selected columns.
+#         values_dict[key] = (
+#             values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
+#         )
+#         # Obtain maximum utilization for all transformers.
+#         values_dict[key] = (
+#             values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
+#         )
+#         # Set over-utilized transformers to 1 p.u. for better visualization.
+#         values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+#         # Obtain histogram values.
+#         values_dict[key] = (
+#             pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
+#             / len(values_dict[key])
+#         )
+
+#     # Obtain plot title / labels / filename.
+#     title = '1MVA Transformers'
+#     filename = 'transformer_utilization_histogram_cumulative'
+#     y_label = 'Peak utilization'
+#     value_unit = 'p.u.'
+
+#     # Create plot.
+#     figure = go.Figure()
+#     for key in values_dict:
+#         figure.add_trace(go.Scatter(
+#             x=values_dict[key].index,
+#             y=values_dict[key].values,
+#             name=key,
+#             line=go.scatter.Line(shape='hv')
+#         ))
+#     # Add horizontal line at 90%.
+#     figure.add_shape(go.layout.Shape(
+#         x0=0,
+#         x1=1,
+#         xref='paper',
+#         y0=0.9,
+#         y1=0.9,
+#         yref='y',
+#         type='line',
+#         line=go.layout.shape.Line(width=2)
+#     ))
+#     figure.update_layout(
+#         title=title,
+#         xaxis_title=f'{y_label} [{value_unit}]',
+#         yaxis_title='Cumulative proportion',
+#         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+#     )
+#     # figure.show()
+#     figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
 def plot_transformer_utilization_histogram(
-        values_dict: dict,
+        results,
         results_path: str,
         selected_columns=None,
         histogram_minimum=0.0,
@@ -1172,23 +1293,24 @@ def plot_transformer_utilization_histogram(
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
 
+    df_branchpower_pu = results['branch_power_magnitude_vector_1_per_unit']
+    
     # Pre-process values.
-    for key in values_dict:
-        # Only use selected columns.
-        values_dict[key] = (
-            values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
-        )
-        # Obtain maximum utilization for all transformers.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
-        )
-        # Set over-utilized transformers to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
-        # Obtain histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
-            / len(values_dict[key])
-        )
+    # Only use selected columns.
+    df_branchpower_pu = (
+        df_branchpower_pu.loc[:, selected_columns] if selected_columns is not None else df_branchpower_pu
+    )
+    # Obtain maximum utilization for all transformers. We can skip this step since it is already in p.u.
+    df_branchpower_pu = (
+        df_branchpower_pu.loc[:, df_branchpower_pu.columns.get_level_values('branch_type') == 'transformer'].max()
+    )
+    # Set over-utilized transformers to 1 p.u. for better visualization.
+    # values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+    # Obtain histogram values.
+    df_branchpower_pu = (
+        pd.Series([*np.histogram(df_branchpower_pu, bins=histogram_bins)[0], 0], index=histogram_bins)
+        / len(df_branchpower_pu)
+    )
 
     # Obtain plot title / labels / filename.
     title = '1MVA Transformers'
@@ -1198,12 +1320,10 @@ def plot_transformer_utilization_histogram(
 
     # Create plot.
     figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Bar(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key
-        ))
+    figure.add_trace(go.Bar(
+        x=df_branchpower_pu.index,
+        y=df_branchpower_pu.values
+    ))
     figure.update_layout(
         title=title,
         xaxis_title=f'{y_label} [{value_unit}]',
@@ -1215,7 +1335,7 @@ def plot_transformer_utilization_histogram(
 
 
 def plot_transformer_utilization_histogram_cumulative(
-        values_dict: dict,
+        results,
         results_path: str,
         selected_columns=None,
         histogram_minimum=0.0,
@@ -1227,23 +1347,24 @@ def plot_transformer_utilization_histogram_cumulative(
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
 
+    df_branchpower_pu = results['branch_power_magnitude_vector_1_per_unit']
+    
     # Pre-process values.
-    for key in values_dict:
-        # Only use selected columns.
-        values_dict[key] = (
-            values_dict[key].loc[:, selected_columns] if selected_columns is not None else values_dict[key]
-        )
-        # Obtain maximum utilization for all transformers.
-        values_dict[key] = (
-            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == 'transformer'].max()
-        )
-        # Set over-utilized transformers to 1 p.u. for better visualization.
-        values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
-        # Obtain histogram values.
-        values_dict[key] = (
-            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
-            / len(values_dict[key])
-        )
+    # Only use selected columns.
+    df_branchpower_pu = (
+        df_branchpower_pu.loc[:, selected_columns] if selected_columns is not None else df_branchpower_pu
+    )
+    # Obtain maximum utilization for all transformers. We can skip this step since it is already in p.u.
+    df_branchpower_pu = (
+        df_branchpower_pu.loc[:, df_branchpower_pu.columns.get_level_values('branch_type') == 'transformer'].max()
+    )
+    # Set over-utilized transformers to 1 p.u. for better visualization.
+    # values_dict[key].loc[values_dict[key] > histogram_maximum] = histogram_maximum
+    # Obtain histogram values.
+    df_branchpower_pu = (
+        pd.Series([*np.histogram(df_branchpower_pu, bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
+        / len(df_branchpower_pu)
+    )
 
     # Obtain plot title / labels / filename.
     title = '1MVA Transformers'
@@ -1253,13 +1374,11 @@ def plot_transformer_utilization_histogram_cumulative(
 
     # Create plot.
     figure = go.Figure()
-    for key in values_dict:
-        figure.add_trace(go.Scatter(
-            x=values_dict[key].index,
-            y=values_dict[key].values,
-            name=key,
-            line=go.scatter.Line(shape='hv')
-        ))
+    figure.add_trace(go.Scatter(
+        x=df_branchpower_pu.index,
+        y=df_branchpower_pu.values,
+        line=go.scatter.Line(shape='hv')
+    ))
     # Add horizontal line at 90%.
     figure.add_shape(go.layout.Shape(
         x0=0,

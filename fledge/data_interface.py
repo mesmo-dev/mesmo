@@ -438,6 +438,14 @@ class ElectricGridData(object):
             self.electric_grid_transformers.reindex(index=natsort.natsorted(self.electric_grid_transformers.index))
         )
 
+        self.check_validity()
+
+    def check_validity(self):
+
+        # Template check.
+        if not (len(self.electric_grid_nodes) > 0):
+            raise ValueError("No electric grid nodes defined.")
+
 
 class ThermalGridData(object):
     """Thermal grid data object."""

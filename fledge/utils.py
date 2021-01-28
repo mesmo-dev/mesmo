@@ -57,14 +57,11 @@ class ObjectBase(object):
 
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
-        try:
-            assert attribute_name in typing.get_type_hints(type(self))
-        except AssertionError:
-            logger.error(
+        if not (attribute_name in typing.get_type_hints(type(self))):
+            raise AttributeError(
                 f"Cannot set invalid attribute '{attribute_name}'. "
                 f"Please ensure that the attribute has been defined with type declaration in the class definition."
             )
-            raise
 
         # Set attribute value.
         super().__setattr__(attribute_name, value)
@@ -216,11 +213,8 @@ class OptimizationProblem(object):
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
-        try:
-            assert self.cvxpy_problem.status == cp.OPTIMAL
-        except AssertionError:
-            logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
-            raise
+        if not (self.cvxpy_problem.status == cp.OPTIMAL):
+            raise cp.SolverError(f"Solver termination status: {self.cvxpy_problem.status}")
 
 
 def starmap(
@@ -355,11 +349,8 @@ def get_index(
 
     # Assert that index is not empty.
     if raise_empty_index_error:
-        try:
-            assert len(index) > 0
-        except AssertionError:
-            logger.error(f"Empty index returned for: {levels_values}")
-            raise
+        if not (len(index) > 0):
+            raise ValueError(f"Empty index returned for: {levels_values}")
 
     return index
 
@@ -490,8 +481,7 @@ def write_figure_plotly(
     elif file_format in ['json']:
         pio.write_json(figure, f"{results_path}.{file_format}")
     else:
-        logger.error(
+        raise ValueError(
             f"Invalid `file_format` for `write_figure_plotly`: {file_format}"
             f" - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'"
         )
-        raise ValueError

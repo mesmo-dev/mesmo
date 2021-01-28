@@ -592,14 +592,11 @@ class ElectricGridModelDefault(ElectricGridModel):
         # Add transformers to admittance matrix.
         for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
             # Raise error if transformer nominal power is not valid.
-            try:
-                assert transformer.at['apparent_power'] > 0
-            except AssertionError:
-                logger.error(
+            if not (transformer.at['apparent_power'] > 0):
+                raise ValueError(
                     f"At transformer '{transformer.at['transformer_name']}', "
                     f"found invalid value for `apparent_power`: {transformer.at['apparent_power']}`"
                 )
-                raise
 
             # Calculate transformer admittance.
             admittance = (
@@ -710,8 +707,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                     * transformer_factors_2
                 )
             else:
-                logger.error(f"Unknown transformer type: {transformer.at['connection']}")
-                raise ValueError
+                raise ValueError(f"Unknown transformer type: {transformer.at['connection']}")
 
             # Obtain phases vector.
             phases_vector = fledge.utils.get_element_phases_array(transformer)
@@ -842,8 +838,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 elif phases_list == [1, 3]:
                     node_index = [node_index[1]]
                 else:
-                    logger.error(f"Unknown delta phase arrangement: {phases_list}")
-                    raise ValueError
+                    raise ValueError(f"Unknown delta phase arrangement: {phases_list}")
 
                 # Define incidence matrix entry.
                 # - Delta ders are assumed to be single-phase.
@@ -851,8 +846,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 self.der_incidence_delta_matrix[np.ix_(node_index, der_index)] = incidence_matrix
 
             else:
-                logger.error(f"Unknown der connection type: {connection}")
-                raise ValueError
+                raise ValueError(f"Unknown der connection type: {connection}")
 
         # Make modifications for single-phase-equivalent modelling.
         if self.is_single_phase_equivalent:
@@ -1146,8 +1140,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                         fledge.utils.get_element_phases_string(transformer)
                     )
                 else:
-                    logger.error(f"Unknown transformer connection type: {connection}")
-                    raise ValueError
+                    raise ValueError(f"Unknown transformer connection type: {connection}")
 
                 # Add node connection, nominal voltage / power, resistance and maximum / minimum tap level
                 # to OpenDSS command string for each winding.
@@ -1796,7 +1789,7 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
     # Overwrite `check_solution_conditions`, which is invalid for the Z-bus power flow.
     @staticmethod
     def check_solution_conditions(*args, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError("This method is invalid for the Z-bus power flow.")
 
     @staticmethod
     def get_voltage(

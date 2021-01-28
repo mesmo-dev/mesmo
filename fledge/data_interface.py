@@ -65,13 +65,10 @@ def recreate_database(
                 # Obtain table name.
                 table_name = os.path.splitext(os.path.basename(csv_file))[0]
                 # Raise exception, if table doesn't exist.
-                try:
-                    assert table_name in valid_table_names
-                except AssertionError:
-                    logger.exception(
+                if not (table_name in valid_table_names):
+                    raise NameError(
                         f"Error loading '{csv_file}' into database, because there is no table named '{table_name}'."
                     )
-                    raise
 
                 # Load table and write to database.
                 try:
@@ -157,11 +154,8 @@ class ScenarioData(object):
             ))
         )
         # Raise error, if scenario not found.
-        try:
-            assert len(scenario) > 0
-        except AssertionError:
-            logger.exception(f"No scenario found for scenario name '{scenario_name}'.")
-            raise
+        if not (len(scenario) > 0):
+            raise ValueError(f"No scenario found for scenario name '{scenario_name}'.")
         # Convert to Series for shorter indexing.
         self.scenario = scenario.iloc[0].copy()
 

@@ -304,8 +304,7 @@ class ThermalPowerFlowSolution(object):
                 ) ** 2
 
             else:
-                logger.error(f"Invalid Reynolds coefficient: {reynold}")
-                raise ValueError
+                raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
 
             # Convert from 1/m to 1/km.
             friction_factor *= 1.0e3

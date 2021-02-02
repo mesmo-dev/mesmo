@@ -27,6 +27,9 @@ class DERModel(object):
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
     timesteps: pd.Index
+    active_power_nominal: np.float
+    reactive_power_nominal: np.float
+    thermal_power_nominal: np.float
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
@@ -49,6 +52,17 @@ class DERModel(object):
 
         # Obtain timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
+
+        # Obtain nominal power values.
+        self.active_power_nominal = (
+            der.at['active_power_nominal'] if pd.notnull(der.at['active_power_nominal']) else 0.0
+        )
+        self.reactive_power_nominal = (
+            der.at['reactive_power_nominal'] if pd.notnull(der.at['reactive_power_nominal']) else 0.0
+        )
+        self.thermal_power_nominal = (
+            der.at['thermal_power_nominal'] if pd.notnull(der.at['thermal_power_nominal']) else 0.0
+        )
 
         # Construct nominal active and reactive power timeseries.
         if (
@@ -103,7 +117,7 @@ class DERModel(object):
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        raise NotImplementedError
+        raise NotImplementedError("This method must be implemented by the subclass.")
 
     def define_optimization_constraints(
             self,
@@ -112,7 +126,7 @@ class DERModel(object):
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     ):
 
-        raise NotImplementedError
+        raise NotImplementedError("This method must be implemented by the subclass.")
 
     def define_optimization_objective(
             self,
@@ -122,7 +136,7 @@ class DERModel(object):
             thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
     ):
 
-        raise NotImplementedError
+        raise NotImplementedError("This method must be implemented by the subclass.")
 
 
 class DERModelOperationResults(fledge.utils.ResultsBase):
@@ -159,11 +173,13 @@ class FixedDERModel(DERModel):
                 optimization_problem.der_active_power_vector[:, der_index]
                 ==
                 self.active_power_nominal_timeseries.values
+                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, der_index]
                 ==
                 self.reactive_power_nominal_timeseries.values
+                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
@@ -428,6 +444,7 @@ class FlexibleDERModel(DERModel):
                     self.mapping_active_power_by_output.values
                     @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
+                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
                 optimization_problem.der_reactive_power_vector[:, [der_index]]
@@ -436,6 +453,7 @@ class FlexibleDERModel(DERModel):
                     self.mapping_reactive_power_by_output.values
                     @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
+                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
         if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
@@ -1170,11 +1188,8 @@ class CoolingPlantModel(FlexibleDERModel):
         der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
         # Cooling plant must be connected to both thermal grid and electric grid.
-        try:
-            assert self.is_electric_grid_connected and self.is_thermal_grid_connected
-        except AssertionError:
-            logger.error(f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
-            raise
+        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+            raise ValueError(f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
 
         # Obtain cooling plant efficiency.
         # TODO: Enable consideration for dynamic wet bulb temperature.
@@ -1539,8 +1554,7 @@ def make_der_model(
             return der_model_class(der_data, der_name)
 
     # Raise error, if no DER model class found for given `der_type`.
-    logger.error(
+    raise ValueError(
         f"Can't find DER model class for DER '{der_name}' of type '{der_type}'. "
         f"Please check if valid `der_type` is defined."
     )
-    raise ValueError

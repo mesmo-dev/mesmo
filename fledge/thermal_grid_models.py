@@ -518,9 +518,14 @@ class LinearThermalGridModel(object):
     ):
         """Define decision variables for given `optimization_problem`."""
 
-        optimization_problem.der_thermal_power_vector = (
-            cp.Variable((len(timesteps), len(self.thermal_grid_model.ders)))
-        )
+        # Define DER power vector variable.
+        # - Only if this has not yet been defined within `DERModelSet`.
+        if not hasattr(optimization_problem, 'der_thermal_power_vector'):
+            optimization_problem.der_thermal_power_vector = (
+                cp.Variable((len(timesteps), len(self.thermal_grid_model.ders)))
+            )
+
+        # Define node head, branch flow and pump power variables.
         optimization_problem.node_head_vector = (
             cp.Variable((len(timesteps), len(self.thermal_grid_model.nodes)))
         )
@@ -538,8 +543,9 @@ class LinearThermalGridModel(object):
             node_head_vector_minimum: np.ndarray = None,
             branch_flow_vector_maximum: np.ndarray = None
     ):
+        """Define constraints to express the linear thermal grid model equations for given `optimization_problem`."""
 
-        # Define constraints.
+        # Define node head equation.
         optimization_problem.constraints.append(
             optimization_problem.node_head_vector
             ==
@@ -549,6 +555,7 @@ class LinearThermalGridModel(object):
             )
         )
 
+        # Define branch flow equation.
         optimization_problem.constraints.append(
             optimization_problem.branch_flow_vector
             ==
@@ -558,6 +565,7 @@ class LinearThermalGridModel(object):
             )
         )
 
+        # Define pump power equation.
         optimization_problem.constraints.append(
             optimization_problem.pump_power
             ==
@@ -567,7 +575,7 @@ class LinearThermalGridModel(object):
             )
         )
 
-        # Node head.
+        # Define node head limits.
         if node_head_vector_minimum is not None:
             optimization_problem.node_head_vector_minimum_constraint = (
                 optimization_problem.node_head_vector
@@ -577,7 +585,7 @@ class LinearThermalGridModel(object):
             )
             optimization_problem.constraints.append(optimization_problem.node_head_vector_minimum_constraint)
 
-        # Branch flow.
+        # Define branch flow limits.
         if branch_flow_vector_maximum is not None:
             optimization_problem.branch_flow_vector_minimum_constraint = (
                 optimization_problem.branch_flow_vector
@@ -607,7 +615,7 @@ class LinearThermalGridModel(object):
         else:
             timestep_interval_hours = 1.0
 
-        # Thermal power cost / revenue.
+        # Define thermal power cost / revenue.
         # - Cost for load / demand, revenue for generation / supply.
         optimization_problem.objective += (
             (
@@ -628,7 +636,7 @@ class LinearThermalGridModel(object):
             ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
-        # Pump cost.
+        # Define pump cost.
         optimization_problem.objective += (
             (
                 # TODO: Use active power instead of thermal power price.

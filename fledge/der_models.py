@@ -1357,6 +1357,12 @@ class DERModelSetOperationResults(fledge.utils.ResultsBase):
     control_vector: pd.DataFrame
     output_vector: pd.DataFrame
     # TODO: Add output constraint and disturbance timeseries.
+    der_active_power_vector: pd.DataFrame
+    der_active_power_vector_per_unit: pd.DataFrame
+    der_reactive_power_vector: pd.DataFrame
+    der_reactive_power_vector_per_unit: pd.DataFrame
+    der_thermal_power_vector: pd.DataFrame
+    der_thermal_power_vector_per_unit: pd.DataFrame
 
 
 class DERModelSet(DERModelSetBase):
@@ -1456,7 +1462,7 @@ class DERModelSet(DERModelSetBase):
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define flexible DER variables.
+        # Define flexible DER state space variables.
         optimization_problem.state_vector = dict.fromkeys(self.flexible_der_names)
         optimization_problem.control_vector = dict.fromkeys(self.flexible_der_names)
         optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
@@ -1478,6 +1484,21 @@ class DERModelSet(DERModelSetBase):
                     len(self.flexible_der_models[der_name].timesteps),
                     len(self.flexible_der_models[der_name].outputs)
                 ))
+            )
+
+        # Define DER power vector variables.
+        # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
+        if (not hasattr(optimization_problem, 'der_active_power_vector')) and (len(self.electric_ders) > 0):
+            optimization_problem.der_active_power_vector = (
+                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+            )
+        if (not hasattr(optimization_problem, 'der_reactive_power_vector')) and (len(self.electric_ders) > 0):
+            optimization_problem.der_reactive_power_vector = (
+                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+            )
+        if (not hasattr(optimization_problem, 'der_thermal_power_vector')) and (len(self.thermal_ders) > 0):
+            optimization_problem.der_thermal_power_vector = (
+                cp.Variable((len(self.timesteps), len(self.thermal_ders)))
             )
 
     def define_optimization_constraints(
@@ -1521,6 +1542,12 @@ class DERModelSet(DERModelSetBase):
         state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
         control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
         output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
+        der_active_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
+        der_active_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
+        der_reactive_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
+        der_reactive_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
+        der_thermal_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.thermal_ders)
+        der_thermal_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.thermal_ders)
 
         # Obtain results.
         for der_name in self.flexible_der_names:
@@ -1533,12 +1560,48 @@ class DERModelSet(DERModelSetBase):
             output_vector.loc[:, (der_name, slice(None))] = (
                 optimization_problem.output_vector[der_name].value
             )
+        for der_name in self.der_names:
+            if self.der_models[der_name].is_electric_grid_connected:
+                der_active_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_active_power_vector[
+                        :, fledge.utils.get_index(self.electric_ders, der_name=der_name)
+                    ].value
+                )
+                der_active_power_vector.loc[:, (slice(None), der_name)] = (
+                    der_active_power_vector_per_unit.loc[:, (slice(None), der_name)].values
+                    * self.der_models[der_name].active_power_nominal
+                )
+                der_reactive_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_reactive_power_vector[
+                        :, fledge.utils.get_index(self.electric_ders, der_name=der_name)
+                    ].value
+                )
+                der_reactive_power_vector.loc[:, (slice(None), der_name)] = (
+                    der_reactive_power_vector_per_unit.loc[:, (slice(None), der_name)].values
+                    * self.der_models[der_name].reactive_power_nominal
+                )
+            if self.der_models[der_name].is_thermal_grid_connected:
+                der_thermal_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_thermal_power_vector[
+                        :, fledge.utils.get_index(self.thermal_ders, der_name=der_name)
+                    ].value
+                )
+                der_thermal_power_vector.loc[:, (slice(None), der_name)] = (
+                    der_thermal_power_vector_per_unit.loc[:, (slice(None), der_name)].values
+                    * self.der_models[der_name].thermal_power_nominal
+                )
 
         return DERModelSetOperationResults(
             der_model_set=self,
             state_vector=state_vector,
             control_vector=control_vector,
-            output_vector=output_vector
+            output_vector=output_vector,
+            der_active_power_vector=der_active_power_vector,
+            der_active_power_vector_per_unit=der_active_power_vector_per_unit,
+            der_reactive_power_vector=der_reactive_power_vector,
+            der_reactive_power_vector_per_unit=der_reactive_power_vector_per_unit,
+            der_thermal_power_vector=der_thermal_power_vector,
+            der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit
         )
 
 

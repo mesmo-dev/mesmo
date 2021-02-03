@@ -1336,6 +1336,9 @@ class CoolingPlantModel(FlexibleDERModel):
 class DERModelSetBase:
 
     timesteps: pd.Index
+    ders: pd.Index
+    electric_ders: pd.Index
+    thermal_ders: pd.Index
     der_names: pd.Index
     fixed_der_names: pd.Index
     flexible_der_names: pd.Index
@@ -1381,7 +1384,12 @@ class DERModelSet(DERModelSetBase):
         # Obtain timesteps.
         self.timesteps = der_data.scenario_data.timesteps
 
-        # Obtain DER names.
+        # Obtain DER index sets.
+        # - Note: Implementation changes to `ders`, `electric_ders` and `thermal_ders` index sets must be aligned
+        #   with `ElectricGridModel.ders` and `ThermalGridModel.ders`.
+        self.ders = pd.MultiIndex.from_frame(der_data.ders.loc[:, ['der_type', 'der_name']])
+        self.electric_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'electric_grid_name'])]
+        self.thermal_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name'])]
         self.der_names = der_data.ders.index
 
         # Obtain DER models.

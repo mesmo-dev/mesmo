@@ -691,7 +691,7 @@ class DERData(object):
                     self.der_definitions[definition_index].at['maximum_energy_definition_name']
                 )
                 self.der_definitions[definition_index].at['departing_energy_definition_index'] = (
-                    self.der_definitions[definition_index].at['departing_energy_definition_type'],
+                    self.der_definitions[definition_index].at['departing_energy_definition_type'] + '_accumulative',
                     self.der_definitions[definition_index].at['departing_energy_definition_name']
                 )
 

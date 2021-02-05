@@ -678,29 +678,29 @@ class DERData(object):
 
                 # Append `definition_index`, for more convenient indexing into DER definitions.
                 # - Add `accumulative` flag to ensure correct interpolation / resampling behavior.
-                self.der_definitions[definition_index].at['arrival_definition_index'] = (
-                    self.der_definitions[definition_index].at['arrival_definition_type'] + '_accumulative',
-                    self.der_definitions[definition_index].at['arrival_definition_name']
+                self.der_definitions[definition_index].at['maximum_charging_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_charging_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_charging_definition_name']
                 )
-                self.der_definitions[definition_index].at['departure_definition_index'] = (
-                    self.der_definitions[definition_index].at['departure_definition_type'] + '_accumulative',
-                    self.der_definitions[definition_index].at['departure_definition_name']
+                self.der_definitions[definition_index].at['maximum_discharging_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_name']
                 )
-                self.der_definitions[definition_index].at['occupancy_definition_index'] = (
-                    self.der_definitions[definition_index].at['occupancy_definition_type'],
-                    self.der_definitions[definition_index].at['occupancy_definition_name']
+                self.der_definitions[definition_index].at['maximum_energy_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_energy_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_energy_definition_name']
                 )
-                self.der_definitions[definition_index].at['bidirectional_definition_index'] = (
-                    self.der_definitions[definition_index].at['bidirectional_definition_type'],
-                    self.der_definitions[definition_index].at['bidirectional_definition_name']
+                self.der_definitions[definition_index].at['departing_energy_definition_index'] = (
+                    self.der_definitions[definition_index].at['departing_energy_definition_type'],
+                    self.der_definitions[definition_index].at['departing_energy_definition_name']
                 )
 
                 # Append arrival / occupancy timeseries / schedule to additional definitions.
                 additional_der_definitions.update({
-                    self.der_definitions[definition_index].at['arrival_definition_index']: None,
-                    self.der_definitions[definition_index].at['departure_definition_index']: None,
-                    self.der_definitions[definition_index].at['occupancy_definition_index']: None,
-                    self.der_definitions[definition_index].at['bidirectional_definition_index']: None
+                    self.der_definitions[definition_index].at['maximum_charging_definition_index']: None,
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_index']: None,
+                    self.der_definitions[definition_index].at['maximum_energy_definition_index']: None,
+                    self.der_definitions[definition_index].at['departing_energy_definition_index']: None
                 })
 
         # Append additional DER definitions.
@@ -743,6 +743,8 @@ class DERData(object):
                         index_col=['time']
                     )
                 )
+                if not (len(der_timeseries) > 0):
+                    raise ValueError(f"No DER time series definition found for definition name '{definition_index[1]}'.")
 
                 # Resample / interpolate / fill values.
                 if 'accumulative' in definition_index[0]:
@@ -810,6 +812,8 @@ class DERData(object):
                         index_col=['time_period']
                     )
                 )
+                if not (len(der_schedule) > 0):
+                    raise ValueError(f"No DER schedule definition found for definition name '{definition_index[1]}'.")
 
                 # Show warning, if `time_period` does not start with '01T00:00'.
                 try:

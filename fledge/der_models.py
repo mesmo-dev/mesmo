@@ -749,9 +749,14 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         # Instantiate indexes.
         self.states = pd.Index(['charged_energy'])
         self.storage_states = pd.Index(['charged_energy'])
-        self.controls = pd.Index(['active_power'])
-        self.disturbances = pd.Index(['departing_vehicle_energy'])
-        self.outputs = pd.Index(['charged_energy', 'active_power', 'reactive_power'])
+        self.controls = pd.Index(['active_power_charge', 'active_power_discharge'])
+        self.disturbances = pd.Index(['departing_energy'])
+        self.outputs = (
+            pd.Index([
+                'charged_energy', 'active_power_charge', 'active_power_discharge',
+                'active_power', 'reactive_power'
+            ])
+        )
 
         # Define power mapping matrices.
         self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
@@ -777,7 +782,19 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.control_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
-        self.control_matrix.at['charged_energy', 'active_power'] = (
+        self.control_matrix.at['charged_energy', 'active_power_charge'] = (
+            der['charging_efficiency']
+            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+        )
+        self.control_matrix.at['charged_energy', 'active_power_discharge'] = (
+            -1.0
+            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+        )
+        self.control_matrix.at['charged_energy', 'active_power_charge'] = (
+            (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+            * der['charging_efficiency']
+        )
+        self.control_matrix.at['charged_energy', 'active_power_discharge'] = (
             -1.0
             * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
             * der['charging_efficiency']
@@ -785,7 +802,7 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         )
-        self.disturbance_matrix.at['charged_energy', 'departing_vehicle_energy'] = -1.0
+        self.disturbance_matrix.at['charged_energy', 'departing_energy'] = -1.0
         self.state_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.states)
         )
@@ -793,8 +810,16 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.control_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
         )
-        self.control_output_matrix.at['active_power', 'active_power'] = 1.0
-        self.control_output_matrix.at['reactive_power', 'active_power'] = (
+        self.control_output_matrix.at['active_power_charge', 'active_power_charge'] = 1.0
+        self.control_output_matrix.at['active_power_discharge', 'active_power_discharge'] = 1.0
+        self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
+        self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
+        self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
+            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+            if der.at['active_power_nominal'] != 0.0
+            else 0.0
+        )
+        self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
             der.at['reactive_power_nominal'] / der.at['active_power_nominal']
             if der.at['active_power_nominal'] != 0.0
             else 0.0
@@ -807,32 +832,37 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.disturbance_timeseries = (
             pd.concat([
                 pd.Series((
-                    der_data.der_definitions[der.at['departure_definition_index']].loc[:, 'value'].copy()
-                    * der.at['vehicle_energy_demand']
-                ), index=self.timesteps, name='departing_vehicle_energy')
+                    der_data.der_definitions[der.at['departing_energy_definition_index']].loc[:, 'value'].copy()
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                ), index=self.timesteps, name='departing_energy')
             ], axis='columns')
         )
 
-        # Construct output constraint timeseries
+        # Construct output constraint timeseries.
         self.output_maximum_timeseries = (
             pd.concat([
                 pd.Series((
-                    der_data.der_definitions[der.at['occupancy_definition_index']].loc[:, 'value'].copy()
-                    * der.at['vehicle_energy_demand']
+                    der_data.der_definitions[der.at['maximum_energy_definition_index']].loc[:, 'value'].copy()
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
                 ), index=self.timesteps, name='charged_energy'),
                 pd.Series((
-                    # TODO: Revise unit / scaling for bidirectional timeseries.
-                    der_data.der_definitions[der.at['bidirectional_definition_index']].loc[:, 'value'].copy()
-                    * der.at['maximum_active_power']
-                    / der_data.der_definitions[der.at['bidirectional_definition_index']].loc[:, 'value'].max()
-                ), index=self.timesteps, name='active_power'),
+                    der_data.der_definitions[der.at['maximum_charging_definition_index']].loc[:, 'value'].copy()
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                ), index=self.timesteps, name='active_power_charge'),
+                pd.Series((
+                    der_data.der_definitions[der.at['maximum_discharging_definition_index']].loc[:, 'value'].copy()
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                ), index=self.timesteps, name='active_power_discharge'),
+                pd.Series(+np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
                 pd.Series(+np.inf, index=self.timesteps, name='reactive_power')
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
             pd.concat([
                 pd.Series(0.0, index=self.timesteps, name='charged_energy'),
-                pd.Series(-1.0 * der.at['maximum_active_power'], index=self.timesteps, name='active_power'),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
+                pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
+                pd.Series(-np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
                 pd.Series(-np.inf, index=self.timesteps, name='reactive_power')
             ], axis='columns')
         )

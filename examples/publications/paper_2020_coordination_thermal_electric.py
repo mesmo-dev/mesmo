@@ -750,9 +750,9 @@ def main(
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Primal residual",
+        yaxis_title="Primal residual<br>[MW<sub>th</sub>h, MWh, MVA<sub>r</sub>h]",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
-        margin=go.layout.Margin(r=10, t=10)
+        margin=go.layout.Margin(l=120, b=50, r=10, t=10)
     )
     # figure.show()
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_primal_residuals'))
@@ -763,9 +763,9 @@ def main(
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Dual residual",
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
-        margin=go.layout.Margin(r=10, t=10)
+        yaxis_title="Dual residual [S$]",
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto', orientation='h'),
+        margin=go.layout.Margin(b=50, r=10, t=10)
     )
     # figure.show()
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_dual_residuals'))
@@ -776,10 +776,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_thermal_power_vector'].index,
-                y=(
-                    results_baseline['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -788,10 +785,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_thermal['der_thermal_power_vector'].index,
-                y=(
-                    results_thermal['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_thermal['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -799,17 +793,14 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_thermal_power_vector'].index,
-                y=(
-                    results_aggregator['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Thermal power [MWth]",
+            yaxis_title="Thermal power [MW<sub>th</sub>]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
@@ -823,10 +814,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_active_power_vector'].index,
-                y=(
-                    results_baseline['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -835,10 +823,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_electric['der_active_power_vector'].index,
-                y=(
-                    results_electric['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_electric['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -846,10 +831,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_active_power_vector'].index,
-                y=(
-                    results_aggregator['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
@@ -871,10 +853,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_reactive_power_vector'].index,
-                y=(
-                    results_baseline['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -883,10 +862,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_electric['der_reactive_power_vector'].index,
-                y=(
-                    results_electric['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_electric['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -894,17 +870,14 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_reactive_power_vector'].index,
-                y=(
-                    results_aggregator['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Reactive power [MVAr]",
+            yaxis_title="Reactive power [MVA<sub>r</sub>]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
@@ -948,9 +921,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kWh]",
+            yaxis_title="Price [S$/MW<sub>th</sub>h]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
@@ -964,6 +937,7 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_active_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_active_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -975,6 +949,7 @@ def main(
                 x=admm_lambda_electric_der_active_power.index,
                 y=(
                     admm_lambda_electric_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -985,6 +960,7 @@ def main(
                 x=admm_lambda_aggregator_der_active_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -992,9 +968,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kWh]",
+            yaxis_title="Price [S$/MWh]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
@@ -1009,6 +985,7 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_reactive_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_reactive_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -1020,6 +997,7 @@ def main(
                 x=admm_lambda_electric_der_reactive_power.index,
                 y=(
                     admm_lambda_electric_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -1030,6 +1008,7 @@ def main(
                 x=admm_lambda_aggregator_der_reactive_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -1037,9 +1016,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kVAh]",
+            yaxis_title="Price [S$/MVA<sub>r</sub>h]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()

@@ -556,6 +556,7 @@ class LinearThermalGridModel(object):
                     np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
                 ))
             )
+            / np.array([self.thermal_grid_model.node_head_vector_reference])
         )
 
         # Define branch flow equation.
@@ -589,6 +590,7 @@ class LinearThermalGridModel(object):
             optimization_problem.node_head_vector_minimum_constraint = (
                 optimization_problem.node_head_vector
                 - np.array([node_head_vector_minimum.ravel()])
+                / np.array([self.thermal_grid_model.node_head_vector_reference])
                 >=
                 0.0
             )
@@ -678,6 +680,7 @@ class LinearThermalGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.node_head_vector_minimum_constraint.dual_value
+                    * np.array([self.thermal_grid_model.node_head_vector_reference])
                     if hasattr(optimization_problem, 'node_head_vector_minimum_constraint')
                     else 0.0
                 ),
@@ -860,17 +863,20 @@ class LinearThermalGridModel(object):
                 index=timesteps
             )
         )
+        node_head_vector = (
+            pd.DataFrame(
+                (
+                    optimization_problem.node_head_vector.value
+                    * np.array([self.thermal_grid_model.node_head_vector_reference])
+                ),
+                columns=self.thermal_grid_model.nodes,
+                index=timesteps
+            )
+        )
         branch_flow_vector = (
             pd.DataFrame(
                 optimization_problem.branch_flow_vector.value,
                 columns=self.thermal_grid_model.branches,
-                index=timesteps
-            )
-        )
-        node_head_vector = (
-            pd.DataFrame(
-                optimization_problem.node_head_vector.value,
-                columns=self.thermal_grid_model.nodes,
                 index=timesteps
             )
         )

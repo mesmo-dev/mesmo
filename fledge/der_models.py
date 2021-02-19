@@ -465,6 +465,7 @@ class FlexibleDERModel(DERModel):
                     self.mapping_thermal_power_by_output.values
                     @ cp.transpose(optimization_problem.output_vector[self.der_name])
                 )
+                / (self.thermal_power_nominal if self.thermal_power_nominal != 0.0 else 1.0)
             )
 
     def define_optimization_objective(

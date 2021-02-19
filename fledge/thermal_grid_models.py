@@ -551,7 +551,10 @@ class LinearThermalGridModel(object):
             ==
             cp.transpose(
                 self.sensitivity_node_head_by_der_power
-                @ cp.transpose(optimization_problem.der_thermal_power_vector)
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_thermal_power_vector,
+                    np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                ))
             )
         )
 
@@ -561,7 +564,10 @@ class LinearThermalGridModel(object):
             ==
             cp.transpose(
                 self.sensitivity_branch_flow_by_der_power
-                @ cp.transpose(optimization_problem.der_thermal_power_vector)
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_thermal_power_vector,
+                    np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                ))
             )
         )
 
@@ -571,7 +577,10 @@ class LinearThermalGridModel(object):
             ==
             cp.transpose(
                 self.sensitivity_pump_power_by_der_power
-                @ cp.transpose(optimization_problem.der_thermal_power_vector)
+                @ cp.transpose(cp.multiply(
+                    optimization_problem.der_thermal_power_vector,
+                    np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                ))
             )
         )
 
@@ -622,7 +631,10 @@ class LinearThermalGridModel(object):
                 price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values.T
                 * timestep_interval_hours  # In Wh.
                 @ cp.sum(-1.0 * (
-                    optimization_problem.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem.der_thermal_power_vector,
+                        np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     / self.thermal_grid_model.cooling_plant_efficiency
                 ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
             )
@@ -630,7 +642,10 @@ class LinearThermalGridModel(object):
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
                 * cp.sum((
-                    optimization_problem.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem.der_thermal_power_vector,
+                        np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     / self.thermal_grid_model.cooling_plant_efficiency
                 ) ** 2)
             ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
@@ -837,7 +852,10 @@ class LinearThermalGridModel(object):
         # Instantiate results variables.
         der_thermal_power_vector = (
             pd.DataFrame(
-                optimization_problem.der_thermal_power_vector.value,
+                (
+                    optimization_problem.der_thermal_power_vector.value
+                    * np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
+                ),
                 columns=self.thermal_grid_model.ders,
                 index=timesteps
             )

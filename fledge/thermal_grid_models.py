@@ -570,6 +570,7 @@ class LinearThermalGridModel(object):
                     np.array([self.thermal_grid_model.der_thermal_power_vector_reference])
                 ))
             )
+            / np.array([self.thermal_grid_model.branch_flow_vector_reference])
         )
 
         # Define pump power equation.
@@ -601,6 +602,7 @@ class LinearThermalGridModel(object):
             optimization_problem.branch_flow_vector_minimum_constraint = (
                 optimization_problem.branch_flow_vector
                 + np.array([branch_flow_vector_maximum.ravel()])
+                / np.array([self.thermal_grid_model.branch_flow_vector_reference])
                 >=
                 0.0
             )
@@ -608,6 +610,7 @@ class LinearThermalGridModel(object):
             optimization_problem.branch_flow_vector_maximum_constraint = (
                 optimization_problem.branch_flow_vector
                 - np.array([branch_flow_vector_maximum.ravel()])
+                / np.array([self.thermal_grid_model.branch_flow_vector_reference])
                 <=
                 0.0
             )
@@ -692,6 +695,7 @@ class LinearThermalGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.branch_flow_vector_maximum_constraint.dual_value
+                    * np.array([self.thermal_grid_model.branch_flow_vector_reference])
                     if hasattr(optimization_problem, 'branch_flow_vector_maximum_constraint')
                     else 0.0
                 ),
@@ -703,6 +707,7 @@ class LinearThermalGridModel(object):
             pd.DataFrame(
                 (
                     -1.0 * optimization_problem.branch_flow_vector_minimum_constraint.dual_value
+                    * np.array([self.thermal_grid_model.branch_flow_vector_reference])
                     if hasattr(optimization_problem, 'branch_flow_vector_minimum_constraint')
                     else 0.0
                 ),
@@ -875,7 +880,10 @@ class LinearThermalGridModel(object):
         )
         branch_flow_vector = (
             pd.DataFrame(
-                optimization_problem.branch_flow_vector.value,
+                (
+                    optimization_problem.branch_flow_vector.value
+                    * np.array([self.thermal_grid_model.branch_flow_vector_reference])
+                ),
                 columns=self.thermal_grid_model.branches,
                 index=timesteps
             )

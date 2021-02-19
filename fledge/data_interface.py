@@ -241,10 +241,6 @@ class ScenarioData(object):
         for column in selected_columns:
             dataframe[column] = self.parse_parameters_column(dataframe[column].values)
 
-        # If dataframe contains `in_service` column, remove all not-in-service elements.
-        if 'in_service' in dataframe.columns:
-            dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
-
         # Apply scaling.
         if 'active_power_nominal' in dataframe.columns:
             dataframe.loc[:, 'active_power_nominal'] /= (
@@ -303,6 +299,11 @@ class ScenarioData(object):
             dataframe.loc[:, 'thermal_power_nominal'] /= (
                 self.scenario.at['base_thermal_power']
             )
+
+        # If dataframe contains `in_service` column, remove all not-in-service elements.
+        # - This operation should be last, to avoid pandas warnings for operation on copy of dataframe.
+        if 'in_service' in dataframe.columns:
+            dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
 
         return dataframe
 

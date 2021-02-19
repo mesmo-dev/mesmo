@@ -286,6 +286,19 @@ class ScenarioData(object):
             dataframe.loc[:, 'enthalpy_difference_distribution_water'] /= (
                 self.scenario.at['base_thermal_power']
             )
+        # TODO: Align enthalpy variable names (see above & below).
+        if 'condenser_water_enthalpy_difference' in dataframe.columns:
+            dataframe.loc[:, 'condenser_water_enthalpy_difference'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'distribution_pump_efficiency' in dataframe.columns:
+            dataframe.loc[:, 'distribution_pump_efficiency'] *= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'plant_pump_efficiency' in dataframe.columns:
+            dataframe.loc[:, 'plant_pump_efficiency'] *= (
+                self.scenario.at['base_thermal_power']
+            )
         if 'thermal_power_nominal' in dataframe.columns:
             dataframe.loc[:, 'thermal_power_nominal'] /= (
                 self.scenario.at['base_thermal_power']

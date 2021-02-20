@@ -311,25 +311,37 @@ def main(
             cp.multiply(
                 admm_lambda_electric_der_active_power,
                 (
-                    optimization_problem_electric.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem_electric.der_active_power_vector,
+                        np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_electric_der_reactive_power,
                 (
-                    optimization_problem_electric.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem_electric.der_reactive_power_vector,
+                        np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_active_power_vector
+                cp.multiply(
+                    optimization_problem_electric.der_active_power_vector,
+                    np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_reactive_power_vector
+                cp.multiply(
+                    optimization_problem_electric.der_reactive_power_vector,
+                    np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -370,13 +382,19 @@ def main(
             cp.multiply(
                 admm_lambda_thermal_der_thermal_power,
                 (
-                    optimization_problem_thermal.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem_thermal.der_thermal_power_vector,
+                        np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     # - admm_exchange_der_thermal_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_thermal.der_thermal_power_vector
+                cp.multiply(
+                    optimization_problem_thermal.der_thermal_power_vector,
+                    np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                )
                 - admm_exchange_der_thermal_power
             ) ** 2
         )
@@ -393,17 +411,6 @@ def main(
     # Define DER variables.
     der_model_set.define_optimization_variables(
         optimization_problem_aggregator
-    )
-
-    # Define DER connection variables.
-    optimization_problem_aggregator.der_active_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
-    )
-    optimization_problem_aggregator.der_reactive_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
-    )
-    optimization_problem_aggregator.der_thermal_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(thermal_grid_model.ders)))
     )
 
     # Define DER constraints.
@@ -427,25 +434,37 @@ def main(
             cp.multiply(
                 admm_lambda_aggregator_der_active_power,
                 (
-                    optimization_problem_aggregator.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_active_power_vector,
+                        np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_aggregator_der_reactive_power,
                 (
-                    optimization_problem_aggregator.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_reactive_power_vector,
+                        np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_active_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_active_power_vector,
+                    np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_reactive_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_reactive_power_vector,
+                    np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -453,13 +472,19 @@ def main(
             cp.multiply(
                 admm_lambda_aggregator_der_thermal_power,
                 (
-                    optimization_problem_aggregator.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_thermal_power_vector,
+                        np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     # - admm_exchange_der_thermal_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_thermal_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_thermal_power_vector,
+                    np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                )
                 - admm_exchange_der_thermal_power
             ) ** 2
         )
@@ -509,38 +534,9 @@ def main(
             )
 
             # Get aggregator sub-problem results.
-            results_aggregator = fledge.problems.Results()
-            results_aggregator.update(
+            results_aggregator = (
                 der_model_set.get_optimization_results(
                     optimization_problem_aggregator
-                )
-            )
-            der_active_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_active_power_vector.value,
-                    columns=electric_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            der_reactive_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_reactive_power_vector.value,
-                    columns=electric_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            der_thermal_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_thermal_power_vector.value,
-                    columns=thermal_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            results_aggregator.update(
-                fledge.problems.Results(
-                    der_active_power_vector=der_active_power_vector,
-                    der_reactive_power_vector=der_reactive_power_vector,
-                    der_thermal_power_vector=der_thermal_power_vector
                 )
             )
 

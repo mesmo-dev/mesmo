@@ -411,8 +411,8 @@ def get_results_path(
     """
 
     # Preprocess results path name components, including removing non-alphanumeric characters.
-    base_name = re.sub(r'\W+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
-    scenario_name = '' if scenario_name is None else re.sub(r'\W+', '', scenario_name) + '_'
+    base_name = re.sub(r'\W-+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
+    scenario_name = '' if scenario_name is None else re.sub(r'\W-+', '', scenario_name) + '_'
     timestamp = fledge.utils.get_timestamp()
 
     # Obtain results path.
@@ -430,7 +430,7 @@ def get_alphanumeric_string(
 ):
     """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
 
-    return re.sub(r'\W+', '_', string).strip('_').lower()
+    return re.sub(r'\W-+', '_', string).strip('_').lower()
 
 
 def launch(path):

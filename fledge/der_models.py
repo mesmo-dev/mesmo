@@ -1337,7 +1337,12 @@ class CoolingPlantModel(FlexibleDERModel):
             if der.at['active_power_nominal'] != 0.0
             else 0.0
         )
-        self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.cooling_plant_efficiency
+        self.control_output_matrix.at['thermal_power', 'active_power'] = (
+            -1.0
+            * self.cooling_plant_efficiency
+            * der_data.scenario_data.scenario.at['base_apparent_power']
+            / der_data.scenario_data.scenario.at['base_thermal_power']
+        )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )

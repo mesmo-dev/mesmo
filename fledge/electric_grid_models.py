@@ -1689,13 +1689,15 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
             f"Outer wrapper iterations: {outer_iteration}"
         )
 
-        # Get full voltage vector by concatenating source and calculated voltage.
-        node_voltage_vector = (
-            np.concatenate([
-                electric_grid_model.node_voltage_vector_reference_source,
-                node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
-            ])
+        # Get full voltage vector.
+        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=np.complex)
+        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
+            electric_grid_model.node_voltage_vector_reference_source
         )
+        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
+            node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
+        )
+
         return node_voltage_vector
 
     @staticmethod
@@ -1891,13 +1893,15 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
                 f"maximum limit of {voltage_iteration_limit} iterations."
             )
 
-        # Get full voltage vector by concatenating source and calculated voltage.
-        node_voltage_vector = (
-            np.concatenate([
-                electric_grid_model.node_voltage_vector_reference_source,
-                node_voltage_vector_estimate_no_source
-            ])
+        # Get full voltage vector.
+        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=np.complex)
+        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
+            electric_grid_model.node_voltage_vector_reference_source
         )
+        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
+            node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
+        )
+
         return node_voltage_vector
 
 

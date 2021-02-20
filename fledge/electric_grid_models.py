@@ -2613,7 +2613,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.voltage_magnitude_vector_minimum_constraint.dual_value
-                    * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
+                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                     if hasattr(optimization_problem, 'voltage_magnitude_vector_minimum_constraint')
                     else 0.0
                 ),
@@ -2625,7 +2625,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     -1.0 * optimization_problem.voltage_magnitude_vector_maximum_constraint.dual_value
-                    * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
+                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                     if hasattr(optimization_problem, 'voltage_magnitude_vector_maximum_constraint')
                     else 0.0
                 ),
@@ -2637,7 +2637,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.branch_power_magnitude_vector_1_minimum_constraint.dual_value
-                    * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                     if hasattr(optimization_problem, 'branch_power_magnitude_vector_1_minimum_constraint')
                     else 0.0
                 ),
@@ -2649,7 +2649,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     -1.0 * optimization_problem.branch_power_magnitude_vector_1_maximum_constraint.dual_value
-                    * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                     if hasattr(optimization_problem, 'branch_power_magnitude_vector_1_maximum_constraint')
                     else 0.0
                 ),
@@ -2661,7 +2661,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.branch_power_magnitude_vector_2_minimum_constraint.dual_value
-                    * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                     if hasattr(optimization_problem, 'branch_power_magnitude_vector_2_minimum_constraint')
                     else 0.0
                 ),
@@ -2673,7 +2673,7 @@ class LinearElectricGridModel(object):
             pd.DataFrame(
                 (
                     -1.0 * optimization_problem.branch_power_magnitude_vector_2_maximum_constraint.dual_value
-                    * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                     if hasattr(optimization_problem, 'branch_power_magnitude_vector_2_maximum_constraint')
                     else 0.0
                 ),

@@ -683,7 +683,7 @@ class LinearThermalGridModel(object):
             pd.DataFrame(
                 (
                     optimization_problem.node_head_vector_minimum_constraint.dual_value
-                    * np.array([self.thermal_grid_model.node_head_vector_reference])
+                    / np.array([self.thermal_grid_model.node_head_vector_reference])
                     if hasattr(optimization_problem, 'node_head_vector_minimum_constraint')
                     else 0.0
                 ),
@@ -694,9 +694,9 @@ class LinearThermalGridModel(object):
         branch_flow_vector_minimum_dual = (
             pd.DataFrame(
                 (
-                    optimization_problem.branch_flow_vector_maximum_constraint.dual_value
-                    * np.array([self.thermal_grid_model.branch_flow_vector_reference])
-                    if hasattr(optimization_problem, 'branch_flow_vector_maximum_constraint')
+                    optimization_problem.branch_flow_vector_minimum_constraint.dual_value
+                    / np.array([self.thermal_grid_model.branch_flow_vector_reference])
+                    if hasattr(optimization_problem, 'branch_flow_vector_minimum_constraint')
                     else 0.0
                 ),
                 columns=self.thermal_grid_model.branches,
@@ -706,9 +706,9 @@ class LinearThermalGridModel(object):
         branch_flow_vector_maximum_dual = (
             pd.DataFrame(
                 (
-                    -1.0 * optimization_problem.branch_flow_vector_minimum_constraint.dual_value
-                    * np.array([self.thermal_grid_model.branch_flow_vector_reference])
-                    if hasattr(optimization_problem, 'branch_flow_vector_minimum_constraint')
+                    -1.0 * optimization_problem.branch_flow_vector_maximum_constraint.dual_value
+                    / np.array([self.thermal_grid_model.branch_flow_vector_reference])
+                    if hasattr(optimization_problem, 'branch_flow_vector_maximum_constraint')
                     else 0.0
                 ),
                 columns=self.thermal_grid_model.branches,

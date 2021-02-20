@@ -40,9 +40,6 @@ def main(
     # Obtain results path.
     results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_rho{admm_rho}_{scenario_name}')
 
-    # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
-
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
@@ -1035,6 +1032,9 @@ def main(
 if __name__ == '__main__':
 
     run_all = False
+
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.data_interface.recreate_database()
 
     if run_all:
         for scenario_number in [None]:

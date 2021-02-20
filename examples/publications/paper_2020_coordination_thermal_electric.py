@@ -893,6 +893,7 @@ def main(
                 x=results_baseline['thermal_grid_total_dlmp_der_thermal_power'].index,
                 y=(
                     results_baseline['thermal_grid_total_dlmp_der_thermal_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -904,6 +905,7 @@ def main(
                 x=admm_lambda_thermal_der_thermal_power.index,
                 y=(
                     admm_lambda_thermal_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -914,6 +916,7 @@ def main(
                 x=admm_lambda_aggregator_der_thermal_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')

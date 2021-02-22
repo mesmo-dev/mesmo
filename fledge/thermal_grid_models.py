@@ -754,19 +754,16 @@ class LinearThermalGridModel(object):
                     self.sensitivity_node_head_by_node_power.transpose()
                     @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
             )
             thermal_grid_congestion_dlmp_node_thermal_power.loc[timestep, :] = (
                 (
                     self.sensitivity_branch_flow_by_node_power.transpose()
                     @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
                 + (
                     self.sensitivity_branch_flow_by_node_power.transpose()
                     @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
             )
             thermal_grid_pump_dlmp_node_thermal_power.loc[timestep, :] = (
                 -1.0
@@ -783,19 +780,16 @@ class LinearThermalGridModel(object):
                     self.sensitivity_node_head_by_der_power.transpose()
                     @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
             )
             thermal_grid_congestion_dlmp_der_thermal_power.loc[timestep, :] = (
                 (
                     self.sensitivity_branch_flow_by_der_power.transpose()
                     @ np.transpose([branch_flow_vector_maximum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
                 + (
                     self.sensitivity_branch_flow_by_der_power.transpose()
                     @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
-                / self.thermal_grid_model.cooling_plant_efficiency
             )
             thermal_grid_pump_dlmp_der_thermal_power.loc[timestep, :] = (
                 -1.0

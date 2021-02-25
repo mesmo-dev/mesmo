@@ -25,11 +25,11 @@ def main(
 
     # Settings.
     admm_iteration_limit = 10000
-    admm_rho = 1e-9 if admm_rho is None else admm_rho
-    admm_primal_residual_termination_limit = 1e4
-    admm_dual_residual_termination_limit = 1e-3
+    admm_rho = 1e-1 if admm_rho is None else admm_rho
+    admm_primal_residual_termination_limit = 1e-6
+    admm_dual_residual_termination_limit = 1e-6
     scenario_number = 2 if scenario_number is None else scenario_number
-    # Choices:
+    # Choices (Note that constrained cases may not solve reliably):
     # 1 - unconstrained operation,
     # 2 - constrained thermal grid branch flow,
     # 3 - constrained thermal grid pressure head,
@@ -38,7 +38,9 @@ def main(
     scenario_name = 'paper_2020_3'
 
     # Obtain results path.
-    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_rho{admm_rho}_{scenario_name}')
+    results_path = (
+        fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_rho{admm_rho:.0e}_{scenario_name}')
+    )
 
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
@@ -1034,7 +1036,10 @@ if __name__ == '__main__':
 
     if run_all:
         for scenario_number in [None]:
-            for admm_rho in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
+            for admm_rho in [
+                1e12, 1e11, 1e10, 1e9, 1e8, 1e7, 1e6, 1e5, 1e4, 1e3, 1e2, 1e1, 1e0,
+                1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12
+            ]:
                 try:
 
                     # Reset timings.

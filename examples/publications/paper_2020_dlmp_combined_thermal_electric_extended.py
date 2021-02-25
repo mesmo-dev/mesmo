@@ -185,11 +185,11 @@ def main(
     )
 
     # Define thermal grid objective.
-    # linear_thermal_grid_model.define_optimization_objective(
-    #     optimization_problem,
-    #     price_data,
-    #     scenario_data.timesteps
-    # )
+    linear_thermal_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        scenario_data.timesteps
+    )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(

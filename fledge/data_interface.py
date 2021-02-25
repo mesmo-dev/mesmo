@@ -1019,8 +1019,6 @@ class PriceData(object):
                     limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             ).loc[:, 'price_value']
-            # TODO: Fix price unit conversion.
-            # price_timeseries *= 1.0e-3  # 1/kWh in 1/Wh.
 
         # Obtain price timeseries for each DER.
         prices = (
@@ -1061,12 +1059,16 @@ class PriceData(object):
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]
+            / 1e3  # 1/kWh in 1/Wh.
             * scenario_data.scenario.at['base_apparent_power']
         )
         # TODO: Proper thermal power price definition.
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (
             price_timeseries.values[:, None]
+            / 1e3  # 1/kWh in 1/Wh.
+            * scenario_data.scenario.at['base_thermal_power']
         )
+        print()
 
     def copy(self):
 

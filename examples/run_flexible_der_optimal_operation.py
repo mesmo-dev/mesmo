@@ -91,6 +91,22 @@ def main():
         # figure.show()
         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, output))
 
+    for disturbance in flexible_der_model.disturbances:
+
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=flexible_der_model.disturbance_timeseries.index,
+            y=flexible_der_model.disturbance_timeseries.loc[:, disturbance].values,
+            line=go.scatter.Line(shape='hv')
+        ))
+        figure.update_layout(
+            title=f'Disturbance: {disturbance}',
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            showlegend=False
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, disturbance))
+
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
 
         if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):

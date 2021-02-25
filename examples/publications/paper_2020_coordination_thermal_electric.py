@@ -25,11 +25,11 @@ def main(
 
     # Settings.
     admm_iteration_limit = 10000
-    admm_rho = 1e-9 if admm_rho is None else admm_rho
-    admm_primal_residual_termination_limit = 1e4
-    admm_dual_residual_termination_limit = 1e-3
+    admm_rho = 1e-1 if admm_rho is None else admm_rho
+    admm_primal_residual_termination_limit = 1e-6
+    admm_dual_residual_termination_limit = 1e-6
     scenario_number = 2 if scenario_number is None else scenario_number
-    # Choices:
+    # Choices (Note that constrained cases may not solve reliably):
     # 1 - unconstrained operation,
     # 2 - constrained thermal grid branch flow,
     # 3 - constrained thermal grid pressure head,
@@ -38,10 +38,9 @@ def main(
     scenario_name = 'paper_2020_3'
 
     # Obtain results path.
-    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_rho{admm_rho}_{scenario_name}')
-
-    # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    results_path = (
+        fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_rho{admm_rho:.0e}_{scenario_name}')
+    )
 
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
@@ -314,25 +313,37 @@ def main(
             cp.multiply(
                 admm_lambda_electric_der_active_power,
                 (
-                    optimization_problem_electric.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem_electric.der_active_power_vector,
+                        np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_electric_der_reactive_power,
                 (
-                    optimization_problem_electric.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem_electric.der_reactive_power_vector,
+                        np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_active_power_vector
+                cp.multiply(
+                    optimization_problem_electric.der_active_power_vector,
+                    np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_electric.der_reactive_power_vector
+                cp.multiply(
+                    optimization_problem_electric.der_reactive_power_vector,
+                    np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -373,13 +384,19 @@ def main(
             cp.multiply(
                 admm_lambda_thermal_der_thermal_power,
                 (
-                    optimization_problem_thermal.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem_thermal.der_thermal_power_vector,
+                        np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     # - admm_exchange_der_thermal_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_thermal.der_thermal_power_vector
+                cp.multiply(
+                    optimization_problem_thermal.der_thermal_power_vector,
+                    np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                )
                 - admm_exchange_der_thermal_power
             ) ** 2
         )
@@ -396,17 +413,6 @@ def main(
     # Define DER variables.
     der_model_set.define_optimization_variables(
         optimization_problem_aggregator
-    )
-
-    # Define DER connection variables.
-    optimization_problem_aggregator.der_active_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
-    )
-    optimization_problem_aggregator.der_reactive_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(electric_grid_model.ders)))
-    )
-    optimization_problem_aggregator.der_thermal_power_vector = (
-        cp.Variable((len(scenario_data.timesteps), len(thermal_grid_model.ders)))
     )
 
     # Define DER constraints.
@@ -430,25 +436,37 @@ def main(
             cp.multiply(
                 admm_lambda_aggregator_der_active_power,
                 (
-                    optimization_problem_aggregator.der_active_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_active_power_vector,
+                        np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_active_power
                 )
             )
             + cp.multiply(
                 admm_lambda_aggregator_der_reactive_power,
                 (
-                    optimization_problem_aggregator.der_reactive_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_reactive_power_vector,
+                        np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                    )
                     # - admm_exchange_der_reactive_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_active_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_active_power_vector,
+                    np.array([np.real(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_active_power
             ) ** 2
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_reactive_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_reactive_power_vector,
+                    np.array([np.imag(electric_grid_model.der_power_vector_reference)])
+                )
                 - admm_exchange_der_reactive_power
             ) ** 2
         )
@@ -456,13 +474,19 @@ def main(
             cp.multiply(
                 admm_lambda_aggregator_der_thermal_power,
                 (
-                    optimization_problem_aggregator.der_thermal_power_vector
+                    cp.multiply(
+                        optimization_problem_aggregator.der_thermal_power_vector,
+                        np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                    )
                     # - admm_exchange_der_thermal_power
                 )
             )
             + 0.5 * admm_rho
             * (
-                optimization_problem_aggregator.der_thermal_power_vector
+                cp.multiply(
+                    optimization_problem_aggregator.der_thermal_power_vector,
+                    np.array([thermal_grid_model.der_thermal_power_vector_reference])
+                )
                 - admm_exchange_der_thermal_power
             ) ** 2
         )
@@ -512,38 +536,9 @@ def main(
             )
 
             # Get aggregator sub-problem results.
-            results_aggregator = fledge.problems.Results()
-            results_aggregator.update(
+            results_aggregator = (
                 der_model_set.get_optimization_results(
                     optimization_problem_aggregator
-                )
-            )
-            der_active_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_active_power_vector.value,
-                    columns=electric_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            der_reactive_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_reactive_power_vector.value,
-                    columns=electric_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            der_thermal_power_vector = (
-                pd.DataFrame(
-                    optimization_problem_aggregator.der_thermal_power_vector.value,
-                    columns=thermal_grid_model.ders,
-                    index=scenario_data.timesteps
-                )
-            )
-            results_aggregator.update(
-                fledge.problems.Results(
-                    der_active_power_vector=der_active_power_vector,
-                    der_reactive_power_vector=der_reactive_power_vector,
-                    der_thermal_power_vector=der_thermal_power_vector
                 )
             )
 
@@ -750,9 +745,9 @@ def main(
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Primal residual",
+        yaxis_title="Primal residual<br>[MW<sub>th</sub>h, MWh, MVA<sub>r</sub>h]",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
-        margin=go.layout.Margin(r=10, t=10)
+        margin=go.layout.Margin(l=120, b=50, r=10, t=10)
     )
     # figure.show()
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_primal_residuals'))
@@ -763,9 +758,9 @@ def main(
     figure.update_layout(
         yaxis=go.layout.YAxis(type='log'),
         xaxis_title="Iteration",
-        yaxis_title="Dual residual",
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto', orientation='h'),
-        margin=go.layout.Margin(r=10, t=10)
+        yaxis_title="Dual residual [S$]",
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto', orientation='h'),
+        margin=go.layout.Margin(b=50, r=10, t=10)
     )
     # figure.show()
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_dual_residuals'))
@@ -776,10 +771,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_thermal_power_vector'].index,
-                y=(
-                    results_baseline['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -788,10 +780,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_thermal['der_thermal_power_vector'].index,
-                y=(
-                    results_thermal['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_thermal['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -799,17 +788,14 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_thermal_power_vector'].index,
-                y=(
-                    results_aggregator['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_thermal_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Thermal power [MWth]",
+            yaxis_title="Thermal power [MW<sub>th</sub>]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
@@ -823,10 +809,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_active_power_vector'].index,
-                y=(
-                    results_baseline['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -835,10 +818,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_electric['der_active_power_vector'].index,
-                y=(
-                    results_electric['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_electric['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -846,10 +826,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_active_power_vector'].index,
-                y=(
-                    results_aggregator['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
@@ -871,10 +848,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_baseline['der_reactive_power_vector'].index,
-                y=(
-                    results_baseline['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_baseline['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Centralized op.',
                 # fill='tozeroy',
                 # line=go.scatter.Line(width=9, shape='hv')
@@ -883,10 +857,7 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_electric['der_reactive_power_vector'].index,
-                y=(
-                    results_electric['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_electric['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
             )
@@ -894,17 +865,14 @@ def main(
         figure.add_trace(
             go.Bar(
                 x=results_aggregator['der_reactive_power_vector'].index,
-                y=(
-                    results_aggregator['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
-                    / 1e6
-                ).values,
+                y=results_aggregator['der_reactive_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs().values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
             )
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Reactive power [MVAr]",
+            yaxis_title="Reactive power [MVA<sub>r</sub>]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
@@ -920,6 +888,7 @@ def main(
                 x=results_baseline['thermal_grid_total_dlmp_der_thermal_power'].index,
                 y=(
                     results_baseline['thermal_grid_total_dlmp_der_thermal_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -931,6 +900,7 @@ def main(
                 x=admm_lambda_thermal_der_thermal_power.index,
                 y=(
                     admm_lambda_thermal_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -941,6 +911,7 @@ def main(
                 x=admm_lambda_aggregator_der_thermal_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -948,9 +919,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kWh]",
+            yaxis_title="Price [S$/MW<sub>th</sub>h]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
@@ -964,6 +935,7 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_active_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_active_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -975,6 +947,7 @@ def main(
                 x=admm_lambda_electric_der_active_power.index,
                 y=(
                     admm_lambda_electric_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -985,6 +958,7 @@ def main(
                 x=admm_lambda_aggregator_der_active_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -992,9 +966,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kWh]",
+            yaxis_title="Price [S$/MWh]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
@@ -1009,6 +983,7 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_reactive_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_reactive_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -1020,6 +995,7 @@ def main(
                 x=admm_lambda_electric_der_reactive_power.index,
                 y=(
                     admm_lambda_electric_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -1030,6 +1006,7 @@ def main(
                 x=admm_lambda_aggregator_der_reactive_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
+                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -1037,9 +1014,9 @@ def main(
         )
         figure.update_layout(
             xaxis_title=None,
-            yaxis_title="Price [S$/kVAh]",
+            yaxis_title="Price [S$/MVA<sub>r</sub>h]",
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto'),
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto'),
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
@@ -1054,9 +1031,15 @@ if __name__ == '__main__':
 
     run_all = False
 
+    # Recreate / overwrite database, to incorporate changes in the CSV files.
+    fledge.data_interface.recreate_database()
+
     if run_all:
         for scenario_number in [None]:
-            for admm_rho in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12]:
+            for admm_rho in [
+                1e12, 1e11, 1e10, 1e9, 1e8, 1e7, 1e6, 1e5, 1e4, 1e3, 1e2, 1e1, 1e0,
+                1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12
+            ]:
                 try:
 
                     # Reset timings.

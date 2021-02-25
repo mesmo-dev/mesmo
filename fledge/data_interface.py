@@ -1068,7 +1068,6 @@ class PriceData(object):
             / 1e3  # 1/kWh in 1/Wh.
             * scenario_data.scenario.at['base_thermal_power']
         )
-        print()
 
     def copy(self):
 

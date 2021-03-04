@@ -1056,6 +1056,7 @@ class PriceData(object):
             ]))
         )
         # TODO: Initialize more efficiently for large number of DERs.
+        # TODO: In 1/MWh.
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]

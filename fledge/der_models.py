@@ -201,6 +201,7 @@ class FixedDERModel(DERModel):
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
+        # TODO: Remove `(electric_grid_model is None)` everywhere.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
 
             # Active power cost / revenue.

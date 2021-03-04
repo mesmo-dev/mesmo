@@ -14,7 +14,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
-    power_multipliers = np.arange(-0.2, 1.2, 0.1)
+    power_multipliers = np.arange(-0.9, 2.3, 0.2)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()

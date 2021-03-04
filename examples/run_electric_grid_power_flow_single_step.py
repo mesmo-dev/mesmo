@@ -1,15 +1,12 @@
 """Example script for setting up and solving an single step electric grid power flow problem."""
 
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.utils
-
-import fledge.problems
+import fledge
 
 def main():
 
@@ -18,7 +15,11 @@ def main():
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    # fledge.data_interface.recreate_database()
+    fledge.data_interface.recreate_database()
+
+    # Obtain scenario data.
+    # - This contains general information, e.g. the base power values which are needed for the plots below.
+    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
 
     # Obtain electric grid model.
     # - The ElectricGridModelDefault object defines index sets for node names / branch names / der names / phases /
@@ -68,39 +69,90 @@ def main():
     np.savetxt(os.path.join(results_path, f'loss.csv'), loss, delimiter=',')
 
     # Plot some results.
-    plt.title('DER active power [kW]')
-    plt.bar(range(len(electric_grid_model.ders)), np.real(der_power_vector) / 1e3)
-    plt.xticks(range(len(electric_grid_model.ders)), electric_grid_model.ders, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-    plt.title('DER reactive power [kVAr]')
-    plt.bar(range(len(electric_grid_model.ders)), np.imag(der_power_vector) / 1e3)
-    plt.xticks(range(len(electric_grid_model.ders)), electric_grid_model.ders, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-    plt.title('Nodal voltage magnitude [kV]')
-    plt.bar(range(len(electric_grid_model.nodes)), node_voltage_vector_magnitude / 1e3)
-    plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-    plt.title('Nodal voltage magnitude [p.u.]')
-    plt.bar(
-        range(len(electric_grid_model.nodes)),
-        node_voltage_vector_magnitude / np.abs(electric_grid_model.node_voltage_vector_reference)
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.ders.to_series().astype(str),  # Labels.
+        y=(np.real(der_power_vector) * scenario_data.scenario.at['base_apparent_power'] / 1e3),  # Values in kW.
     )
-    plt.xticks(range(len(electric_grid_model.nodes)), electric_grid_model.nodes, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
-    plt.title('Branch apparent power flow (direction 1) [kVA]')
-    plt.bar(range(len(electric_grid_model.branches)), np.abs(branch_power_vector_1) / 1e3)
-    plt.xticks(range(len(electric_grid_model.branches)), electric_grid_model.branches, rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_path, f'{plt.gca().get_title()}.png'))
-    plt.show()
+    figure.update_layout(
+        title="DER active power",
+        yaxis_title="Active power [kW]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.ders.to_series().astype(str),  # Labels.
+        y=(np.imag(der_power_vector) * scenario_data.scenario.at['base_apparent_power'] / 1e3),  # Values in kW.
+    )
+    figure.update_layout(
+        title="DER reactive power",
+        yaxis_title="Reactive power [kVA<sub>r</sub>]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.nodes.to_series().astype(str),  # Labels.
+        y=(node_voltage_vector_magnitude * scenario_data.scenario.at['base_voltage'] / 1e3),  # Values in kV.
+    )
+    figure.update_layout(
+        title="Node voltage magnitude",
+        yaxis_title="Voltage magnitude [kV]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.nodes.to_series().astype(str),  # Labels.
+        y=(node_voltage_vector_magnitude / np.abs(electric_grid_model.node_voltage_vector_reference)),  # Values in p.u.
+    )
+    figure.update_layout(
+        title="Node voltage per-unit magnitude",
+        yaxis_title="Voltage magnitude [p.u.]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.branches.to_series().astype(str),  # Labels.
+        y=(np.abs(branch_power_vector_1) * scenario_data.scenario.at['base_apparent_power'] / 1e3),  # Values in kW.
+    )
+    figure.update_layout(
+        title="Branch apparent power flow (direction 1)",
+        yaxis_title="Apparent power [kVA]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
+
+    figure = go.Figure()
+    figure.add_bar(
+        x=electric_grid_model.branches.to_series().astype(str),  # Labels.
+        y=(np.abs(branch_power_vector_2) * scenario_data.scenario.at['base_apparent_power'] / 1e3),  # Values in kW.
+    )
+    figure.update_layout(
+        title="Branch apparent power flow (direction 2)",
+        yaxis_title="Apparent power [kVA]",
+        xaxis=dict(tickangle=-45),
+        showlegend=False,
+        margin=dict(b=150)
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, figure.layout.title.text))
 
     # Print results path.
     fledge.utils.launch(results_path)

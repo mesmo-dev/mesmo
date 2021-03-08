@@ -8,6 +8,7 @@ import opendssdirect
 import pandas as pd
 import scipy.sparse
 import scipy.sparse.linalg
+import typing
 
 import fledge.config
 import fledge.data_interface
@@ -2116,6 +2117,36 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         loss = opendssdirect.Circuit.Losses()[0] + 1.0j * opendssdirect.Circuit.Losses()[1]
 
         return loss
+
+
+class PowerFlowSolutionSet(object):
+
+    power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionFixedPoint]
+    electric_grid_model: ElectricGridModelDefault
+    der_power_vector: pd.DataFrame
+    timesteps: pd.Index
+
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            der_power_vector: pd.DataFrame
+    ):
+
+        # Store attributes.
+        self.electric_grid_model = electric_grid_model
+        self.der_power_vector = der_power_vector
+        self.timesteps = self.electric_grid_model.timesteps
+
+        # Obtain linear electric grid models.
+        self.power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionFixedPoint] = dict.fromkeys(self.timesteps)
+        for timestep in self.timesteps:
+            self.power_flow_solutions[timestep] = (
+                # TODO: Fixed-point method is hard-coded here, but should be selectable.
+                PowerFlowSolutionFixedPoint(
+                    self.electric_grid_model,
+                    self.der_power_vector.loc[timestep, :].values
+                )
+            )
 
 
 class ElectricGridOperationResults(fledge.utils.ResultsBase):
@@ -4494,3 +4525,442 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
             + self.sensitivity_loss_reactive_by_power_delta_reactive
             @ electric_grid_model.der_incidence_delta_matrix
         )
+
+
+class LinearElectricGridModelSet(object):
+
+    linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
+    electric_grid_model: ElectricGridModelDefault
+    power_flow_solution_set: PowerFlowSolutionSet
+    timesteps: pd.Index
+
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            power_flow_solution_set: PowerFlowSolutionSet
+    ):
+
+        # Store attributes.
+        self.electric_grid_model = electric_grid_model
+        self.power_flow_solution_set = power_flow_solution_set
+        self.timesteps = self.electric_grid_model.timesteps
+
+        # Obtain linear electric grid models.
+        self.linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel] = dict.fromkeys(self.timesteps)
+        for timestep in self.timesteps:
+            self.linear_electric_grid_models[timestep] = (
+                # TODO: Local model is hard-coded here, but should be selectable.
+                LinearElectricGridModelLocal(
+                    self.electric_grid_model,
+                    self.power_flow_solution_set.power_flow_solutions[timestep]
+                )
+            )
+
+    def define_optimization_variables(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem
+    ):
+
+        # Define optimization variables through linear model of first time step.
+        self.linear_electric_grid_models[self.timesteps[0]].define_optimization_variables(optimization_problem)
+
+    def define_optimization_constraints(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            node_voltage_magnitude_vector_minimum: np.ndarray = None,
+            node_voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_magnitude_vector_maximum: np.ndarray = None,
+    ):
+
+        # Define optimization constraints through linear model for each time step.
+        for timestep in self.timesteps:
+            self.linear_electric_grid_models[timestep].define_optimization_constraints(
+                optimization_problem,
+                timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep),
+                node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+                node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+                branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
+            )
+
+    def define_optimization_objective(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData
+    ):
+
+        for timestep in self.timesteps:
+            self.linear_electric_grid_models[timestep].define_optimization_objective(
+                optimization_problem,
+                price_data,
+                timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep)
+            )
+
+    def get_optimization_dlmps(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData
+    ) -> ElectricGridDLMPResults:
+
+        # Obtain duals.
+        voltage_magnitude_vector_minimum_dual = (
+            pd.DataFrame(
+                (
+                    optimization_problem.voltage_magnitude_vector_minimum_constraint.dual_value
+                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
+                    if hasattr(optimization_problem, 'voltage_magnitude_vector_minimum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.nodes,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+        voltage_magnitude_vector_maximum_dual = (
+            pd.DataFrame(
+                (
+                    -1.0 * optimization_problem.voltage_magnitude_vector_maximum_constraint.dual_value
+                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
+                    if hasattr(optimization_problem, 'voltage_magnitude_vector_maximum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.nodes,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+        branch_power_magnitude_vector_1_minimum_dual = (
+            pd.DataFrame(
+                (
+                    optimization_problem.branch_power_magnitude_vector_1_minimum_constraint.dual_value
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    if hasattr(optimization_problem, 'branch_power_magnitude_vector_1_minimum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.branches,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+        branch_power_magnitude_vector_1_maximum_dual = (
+            pd.DataFrame(
+                (
+                    -1.0 * optimization_problem.branch_power_magnitude_vector_1_maximum_constraint.dual_value
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    if hasattr(optimization_problem, 'branch_power_magnitude_vector_1_maximum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.branches,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+        branch_power_magnitude_vector_2_minimum_dual = (
+            pd.DataFrame(
+                (
+                    optimization_problem.branch_power_magnitude_vector_2_minimum_constraint.dual_value
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    if hasattr(optimization_problem, 'branch_power_magnitude_vector_2_minimum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.branches,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+        branch_power_magnitude_vector_2_maximum_dual = (
+            pd.DataFrame(
+                (
+                    -1.0 * optimization_problem.branch_power_magnitude_vector_2_maximum_constraint.dual_value
+                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
+                    if hasattr(optimization_problem, 'branch_power_magnitude_vector_2_maximum_constraint')
+                    else 0.0
+                ),
+                columns=self.electric_grid_model.branches,
+                index=self.electric_grid_model.timesteps
+            )
+        )
+
+        # Instantiate DLMP variables.
+        # TODO: Consider delta connections in nodal DLMPs.
+        electric_grid_energy_dlmp_node_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_node_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_node_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_node_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+
+        electric_grid_energy_dlmp_node_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_node_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_node_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_node_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+
+        electric_grid_energy_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_der_active_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+
+        electric_grid_energy_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_voltage_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_congestion_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+        electric_grid_loss_dlmp_der_reactive_power = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+        )
+
+        # Obtain DLMPs.
+        for timestep in self.electric_grid_model.timesteps:
+            electric_grid_energy_dlmp_node_active_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_node_active_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_node_active_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_power_wye_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_node_active_power.loc[timestep, :] = (
+                -1.0 * self.linear_electric_grid_models[timestep].sensitivity_loss_active_by_power_wye_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.linear_electric_grid_models[timestep].sensitivity_loss_reactive_by_power_wye_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+            electric_grid_energy_dlmp_node_reactive_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_node_reactive_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_node_reactive_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_power_wye_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_node_reactive_power.loc[timestep, :] = (
+                -1.0 * self.linear_electric_grid_models[timestep].sensitivity_loss_active_by_power_wye_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.linear_electric_grid_models[timestep].sensitivity_loss_reactive_by_power_wye_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+            electric_grid_energy_dlmp_der_active_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_der_active_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_der_active_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_der_power_active.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_der_active_power.loc[timestep, :] = (
+                -1.0 * self.linear_electric_grid_models[timestep].sensitivity_loss_active_by_der_power_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.linear_electric_grid_models[timestep].sensitivity_loss_reactive_by_der_power_active.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+            electric_grid_energy_dlmp_der_reactive_power.loc[timestep, :] = (
+                price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+            electric_grid_voltage_dlmp_der_reactive_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_voltage_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([voltage_magnitude_vector_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_congestion_dlmp_der_reactive_power.loc[timestep, :] = (
+                (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_1_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_1_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_maximum_dual.loc[timestep, :].values])
+                ).ravel()
+                + (
+                    self.linear_electric_grid_models[timestep].sensitivity_branch_power_2_magnitude_by_der_power_reactive.transpose()
+                    @ np.transpose([branch_power_magnitude_vector_2_minimum_dual.loc[timestep, :].values])
+                ).ravel()
+            )
+            electric_grid_loss_dlmp_der_reactive_power.loc[timestep, :] = (
+                -1.0 * self.linear_electric_grid_models[timestep].sensitivity_loss_active_by_der_power_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('active_power', 'source', 'source')]
+                - self.linear_electric_grid_models[timestep].sensitivity_loss_reactive_by_der_power_reactive.toarray().ravel()
+                * price_data.price_timeseries.at[timestep, ('reactive_power', 'source', 'source')]
+            )
+
+        electric_grid_total_dlmp_node_active_power = (
+            electric_grid_energy_dlmp_node_active_power
+            + electric_grid_voltage_dlmp_node_active_power
+            + electric_grid_congestion_dlmp_node_active_power
+            + electric_grid_loss_dlmp_node_active_power
+        )
+        electric_grid_total_dlmp_node_reactive_power = (
+            electric_grid_energy_dlmp_node_reactive_power
+            + electric_grid_voltage_dlmp_node_reactive_power
+            + electric_grid_congestion_dlmp_node_reactive_power
+            + electric_grid_loss_dlmp_node_reactive_power
+        )
+        electric_grid_total_dlmp_der_active_power = (
+            electric_grid_energy_dlmp_der_active_power
+            + electric_grid_voltage_dlmp_der_active_power
+            + electric_grid_congestion_dlmp_der_active_power
+            + electric_grid_loss_dlmp_der_active_power
+        )
+        electric_grid_total_dlmp_der_reactive_power = (
+            electric_grid_energy_dlmp_der_reactive_power
+            + electric_grid_voltage_dlmp_der_reactive_power
+            + electric_grid_congestion_dlmp_der_reactive_power
+            + electric_grid_loss_dlmp_der_reactive_power
+        )
+
+        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        electric_grid_total_dlmp_price_timeseries = (
+            pd.concat(
+                [
+                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
+                    electric_grid_total_dlmp_der_active_power,
+                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].rename(
+                        ('source', 'source')
+                    ),
+                    electric_grid_total_dlmp_der_reactive_power
+                ],
+                axis='columns',
+                keys=['active_power', 'active_power', 'reactive_power', 'reactive_power'],
+                names=['commodity_type']
+            )
+        )
+        # Redefine columns to avoid slicing issues.
+        electric_grid_total_dlmp_price_timeseries.columns = (
+            price_data.price_timeseries.columns[
+                price_data.price_timeseries.columns.isin(electric_grid_total_dlmp_price_timeseries.columns)
+            ]
+        )
+
+        return ElectricGridDLMPResults(
+            electric_grid_energy_dlmp_node_active_power=electric_grid_energy_dlmp_node_active_power,
+            electric_grid_voltage_dlmp_node_active_power=electric_grid_voltage_dlmp_node_active_power,
+            electric_grid_congestion_dlmp_node_active_power=electric_grid_congestion_dlmp_node_active_power,
+            electric_grid_loss_dlmp_node_active_power=electric_grid_loss_dlmp_node_active_power,
+            electric_grid_total_dlmp_node_active_power=electric_grid_total_dlmp_node_active_power,
+            electric_grid_voltage_dlmp_node_reactive_power=electric_grid_voltage_dlmp_node_reactive_power,
+            electric_grid_congestion_dlmp_node_reactive_power=electric_grid_congestion_dlmp_node_reactive_power,
+            electric_grid_loss_dlmp_node_reactive_power=electric_grid_loss_dlmp_node_reactive_power,
+            electric_grid_energy_dlmp_node_reactive_power=electric_grid_energy_dlmp_node_reactive_power,
+            electric_grid_total_dlmp_node_reactive_power=electric_grid_total_dlmp_node_reactive_power,
+            electric_grid_energy_dlmp_der_active_power=electric_grid_energy_dlmp_der_active_power,
+            electric_grid_voltage_dlmp_der_active_power=electric_grid_voltage_dlmp_der_active_power,
+            electric_grid_congestion_dlmp_der_active_power=electric_grid_congestion_dlmp_der_active_power,
+            electric_grid_loss_dlmp_der_active_power=electric_grid_loss_dlmp_der_active_power,
+            electric_grid_total_dlmp_der_active_power=electric_grid_total_dlmp_der_active_power,
+            electric_grid_voltage_dlmp_der_reactive_power=electric_grid_voltage_dlmp_der_reactive_power,
+            electric_grid_congestion_dlmp_der_reactive_power=electric_grid_congestion_dlmp_der_reactive_power,
+            electric_grid_loss_dlmp_der_reactive_power=electric_grid_loss_dlmp_der_reactive_power,
+            electric_grid_energy_dlmp_der_reactive_power=electric_grid_energy_dlmp_der_reactive_power,
+            electric_grid_total_dlmp_der_reactive_power=electric_grid_total_dlmp_der_reactive_power,
+            electric_grid_total_dlmp_price_timeseries=electric_grid_total_dlmp_price_timeseries
+        )
+
+    def get_optimization_results(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem
+    ) -> ElectricGridOperationResults:
+
+        # Obtain results through linear model of first time step.
+        return self.linear_electric_grid_models[self.timesteps[0]].get_optimization_results(optimization_problem)

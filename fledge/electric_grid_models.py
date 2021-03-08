@@ -877,11 +877,17 @@ class ElectricGridModelDefault(ElectricGridModel):
 
         # Define shorthands for no-source variables.
         # TODO: Add in class documentation.
-        # TODO: Validate behavior if source node not first node.
+        # TODO: Replace local variables in power flow / linear models.
         self.node_admittance_matrix_no_source = (
             self.node_admittance_matrix[np.ix_(
                 fledge.utils.get_index(self.nodes, node_type='no_source'),
                 fledge.utils.get_index(self.nodes, node_type='no_source')
+            )]
+        )
+        self.node_admittance_matrix_source_to_no_source = (
+            self.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(self.nodes, node_type='no_source'),
+                fledge.utils.get_index(self.nodes, node_type='source')
             )]
         )
         self.node_transformation_matrix_no_source = (

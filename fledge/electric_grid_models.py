@@ -3767,3 +3767,705 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             + self.sensitivity_loss_reactive_by_power_delta_reactive
             @ electric_grid_model.der_incidence_delta_matrix
         )
+
+
+class LinearElectricGridModelLocal(LinearElectricGridModel):
+    """Linear electric grid model object based on local approximations, consisting of the sensitivity matrices for
+    voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
+    nodal delta power.
+
+    :syntax:
+        - ``LinearElectricGridModelLocal(electric_grid_model, power_flow_solution)``: Instantiate linear electric grid
+          model object for given `electric_grid_model` and `power_flow_solution`.
+        - ``LinearElectricGridModelLocal(scenario_name)``: Instantiate linear electric grid model for given
+          `scenario_name`. The required `electric_grid_model` is obtained for given `scenario_name` and the
+          `power_flow_solution` is obtained for nominal power conditions.
+
+    Parameters:
+        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        power_flow_solution (PowerFlowSolution): Power flow solution object.
+        scenario_name (str): FLEDGE scenario name.
+
+    Attributes:
+        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        power_flow_solution (PowerFlowSolution): Reference power flow solution object.
+        sensitivity_voltage_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
+            by active wye power vector.
+        sensitivity_voltage_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
+            vector by reactive wye power vector.
+        sensitivity_voltage_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage vector
+            by active delta power vector.
+        sensitivity_voltage_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for complex voltage
+            vector by reactive delta power vector.
+        sensitivity_voltage_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            complex voltage vector by DER active power vector.
+        sensitivity_voltage_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            complex voltage vector by DER reactive power vector.
+        sensitivity_voltage_magnitude_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for voltage
+            magnitude vector by active wye power vector.
+        sensitivity_voltage_magnitude_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by reactive wye power vector.
+        sensitivity_voltage_magnitude_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by active delta power vector.
+        sensitivity_voltage_magnitude_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by reactive delta power vector.
+        sensitivity_voltage_magnitude_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by DER active power vector.
+        sensitivity_voltage_magnitude_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            voltage magnitude vector by DER reactive power vector.
+        sensitivity_branch_power_1_magnitude_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 ('from' direction) by active wye power vector.
+        sensitivity_branch_power_1_magnitude_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 ('from' direction) by reactive wye power vector.
+        sensitivity_branch_power_1_magnitude_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 ('from' direction) by active delta power vector.
+        sensitivity_branch_power_1_magnitude_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 ('from' direction) by reactive delta power vector.
+        sensitivity_branch_power_1_magnitude_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 by DER active power vector.
+        sensitivity_branch_power_1_magnitude_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 1 by DER reactive power vector.
+        sensitivity_branch_power_2_magnitude_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 ('to' direction) by active wye power vector.
+        sensitivity_branch_power_2_magnitude_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 ('to' direction) by reactive wye power vector.
+        sensitivity_branch_power_2_magnitude_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 ('to' direction) by active delta power vector.
+        sensitivity_branch_power_2_magnitude_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 ('to' direction) by reactive delta power vector.
+        sensitivity_branch_power_2_magnitude_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 by DER active power vector.
+        sensitivity_branch_power_2_magnitude_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            branch flow power magnitude vector 2 by DER reactive power vector.
+        sensitivity_branch_power_1_squared_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by active wye power vector.
+        sensitivity_branch_power_1_squared_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by reactive wye power vector.
+        sensitivity_branch_power_1_squared_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by active delta power vector.
+        sensitivity_branch_power_1_squared_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 ('from' direction) by reactive delta power vector.
+        sensitivity_branch_power_1_squared_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 by DER active power vector.
+        sensitivity_branch_power_1_squared_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 1 by DER reactive power vector.
+        sensitivity_branch_power_2_squared_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by active wye power vector.
+        sensitivity_branch_power_2_squared_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by reactive wye power vector.
+        sensitivity_branch_power_2_squared_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by active delta power vector.
+        sensitivity_branch_power_2_squared_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 ('to' direction) by reactive delta power vector.
+        sensitivity_branch_power_2_squared_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 by DER active power vector.
+        sensitivity_branch_power_2_squared_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            squared branch flow power vector 2 by DER reactive power vector.
+        sensitivity_loss_active_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by active wye power vector.
+        sensitivity_loss_active_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by reactive wye power vector.
+        sensitivity_loss_active_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by active delta power vector.
+        sensitivity_loss_active_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by reactive delta power vector.
+        sensitivity_loss_active_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by DER active power vector.
+        sensitivity_loss_active_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            active loss by DER reactive power vector.
+        sensitivity_loss_reactive_by_power_wye_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by active wye power vector.
+        sensitivity_loss_reactive_by_power_wye_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by reactive wye power vector.
+        sensitivity_loss_reactive_by_power_delta_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by active delta power vector.
+        sensitivity_loss_reactive_by_power_delta_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by reactive delta power vector.
+        sensitivity_loss_reactive_by_der_power_active (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by DER active power vector.
+        sensitivity_loss_reactive_by_der_power_reactive (scipy.sparse.spmatrix): Sensitivity matrix for
+            reactive loss by DER reactive power vector.
+    """
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+    ):
+
+        # Obtain electric grid model.
+        electric_grid_model = (
+            ElectricGridModelDefault(scenario_name)
+        )
+
+        # Obtain der power vector.
+        der_power_vector = (
+            electric_grid_model.der_power_vector_reference
+        )
+
+        # Obtain power flow solution.
+        power_flow_solution = (
+            PowerFlowSolutionFixedPoint(
+                electric_grid_model,
+                der_power_vector
+            )
+        )
+
+        self.__init__(
+            electric_grid_model,
+            power_flow_solution
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            power_flow_solution: PowerFlowSolution
+    ):
+
+        # Store power flow solution.
+        self.power_flow_solution = power_flow_solution
+
+        # Store electric grid model.
+        self.electric_grid_model = electric_grid_model
+
+        # Obtain shorthands for no-source matrices and vectors.
+        electric_grid_model.node_admittance_matrix_no_source = (
+            electric_grid_model.node_admittance_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            )]
+        )
+        electric_grid_model.node_transformation_matrix_no_source = (
+            electric_grid_model.node_transformation_matrix[np.ix_(
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            )]
+        )
+        node_voltage_no_source = (
+            self.power_flow_solution.node_voltage_vector[
+                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            ]
+        )
+
+        # Instantiate voltage sensitivity matrices.
+        self.sensitivity_voltage_by_power_wye_active = (
+            scipy.sparse.dok_matrix(
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
+                dtype=complex
+            )
+        )
+        self.sensitivity_voltage_by_power_wye_reactive = (
+            scipy.sparse.dok_matrix(
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
+                dtype=complex
+            )
+        )
+        self.sensitivity_voltage_by_power_delta_active = (
+            scipy.sparse.dok_matrix(
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
+                dtype=complex
+            )
+        )
+        self.sensitivity_voltage_by_power_delta_reactive = (
+            scipy.sparse.dok_matrix(
+                (len(electric_grid_model.nodes), len(electric_grid_model.nodes)),
+                dtype=complex
+            )
+        )
+
+        # Calculate utility matrices.
+        A_matrix_inverse = (
+            scipy.sparse.diags((
+                electric_grid_model.node_admittance_matrix_source_to_no_source
+                @ electric_grid_model.node_voltage_vector_reference_source
+                + electric_grid_model.node_admittance_matrix_no_source
+                @ node_voltage_no_source
+            ) ** -1)
+        )
+        A_matrix_conjugate = (
+            scipy.sparse.diags(np.conj(
+                electric_grid_model.node_admittance_matrix_source_to_no_source
+                @ electric_grid_model.node_voltage_vector_reference_source
+                + electric_grid_model.node_admittance_matrix_no_source
+                @ node_voltage_no_source
+            ))
+        )
+        B_matrix = (
+            A_matrix_conjugate
+            - scipy.sparse.diags(node_voltage_no_source)
+            @ np.conj(electric_grid_model.node_admittance_matrix_no_source)
+            @ A_matrix_inverse
+            @ scipy.sparse.diags(np.conj(node_voltage_no_source))
+            @ electric_grid_model.node_admittance_matrix_no_source
+        )
+
+        # Calculate voltage sensitivity matrices.
+        # - TODO: Consider delta loads.
+        self.sensitivity_voltage_by_power_wye_active[np.ix_(
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        )] = (
+            scipy.sparse.linalg.spsolve(
+                B_matrix.tocsc(),
+                (
+                    scipy.sparse.identity(len(node_voltage_no_source))
+                    - scipy.sparse.diags(node_voltage_no_source)
+                    @ np.conj(electric_grid_model.node_admittance_matrix_no_source)
+                    @ A_matrix_inverse
+                    @ scipy.sparse.identity(len(node_voltage_no_source))
+                ).tocsc()
+            )
+        )
+        self.sensitivity_voltage_by_power_wye_reactive[np.ix_(
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        )] = (
+            scipy.sparse.linalg.spsolve(
+                B_matrix.tocsc(),
+                (
+                    (1.0j * scipy.sparse.identity(len(node_voltage_no_source)))
+                    - scipy.sparse.diags(node_voltage_no_source)
+                    @ np.conj(electric_grid_model.node_admittance_matrix_no_source)
+                    @ A_matrix_inverse
+                    @ (-1.0j * scipy.sparse.identity(len(node_voltage_no_source)))
+                ).tocsc()
+            )
+        )
+        # self.sensitivity_voltage_by_power_delta_active[np.ix_(
+        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        # )] = (
+        #     ???
+        # )
+        # self.sensitivity_voltage_by_power_delta_reactive[np.ix_(
+        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        # )] = (
+        #     ???
+        # )
+
+        self.sensitivity_voltage_by_der_power_active = (
+            self.sensitivity_voltage_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_voltage_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_voltage_by_der_power_reactive = (
+            self.sensitivity_voltage_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_voltage_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+
+        self.sensitivity_voltage_magnitude_by_power_wye_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+        )
+        self.sensitivity_voltage_magnitude_by_power_wye_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+        )
+        self.sensitivity_voltage_magnitude_by_power_delta_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+        )
+        self.sensitivity_voltage_magnitude_by_power_delta_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.node_voltage_vector) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.node_voltage_vector))
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+        )
+
+        self.sensitivity_voltage_magnitude_by_der_power_active = (
+            self.sensitivity_voltage_magnitude_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_voltage_magnitude_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_voltage_magnitude_by_der_power_reactive = (
+            self.sensitivity_voltage_magnitude_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_voltage_magnitude_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+
+        # Calculate branch power sensitivity matrices.
+        sensitivity_branch_power_1_by_voltage = (
+            scipy.sparse.diags((
+                np.conj(electric_grid_model.branch_admittance_1_matrix)
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
+            ).ravel())
+            @ electric_grid_model.branch_incidence_1_matrix
+            + scipy.sparse.diags((
+                electric_grid_model.branch_incidence_1_matrix
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
+            ).ravel())
+            @ electric_grid_model.branch_admittance_1_matrix
+            * np.sqrt(3)
+        )
+        sensitivity_branch_power_2_by_voltage = (
+            scipy.sparse.diags((
+                np.conj(electric_grid_model.branch_admittance_2_matrix)
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
+            ).ravel())
+            @ electric_grid_model.branch_incidence_2_matrix
+            + scipy.sparse.diags((
+                electric_grid_model.branch_incidence_2_matrix
+                @ np.conj(self.power_flow_solution.node_voltage_vector)
+            ).ravel())
+            @ electric_grid_model.branch_admittance_2_matrix
+            * np.sqrt(3)
+        )
+
+        self.sensitivity_branch_power_1_magnitude_by_power_wye_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_1) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_1))
+                @ sensitivity_branch_power_1_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+        )
+        self.sensitivity_branch_power_1_magnitude_by_power_wye_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_1) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_1))
+                @ sensitivity_branch_power_1_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+        )
+        self.sensitivity_branch_power_1_magnitude_by_power_delta_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_1) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_1))
+                @ sensitivity_branch_power_1_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+        )
+        self.sensitivity_branch_power_1_magnitude_by_power_delta_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_1) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_1))
+                @ sensitivity_branch_power_1_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+        )
+        self.sensitivity_branch_power_2_magnitude_by_power_wye_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_2) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_2))
+                @ sensitivity_branch_power_2_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+        )
+        self.sensitivity_branch_power_2_magnitude_by_power_wye_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_2) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_2))
+                @ sensitivity_branch_power_2_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+        )
+        self.sensitivity_branch_power_2_magnitude_by_power_delta_active = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_2) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_2))
+                @ sensitivity_branch_power_2_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+        )
+        self.sensitivity_branch_power_2_magnitude_by_power_delta_reactive = (
+            scipy.sparse.diags(abs(self.power_flow_solution.branch_power_vector_2) ** -1)
+            @ np.real(
+                scipy.sparse.diags(np.conj(self.power_flow_solution.branch_power_vector_2))
+                @ sensitivity_branch_power_2_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+        )
+
+        self.sensitivity_branch_power_1_magnitude_by_der_power_active = (
+            self.sensitivity_branch_power_1_magnitude_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_1_magnitude_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_1_magnitude_by_der_power_reactive = (
+            self.sensitivity_branch_power_1_magnitude_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_1_magnitude_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_2_magnitude_by_der_power_active = (
+            self.sensitivity_branch_power_2_magnitude_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_2_magnitude_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_2_magnitude_by_der_power_reactive = (
+            self.sensitivity_branch_power_2_magnitude_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_2_magnitude_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+
+        self.sensitivity_branch_power_1_squared_by_power_wye_active = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
+                @ np.real(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
+        )
+        self.sensitivity_branch_power_1_squared_by_power_wye_reactive = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
+                @ np.real(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
+        )
+        self.sensitivity_branch_power_1_squared_by_power_delta_active = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
+                @ np.real(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
+        )
+        self.sensitivity_branch_power_1_squared_by_power_delta_reactive = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_1))
+                @ np.real(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_1))
+                @ np.imag(
+                    sensitivity_branch_power_1_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
+        )
+        self.sensitivity_branch_power_2_squared_by_power_wye_active = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
+                @ np.real(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_active
+                )
+            )
+        )
+        self.sensitivity_branch_power_2_squared_by_power_wye_reactive = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
+                @ np.real(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_wye_reactive
+                )
+            )
+        )
+        self.sensitivity_branch_power_2_squared_by_power_delta_active = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
+                @ np.real(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_active
+                )
+            )
+        )
+        self.sensitivity_branch_power_2_squared_by_power_delta_reactive = (
+            (
+                scipy.sparse.diags(np.real(self.power_flow_solution.branch_power_vector_2))
+                @ np.real(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
+            + (
+                scipy.sparse.diags(np.imag(self.power_flow_solution.branch_power_vector_2))
+                @ np.imag(
+                    sensitivity_branch_power_2_by_voltage
+                    @ self.sensitivity_voltage_by_power_delta_reactive
+                )
+            )
+        )
+
+        self.sensitivity_branch_power_1_squared_by_der_power_active = (
+            self.sensitivity_branch_power_1_squared_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_1_squared_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_1_squared_by_der_power_reactive = (
+            self.sensitivity_branch_power_1_squared_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_1_squared_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_2_squared_by_der_power_active = (
+            self.sensitivity_branch_power_2_squared_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_2_squared_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_branch_power_2_squared_by_der_power_reactive = (
+            self.sensitivity_branch_power_2_squared_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_branch_power_2_squared_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+
+        # Calculate loss sensitivity matrices.
+        # sensitivity_loss_by_voltage = (
+        #     np.array([self.power_flow_solution.node_voltage_vector])
+        #     @ np.conj(electric_grid_model.node_admittance_matrix)
+        #     + np.transpose(
+        #         electric_grid_model.node_admittance_matrix
+        #         @ np.transpose([self.power_flow_solution.node_voltage_vector])
+        #     )
+        # )
+        sensitivity_loss_by_voltage = (
+            sum(np.transpose(
+                np.transpose(sensitivity_branch_power_1_by_voltage)
+                + np.transpose(sensitivity_branch_power_2_by_voltage)
+            ))
+        )
+
+        self.sensitivity_loss_active_by_power_wye_active = (
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+            / (2 * np.sqrt(3))
+        )
+        self.sensitivity_loss_active_by_power_wye_reactive = (
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+            / (2 * np.sqrt(3))
+        )
+        self.sensitivity_loss_active_by_power_delta_active = (
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+            / (2 * np.sqrt(3))
+        )
+        self.sensitivity_loss_active_by_power_delta_reactive = (
+            np.real(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+            / (2 * np.sqrt(3))
+        )
+        self.sensitivity_loss_reactive_by_power_wye_active = (
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_active
+            )
+            * -1 * np.sqrt(3)
+        )
+        self.sensitivity_loss_reactive_by_power_wye_reactive = (
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_wye_reactive
+            )
+            * -1 * np.sqrt(3)
+        )
+        self.sensitivity_loss_reactive_by_power_delta_active = (
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_active
+            )
+            * -1 * np.sqrt(3)
+        )
+        self.sensitivity_loss_reactive_by_power_delta_reactive = (
+            np.imag(
+                sensitivity_loss_by_voltage
+                @ self.sensitivity_voltage_by_power_delta_reactive
+            )
+            * -1 * np.sqrt(3)
+        )
+
+        self.sensitivity_loss_active_by_der_power_active = (
+            self.sensitivity_loss_active_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_loss_active_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_loss_active_by_der_power_reactive = (
+            self.sensitivity_loss_active_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_loss_active_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_loss_reactive_by_der_power_active = (
+            self.sensitivity_loss_reactive_by_power_wye_active
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_loss_reactive_by_power_delta_active
+            @ electric_grid_model.der_incidence_delta_matrix
+        )
+        self.sensitivity_loss_reactive_by_der_power_reactive = (
+            self.sensitivity_loss_reactive_by_power_wye_reactive
+            @ electric_grid_model.der_incidence_wye_matrix
+            + self.sensitivity_loss_reactive_by_power_delta_reactive
+            @ electric_grid_model.der_incidence_delta_matrix
+        )

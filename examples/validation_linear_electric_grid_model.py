@@ -17,7 +17,7 @@ def main():
     # Settings.
     scenario_name = fledge.config.config['tests']['scenario_name']
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
-    power_multipliers = np.arange(-0.2, 1.2, 0.1)
+    power_multipliers = np.arange(-0.2, 1.8, 0.1)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -30,7 +30,7 @@ def main():
 
     # Obtain linear electric grid model for nominal power conditions.
     linear_electric_grid_model = (
-        fledge.electric_grid_models.LinearElectricGridModelGlobal(
+        fledge.electric_grid_models.LinearElectricGridModelLocal(
             electric_grid_model,
             power_flow_solution_initial
         )
@@ -193,38 +193,24 @@ def main():
         @ np.transpose(der_power_vector_reactive_change.values)
     ).ravel()
 
-    # Instantiate error variables.
-    node_voltage_vector_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    node_voltage_vector_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    branch_power_vector_1_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    branch_power_vector_2_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    branch_power_vector_1_squared_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    branch_power_vector_2_squared_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    loss_active_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-    loss_reactive_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
-    )
-
     # Obtain error values.
     node_voltage_vector_error = (
         100.0 * (
             (node_voltage_vector_linear_model - node_voltage_vector_power_flow)
             / node_voltage_vector_power_flow
         ).abs().mean(axis='columns')
+    )
+    node_voltage_vector_error_real = (
+        100.0 * (
+            (node_voltage_vector_linear_model.apply(np.real) - node_voltage_vector_power_flow.apply(np.real))
+            / node_voltage_vector_power_flow.apply(np.real)
+        ).mean(axis='columns')
+    )
+    node_voltage_vector_error_imag = (
+        100.0 * (
+            (node_voltage_vector_linear_model.apply(np.imag) - node_voltage_vector_power_flow.apply(np.imag))
+            / node_voltage_vector_power_flow.apply(np.imag)
+        ).mean(axis='columns')
     )
     node_voltage_vector_magnitude_error = (
         100.0 * (
@@ -274,6 +260,8 @@ def main():
         pd.DataFrame(
             [
                 node_voltage_vector_error,
+                node_voltage_vector_error_real,
+                node_voltage_vector_error_imag,
                 node_voltage_vector_magnitude_error,
                 branch_power_vector_1_magnitude_error,
                 branch_power_vector_2_magnitude_error,
@@ -284,6 +272,8 @@ def main():
             ],
             index=[
                 'node_voltage_vector_error',
+                'node_voltage_vector_error_real',
+                'node_voltage_vector_error_imag',
                 'node_voltage_vector_magnitude_error',
                 'branch_power_vector_1_magnitude_error',
                 'branch_power_vector_2_magnitude_error',
@@ -297,26 +287,6 @@ def main():
     linear_electric_grid_model_error = linear_electric_grid_model_error.round(2)
 
     # Print results.
-    print(f"der_power_vector_active =\n{der_power_vector_active}")
-    print(f"der_power_vector_reactive =\n{der_power_vector_reactive}")
-    print(f"der_power_vector_active_change =\n{der_power_vector_active_change}")
-    print(f"der_power_vector_reactive_change =\n{der_power_vector_reactive_change}")
-    print(f"node_voltage_vector_power_flow =\n{node_voltage_vector_power_flow}")
-    print(f"node_voltage_vector_linear_model =\n{node_voltage_vector_linear_model}")
-    print(f"node_voltage_vector_magnitude_power_flow =\n{node_voltage_vector_magnitude_power_flow}")
-    print(f"node_voltage_vector_magnitude_linear_model =\n{node_voltage_vector_magnitude_linear_model}")
-    print(f"branch_power_vector_1_squared_power_flow =\n{branch_power_vector_1_squared_power_flow}")
-    print(f"branch_power_vector_1_squared_linear_model =\n{branch_power_vector_1_squared_linear_model}")
-    print(f"branch_power_vector_2_squared_power_flow =\n{branch_power_vector_2_squared_power_flow}")
-    print(f"branch_power_vector_2_squared_linear_model =\n{branch_power_vector_2_squared_linear_model}")
-    print(f"branch_power_vector_1_magnitude_power_flow =\n{branch_power_vector_1_magnitude_power_flow}")
-    print(f"branch_power_vector_1_magnitude_linear_model =\n{branch_power_vector_1_magnitude_linear_model}")
-    print(f"branch_power_vector_2_magnitude_power_flow =\n{branch_power_vector_2_magnitude_power_flow}")
-    print(f"branch_power_vector_2_magnitude_linear_model =\n{branch_power_vector_2_magnitude_linear_model}")
-    print(f"loss_active_power_flow =\n{loss_active_power_flow}")
-    print(f"loss_active_linear_model =\n{loss_active_linear_model}")
-    print(f"loss_reactive_power_flow =\n{loss_reactive_power_flow}")
-    print(f"loss_reactive_linear_model =\n{loss_reactive_linear_model}")
     print(f"linear_electric_grid_model_error =\n{linear_electric_grid_model_error}")
 
     # Store results as CSV.
@@ -344,7 +314,7 @@ def main():
 
     # Plot results.
 
-    # Voltage magnitude.
+    # Voltage.
     for node_index, node in enumerate(electric_grid_model.nodes):
         plt.plot(power_multipliers, node_voltage_vector_magnitude_power_flow.loc[:, node], label='Power flow')
         plt.plot(power_multipliers, node_voltage_vector_magnitude_linear_model.loc[:, node], label='Linear model')
@@ -353,6 +323,26 @@ def main():
         plt.legend()
         plt.title(f"Voltage magnitude [V] for\n (node_type, node_name, phase): {node}")
         plt.savefig(os.path.join(results_path, f'voltage_magnitude_{node}.png'))
+        # plt.show()
+        plt.close()
+
+        plt.plot(power_multipliers, np.real(node_voltage_vector_power_flow.loc[:, node]), label='Power flow')
+        plt.plot(power_multipliers, np.real(node_voltage_vector_linear_model.loc[:, node]), label='Linear model')
+        plt.scatter([0.0], [np.real(electric_grid_model.node_voltage_vector_reference[node_index])], label='No load')
+        plt.scatter([1.0], [np.real(power_flow_solution_initial.node_voltage_vector[node_index])], label='Initial point')
+        plt.legend()
+        plt.title(f"Voltage (real component) [V] for\n (node_type, node_name, phase): {node}")
+        plt.savefig(os.path.join(results_path, f'voltage_real_{node}.png'))
+        # plt.show()
+        plt.close()
+
+        plt.plot(power_multipliers, np.imag(node_voltage_vector_power_flow.loc[:, node]), label='Power flow')
+        plt.plot(power_multipliers, np.imag(node_voltage_vector_linear_model.loc[:, node]), label='Linear model')
+        plt.scatter([0.0], [np.imag(electric_grid_model.node_voltage_vector_reference[node_index])], label='No load')
+        plt.scatter([1.0], [np.imag(power_flow_solution_initial.node_voltage_vector[node_index])], label='Initial point')
+        plt.legend()
+        plt.title(f"Voltage (imaginary component) [V] for\n (node_type, node_name, phase): {node}")
+        plt.savefig(os.path.join(results_path, f'voltage_imag_{node}.png'))
         # plt.show()
         plt.close()
 

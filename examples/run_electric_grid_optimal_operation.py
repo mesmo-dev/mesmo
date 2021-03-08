@@ -43,8 +43,7 @@ def main():
 
     # Define optimization variables.
     linear_electric_grid_model.define_optimization_variables(
-        optimization_problem,
-        scenario_data.timesteps
+        optimization_problem
     )
     der_model_set.define_optimization_variables(
         optimization_problem
@@ -56,7 +55,6 @@ def main():
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
@@ -70,7 +68,6 @@ def main():
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
         price_data,
-        scenario_data.timesteps
     )
     der_model_set.define_optimization_objective(
         optimization_problem,
@@ -84,9 +81,7 @@ def main():
     results = fledge.problems.Results()
     results.update(
         linear_electric_grid_model.get_optimization_results(
-            optimization_problem,
-            power_flow_solution,
-            scenario_data.timesteps,
+            optimization_problem
         )
     )
     results.update(
@@ -105,8 +100,7 @@ def main():
     dlmps = (
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
 

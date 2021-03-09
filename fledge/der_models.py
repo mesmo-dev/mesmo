@@ -1396,17 +1396,13 @@ class DERModelSetBase:
     outputs: pd.Index
 
 
-class DERModelSetOperationResults(fledge.utils.ResultsBase):
+class DERModelSetOperationResults(fledge.electric_grid_models.ElectricGridDEROperationResults):
 
     der_model_set: DERModelSetBase
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame
     output_vector: pd.DataFrame
     # TODO: Add output constraint and disturbance timeseries.
-    der_active_power_vector: pd.DataFrame
-    der_active_power_vector_per_unit: pd.DataFrame
-    der_reactive_power_vector: pd.DataFrame
-    der_reactive_power_vector_per_unit: pd.DataFrame
     der_thermal_power_vector: pd.DataFrame
     der_thermal_power_vector_per_unit: pd.DataFrame
 

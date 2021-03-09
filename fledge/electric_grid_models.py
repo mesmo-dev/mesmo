@@ -1246,13 +1246,17 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         opendssdirect.run_command(opendss_command_string)
 
 
-class ElectricGridOperationResults(fledge.utils.ResultsBase):
+class ElectricGridDEROperationResults(fledge.utils.ResultsBase):
 
-    electric_grid_model: ElectricGridModel
     der_active_power_vector: pd.DataFrame
     der_active_power_vector_per_unit: pd.DataFrame
     der_reactive_power_vector: pd.DataFrame
     der_reactive_power_vector_per_unit: pd.DataFrame
+
+
+class ElectricGridOperationResults(ElectricGridDEROperationResults):
+
+    electric_grid_model: ElectricGridModel
     node_voltage_magnitude_vector: pd.DataFrame
     node_voltage_magnitude_vector_per_unit: pd.DataFrame
     branch_power_magnitude_vector_1: pd.DataFrame

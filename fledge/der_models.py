@@ -26,6 +26,8 @@ class DERModel(object):
     der_name: str
     is_electric_grid_connected: np.bool
     is_thermal_grid_connected: np.bool
+    electric_grid_der_index: typing.List[int]
+    thermal_grid_der_index: typing.List[int]
     timesteps: pd.Index
     active_power_nominal: np.float
     reactive_power_nominal: np.float
@@ -49,6 +51,18 @@ class DERModel(object):
         # Obtain grid connection flags.
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
+
+        # Obtain DER grid indexes.
+        self.electric_grid_der_index = (
+            [der_data.ders.loc[der_data.ders.loc[:, 'electric_grid_name'].notnull(), :].index.get_loc(der_name)]
+            if self.is_electric_grid_connected
+            else []
+        )
+        self.thermal_grid_der_index = (
+            [der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), :].index.get_loc(der_name)]
+            if self.is_thermal_grid_connected
+            else []
+        )
 
         # Obtain timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
@@ -166,23 +180,21 @@ class FixedDERModel(DERModel):
     ):
 
         # Define connection constraints.
-        if (electric_grid_model is not None) and self.is_electric_grid_connected:
-            der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
-
+        if self.is_electric_grid_connected:
             optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, der_index]
+                optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
                 ==
-                self.active_power_nominal_timeseries.values
+                np.transpose([self.active_power_nominal_timeseries.values])
                 / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, der_index]
+                optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
                 ==
-                self.reactive_power_nominal_timeseries.values
+                np.transpose([self.reactive_power_nominal_timeseries.values])
                 / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
-        if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
+        if self.is_thermal_grid_connected:
             # TODO: Implement fixed load / fixed generator models for thermal grid.
             pass
 
@@ -435,10 +447,9 @@ class FlexibleDERModel(DERModel):
         )
 
         # Define connection constraints.
-        if (electric_grid_model is not None) and self.is_electric_grid_connected:
-            der_index = int(fledge.utils.get_index(electric_grid_model.ders, der_name=self.der_name))
+        if self.is_electric_grid_connected:
             optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, [der_index]]
+                optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
                 ==
                 cp.transpose(
                     self.mapping_active_power_by_output.values
@@ -447,7 +458,7 @@ class FlexibleDERModel(DERModel):
                 / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
             )
             optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, [der_index]]
+                optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
                 ==
                 cp.transpose(
                     self.mapping_reactive_power_by_output.values
@@ -456,10 +467,9 @@ class FlexibleDERModel(DERModel):
                 / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
             )
 
-        if (thermal_grid_model is not None) and self.is_thermal_grid_connected:
-            der_index = int(fledge.utils.get_index(thermal_grid_model.ders, der_name=self.der_name))
+        if self.is_thermal_grid_connected:
             optimization_problem.constraints.append(
-                optimization_problem.der_thermal_power_vector[:, [der_index]]
+                optimization_problem.der_thermal_power_vector[:, self.thermal_grid_der_index]
                 ==
                 cp.transpose(
                     self.mapping_thermal_power_by_output.values

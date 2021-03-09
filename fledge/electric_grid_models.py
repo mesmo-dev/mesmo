@@ -2741,6 +2741,43 @@ class LinearElectricGridModel(object):
             ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
         )
 
+    def evaluate_optimization_objective(
+            self,
+            results: ElectricGridOperationResults,
+            price_data: fledge.data_interface.PriceData
+    ) -> float:
+
+        # Instantiate optimization problem.
+        optimization_problem = fledge.utils.OptimizationProblem()
+
+        # Instantiate optimization variables as parameters using results values.
+        optimization_problem.der_active_power_vector = (
+            cp.Parameter(
+                results.der_active_power_vector_per_unit.shape,
+                value=results.der_active_power_vector_per_unit.fillna(0.0).values
+            )
+        )
+        optimization_problem.der_reactive_power_vector = (
+            cp.Parameter(
+                results.der_reactive_power_vector_per_unit.shape,
+                value=results.der_reactive_power_vector_per_unit.fillna(0.0).values
+            )
+        )
+        optimization_problem.loss_active = (
+            cp.Parameter(
+                results.loss_active.shape,
+                value=results.loss_active.values
+            )
+        )
+
+        # Define objective.
+        self.define_optimization_objective(
+            optimization_problem,
+            price_data
+        )
+
+        return optimization_problem.objective.value
+
     def get_optimization_dlmps(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
@@ -4671,6 +4708,43 @@ class LinearElectricGridModelSet(object):
                 price_data,
                 timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep)
             )
+
+    def evaluate_optimization_objective(
+            self,
+            results: ElectricGridOperationResults,
+            price_data: fledge.data_interface.PriceData
+    ) -> float:
+
+        # Instantiate optimization problem.
+        optimization_problem = fledge.utils.OptimizationProblem()
+
+        # Instantiate optimization variables as parameters using results values.
+        optimization_problem.der_active_power_vector = (
+            cp.Parameter(
+                results.der_active_power_vector_per_unit.shape,
+                value=results.der_active_power_vector_per_unit.fillna(0.0).values
+            )
+        )
+        optimization_problem.der_reactive_power_vector = (
+            cp.Parameter(
+                results.der_reactive_power_vector_per_unit.shape,
+                value=results.der_reactive_power_vector_per_unit.fillna(0.0).values
+            )
+        )
+        optimization_problem.loss_active = (
+            cp.Parameter(
+                results.loss_active.shape,
+                value=results.loss_active.values
+            )
+        )
+
+        # Define objective.
+        self.define_optimization_objective(
+            optimization_problem,
+            price_data
+        )
+
+        return optimization_problem.objective.value
 
     def get_optimization_dlmps(
             self,

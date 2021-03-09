@@ -2173,6 +2173,26 @@ class PowerFlowSolutionSet(object):
     der_power_vector: pd.DataFrame
     timesteps: pd.Index
 
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            der_operation_results: ElectricGridDEROperationResults,
+            **kwargs
+    ):
+
+        der_power_vector = (
+            der_operation_results.der_active_power_vector
+            + 1.0j * der_operation_results.der_reactive_power_vector
+        )
+
+        self.__init__(
+            electric_grid_model,
+            der_power_vector,
+            **kwargs
+        )
+
+    @multimethod
     def __init__(
             self,
             electric_grid_model: ElectricGridModelDefault,

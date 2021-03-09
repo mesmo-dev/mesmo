@@ -2213,6 +2213,7 @@ class PowerFlowSolutionSet(object):
         # Obtain results.
         for timestep in self.timesteps:
             power_flow_solution = self.power_flow_solutions[timestep]
+            der_power_vector.loc[timestep, :] = power_flow_solution.der_power_vector
             node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector
             branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1
             branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2
@@ -2654,7 +2655,7 @@ class LinearElectricGridModel(object):
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
-            timestep_index=slice(None),
+            timestep_index=slice(None)
     ):
 
         # Obtain timestep interval in hours, for conversion of power to energy.

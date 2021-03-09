@@ -2119,6 +2119,23 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         return loss
 
 
+class ElectricGridOperationResults(fledge.utils.ResultsBase):
+
+    electric_grid_model: ElectricGridModel
+    der_active_power_vector: pd.DataFrame
+    der_active_power_vector_per_unit: pd.DataFrame
+    der_reactive_power_vector: pd.DataFrame
+    der_reactive_power_vector_per_unit: pd.DataFrame
+    node_voltage_magnitude_vector: pd.DataFrame
+    node_voltage_magnitude_vector_per_unit: pd.DataFrame
+    branch_power_magnitude_vector_1: pd.DataFrame
+    branch_power_magnitude_vector_1_per_unit: pd.DataFrame
+    branch_power_magnitude_vector_2: pd.DataFrame
+    branch_power_magnitude_vector_2_per_unit: pd.DataFrame
+    loss_active: pd.DataFrame
+    loss_reactive: pd.DataFrame
+
+
 class PowerFlowSolutionSet(object):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionFixedPoint]
@@ -2148,22 +2165,76 @@ class PowerFlowSolutionSet(object):
                 )
             )
 
+    def get_results(self) -> ElectricGridOperationResults:
 
-class ElectricGridOperationResults(fledge.utils.ResultsBase):
+        # Instantiate results variables.
+        der_power_vector = (
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+        )
+        node_voltage_vector = (
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+        )
+        branch_power_vector_1 = (
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+        )
+        branch_power_vector_2 = (
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+        )
+        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
 
-    electric_grid_model: ElectricGridModel
-    der_active_power_vector: pd.DataFrame
-    der_active_power_vector_per_unit: pd.DataFrame
-    der_reactive_power_vector: pd.DataFrame
-    der_reactive_power_vector_per_unit: pd.DataFrame
-    node_voltage_magnitude_vector: pd.DataFrame
-    node_voltage_magnitude_vector_per_unit: pd.DataFrame
-    branch_power_magnitude_vector_1: pd.DataFrame
-    branch_power_magnitude_vector_1_per_unit: pd.DataFrame
-    branch_power_magnitude_vector_2: pd.DataFrame
-    branch_power_magnitude_vector_2_per_unit: pd.DataFrame
-    loss_active: pd.DataFrame
-    loss_reactive: pd.DataFrame
+        # Obtain results.
+        for timestep in self.timesteps:
+            power_flow_solution = self.power_flow_solutions[timestep]
+            node_voltage_vector.loc[timestep, :] = power_flow_solution.node_voltage_vector
+            branch_power_vector_1.loc[timestep, :] = power_flow_solution.branch_power_vector_1
+            branch_power_vector_2.loc[timestep, :] = power_flow_solution.branch_power_vector_2
+            loss.loc[timestep, :] = power_flow_solution.loss
+        der_active_power_vector = der_power_vector.apply(np.real)
+        der_reactive_power_vector = der_power_vector.apply(np.imag)
+        node_voltage_magnitude_vector = np.abs(node_voltage_vector)
+        branch_power_magnitude_vector_1 = np.abs(branch_power_vector_1)
+        branch_power_magnitude_vector_2 = np.abs(branch_power_vector_2)
+        loss_active = loss.apply(np.real)
+        loss_reactive = loss.apply(np.imag)
+
+        # Obtain per-unit values.
+        der_active_power_vector_per_unit = (
+            der_active_power_vector
+            / np.real(self.electric_grid_model.der_power_vector_reference)
+        )
+        der_reactive_power_vector_per_unit = (
+            der_reactive_power_vector
+            / np.imag(self.electric_grid_model.der_power_vector_reference)
+        )
+        node_voltage_magnitude_vector_per_unit = (
+            node_voltage_magnitude_vector
+            / np.abs(self.electric_grid_model.node_voltage_vector_reference)
+        )
+        branch_power_magnitude_vector_1_per_unit = (
+            branch_power_magnitude_vector_1
+            / self.electric_grid_model.branch_power_vector_magnitude_reference
+        )
+        branch_power_magnitude_vector_2_per_unit = (
+            branch_power_magnitude_vector_2
+            / self.electric_grid_model.branch_power_vector_magnitude_reference
+        )
+
+        # Store results.
+        return ElectricGridOperationResults(
+            electric_grid_model=self.electric_grid_model,
+            der_active_power_vector=der_active_power_vector,
+            der_active_power_vector_per_unit=der_active_power_vector_per_unit,
+            der_reactive_power_vector=der_reactive_power_vector,
+            der_reactive_power_vector_per_unit=der_reactive_power_vector_per_unit,
+            node_voltage_magnitude_vector=node_voltage_magnitude_vector,
+            node_voltage_magnitude_vector_per_unit=node_voltage_magnitude_vector_per_unit,
+            branch_power_magnitude_vector_1=branch_power_magnitude_vector_1,
+            branch_power_magnitude_vector_1_per_unit=branch_power_magnitude_vector_1_per_unit,
+            branch_power_magnitude_vector_2=branch_power_magnitude_vector_2,
+            branch_power_magnitude_vector_2_per_unit=branch_power_magnitude_vector_2_per_unit,
+            loss_active=loss_active,
+            loss_reactive=loss_reactive
+        )
 
 
 class ElectricGridDLMPResults(fledge.utils.ResultsBase):

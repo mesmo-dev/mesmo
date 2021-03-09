@@ -2800,7 +2800,7 @@ class LinearElectricGridModel(object):
             price_data
         )
 
-        return optimization_problem.objective.value
+        return float(optimization_problem.objective.value)
 
     def get_optimization_dlmps(
             self,
@@ -4768,7 +4768,7 @@ class LinearElectricGridModelSet(object):
             price_data
         )
 
-        return optimization_problem.objective.value
+        return float(optimization_problem.objective.value)
 
     def get_optimization_dlmps(
             self,

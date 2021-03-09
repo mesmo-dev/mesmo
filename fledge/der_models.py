@@ -1575,6 +1575,35 @@ class DERModelSet(DERModelSetBase):
                 thermal_grid_model
             )
 
+    def evaluate_optimization_objective(
+            self,
+            results: DERModelSetOperationResults,
+            price_data: fledge.data_interface.PriceData,
+            **kwargs
+    ) -> float:
+
+        # Instantiate optimization problem.
+        optimization_problem = fledge.utils.OptimizationProblem()
+
+        # Instantiate optimization variables as parameters using results values.
+        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
+        for der_name in self.flexible_der_names:
+            optimization_problem.output_vector[der_name] = (
+                cp.Parameter(
+                    results.output_vector.loc[:, (der_name, slice(None))].shape,
+                    value=results.output_vector.loc[:, (der_name, slice(None))].values
+                )
+            )
+
+        # Define objective.
+        self.define_optimization_objective(
+            optimization_problem,
+            price_data,
+            **kwargs
+        )
+
+        return float(optimization_problem.objective.value)
+
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem

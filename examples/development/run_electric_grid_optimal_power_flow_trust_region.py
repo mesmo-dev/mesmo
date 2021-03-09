@@ -11,7 +11,6 @@ in North American Power Symposium 2010, Arlington, TX, USA, Sep. 2010, pp. 1–6
 """
 
 import numpy as np
-import pandas as pd
 from datetime import datetime
 
 import fledge.config
@@ -33,7 +32,7 @@ def main():
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     print('Loading data...', end='\r')
-    fledge.data_interface.recreate_database()
+    # fledge.data_interface.recreate_database()
 
     # Instantiate iteration variables.
     sigma = 0.0
@@ -44,7 +43,7 @@ def main():
     optimization_problems_iter = []
 
     # Define trust-region parameters according to [2].
-    delta = 1.0  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
+    delta = 0.8  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
     delta_max = 2.0  # 4.0 / 1.0
     gamma = 0.5  # 0.5 / range: (0, 1)
     eta = 0.1  # 0.1 / range: (0, 0.5]
@@ -64,19 +63,15 @@ def main():
     # ---------------------------------------------------------------------------------------------------------
     # Pre-solve optimal operation problem without underlying electric grid to get realistic initial values
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
-    presolve_results = run_presolve_with_der_models(der_model_set, price_data)
-    der_model_set_candidate = change_der_set_points_based_on_results(der_model_set, presolve_results)
-    # der_model_set_candidate = fledge.der_models.DERModelSet(scenario_name)
+    pre_solve_der_results = der_model_set.pre_solve(price_data)
 
     # ---------------------------------------------------------------------------------------------------------
     # Obtain the base case power flow, using the active_power_nominal values given as input as initial dispatch
     # quantities. This represents the initial solution candidate.
-    # For the base power flow, we use the nominal power flow results
-    der_power_vector = get_der_power_vector(electric_grid_model, der_model_set_candidate, timesteps)
     power_flow_solution_set_candidate = (
         fledge.electric_grid_models.PowerFlowSolutionSet(
             electric_grid_model,
-            der_power_vector
+            pre_solve_der_results
         )
     )
 
@@ -99,38 +94,26 @@ def main():
 
             # Accept der power vector and power flow solution candidate.
             # DER power vector is stored in the der_model_set for every DER and every timestep
-            der_model_set_reference = der_model_set_candidate
+            # der_model_set_reference = der_model_set_candidate
             power_flow_solution_set = power_flow_solution_set_candidate
             power_flow_solutions_iter.append(power_flow_solution_set)
 
             # Get the new reference power vector for DERs based on the accepted candidate. This vector is different
             # from the one of the electric grid model, which is not adapted every iteration
-            der_power_vector_reference = get_der_power_vector(electric_grid_model, der_model_set_reference, timesteps)
-
-            # TODO: the functions for voltage and branch flow as dataframes per timestep could be integrated in class
-            # Get the node voltage and branch flow reference vector based on the accepted candidate
-            node_voltage_vector_reference = get_node_voltage_vector_per_timestep(
-                electric_grid_model,
-                power_flow_solution_set,
-                timesteps
+            power_flow_results = power_flow_solution_set.get_results()
+            der_active_power_vector_reference = np.nan_to_num(
+                    np.real(power_flow_solution_set.der_power_vector) /
+                    np.real(electric_grid_model.der_power_vector_reference)
             )
-            if trust_region_iteration_count != 0:
-                # The branch power flow has already been calculated below, use existing instead of re-calculating
-                branch_power_magnitude_vector_1_reference = branch_power_magnitude_vector_1_candidate
-                branch_power_magnitude_vector_2_reference = branch_power_magnitude_vector_2_candidate
-            else:
-                branch_power_magnitude_vector_1_reference = get_branch_power_vector_per_timestep(
-                    electric_grid_model,
-                    power_flow_solution_set,
-                    timesteps,
-                    1
-                )
-                branch_power_magnitude_vector_2_reference = get_branch_power_vector_per_timestep(
-                    electric_grid_model,
-                    power_flow_solution_set,
-                    timesteps,
-                    2
-                )
+            der_reactive_power_vector_reference = np.nan_to_num(
+                    np.imag(power_flow_solution_set.der_power_vector) /
+                    np.imag(electric_grid_model.der_power_vector_reference)
+            )
+
+            # Get the new reference values for voltage and branch flow which are used in the Trust-Region constraints
+            node_voltage_vector_reference = power_flow_results.node_voltage_magnitude_vector_per_unit
+            branch_power_magnitude_vector_1_reference = power_flow_results.branch_power_magnitude_vector_1_per_unit
+            branch_power_magnitude_vector_2_reference = power_flow_results.branch_power_magnitude_vector_2_per_unit
 
             # Get linear electric grid model for all timesteps
             linear_electric_grid_model_set = (
@@ -140,30 +123,13 @@ def main():
                 )
             )
 
-            # Instantiate optimization problem to evaluate the objective based on power flow solution setpoints
-            # The problem will not be solved, it is just used to evaluate the objective
-            optimization_problem = fledge.utils.OptimizationProblem()
-
-            # Define optimization variables.
-            # The variables of the linearized electric grid model are independent of the linearization
-            #  --> no need to define them for every timestep
-            linear_electric_grid_model_set.define_optimization_variables(
-                optimization_problem=optimization_problem
+            # Evaluate the objective function based on power flow results and store objective value.
+            objective_power_flows_iter.append(
+                linear_electric_grid_model_set.evaluate_optimization_objective(
+                    power_flow_results,
+                    price_data
+                )
             )
-            der_model_set_reference.define_optimization_variables(
-                optimization_problem=optimization_problem
-            )
-            linear_electric_grid_model_set.define_optimization_objective(
-                optimization_problem=optimization_problem,
-                price_data=price_data,
-            )
-            # Store objective value.
-            objective_power_flows_iter.append(evaluate_optimization_objective_based_on_power_flow(
-                optimization_problem=optimization_problem,
-                electric_grid_model=electric_grid_model,
-                power_flow_solution_set=power_flow_solution_set,
-            ))
-            print()
         else:
             print('sigma <= tau -> Rejecting iteration. Repeating iteration using the modified region (delta).')
 
@@ -180,15 +146,15 @@ def main():
         )
 
         # Define DER model variables
-        der_model_set_reference.define_optimization_variables(
+        der_model_set.define_optimization_variables(
             optimization_problem=optimization_problem
         )
 
         # Define linear electric grid model constraints.
         # TODO: adapt to what we actually want as limits
-        node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-        node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-        branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
+        node_voltage_magnitude_vector_minimum = 0.9 * np.abs(electric_grid_model.node_voltage_vector_reference)
+        node_voltage_magnitude_vector_maximum = 1.1 * np.abs(electric_grid_model.node_voltage_vector_reference)
+        branch_power_magnitude_vector_maximum = 2.0 * electric_grid_model.branch_power_vector_magnitude_reference
         # The linear electric grid model is different for every timestep
         linear_electric_grid_model_set.define_optimization_constraints(
             optimization_problem=optimization_problem,
@@ -202,7 +168,7 @@ def main():
         # )
 
         # Define DER constraints.
-        der_model_set_reference.define_optimization_constraints(
+        der_model_set.define_optimization_constraints(
             optimization_problem=optimization_problem,
             electric_grid_model=electric_grid_model
         )
@@ -216,86 +182,71 @@ def main():
         # TODO: actually over the entire output vector?
         # We redefine the approximate state and dispatch quantities as the measure of change in their
         # operating state at the current iteration.
-
         # Voltage.
-        for node_index, node in enumerate(electric_grid_model.nodes):
-            optimization_problem.constraints.append(
-                optimization_problem.node_voltage_magnitude_vector[:, node_index]
-                - np.abs(node_voltage_vector_reference.loc[:, node])
-                >=
-                -delta * np.abs(node_voltage_vector_reference.loc[:, node])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.node_voltage_magnitude_vector[:, node_index]
-                - np.abs(node_voltage_vector_reference.loc[:, node])
-                <=
-                delta * np.abs(node_voltage_vector_reference.loc[:, node])
-            )
+        optimization_problem.constraints.append(
+            optimization_problem.node_voltage_magnitude_vector
+            - np.abs(node_voltage_vector_reference).to_numpy()
+            >=
+            -delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.node_voltage_magnitude_vector
+            - np.abs(node_voltage_vector_reference).to_numpy()
+            <=
+            delta
+        )
 
         # Branch flows.
-        # TODO: needed or is voltage and DER active power constraint for trust region enough?
-        for branch_index, branch in enumerate(electric_grid_model.branches):
-            optimization_problem.constraints.append(
-                optimization_problem.branch_power_magnitude_vector_1[:, branch_index]
-                - np.abs(branch_power_magnitude_vector_1_reference.loc[:, branch])
-                >=
-                -delta * np.abs(branch_power_magnitude_vector_1_reference.loc[:, branch])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.branch_power_magnitude_vector_1[:, branch_index]
-                - np.abs(branch_power_magnitude_vector_1_reference.loc[:, branch])
-                <=
-                delta * np.abs(branch_power_magnitude_vector_1_reference.loc[:, branch])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.branch_power_magnitude_vector_2[:, branch_index]
-                - np.abs(branch_power_magnitude_vector_2_reference.loc[:, branch])
-                >=
-                -delta * np.abs(branch_power_magnitude_vector_2_reference.loc[:, branch])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.branch_power_magnitude_vector_2[:, branch_index]
-                - np.abs(branch_power_magnitude_vector_2_reference.loc[:, branch])
-                <=
-                delta * np.abs(branch_power_magnitude_vector_2_reference.loc[:, branch])
-            )
+        optimization_problem.constraints.append(
+            optimization_problem.branch_power_magnitude_vector_1
+            - np.abs(branch_power_magnitude_vector_1_reference).to_numpy()
+            >=
+            -delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.branch_power_magnitude_vector_1
+            - np.abs(branch_power_magnitude_vector_1_reference).to_numpy()
+            <=
+            delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.branch_power_magnitude_vector_2
+            - np.abs(branch_power_magnitude_vector_2_reference).to_numpy()
+            >=
+            -delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.branch_power_magnitude_vector_2
+            - np.abs(branch_power_magnitude_vector_2_reference).to_numpy()
+            <=
+            delta
+        )
 
         # DERs.
-        for der_index, der in enumerate(electric_grid_model.ders):
-            der_model = der_model_set_reference.der_models[der[1]]
-            if not issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
-                # If not flexible, then there should not be a trust-region constraint on it
-                continue
-            # Check if load (negative nominal power value) or generator (positive...)
-            if np.real(electric_grid_model.der_power_vector_reference[der_index]) < 0:
-                factor = 1
-            else:
-                factor = -1
-
-            optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, der_index]
-                - np.real(der_power_vector_reference[der])
-                <=
-                -factor * delta * np.real(der_power_vector_reference[der])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, der_index]
-                - np.real(der_power_vector_reference[der])
-                >=
-                factor * delta * np.real(der_power_vector_reference[der])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, der_index]
-                - np.imag(der_power_vector_reference[der])
-                <=
-                -factor * delta * np.imag(der_power_vector_reference[der])
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, der_index]
-                - np.imag(der_power_vector_reference[der])
-                >=
-                factor * delta * np.imag(der_power_vector_reference[der])
-            )
+        optimization_problem.constraints.append(
+            optimization_problem.der_active_power_vector
+            - der_active_power_vector_reference
+            >=
+            -delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.der_active_power_vector
+            - der_active_power_vector_reference
+            <=
+            delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.der_reactive_power_vector
+            - der_reactive_power_vector_reference
+            <=
+            delta
+        )
+        optimization_problem.constraints.append(
+            optimization_problem.der_reactive_power_vector
+            - der_reactive_power_vector_reference
+            >=
+            -delta
+        )
 
         # ---------------------------------------------------------------------------------------------------------
         # Define objective and solve.
@@ -304,38 +255,43 @@ def main():
             optimization_problem,
             price_data,
         )
+
         # Solve optimization problem.
         print('Solving optimal power flow...', end='\r')
         optimization_problem.solve()
-        optimization_problems_iter.append(optimization_problem)
+        optimization_problems_iter.append(optimization_problem)  # TODO: really needed?
+        optimization_results = fledge.problems.Results()
+        optimization_results.update(
+            linear_electric_grid_model_set.get_optimization_results(
+                optimization_problem
+            )
+        )
+        optimization_results.update(
+            der_model_set.get_optimization_results(
+                optimization_problem
+            )
+        )
 
         # ---------------------------------------------------------------------------------------------------------
         # Trust-region evaluation and update
         print('Trust-region evaluation and update...', end='\r')
         # Obtain der power change value.
-        der_active_power_vector_change = (
+        der_active_power_vector_change_per_unit = (
             np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=np.float)
         )
-        der_reactive_power_vector_change = (
+        der_reactive_power_vector_change_per_unit = (
             np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=np.float)
         )
 
         for der_index, der in enumerate(electric_grid_model.ders):
-            der_active_power_vector_change[:, der_index] = (
-                optimization_problem.der_active_power_vector[:, der_index].value
-                - np.real(der_power_vector_reference[der])
+            der_active_power_vector_change_per_unit[:, der_index] = (
+                optimization_results.der_active_power_vector_per_unit.loc[:, der]
+                - der_active_power_vector_reference[:, der_index]
             )
-            der_reactive_power_vector_change[:, der_index] = (
-                optimization_problem.der_reactive_power_vector[:, der_index].value
-                - np.imag(der_power_vector_reference[der])
+            der_reactive_power_vector_change_per_unit[:, der_index] = (
+                optimization_results.der_reactive_power_vector_per_unit.loc[:, der]
+                - der_reactive_power_vector_reference[:, der_index]
             )
-        # Change to p.u. value
-        der_active_power_vector_change_per_unit = (
-                der_active_power_vector_change / np.real(electric_grid_model.der_power_vector_reference))
-        # For DERs with 0 reactive nominal power, we divide by zero here, that is why np settings are set to ignore
-        der_reactive_power_vector_change_per_unit = (
-                der_reactive_power_vector_change / np.imag(electric_grid_model.der_power_vector_reference))
-
         der_power_vector_change_per_unit_max = (
             max(
                 np.max(abs(der_active_power_vector_change_per_unit)),
@@ -343,71 +299,43 @@ def main():
             )
         )
 
-        # Print change variables.
-        # print(f"der_active_power_vector_change = {der_active_power_vector_change}")
-        # print(f"der_reactive_power_vector_change = {der_reactive_power_vector_change}")
+        # Print change variable.
         print(f"der_power_vector_change_per_unit_max = {der_power_vector_change_per_unit_max}")
 
         # ---------------------------------------------------------------------------------------------------------
         # Check trust-region conditions and obtain DER power vector / power flow solution candidates for next iteration.
         # - Only if termination condition is not met, otherwise risk of division by zero.
         if der_power_vector_change_per_unit_max > epsilon:
-            # Get new der vector and power flow solution candidate.
-            results = fledge.problems.Results()
-            results.update(der_model_set_reference.get_optimization_results(optimization_problem))
-            # NOTE: results function independent of linear electric grid model, we can call it from any timestep
-            results.update(
-                linear_electric_grid_model_set.get_optimization_results(
-                    optimization_problem
-                )
-            )
-            der_model_set_candidate = change_der_set_points_based_on_results(
-                der_model_set=der_model_set_reference,
-                results=results
-            )
-
-            der_power_vector = get_der_power_vector(
-                electric_grid_model,
-                der_model_set_candidate,
-                timesteps)
+            # Get new power flow solution candidate
             power_flow_solution_set_candidate = (
                 fledge.electric_grid_models.PowerFlowSolutionSet(
                     electric_grid_model,
-                    der_power_vector
+                    optimization_results
                 )
             )
 
             # Obtain objective values.
-            objective_linear_model = (
+            objective_linear_model = float(
                 optimization_problem.objective.value
             )
 
-            objective_power_flow = evaluate_optimization_objective_based_on_power_flow(
-                optimization_problem=optimization_problem,
-                electric_grid_model=electric_grid_model,
-                power_flow_solution_set=power_flow_solution_set_candidate
+            power_flow_results_candidate = power_flow_solution_set_candidate.get_results()
+
+            objective_power_flow = (
+                linear_electric_grid_model_set.evaluate_optimization_objective(
+                    power_flow_results_candidate,
+                    price_data
+                )
             )
 
             # Check if power flow of candidate is violating line limits, to then increase the radius delta
             # This is only to save some iterations
-            branch_power_magnitude_vector_1_candidate = get_branch_power_vector_per_timestep(
-                electric_grid_model,
-                power_flow_solution_set_candidate,
-                timesteps,
-                1
-            )
-            branch_power_magnitude_vector_2_candidate = get_branch_power_vector_per_timestep(
-                electric_grid_model,
-                power_flow_solution_set_candidate,
-                timesteps,
-                2
-            )
             pf_violation_flag_1 = (
                     np.abs(branch_power_magnitude_vector_maximum
-                           - branch_power_magnitude_vector_1_candidate) < 0).any(axis=None)
+                           - power_flow_results_candidate.branch_power_magnitude_vector_1) < 0).any(axis=None)
             pf_violation_flag_2 = (
                     np.abs(branch_power_magnitude_vector_maximum
-                           - branch_power_magnitude_vector_2_candidate) < 0).any(axis=None)
+                           - power_flow_results_candidate.branch_power_magnitude_vector_2) < 0).any(axis=None)
 
             # ---------------------------------------------------------------------------------------------------------
             # Evaluate solution progress.
@@ -455,13 +383,13 @@ def main():
         )
     )
     results.update(
-        der_model_set_reference.get_optimization_results(
+        der_model_set.get_optimization_results(
             optimization_problem
         )
     )
 
     # Print results.
-    print(results)
+    # print(results)
 
     # Store results to CSV.
     results.save(results_path)
@@ -475,7 +403,7 @@ def main():
     )
 
     # Print DLMPs.
-    print(dlmps)
+    # print(dlmps)
 
     # Store DLMPs to CSV.
     dlmps.save(results_path)
@@ -485,163 +413,6 @@ def main():
     print(f"Results are stored in: {results_path}")
     print(f'Time elapsed for trust region: {(end_time - start_time)}')
     print(f'Trust region iterations: {trust_region_iteration_count}')
-
-
-def run_presolve_with_der_models(
-        der_model_set: fledge.der_models.DERModelSet,
-        price_data: fledge.data_interface.PriceData
-) -> fledge.problems.Results:
-    # Pre-solve optimal operation problem without underlying electric grid to get realistic initial values
-    # Obtain all DERs
-    print('Running pre-solve for der models only...', end='\r')
-
-    # TODO: this must be removed again in the end!
-    for der_name in der_model_set.der_names:
-        der_model_set.der_models[der_name].is_electric_grid_connected = False
-
-    # Instantiate decentralized DER optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
-
-    # Define DER variables.
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
-
-    # set_custom_der_constraints(der_model_set)
-
-    # Define DER constraints.
-    der_model_set.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define objective (DER operation cost minimization).
-    der_model_set.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-
-    # Solve decentralized DER optimization problem.
-    optimization_problem.solve()
-
-    # Obtain results.
-    results = fledge.problems.Results()
-    results.update(
-        der_model_set.get_optimization_results(
-            optimization_problem
-        )
-    )
-
-    # TODO: this must be removed again in the end!
-    for der_name in der_model_set.der_names:
-        der_model_set.der_models[der_name].is_electric_grid_connected = True
-
-    return results
-
-
-def change_der_set_points_based_on_results(
-        der_model_set: fledge.der_models.DERModelSet,
-        results: fledge.problems.Results,
-        power_factor: float = 0.8
-) -> fledge.der_models.DERModelSet:
-
-    attributes = dir(results)
-    if 'der_active_power_vector' in attributes and not np.all(results.der_active_power_vector == 0):
-        for der_name in der_model_set.der_names:
-            der_model = der_model_set.der_models[der_name]
-            der_type = der_model.der_type
-            der_model.active_power_nominal_timeseries = (
-                results.der_active_power_vector[der_type, der_name]
-            )
-            der_model.reactive_power_nominal_timeseries = (
-                results.der_reactive_power_vector[der_type, der_name]
-            )
-    # If there was no electric grid model in the optimization, get the results based on the output vector
-    elif 'output_vector' in attributes:
-        for der_name in der_model_set.der_names:
-            der_model = der_model_set.der_models[der_name]
-            if issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
-                if 'active_power' in results.output_vector[der_name].columns:
-                    der_model.active_power_nominal_timeseries = (
-                        results.output_vector[(der_name, 'active_power')]
-                    )
-                    der_model.reactive_power_nominal_timeseries = (
-                        results.output_vector[(der_name, 'reactive_power')]
-                    )
-                elif 'grid_electric_power' in results.output_vector[der_name].columns:
-                    print(f'FlexibleBuildingModel detected, using default power factor {power_factor}', end='\r')
-                    der_model.active_power_nominal_timeseries = (
-                        results.output_vector[(der_name, 'grid_electric_power')]
-                        * float(der_model.mapping_active_power_by_output['grid_electric_power'])
-                    )
-                    der_model.reactive_power_nominal_timeseries = (
-                        results.output_vector[(der_name, 'grid_electric_power')]
-                        * np.tan(np.arccos(power_factor))
-                        * float(der_model.mapping_active_power_by_output['grid_electric_power'])
-                    )
-    else:
-        print('Results object does not contain any data on active power output. ')
-        raise ValueError
-
-    return der_model_set
-
-
-def get_der_power_vector(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-        der_models_set: fledge.der_models.DERModelSet,
-        timesteps: pd.Index
-) -> pd.DataFrame:
-    der_power_vector = (
-        pd.DataFrame(columns=electric_grid_model.ders, index=timesteps, dtype=np.complex)
-    )
-    for der in electric_grid_model.ders:
-        der_name = der[1]
-        der_power_vector.loc[:, der] = (
-                der_models_set.der_models[der_name].active_power_nominal_timeseries
-                + (1.0j * der_models_set.der_models[der_name].reactive_power_nominal_timeseries)
-        )
-    return der_power_vector
-
-
-def get_node_voltage_vector_per_timestep(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-        power_flow_solution_set: fledge.electric_grid_models.PowerFlowSolutionSet,
-        timesteps: pd.Index
-) -> pd.DataFrame:
-    node_voltage_vector_per_timestep = (
-        pd.DataFrame(columns=electric_grid_model.nodes, index=timesteps, dtype=np.complex)
-    )
-    for timestep in power_flow_solution_set.timesteps:
-        node_voltage_vector_per_timestep.loc[timestep, :] = (
-            power_flow_solution_set.power_flow_solutions[timestep].node_voltage_vector
-        )
-
-    return node_voltage_vector_per_timestep
-
-
-def get_branch_power_vector_per_timestep(
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-        power_flow_solution_set: fledge.electric_grid_models.PowerFlowSolutionSet,
-        timesteps: pd.Index,
-        direction: int
-) -> pd.DataFrame:
-    branch_power_vector_per_timestep = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=timesteps, dtype=np.complex)
-    )
-
-    for timestep in power_flow_solution_set.timesteps:
-        if direction == 1:
-            branch_power_vector_per_timestep.loc[timestep, :] = (
-                power_flow_solution_set.power_flow_solutions[timestep].branch_power_vector_1
-            )
-        elif direction == 2:
-            branch_power_vector_per_timestep.loc[timestep, :] = (
-                power_flow_solution_set.power_flow_solutions[timestep].branch_power_vector_2
-            )
-        else:
-            print(f'No valid branch flow direction provided. Possible values: 1 or 2, provided value: {direction}')
-            raise ValueError
-
-    return branch_power_vector_per_timestep
 
 
 def set_custom_der_constraints(
@@ -672,46 +443,6 @@ def set_custom_der_constraints(
                 der_model.output_maximum_timeseries['zone_generic_cool_thermal_power'] = (
                     np.zeros([len(der_model.output_maximum_timeseries), 1])
                 )
-
-
-def evaluate_optimization_objective_based_on_power_flow(
-        optimization_problem: fledge.utils.OptimizationProblem,
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault,
-        power_flow_solution_set: fledge.electric_grid_models.PowerFlowSolutionSet
-) -> float:
-    """
-    Evaluates the objective of the optimization problem based on set points from the power flow solution
-    Args:
-        optimization_problem: fully formulated optimization problem
-        electric_grid_model:
-        power_flow_solution_set:
-        timesteps:
-
-    Returns: the optimization objective value
-
-    """
-    timesteps = power_flow_solution_set.timesteps
-    # set objective function variables to zero (power vector change is zero, as the solution is already correct)
-    loss_active = np.zeros([len(timesteps), 1], dtype=float)
-    loss_reactive = np.zeros([len(timesteps), 1], dtype=float)
-    active_power = np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=float)
-    reactive_power = np.zeros([len(timesteps), len(electric_grid_model.ders)], dtype=float)
-    time_index = 0
-    for timestep in timesteps:
-        power_flow_solution = power_flow_solution_set.power_flow_solutions[timestep]
-        loss_active[time_index][0] = np.real(power_flow_solution.loss)
-        loss_reactive[time_index][0] = np.imag(power_flow_solution.loss)
-        for der_index, der in enumerate(electric_grid_model.ders):
-            active_power[time_index][der_index] = np.real(power_flow_solution.der_power_vector[der_index])
-            reactive_power[time_index][der_index] = np.imag(power_flow_solution.der_power_vector[der_index])
-        time_index += 1
-
-    optimization_problem.loss_active.value = loss_active
-    optimization_problem.loss_reactive.value = loss_reactive
-    optimization_problem.der_active_power_vector.value = active_power
-    optimization_problem.der_reactive_power_vector.value = reactive_power
-
-    return float(optimization_problem.objective.value)
 
 
 if __name__ == '__main__':

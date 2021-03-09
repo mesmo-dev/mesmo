@@ -1650,6 +1650,56 @@ class DERModelSet(DERModelSetBase):
             der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit
         )
 
+    def pre_solve(
+            self,
+            price_data: fledge.data_interface.PriceData
+    ) -> DERModelSetOperationResults:
+
+        # Instantiate optimization problem.
+        optimization_problem = fledge.utils.OptimizationProblem()
+        self.define_optimization_variables(optimization_problem)
+        self.define_optimization_constraints(optimization_problem)
+        self.define_optimization_objective(optimization_problem, price_data)
+
+        # Add nominal DER power constraints.
+        if len(self.electric_ders) > 0:
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector
+                <=
+                1.0
+            )
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector
+                <=
+                1.0
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.constraints.append(
+                optimization_problem.der_thermal_power_vector
+                <=
+                1.0
+            )
+
+        # Solve optimization problem and obtain results.
+        optimization_problem.solve()
+        results = self.get_optimization_results(optimization_problem)
+
+        # Update nominal DER power time series.
+        for der_name in self.der_names:
+            if self.der_models[der_name].is_electric_grid_connected:
+                self.der_models[der_name].active_power_nominal_timeseries.loc[:] = (
+                    results.der_active_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
+                )
+                self.der_models[der_name].reactive_power_nominal_timeseries.loc[:] = (
+                    results.der_reactive_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
+                )
+            if self.der_models[der_name].is_thermal_grid_connected:
+                self.der_models[der_name].thermal_power_nominal_timeseries.loc[:] = (
+                    results.der_thermal_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
+                )
+
+        return results
+
 
 def make_der_model(
     der_data: fledge.data_interface.DERData,

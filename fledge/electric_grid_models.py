@@ -1,6 +1,7 @@
 """Electric grid models module."""
 
 import cvxpy as cp
+import itertools
 from multimethod import multimethod
 import natsort
 import numpy as np
@@ -2138,7 +2139,7 @@ class ElectricGridOperationResults(fledge.utils.ResultsBase):
 
 class PowerFlowSolutionSet(object):
 
-    power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionFixedPoint]
+    power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolution]
     electric_grid_model: ElectricGridModelDefault
     der_power_vector: pd.DataFrame
     timesteps: pd.Index
@@ -2146,7 +2147,8 @@ class PowerFlowSolutionSet(object):
     def __init__(
             self,
             electric_grid_model: ElectricGridModelDefault,
-            der_power_vector: pd.DataFrame
+            der_power_vector: pd.DataFrame,
+            power_flow_solution_method=PowerFlowSolutionFixedPoint
     ):
 
         # Store attributes.
@@ -2154,16 +2156,17 @@ class PowerFlowSolutionSet(object):
         self.der_power_vector = der_power_vector
         self.timesteps = self.electric_grid_model.timesteps
 
-        # Obtain linear electric grid models.
-        self.power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionFixedPoint] = dict.fromkeys(self.timesteps)
-        for timestep in self.timesteps:
-            self.power_flow_solutions[timestep] = (
-                # TODO: Fixed-point method is hard-coded here, but should be selectable.
-                PowerFlowSolutionFixedPoint(
-                    self.electric_grid_model,
-                    self.der_power_vector.loc[timestep, :].values
+        # Obtain power flow solutions.
+        power_flow_solutions = (
+            fledge.utils.starmap(
+                power_flow_solution_method,
+                zip(
+                    itertools.repeat(self.electric_grid_model),
+                    der_power_vector.values
                 )
             )
+        )
+        self.power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
 
     def get_results(self) -> ElectricGridOperationResults:
 
@@ -4608,7 +4611,8 @@ class LinearElectricGridModelSet(object):
     def __init__(
             self,
             electric_grid_model: ElectricGridModelDefault,
-            power_flow_solution_set: PowerFlowSolutionSet
+            power_flow_solution_set: PowerFlowSolutionSet,
+            linear_electric_grid_model_method=LinearElectricGridModelLocal
     ):
 
         # Store attributes.
@@ -4617,15 +4621,16 @@ class LinearElectricGridModelSet(object):
         self.timesteps = self.electric_grid_model.timesteps
 
         # Obtain linear electric grid models.
-        self.linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel] = dict.fromkeys(self.timesteps)
-        for timestep in self.timesteps:
-            self.linear_electric_grid_models[timestep] = (
-                # TODO: Local model is hard-coded here, but should be selectable.
-                LinearElectricGridModelLocal(
-                    self.electric_grid_model,
-                    self.power_flow_solution_set.power_flow_solutions[timestep]
+        linear_electric_grid_models = (
+            fledge.utils.starmap(
+                linear_electric_grid_model_method,
+                zip(
+                    itertools.repeat(self.electric_grid_model),
+                    self.power_flow_solution_set.power_flow_solutions.values()
                 )
             )
+        )
+        self.linear_electric_grid_models = dict(zip(self.timesteps, linear_electric_grid_models))
 
     def define_optimization_variables(
             self,

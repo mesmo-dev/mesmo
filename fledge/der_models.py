@@ -1686,25 +1686,6 @@ class DERModelSet(DERModelSetBase):
         self.define_optimization_constraints(optimization_problem)
         self.define_optimization_objective(optimization_problem, price_data)
 
-        # Add nominal DER power constraints.
-        if len(self.electric_ders) > 0:
-            optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector
-                <=
-                1.0
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector
-                <=
-                1.0
-            )
-        if len(self.thermal_ders) > 0:
-            optimization_problem.constraints.append(
-                optimization_problem.der_thermal_power_vector
-                <=
-                1.0
-            )
-
         # Solve optimization problem and obtain results.
         optimization_problem.solve()
         results = self.get_optimization_results(optimization_problem)

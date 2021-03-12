@@ -24,10 +24,10 @@ def main(
 ):
 
     # Settings.
-    admm_iteration_limit = 10000
+    admm_iteration_limit = 1000
     admm_rho = 1e-1 if admm_rho is None else admm_rho
-    admm_primal_residual_termination_limit = 1e-6
-    admm_dual_residual_termination_limit = 1e-6
+    admm_primal_residual_termination_limit = 1e-1
+    admm_dual_residual_termination_limit = 1e-1
     scenario_number = 2 if scenario_number is None else scenario_number
     # Choices (Note that constrained cases may not solve reliably):
     # 1 - unconstrained operation,
@@ -58,6 +58,7 @@ def main(
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_grid_model.cooling_plant_efficiency = 10.0  # Change model parameter to incentivize use of thermal grid.
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
     linear_thermal_grid_model = (

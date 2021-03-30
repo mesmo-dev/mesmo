@@ -181,22 +181,25 @@ class FixedDERModel(DERModel):
 
         # Define connection constraints.
         if self.is_electric_grid_connected:
-            optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
-                ==
-                np.transpose([self.active_power_nominal_timeseries.values])
-                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
-                ==
-                np.transpose([self.reactive_power_nominal_timeseries.values])
-                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
-            )
+            if hasattr(optimization_problem, 'der_active_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
+                    ==
+                    np.transpose([self.active_power_nominal_timeseries.values])
+                    / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
+                )
+            if hasattr(optimization_problem, 'der_reactive_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
+                    ==
+                    np.transpose([self.reactive_power_nominal_timeseries.values])
+                    / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
+                )
 
         if self.is_thermal_grid_connected:
-            # TODO: Implement fixed load / fixed generator models for thermal grid.
-            pass
+            if hasattr(optimization_problem, 'der_thermal_power_vector'):
+                # TODO: Implement fixed load / fixed generator models for thermal grid.
+                pass
 
     def define_optimization_objective(
             self,
@@ -448,35 +451,38 @@ class FlexibleDERModel(DERModel):
 
         # Define connection constraints.
         if self.is_electric_grid_connected:
-            optimization_problem.constraints.append(
-                optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
-                ==
-                cp.transpose(
-                    self.mapping_active_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+            if hasattr(optimization_problem, 'der_active_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
+                    ==
+                    cp.transpose(
+                        self.mapping_active_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
+                    / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
                 )
-                / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
-            )
-            optimization_problem.constraints.append(
-                optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
-                ==
-                cp.transpose(
-                    self.mapping_reactive_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+            if hasattr(optimization_problem, 'der_reactive_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
+                    ==
+                    cp.transpose(
+                        self.mapping_reactive_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
+                    / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
                 )
-                / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
-            )
 
         if self.is_thermal_grid_connected:
-            optimization_problem.constraints.append(
-                optimization_problem.der_thermal_power_vector[:, self.thermal_grid_der_index]
-                ==
-                cp.transpose(
-                    self.mapping_thermal_power_by_output.values
-                    @ cp.transpose(optimization_problem.output_vector[self.der_name])
+            if hasattr(optimization_problem, 'der_thermal_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_thermal_power_vector[:, self.thermal_grid_der_index]
+                    ==
+                    cp.transpose(
+                        self.mapping_thermal_power_by_output.values
+                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
+                    )
+                    / (self.thermal_power_nominal if self.thermal_power_nominal != 0.0 else 1.0)
                 )
-                / (self.thermal_power_nominal if self.thermal_power_nominal != 0.0 else 1.0)
-            )
 
     def define_optimization_objective(
             self,

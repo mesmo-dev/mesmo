@@ -1438,16 +1438,22 @@ class DERModelSet(DERModelSetBase):
         self.der_names = der_data.ders.index
 
         # Obtain DER models.
-        # TODO: Fix cobmo error when running as parallel starmap.
-        self.der_models = (
-            dict(zip(
-                self.der_names,
-                fledge.utils.starmap(
-                    make_der_model,
-                    zip(itertools.repeat(der_data), self.der_names.to_list())
+        fledge.utils.log_time("DER model setup")
+        der_models = (
+            fledge.utils.starmap(
+                make_der_models,
+                zip(
+                    fledge.utils.chunk_list(self.der_names.to_list())
+                ),
+                dict(
+                    der_data=der_data
                 )
-            ))
+            )
         )
+        self.der_models = dict()
+        for chunk in der_models:
+            self.der_models.update(chunk)
+        fledge.utils.log_time("DER model setup")
 
         # Obtain fixed / flexible DER name / models.
         self.fixed_der_names = list()
@@ -1704,9 +1710,22 @@ class DERModelSet(DERModelSetBase):
         return results
 
 
+def make_der_models(
+    der_names: typing.List[str],
+    der_data: fledge.data_interface.DERData
+) -> typing.Dict[str, DERModel]:
+
+    der_models = dict.fromkeys(der_names)
+
+    for der_name in der_names:
+        der_models[der_name] = make_der_model(der_name, der_data)
+
+    return der_models
+
+
 def make_der_model(
-    der_data: fledge.data_interface.DERData,
-    der_name: str
+    der_name: str,
+    der_data: fledge.data_interface.DERData
 ) -> DERModel:
     """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
 

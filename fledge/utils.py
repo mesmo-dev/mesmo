@@ -251,6 +251,36 @@ def starmap(
     return results
 
 
+def chunk_dict(
+        dict_in: dict,
+        chunk_count: int = os.cpu_count()
+):
+    """Divide dictionary into equally sized chunks."""
+
+    chunk_size = int(np.ceil(len(dict_in) / chunk_count))
+    dict_iter = iter(dict_in)
+
+    return [
+        {j: dict_in[j] for j in itertools.islice(dict_iter, chunk_size)}
+        for i in range(0, len(dict_in), chunk_size)
+    ]
+
+
+def chunk_list(
+        list_in: typing.Union[typing.Iterable, typing.Sized],
+        chunk_count: int = os.cpu_count()
+):
+    """Divide list into equally sized chunks."""
+
+    chunk_size = int(np.ceil(len(list_in) / chunk_count))
+    list_iter = iter(list_in)
+
+    return [
+        [j for j in itertools.islice(list_iter, chunk_size)]
+        for i in range(0, len(list_in), chunk_size)
+    ]
+
+
 def log_timing_start(
         message: str,
         logger_object: logging.Logger = logger

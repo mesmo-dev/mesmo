@@ -688,6 +688,10 @@ class DERData(object):
 
                 # Append `definition_index`, for more convenient indexing into DER definitions.
                 # - Add `accumulative` flag to ensure correct interpolation / resampling behavior.
+                self.der_definitions[definition_index].at['nominal_charging_definition_index'] = (
+                    self.der_definitions[definition_index].at['nominal_charging_definition_type'],
+                    self.der_definitions[definition_index].at['nominal_charging_definition_name']
+                )
                 self.der_definitions[definition_index].at['maximum_charging_definition_index'] = (
                     self.der_definitions[definition_index].at['maximum_charging_definition_type'],
                     self.der_definitions[definition_index].at['maximum_charging_definition_name']
@@ -707,6 +711,7 @@ class DERData(object):
 
                 # Append arrival / occupancy timeseries / schedule to additional definitions.
                 additional_der_definitions.update({
+                    self.der_definitions[definition_index].at['nominal_charging_definition_index']: None,
                     self.der_definitions[definition_index].at['maximum_charging_definition_index']: None,
                     self.der_definitions[definition_index].at['maximum_discharging_definition_index']: None,
                     self.der_definitions[definition_index].at['maximum_energy_definition_index']: None,

@@ -763,6 +763,48 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         der = der_data.ders.loc[self.der_name, :]
         der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
+        # Construct nominal active and reactive power timeseries.
+        if (
+                pd.notnull(der.at['nominal_charging_definition_type'])
+                and (('schedule' in der.at['nominal_charging_definition_type']) or ('timeseries' in der.at['definition_type']))
+                and self.is_electric_grid_connected
+        ):
+            self.active_power_nominal_timeseries = (
+                der_data.der_definitions[
+                    der.at['nominal_charging_definition_index']
+                ].loc[:, 'value'].copy().abs().rename('active_power')
+            )
+            self.reactive_power_nominal_timeseries = (
+                der_data.der_definitions[
+                    der.at['nominal_charging_definition_index']
+                ].loc[:, 'value'].copy().abs().rename('reactive_power')
+            )
+            if 'per_unit' in der.at['nominal_charging_definition_type']:
+                # If per unit definition, multiply nominal active / reactive power.
+                self.active_power_nominal_timeseries *= der.at['active_power_nominal']
+                self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+            else:
+                self.active_power_nominal_timeseries *= (
+                    np.sign(der.at['active_power_nominal'])
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                )
+                self.reactive_power_nominal_timeseries *= (
+                    np.sign(der.at['reactive_power_nominal'])
+                    * (
+                        der.at['reactive_power_nominal'] / der.at['active_power_nominal']
+                        if der.at['active_power_nominal'] != 0.0
+                        else 1.0
+                    )
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                )
+        else:
+            self.active_power_nominal_timeseries = (
+                pd.Series(0.0, index=self.timesteps, name='active_power')
+            )
+            self.reactive_power_nominal_timeseries = (
+                pd.Series(0.0, index=self.timesteps, name='reactive_power')
+            )
+
         # Instantiate indexes.
         self.states = pd.Index(['charged_energy'])
         self.storage_states = pd.Index(['charged_energy'])

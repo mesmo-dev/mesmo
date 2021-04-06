@@ -17,6 +17,8 @@ CREATE TABLE der_cooling_plants (
 );
 CREATE TABLE der_ev_chargers (
     definition_name TEXT,
+    nominal_charging_definition_type TEXT,
+    nominal_charging_definition_name TEXT,
     maximum_charging_definition_type TEXT,
     maximum_charging_definition_name TEXT,
     maximum_discharging_definition_type TEXT,

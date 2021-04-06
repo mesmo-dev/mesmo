@@ -35,7 +35,6 @@ setuptools.setup(
         'kaleido',  # For static plot output with plotly.
         'matplotlib',
         'multimethod',
-        'multiprocess',
         'networkx',
         'natsort',
         'numpy',
@@ -45,6 +44,7 @@ setuptools.setup(
         'parameterized',  # For tests.
         'plotly',
         'pyyaml',
+        'ray',
         'scipy',
     ]
 )

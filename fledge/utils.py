@@ -226,7 +226,7 @@ def starmap(
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
 
     - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
-      of `multiprocess.Pool`, hence running the function calls in parallel.
+      of multiprocessing pool, hence running the function calls in parallel.
     - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
     """
 
@@ -237,13 +237,13 @@ def starmap(
         function_partial = function
 
     if fledge.config.config['multiprocessing']['run_parallel']:
-        # If `run_parallel`, use starmap from `multiprocess.Pool` for parallel execution.
+        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
         if fledge.config.parallel_pool is None:
             # Setup parallel pool on first execution.
             log_time('parallel pool setup')
             fledge.config.parallel_pool = fledge.config.get_parallel_pool()
             log_time('parallel pool setup')
-        results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
+        results = fledge.config.parallel_pool.starmap(function_partial, list(argument_sequence))
     else:
         # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
         results = list(itertools.starmap(function_partial, argument_sequence))

@@ -807,15 +807,6 @@ class FlexibleEVChargerModel(FlexibleDERModel):
             -1.0
             * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
         )
-        self.control_matrix.at['charged_energy', 'active_power_charge'] = (
-            (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
-            * der['charging_efficiency']
-        )
-        self.control_matrix.at['charged_energy', 'active_power_discharge'] = (
-            -1.0
-            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
-            * der['charging_efficiency']
-        )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         )

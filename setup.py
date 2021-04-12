@@ -31,6 +31,7 @@ setuptools.setup(
     install_requires=[
         # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
         'cvxpy',
+        'dill',
         'diskcache',
         'kaleido',  # For static plot output with plotly.
         'matplotlib',

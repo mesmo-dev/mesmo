@@ -99,8 +99,10 @@ def main():
 
     for stochastic_scenario_name in stochastic_scenario_set:
         optimization_problem.node_voltage_magnitude_vector[stochastic_scenario_name] = (
-            cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps),
-                         len(linear_electric_grid_model.electric_grid_model.nodes)))
+            cp.Variable(shape=(
+                len(linear_electric_grid_model.electric_grid_model.timesteps),
+                len(linear_electric_grid_model.electric_grid_model.nodes)
+            ))
         )
 
     # cp.sum(optimization_problem.der_active_power_vector[stochastic_scenario_name], axis=1),
@@ -111,45 +113,27 @@ def main():
             optimization_problem.node_voltage_magnitude_vector[stochastic_scenario_name]
             ==
             (
-                    cp.transpose(
-                        linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                        @ cp.transpose(cp.multiply(
-                            optimization_problem.der_active_power_vector[stochastic_scenario_name],
-                            np.array(
-                                [np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                        ) - np.array(
-                            [np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-                        + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                        @ cp.transpose(cp.multiply(
-                            optimization_problem.der_reactive_power_vector[stochastic_scenario_name],
-                            np.array(
-                                [np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                        ) - np.array(
-                            [np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-                        # what is this for? I forget..
-                    )
-                    + np.array([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])
+                cp.transpose(
+                    linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_active_power_vector[stochastic_scenario_name],
+                        np.array(
+                            [np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array(
+                        [np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
+                    + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                    @ cp.transpose(cp.multiply(
+                        optimization_problem.der_reactive_power_vector[stochastic_scenario_name],
+                        np.array(
+                            [np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                    ) - np.array(
+                        [np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
+                    # what is this for? I forget..
+                )
+                + np.array([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])
             )
             / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
         )
-
-    # from multimethod import multimethod
-    # @multimethod
-    # def stupid_fun(
-    #         arg1: str,
-    #         arg2: float,
-    # ):
-    #     return arg1 + arg2
-    #
-    # @multimethod
-    # def stupid_fun(
-    #         arg1: float,
-    #         arg2: float,
-    #         alg=None
-    # ):
-    #     return arg1 + arg2
-    #
-    # out = stupid_fun(1, 10, alg=[0.9])
 
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(
         linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
@@ -157,7 +141,7 @@ def main():
         linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
 
     for stochastic_scenario_name in stochastic_scenario_set:
-        # Define up/lower bounds for voltage magnitude
+        # Define upper/lower bounds for voltage magnitude.
         optimization_problem.voltage_magnitude_vector_minimum_constraint = (
                 optimization_problem.node_voltage_magnitude_vector[stochastic_scenario_name]
                 - np.array([node_voltage_magnitude_vector_minimum.ravel()])
@@ -165,9 +149,7 @@ def main():
                 >=
                 0.0
         )
-
         optimization_problem.constraints.append(optimization_problem.voltage_magnitude_vector_minimum_constraint)
-
         optimization_problem.voltage_magnitude_vector_maximum_constraint = (
                 optimization_problem.node_voltage_magnitude_vector[stochastic_scenario_name]
                 - np.array([node_voltage_magnitude_vector_maximum.ravel()])
@@ -177,10 +159,10 @@ def main():
         )
         optimization_problem.constraints.append(optimization_problem.voltage_magnitude_vector_maximum_constraint)
 
-    # # Define DER constraints...
-
+    # Define DER constraints.
     for der_name, der_model in der_model_set.der_models.items():
-        # Fixed DERs
+
+        # Fixed DERs.
         if issubclass(type(der_model), fledge.der_models.FixedDERModel):
             if der_model.is_electric_grid_connected:
                 for stochastic_scenario_name in stochastic_scenario_set:
@@ -200,7 +182,8 @@ def main():
                             np.transpose([der_model.reactive_power_nominal_timeseries.values])
                             / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
                         )
-        # Flexi DERs
+
+        # Flexible DERs.
         elif issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
             for stochastic_scenario_name in stochastic_scenario_set:
                 # Initial state.
@@ -280,89 +263,181 @@ def main():
                         )
     # Define Substation constr. TO DO
 
-    # # Define power balance constraints # how to get the power injections from load nodes
-
+    # Define power balance constraints.
     for stochastic_scenario_name in stochastic_scenario_set:
         if stochastic_scenario_name == 'no_reserve':
             optimization_problem.constraints.append(
-                optimization_problem.balance_energy == -1.0 * cp.sum(
-                    cp.multiply(
-                        optimization_problem.der_active_power_vector[stochastic_scenario_name],
-                        np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                    ), axis=1, keepdims=True, )
+                optimization_problem.balance_energy
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario_name],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
             )
         elif stochastic_scenario_name == 'up_reserve_act':
             optimization_problem.constraints.append(
-                optimization_problem.balance_energy + optimization_problem.up_reserve == -1.0 * cp.sum(
-                    cp.multiply(
-                        optimization_problem.der_active_power_vector[stochastic_scenario_name],
-                        np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                    ), axis=1, keepdims=True, )
+                optimization_problem.balance_energy
+                + optimization_problem.up_reserve
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario_name],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
             )
         else:
             optimization_problem.constraints.append(
-                optimization_problem.balance_energy - optimization_problem.down_reserve == -1.0 * cp.sum(
-                    cp.multiply(
-                        optimization_problem.der_active_power_vector[stochastic_scenario_name],
-                        np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                    ), axis=1, keepdims=True, )
+                optimization_problem.balance_energy
+                - optimization_problem.down_reserve
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario_name],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
             )
 
         optimization_problem.constraints.append(
             optimization_problem.up_reserve >= 0
         )
-
         optimization_problem.constraints.append(
             optimization_problem.down_reserve >= 0
         )
-    #
-    #
-    # Define model objective.
-    #   der_model_set.define_optimization_objective(optimization_problem, price_data)
-    #   linear_electric_grid_model.define_optimization_objective(optimization_problem, price_data)
-    # Define custom objective.
-    # optimization_problem.objective += 1e2 * cp.sum(optimization_problem.electric_power_peak)
 
     # Obtain timestep interval in hours, for conversion of power to energy.
-
     timestep_interval_hours = (
-            (price_data.price_timeseries.index[1] - price_data.price_timeseries.index[0])
-            / pd.Timedelta('1h')
+        (price_data.price_timeseries.index[1] - price_data.price_timeseries.index[0])
+        / pd.Timedelta('1h')
     )
 
-
+    # Define objective.
     optimization_problem.objective += (
-            (
-                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T
-                    * timestep_interval_hours  # In Wh.
-                    @ optimization_problem.balance_energy
-            ) +
-            (
-                    100 * reserve_price
-                    * timestep_interval_hours  # In Wh.
-                    @ optimization_problem.up_reserve  # Sum along DERs, i.e. sum for each timestep.
-            ) +
-            (
-                    100 * reserve_price
-                    * timestep_interval_hours  # In Wh.
-                    @ optimization_problem.down_reserve  # Sum along DERs, i.e. sum for each timestep.
-            )
-
+        (
+            price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T
+            * timestep_interval_hours  # In Wh.
+            @ optimization_problem.balance_energy
+        ) +
+        (
+            -1.0
+            * reserve_price
+            * timestep_interval_hours  # In Wh.
+            @ optimization_problem.up_reserve
+        ) +
+        (
+            -1.0
+            * reserve_price
+            * timestep_interval_hours  # In Wh.
+            @ optimization_problem.down_reserve
+        )
     )
 
     # Solve optimization problem.
     optimization_problem.solve()
 
-    # Get model results.
-    results = fledge.problems.Results()
-    # results.update(der_model_set.get_optimization_results(optimization_problem))
-    # results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
-    # Get custom results.
+    # Obtain reserve results.
+    balance_energy = pd.Series(optimization_problem.balance_energy.value.ravel(), index=der_model_set.timesteps)
+    up_reserve = pd.Series(optimization_problem.up_reserve.value.ravel(), index=der_model_set.timesteps)
+    down_reserve = pd.Series(optimization_problem.down_reserve.value.ravel(), index=der_model_set.timesteps)
 
+    # Instantiate DER results variables.
+    state_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.states)
+        )
+    )
+    control_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.controls)
+        )
+    )
+    output_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.outputs)
+        )
+    )
+    der_active_power_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+        )
+    )
+    der_active_power_vector_per_unit = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+        )
+    )
+    der_reactive_power_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+        )
+    )
+    der_reactive_power_vector_per_unit = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+        )
+    )
+    der_thermal_power_vector = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.thermal_ders)
+        )
+    )
+    der_thermal_power_vector_per_unit = (
+        dict.fromkeys(
+            stochastic_scenario_set,
+            pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.thermal_ders)
+        )
+    )
 
-    # # Store results to CSV.
-    # results.save(results_path)
-    #
+    # Obtain DER results.
+    for stochastic_scenario_name in stochastic_scenario_set:
+        for der_name in der_model_set.flexible_der_names:
+            state_vector[stochastic_scenario_name].loc[:, (der_name, slice(None))] = (
+                optimization_problem.state_vector[der_name, stochastic_scenario_name].value
+            )
+            control_vector[stochastic_scenario_name].loc[:, (der_name, slice(None))] = (
+                optimization_problem.control_vector[der_name, stochastic_scenario_name].value
+            )
+            output_vector[stochastic_scenario_name].loc[:, (der_name, slice(None))] = (
+                optimization_problem.output_vector[der_name, stochastic_scenario_name].value
+            )
+        for der_name in der_model_set.der_names:
+            if der_model_set.der_models[der_name].is_electric_grid_connected:
+                der_active_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_active_power_vector[stochastic_scenario_name][
+                        :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
+                    ].value
+                )
+                der_active_power_vector[stochastic_scenario_name].loc[:, (slice(None), der_name)] = (
+                    der_active_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)].values
+                    * der_model_set.der_models[der_name].active_power_nominal
+                )
+                der_reactive_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_reactive_power_vector[stochastic_scenario_name][
+                        :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
+                    ].value
+                )
+                der_reactive_power_vector[stochastic_scenario_name].loc[:, (slice(None), der_name)] = (
+                    der_reactive_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)].values
+                    * der_model_set.der_models[der_name].reactive_power_nominal
+                )
+            if der_model_set.der_models[der_name].is_thermal_grid_connected:
+                der_thermal_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)] = (
+                    optimization_problem.der_thermal_power_vector[stochastic_scenario_name][
+                        :, fledge.utils.get_index(der_model_set.thermal_ders, der_name=der_name)
+                    ].value
+                )
+                der_thermal_power_vector.loc[:, (slice(None), der_name)] = (
+                    der_thermal_power_vector_per_unit[stochastic_scenario_name].loc[:, (slice(None), der_name)].values
+                    * der_model_set.der_models[der_name].thermal_power_nominal
+                )
+
+    print()
+
     # # Plot some results.
     #  for der_model in der_model_set.flexible_der_models.values():
     # #

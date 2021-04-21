@@ -1310,18 +1310,18 @@ class StorageModel(FlexibleDERModel):
         self.output_maximum_timeseries = (
             pd.concat([
                 pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
-                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
-                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
                 (
                     der['power_per_unit_maximum']
                     * der['active_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge')
                 ),
                 (
                     der['power_per_unit_maximum']
-                    * der['reactive_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
-                )
+                    * der['active_power_nominal']
+                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge')
+                ),
+                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
+                pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='reactive_power')
             ], axis='columns')
         )
         self.output_minimum_timeseries = (
@@ -1329,16 +1329,8 @@ class StorageModel(FlexibleDERModel):
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge'),
                 pd.Series(0.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge'),
-                (
-                    der['power_per_unit_minimum']
-                    * der['active_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power')
-                ),
-                (
-                    der['power_per_unit_minimum']
-                    * der['reactive_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='reactive_power')
-                )
+                pd.Series(-np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
+                pd.Series(-np.inf, index=self.active_power_nominal_timeseries.index, name='reactive_power')
             ], axis='columns')
         )
 

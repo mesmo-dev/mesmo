@@ -6,13 +6,13 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
 
 import fledge.config
 import fledge.data_interface
 import fledge.der_models
 import fledge.electric_grid_models
 import fledge.plots
+import fledge.problems
 import fledge.thermal_grid_models
 import fledge.utils
 
@@ -56,12 +56,10 @@ def main(
     elif scenario_number in [15]:
         scenario_name = 'paper_2020_2_scenario_15'
     else:
-        scenario_name = 'singapore_tanjongpagar_modified'
+        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
 
     # Obtain results path.
-    results_path = (
-        fledge.utils.get_results_path(f'paper_2020_2_dlmp_combined_thermal_electric_scenario_{scenario_number}', scenario_name)
-    )
+    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_{scenario_name}')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -70,14 +68,11 @@ def main(
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
-    # Obtain price timeseries.
-    price_type = 'singapore_wholesale'
-    price_timeseries = price_data.price_timeseries_dict[price_type]
-
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2020_2_scenario_1_2_3_4_5')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -86,7 +81,8 @@ def main(
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
+    # TODO: Fix reliance on default scenario power flow.
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2020_2_scenario_1_2_3_4_5')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,
@@ -109,7 +105,7 @@ def main(
         der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define linear electric grid model variables.
     linear_electric_grid_model.define_optimization_variables(
@@ -118,16 +114,16 @@ def main(
     )
 
     # Define linear electric grid model constraints.
-    voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_vector_squared_maximum = 100.0 * (electric_grid_model.branch_power_vector_magnitude_reference ** 2)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 100.0 * electric_grid_model.branch_power_vector_magnitude_reference
     # Modify limits for scenarios.
     if scenario_number in [4, 12, 13, 14, 15]:
-        branch_power_vector_squared_maximum[
+        branch_power_magnitude_vector_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
     elif scenario_number in [5]:
-        voltage_magnitude_vector_minimum[
+        node_voltage_magnitude_vector_minimum[
             fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.9985 / 0.5
     else:
@@ -135,9 +131,9 @@ def main(
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
         scenario_data.timesteps,
-        voltage_magnitude_vector_minimum=voltage_magnitude_vector_minimum,
-        voltage_magnitude_vector_maximum=voltage_magnitude_vector_maximum,
-        branch_power_vector_squared_maximum=branch_power_vector_squared_maximum
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
@@ -178,81 +174,47 @@ def main(
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
-        power_flow_solution=power_flow_solution,
-        thermal_grid_model=thermal_grid_model,
-        thermal_power_flow_solution=thermal_power_flow_solution
+        thermal_grid_model=thermal_grid_model
     )
-
-    # Connect thermal grid source.
-    # TODO: Incorporate this workaround in model definition.
-    der_index = fledge.utils.get_index(electric_grid_model.ders, der_type='thermal_grid_source')[0]
-    der = electric_grid_model.ders[der_index]
-    for timestep in scenario_data.timesteps:
-        optimization_problem.der_model_constraints.add(
-            optimization_problem.der_active_power_vector_change[timestep, der]
-            ==
-            sum(
-                optimization_problem.der_thermal_power_vector[timestep, thermal_der]
-                for thermal_der in thermal_grid_model.ders
-            )
-            / thermal_grid_model.cooling_plant_efficiency
-            + optimization_problem.pump_power[timestep]
-            - np.real(power_flow_solution.der_power_vector[der_index])
-        )
-        optimization_problem.der_model_constraints.add(
-            optimization_problem.der_reactive_power_vector_change[timestep, der]
-            ==
-            0.5  # Constant power factor.
-            * optimization_problem.der_active_power_vector_change[timestep, der]
-        )
 
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
-        price_timeseries=price_timeseries,
-        timesteps=scenario_data.timesteps
+        price_data,
+        scenario_data.timesteps
     )
 
     # Define thermal grid objective.
-    # linear_thermal_grid_model.define_optimization_objective(
-    #     optimization_problem,
-    #     price_timeseries=price_timeseries,
-    #     timesteps=scenario_data.timesteps
-    # )
+    linear_thermal_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        scenario_data.timesteps
+    )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_timeseries,
+        price_data,
         electric_grid_model=electric_grid_model,
         thermal_grid_model=thermal_grid_model
     )
 
     # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
+    optimization_problem.solve()
 
     # Obtain results.
-    in_per_unit = True
-    results = (
+    results = fledge.problems.Results()
+    results.update(
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
             power_flow_solution,
-            scenario_data.timesteps,
-            in_per_unit=in_per_unit
+            scenario_data.timesteps
         )
     )
     results.update(
         linear_thermal_grid_model.get_optimization_results(
             optimization_problem,
-            scenario_data.timesteps,
-            in_per_unit=in_per_unit
+            scenario_data.timesteps
         )
     )
     results.update(
@@ -261,44 +223,25 @@ def main(
         )
     )
 
-    # Obtain additional results.
-    branch_power_vector_magnitude_per_unit = (
-        (
-            np.sqrt(np.abs(results['branch_power_vector_1_squared']))
-            + np.sqrt(np.abs(results['branch_power_vector_2_squared']))
-        ) / 2
-        # / electric_grid_model.branch_power_vector_magnitude_reference
-    )
-    branch_power_vector_magnitude_per_unit.loc['maximum', :] = branch_power_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit = (
-        np.abs(results['voltage_magnitude_vector'])
-        # / np.abs(electric_grid_model.node_voltage_vector_reference)
-    )
-    node_voltage_vector_magnitude_per_unit.loc['maximum', :] = node_voltage_vector_magnitude_per_unit.max(axis='rows')
-    node_voltage_vector_magnitude_per_unit.loc['minimum', :] = node_voltage_vector_magnitude_per_unit.min(axis='rows')
-    results.update({
-        'branch_power_vector_magnitude_per_unit': branch_power_vector_magnitude_per_unit,
-        'node_voltage_vector_magnitude_per_unit': node_voltage_vector_magnitude_per_unit
-    })
-
     # Print results.
     print(results)
 
     # Store results as CSV.
-    results.to_csv(results_path)
+    results.save(results_path)
 
     # Obtain DLMPs.
-    dlmps = (
+    dlmps = fledge.problems.Results()
+    dlmps.update(
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
     dlmps.update(
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_timeseries,
+            price_data,
             scenario_data.timesteps
         )
     )
@@ -307,16 +250,20 @@ def main(
     print(dlmps)
 
     # Store DLMPs as CSV.
-    dlmps.to_csv(results_path)
+    dlmps.save(results_path)
+
+    # Plot results.
+    in_per_unit = False
+    results_suffix = '_per_unit' if in_per_unit else ''
 
     # Plot thermal grid DLMPs.
     thermal_grid_dlmp = (
         pd.concat(
             [
-                dlmps['thermal_grid_energy_dlmp'],
-                dlmps['thermal_grid_pump_dlmp'],
-                dlmps['thermal_grid_head_dlmp'],
-                dlmps['thermal_grid_congestion_dlmp']
+                dlmps['thermal_grid_energy_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_pump_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_head_dlmp_node_thermal_power'],
+                dlmps['thermal_grid_congestion_dlmp_node_thermal_power']
             ],
             axis='columns',
             keys=['energy', 'pump', 'head', 'congestion'],
@@ -366,7 +313,7 @@ def main(
         ax2 = plt.twinx(ax1)
         if der in thermal_grid_model.ders:
             ax2.plot(
-                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_thermal_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Thrm. pw.',
                 drawstyle='steps-post',
                 color='darkgrey',
@@ -374,14 +321,14 @@ def main(
             )
         if der in electric_grid_model.ders:
             ax2.plot(
-                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_active_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Active pw.',
                 drawstyle='steps-post',
                 color='black',
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
@@ -398,10 +345,10 @@ def main(
     electric_grid_dlmp = (
         pd.concat(
             [
-                dlmps['electric_grid_energy_dlmp'],
-                dlmps['electric_grid_loss_dlmp'],
-                dlmps['electric_grid_voltage_dlmp'],
-                dlmps['electric_grid_congestion_dlmp']
+                dlmps['electric_grid_energy_dlmp_node_active_power'],
+                dlmps['electric_grid_loss_dlmp_node_active_power'],
+                dlmps['electric_grid_voltage_dlmp_node_active_power'],
+                dlmps['electric_grid_congestion_dlmp_node_active_power']
             ],
             axis='columns',
             keys=['energy', 'loss', 'voltage', 'congestion'],
@@ -453,7 +400,7 @@ def main(
         ax2 = plt.twinx(ax1)
         if der in thermal_grid_model.ders:
             ax2.plot(
-                results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_thermal_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Thrm. pw.',
                 drawstyle='steps-post',
                 color='darkgrey',
@@ -461,14 +408,14 @@ def main(
             )
         if der in electric_grid_model.ders:
             ax2.plot(
-                results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+                results[f'der_active_power_vector{results_suffix}'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
                 label='Active pw.',
                 drawstyle='steps-post',
                 color='black',
                 linewidth=1.5
             )
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        ax2.set_xlim((scenario_data.timesteps[0].toordinal(), scenario_data.timesteps[-1].toordinal()))
+        ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
         # ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
@@ -487,10 +434,10 @@ def main(
 
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
-        'thermal_grid_energy_dlmp',
-        'thermal_grid_pump_dlmp',
-        'thermal_grid_head_dlmp',
-        'thermal_grid_congestion_dlmp'
+        'thermal_grid_energy_dlmp_node_thermal_power',
+        'thermal_grid_pump_dlmp_node_thermal_power',
+        'thermal_grid_head_dlmp_node_thermal_power',
+        'thermal_grid_congestion_dlmp_node_thermal_power'
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:
@@ -535,15 +482,15 @@ def main(
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
             plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
-            plt.show()
+            # plt.show()
             plt.close()
 
     # Plot electric grid DLMPs in grid.
     dlmp_types = [
-        'electric_grid_energy_dlmp',
-        'electric_grid_voltage_dlmp',
-        'electric_grid_congestion_dlmp',
-        'electric_grid_loss_dlmp'
+        'electric_grid_energy_dlmp_node_active_power',
+        'electric_grid_voltage_dlmp_node_active_power',
+        'electric_grid_congestion_dlmp_node_active_power',
+        'electric_grid_loss_dlmp_node_active_power'
     ]
     for timestep in scenario_data.timesteps:
         for dlmp_type in dlmp_types:
@@ -595,14 +542,14 @@ def main(
     fledge.plots.plot_grid_line_utilization(
         electric_grid_model,
         electric_grid_graph,
-        branch_power_vector_magnitude_per_unit * 100.0,
+        results[f'branch_power_magnitude_vector_1{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
-        value_unit='%',
+        value_unit='%' if in_per_unit else 'kW',
     )
     fledge.plots.plot_grid_line_utilization(
         thermal_grid_model,
         thermal_grid_graph,
-        results['branch_flow_vector'] * (100.0 if in_per_unit else 1.0e-3),
+        results[f'branch_flow_vector{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
         value_unit='%' if in_per_unit else 'kW',
     )
@@ -611,7 +558,7 @@ def main(
     fledge.plots.plot_grid_node_utilization(
         electric_grid_model,
         electric_grid_graph,
-        node_voltage_vector_magnitude_per_unit,
+        results['node_voltage_magnitude_vector_per_unit'],
         results_path
     )
 

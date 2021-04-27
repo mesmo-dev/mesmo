@@ -6,15 +6,17 @@ paths:
   data: ./data
   database: ./data/database.sqlite
   results: ./results
+  cobmo_additional_data: []
 multiprocessing:
-  run_parallel: true
+  run_parallel: false  # Disabled by default to avoid unexpected issues.
 caching:
-  enable: false  # If false, no cache is created.
+  enable: false  # If false, no cache is created. Disabled by default to avoid unexpected issues.
   reset_cache: false  # If true, reset the cache on each restart of FLEDGE, to incorporate changes in the database.
   expiry_time: 3600  # Expiry time of the cache, in seconds.
   get_building_model: true
 optimization:
-  solver_name: gurobi  # Must be valid input string for Pyomo's `SolverFactory`.
+  solver_name: gurobi  # Must be valid solver name for CVXPY.
+  time_limit:  # Solver time limit in seconds. Infinite if not defined. Only for Gurobi / CPLEX.
   show_solver_output: true  # If True, activate verbose solver output.
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.
@@ -24,7 +26,13 @@ logs:
   format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
 plots:
   matplotlib_style: seaborn-colorblind
-  colormap: viridis_r
-  font_family: ['Arial', 'Helvetica']
+  matplotlib_colormap: viridis_r
+  matplotlib_font_family: ['Arial', 'Helvetica']
+  matplotlib_figure_size: [7.0, 4.0]
+  plotly_font_family: Arial
+  plotly_font_size: 15
+  plotly_figure_width: 1000
+  plotly_figure_height: 500
+  file_format: png
   add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
   show_basemap_attribution: false # If True, show copyright notice for basemap.

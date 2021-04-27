@@ -1,9 +1,11 @@
 line_type,n_phases,maximum_current,definition_type
+ieee_123node_line_type1,3,530,matrix
 mtx601,3,1000000000.0,matrix
 mtx602,2,1000000000.0,matrix
 hougang_linetype_66,3,585.0,matrix
 hougang_linetype_22,3,585.0,matrix
 hougang_linetype_0.415,3,585.0,matrix
 singapore_cable_22_copper_300,3,585.0,matrix
+singapore_cable_22_copper_300_400amp,3,400.0,matrix
 assembly_test_linetype_1,3,585.0,assembly
 assembly_test_linetype_2,3,585.0,assembly

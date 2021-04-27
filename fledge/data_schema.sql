@@ -15,6 +15,18 @@ CREATE TABLE der_cooling_plants (
     cooling_tower_set_ventilation_factor TEXT,
     PRIMARY KEY(definition_name)
 );
+CREATE TABLE der_ev_chargers (
+    definition_name TEXT,
+    maximum_charging_definition_type TEXT,
+    maximum_charging_definition_name TEXT,
+    maximum_discharging_definition_type TEXT,
+    maximum_discharging_definition_name TEXT,
+    maximum_energy_definition_type TEXT,
+    maximum_energy_definition_name TEXT,
+    departing_energy_definition_type TEXT,
+    departing_energy_definition_name TEXT,
+    PRIMARY KEY(definition_name)
+);
 CREATE TABLE der_models (
     der_type TEXT,
     der_model_name TEXT,
@@ -178,11 +190,15 @@ CREATE TABLE scenarios (
     thermal_grid_name TEXT,
     parameter_set TEXT,
     price_type TEXT,
+    price_sensitivity_coefficient REAL DEFAULT 0,
     electric_grid_operation_limit_type TEXT,
     thermal_grid_operation_limit_type TEXT,
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,
+    base_apparent_power REAL DEFAULT 1,
+    base_voltage REAL DEFAULT 1,
+    base_thermal_power REAL DEFAULT 1,
     PRIMARY KEY(scenario_name)
 );
 CREATE TABLE thermal_grid_ders (

@@ -8,6 +8,7 @@ import pandas as pd
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
+import fledge.problems
 import fledge.utils
 
 
@@ -15,7 +16,7 @@ def main():
 
     # Settings.
     scenario_name = fledge.config.config['tests']['scenario_name']
-    results_path = fledge.utils.get_results_path('run_electric_grid_power_flow_validation', scenario_name)
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
     power_multipliers = np.arange(-0.2, 1.2, 0.1)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -170,29 +171,37 @@ def main():
     )
     power_flow_solution_error = power_flow_solution_error.round(2)
 
-    # Compile results.
-    results = fledge.data_interface.ResultsDict(
-        der_power_vector=der_power_vector,
-        node_voltage_vector_fledge=node_voltage_vector_fledge,
-        node_voltage_vector_opendss=node_voltage_vector_opendss,
-        node_voltage_vector_magnitude_fledge=node_voltage_vector_magnitude_fledge,
-        node_voltage_vector_magnitude_opendss=node_voltage_vector_magnitude_opendss,
-        branch_power_vector_1_magnitude_fledge=branch_power_vector_1_magnitude_fledge,
-        branch_power_vector_1_magnitude_opendss=branch_power_vector_1_magnitude_opendss,
-        branch_power_vector_2_magnitude_fledge=branch_power_vector_2_magnitude_fledge,
-        branch_power_vector_2_magnitude_opendss=branch_power_vector_2_magnitude_opendss,
-        loss_active_fledge=loss_active_fledge,
-        loss_active_opendss=loss_active_opendss,
-        loss_reactive_fledge=loss_reactive_fledge,
-        loss_reactive_opendss=loss_reactive_opendss,
-        power_flow_solution_error=power_flow_solution_error
-    )
-
     # Print results.
-    print(results)
+    print(f"der_power_vector =\n{der_power_vector}")
+    print(f"node_voltage_vector_fledge =\n{node_voltage_vector_fledge}")
+    print(f"node_voltage_vector_opendss =\n{node_voltage_vector_opendss}")
+    print(f"node_voltage_vector_magnitude_fledge =\n{node_voltage_vector_magnitude_fledge}")
+    print(f"node_voltage_vector_magnitude_opendss =\n{node_voltage_vector_magnitude_opendss}")
+    print(f"branch_power_vector_1_magnitude_fledge =\n{branch_power_vector_1_magnitude_fledge}")
+    print(f"branch_power_vector_1_magnitude_opendss =\n{branch_power_vector_1_magnitude_opendss}")
+    print(f"branch_power_vector_2_magnitude_fledge =\n{branch_power_vector_2_magnitude_fledge}")
+    print(f"branch_power_vector_2_magnitude_opendss =\n{branch_power_vector_2_magnitude_opendss}")
+    print(f"loss_active_fledge =\n{loss_active_fledge}")
+    print(f"loss_active_opendss =\n{loss_active_opendss}")
+    print(f"loss_reactive_fledge =\n{loss_reactive_fledge}")
+    print(f"loss_reactive_opendss =\n{loss_reactive_opendss}")
+    print(f"power_flow_solution_error =\n{power_flow_solution_error}")
 
     # Store results as CSV.
-    results.to_csv(results_path)
+    der_power_vector.to_csv(os.path.join(results_path, 'der_power_vector.csv'))
+    node_voltage_vector_fledge.to_csv(os.path.join(results_path, 'node_voltage_vector_fledge.csv'))
+    node_voltage_vector_opendss.to_csv(os.path.join(results_path, 'node_voltage_vector_opendss.csv'))
+    node_voltage_vector_magnitude_fledge.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_fledge.csv'))
+    node_voltage_vector_magnitude_opendss.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_opendss.csv'))
+    branch_power_vector_1_magnitude_fledge.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_fledge.csv'))
+    branch_power_vector_1_magnitude_opendss.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_opendss.csv'))
+    branch_power_vector_2_magnitude_fledge.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_fledge.csv'))
+    branch_power_vector_2_magnitude_opendss.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_opendss.csv'))
+    loss_active_fledge.to_csv(os.path.join(results_path, 'loss_active_fledge.csv'))
+    loss_active_opendss.to_csv(os.path.join(results_path, 'loss_active_opendss.csv'))
+    loss_reactive_fledge.to_csv(os.path.join(results_path, 'loss_reactive_fledge.csv'))
+    loss_reactive_opendss.to_csv(os.path.join(results_path, 'loss_reactive_opendss.csv'))
+    power_flow_solution_error.to_csv(os.path.join(results_path, 'power_flow_solution_error.csv'))
 
     # Plot results.
 

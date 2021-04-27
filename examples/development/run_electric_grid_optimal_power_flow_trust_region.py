@@ -3,7 +3,8 @@
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
+import plotly.express as px
+import plotly.graph_objects as go
 
 import fledge.config
 import fledge.data_interface
@@ -14,9 +15,9 @@ import fledge.utils
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_tanjongpagar'
 
-    results_path = fledge.utils.get_results_path('run_electric_grid_optimal_power_flow_trust_region', scenario_name)
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     fledge.data_interface.recreate_database()
@@ -84,7 +85,7 @@ def main():
             objective_power_flows.append(objective_power_flow)
 
         # Instantiate / reset optimization problem.
-        optimization_problem = pyo.ConcreteModel()
+        optimization_problem = fledge.utils.OptimizationProblem()
 
         # Define linear electric grid model variables.
         linear_electric_grid_model.define_optimization_variables(optimization_problem)
@@ -94,135 +95,122 @@ def main():
 
         # Define DER constraints.
         # TODO: DERs are currently assumed to be only loads, hence negative power values.
-        optimization_problem.der_constraints = pyo.ConstraintList()
         for der_index, der in enumerate(electric_grid_model.ders):
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[0, der]
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector[0, der_index]
                 <=
                 0.5 * np.real(electric_grid_model.der_power_vector_reference[der_index])
-                - np.real(der_power_vector_reference[der_index])
             )
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_active_power_vector_change[0, der]
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector[0, der_index]
                 >=
                 1.5 * np.real(electric_grid_model.der_power_vector_reference[der_index])
-                - np.real(der_power_vector_reference[der_index])
             )
             # Fixed power factor for reactive power based on nominal power factor.
-            optimization_problem.der_constraints.add(
-                optimization_problem.der_reactive_power_vector_change[0, der]
+            optimization_problem.constraints.append(
+                optimization_problem.der_reactive_power_vector[0, der_index]
                 ==
-                optimization_problem.der_active_power_vector_change[0, der]
+                optimization_problem.der_active_power_vector[0, der_index]
                 * np.imag(electric_grid_model.der_power_vector_reference[der_index])
                 / np.real(electric_grid_model.der_power_vector_reference[der_index])
             )
 
         # Define trust region constraints.
-        optimization_problem.trust_region_constraints = pyo.ConstraintList()
 
         # DER.
         # TODO: DERs are currently assumed to be only loads, hence negative power values.
         for der_index, der in enumerate(electric_grid_model.ders):
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.der_active_power_vector_change[0, der]
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector[0, der_index]
+                - np.real(electric_grid_model.der_power_vector_reference[der_index])
                 <=
                 -delta * np.real(electric_grid_model.der_power_vector_reference[der_index])
             )
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.der_active_power_vector_change[0, der]
+            optimization_problem.constraints.append(
+                optimization_problem.der_active_power_vector[0, der_index]
+                - np.real(electric_grid_model.der_power_vector_reference[der_index])
                 >=
                 delta * np.real(electric_grid_model.der_power_vector_reference[der_index])
             )
 
         # Voltage.
         for node_index, node in enumerate(electric_grid_model.nodes):
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.voltage_magnitude_vector_change[0, node]
+            optimization_problem.constraints.append(
+                optimization_problem.voltage_magnitude_vector[0, node_index]
+                - np.abs(electric_grid_model.node_voltage_vector_reference[node_index])
                 >=
                 -delta * np.abs(electric_grid_model.node_voltage_vector_reference[node_index])
             )
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.voltage_magnitude_vector_change[0, node]
+            optimization_problem.constraints.append(
+                optimization_problem.voltage_magnitude_vector[0, node_index]
+                - np.abs(electric_grid_model.node_voltage_vector_reference[node_index])
                 <=
                 delta * np.abs(electric_grid_model.node_voltage_vector_reference[node_index])
             )
 
         # Branch flows.
         for branch_index, branch in enumerate(electric_grid_model.branches):
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_1_squared_change[0, branch]
+            optimization_problem.constraints.append(
+                optimization_problem.branch_power_vector_1_squared_change[0, branch_index]
                 >=
                 -delta * np.abs(power_flow_solutions[0].branch_power_vector_1[branch_index] ** 2)
             )
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_1_squared_change[0, branch]
+            optimization_problem.constraints.append(
+                optimization_problem.branch_power_vector_1_squared_change[0, branch_index]
                 <=
                 delta * np.abs(power_flow_solutions[0].branch_power_vector_1[branch_index] ** 2)
             )
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_2_squared_change[0, branch]
+            optimization_problem.constraints.append(
+                optimization_problem.branch_power_vector_2_squared_change[0, branch_index]
                 >=
                 -delta * np.abs(power_flow_solutions[0].branch_power_vector_2[branch_index] ** 2)
             )
-            optimization_problem.trust_region_constraints.add(
-                optimization_problem.branch_power_vector_2_squared_change[0, branch]
+            optimization_problem.constraints.append(
+                optimization_problem.branch_power_vector_2_squared_change[0, branch_index]
                 <=
                 delta * np.abs(power_flow_solutions[0].branch_power_vector_2[branch_index] ** 2)
             )
 
         # Loss.
-        optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_active_change[0]
+        optimization_problem.constraints.append(
+            optimization_problem.loss_active[0]
+            - np.sum(np.real(power_flow_solutions[0].loss))
             >=
             -delta * np.sum(np.real(power_flow_solutions[0].loss))
         )
-        optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_active_change[0]
+        optimization_problem.constraints.append(
+            optimization_problem.loss_active[0]
+            - np.sum(np.real(power_flow_solutions[0].loss))
             <=
             delta * np.sum(np.real(power_flow_solutions[0].loss))
         )
-        optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_reactive_change[0]
+        optimization_problem.constraints.append(
+            optimization_problem.loss_reactive[0]
+            - np.sum(np.imag(power_flow_solutions[0].loss))
             >=
             -delta * np.sum(np.imag(power_flow_solutions[0].loss))
         )
-        optimization_problem.trust_region_constraints.add(
-            optimization_problem.loss_reactive_change[0]
+        optimization_problem.constraints.append(
+            optimization_problem.loss_reactive[0]
+            - np.sum(np.imag(power_flow_solutions[0].loss))
             <=
             delta * np.sum(np.imag(power_flow_solutions[0].loss))
         )
 
         # Define objective.
-        optimization_problem.objective = (
-            pyo.Objective(
-                expr=0.0,
-                sense=pyo.minimize
-            )
-        )
-        optimization_problem.objective.expr += (
+        optimization_problem.objective += (
             # DER active power.
             # TODO: DERs are currently assumed to be only loads, hence negative values.
-            -1.0 * sum(
-                optimization_problem.der_active_power_vector_change[0, der]
-                + np.real(der_power_vector_reference[der_index])
-                for der_index, der in enumerate(electric_grid_model.ders)
-            )
+            -1.0 * sum(sum(optimization_problem.der_active_power_vector))
         )
-        optimization_problem.objective.expr += (
+        optimization_problem.objective += (
             # Active loss.
-            optimization_problem.loss_active_change[0]
-            + np.sum(np.real(power_flow_solution.loss))
+            sum(sum(optimization_problem.loss_active))
         )
 
         # Solve optimization problem.
-        optimization_solver = pyo.SolverFactory(fledge.config.config['optimization']['solver_name'])
-        optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.config['optimization']['show_solver_output'])
+        optimization_problem.solve()
         optimization_problems.append(optimization_problem)
-        try:
-            assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-        except AssertionError:
-            raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-        # optimization_problem.display()
 
         # Obtain der power change value.
         der_active_power_vector_change = (
@@ -233,10 +221,12 @@ def main():
         )
         for der_index, der in enumerate(electric_grid_model.ders):
             der_active_power_vector_change[der_index] = (
-                optimization_problem.der_active_power_vector_change[0, der].value
+                optimization_problem.der_active_power_vector_change[0, der_index].value
+                - np.real(electric_grid_model.der_power_vector_reference[der_index])
             )
             der_reactive_power_vector_change[der_index] = (
-                optimization_problem.der_reactive_power_vector_change[0, der].value
+                optimization_problem.der_reactive_power_vector_change[0, der_index].value
+                - np.imag(electric_grid_model.der_power_vector_reference[der_index])
             )
         der_power_vector_change_max = (
             max(
@@ -272,7 +262,7 @@ def main():
                 + np.sum(np.real(power_flow_solution_candidate.loss))
             )
             objective_linear_model = (
-                pyo.value(optimization_problem.objective)
+                optimization_problem.objective.value
             )
 
             # Check trust-region range conditions.
@@ -299,19 +289,18 @@ def main():
     results = (
         linear_electric_grid_model.get_optimization_results(
             optimization_problem,
-            power_flow_solutions[0],
-            in_per_unit=True,
-            with_mean=True
+            power_flow_solutions[0]
         )
     )
 
     # Print results.
     print(results)
 
-    # Store results as CSV.
-    results.to_csv(results_path)
+    # Store results to CSV.
+    results.save(results_path)
 
     # Print results path.
+    fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

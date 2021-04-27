@@ -1,12 +1,18 @@
 """Utility functions module."""
 
+import copy
+import cvxpy as cp
 import datetime
+import dill
 import functools
+import glob
 import itertools
 import logging
 import numpy as np
 import os
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
 import re
 import time
 import typing
@@ -20,6 +26,195 @@ logger = fledge.config.get_logger(__name__)
 
 # Instantiate dictionary for execution time logging.
 log_times = dict()
+
+
+class ObjectBase(object):
+    """FLEDGE object base class, which extends the Python object base class.
+
+    - Requires all attributes, i.e. parameters or object variables, to be defined with type declaration at the
+      beginning of the class definition. Setting a value to an attribute which has not been defined will raise an error.
+      This is to ensure consistent definition structure of FLEDGE classes.
+    - String representation of the object is the concatenation of the string representation of all its attributes.
+      Thus, printing the object will print all its attributes.
+
+    Example:
+
+        Attributes should be defined in the beginning of the class definition as follows::
+
+            class ExampleClass(ObjectBase):
+
+                example_attribute1: str
+                example_attribute2: pd.DataFrame
+
+        In this case, ``example_attribute1`` and ``example_attribute2`` are valid attributes of the class.
+    """
+
+    def __setattr__(
+            self,
+            attribute_name,
+            value
+    ):
+
+        # Assert that attribute name is valid.
+        # - Valid attributes are those which are defined as results class attributes with type declaration.
+        if not (attribute_name in typing.get_type_hints(type(self))):
+            raise AttributeError(
+                f"Cannot set invalid attribute '{attribute_name}'. "
+                f"Please ensure that the attribute has been defined with type declaration in the class definition."
+            )
+
+        # Set attribute value.
+        super().__setattr__(attribute_name, value)
+
+    def __repr__(self) -> str:
+        """Obtain string representation."""
+
+        # Obtain attributes.
+        attributes = vars(self)
+
+        # Obtain representation string.
+        repr_string = ""
+        for attribute_name in attributes:
+            repr_string += f"{attribute_name} = \n{attributes[attribute_name]}\n"
+
+        return repr_string
+
+    def copy(self):
+        """Return a copy of this object. A new object will be created with a copy of the calling object’s attributes.
+        Modifications to the attributes of the copy will not be reflected in the original object.
+        """
+
+        return copy.deepcopy(self)
+
+
+class ResultsBase(ObjectBase):
+    """Results object base class."""
+
+    def __init__(
+            self,
+            **kwargs
+    ):
+
+        # Set all keyword arguments as attributes.
+        for attribute_name in kwargs:
+            self.__setattr__(attribute_name, kwargs[attribute_name])
+
+    def __getitem__(self, key):
+        # Enable dict-like attribute getting.
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        # Enable dict-like attribute setting.
+        self.__setattr__(key, value)
+
+    def update(
+            self,
+            other_results
+    ):
+
+        # Obtain attributes of other results object.
+        attributes = vars(other_results)
+
+        # Update attributes.
+        # - Existing attributes are overwritten with values from the other results object.
+        for attribute_name in attributes:
+            if attributes[attribute_name] is not None:
+                self.__setattr__(attribute_name, attributes[attribute_name])
+
+    def save(
+            self,
+            results_path: str
+    ):
+        """Store results to files at given results path.
+
+        - Each results variable / attribute will be stored as separate file with the attribute name as file name.
+        - Pandas Series / DataFrame are stored to CSV.
+        - Other objects are stored to pickle binary file (PKL).
+        """
+
+        # Obtain results attributes.
+        attributes = vars(self)
+
+        # Store each attribute to a separate file.
+        for attribute_name in attributes:
+            if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
+                # Pandas Series / DataFrame are stored to CSV.
+                attributes[attribute_name].to_csv(os.path.join(results_path, f'{attribute_name}.csv'))
+            else:
+                # Other objects are stored to pickle binary file (PKL).
+                with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
+                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+
+    def load(
+            self,
+            results_path: str
+    ):
+        """Load results from given path."""
+
+        # Obtain all CSV and PKL files at results path.
+        files = glob.glob(os.path.join(results_path, '*.csv')) + glob.glob(os.path.join(results_path, '*.pkl'))
+
+        # Load all files which correspond to valid attributes.
+        for file in files:
+
+            # Obtain file extension / attribute name.
+            file_extension = os.path.splitext(file)[1]
+            attribute_name = os.path.basename(os.path.splitext(file)[0])
+
+            # Load file and set attribute value.
+            if attribute_name in typing.get_type_hints(type(self)):
+                if file_extension.lower() == '.csv':
+                    value = pd.read_csv(file)
+                else:
+                    with open(file, 'rb') as input_file:
+                        value = dill.load(input_file)
+                self.__setattr__(attribute_name, value)
+            else:
+                # Files which do not match any valid results attribute are not loaded.
+                logger.debug(f"Skipping results file which does match any valid results attribute: {file}")
+
+        return self
+
+
+class OptimizationProblem(object):
+    """Optimization problem object for use with CVXPY."""
+
+    constraints: list
+    objective: cp.Expression
+    cvxpy_problem: cp.Problem
+
+    def __init__(self):
+
+        self.constraints = []
+        self.objective = cp.Constant(value=0.0)
+
+    def solve(
+            self,
+            keep_problem=False,
+            **kwargs
+    ):
+
+        # Instantiate CVXPY problem object.
+        if hasattr(self, 'cvxpy_problem') and keep_problem:
+            pass
+        else:
+            self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
+
+        # Solve optimization problem.
+        self.cvxpy_problem.solve(
+            solver=(
+                fledge.config.config['optimization']['solver_name'].upper()
+                if fledge.config.config['optimization']['solver_name'] is not None
+                else None
+            ),
+            verbose=fledge.config.config['optimization']['show_solver_output'],
+            **kwargs,
+            **fledge.config.solver_parameters
+        )
+
+        # Assert that solver exited with an optimal solution. If not, raise an error.
+        if not (self.cvxpy_problem.status == cp.OPTIMAL):
+            raise cp.SolverError(f"Solver termination status: {self.cvxpy_problem.status}")
 
 
 def starmap(
@@ -83,7 +278,23 @@ def log_time(
         label: str,
         logger_object: logging.Logger = logger
 ):
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
+    """Log start / end message and time duration for given label.
+
+    - When called with given label for the first time, will log start message.
+    - When called subsequently with the same / previously used label, will log end message and time duration since
+      logging the start message.
+    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
+      By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting `label`."
+    - End message: "Completed `label` in `duration` seconds."
+
+    Arguments:
+        label (str): Label for the start / end message.
+
+    Keyword Arguments:
+        logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
+            ``utils.logger``.
+    """
 
     time_now = time.time()
 
@@ -138,11 +349,8 @@ def get_index(
 
     # Assert that index is not empty.
     if raise_empty_index_error:
-        try:
-            assert len(index) > 0
-        except AssertionError:
-            logger.error(f"Empty index returned for: {levels_values}")
-            raise
+        if not (len(index) > 0):
+            raise ValueError(f"Empty index returned for: {levels_values}")
 
     return index
 
@@ -191,21 +399,24 @@ def get_timestamp(
 
 def get_results_path(
         base_name: str,
-        scenario_name: str
+        scenario_name: str = None
 ) -> str:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
     created on disk along with this.
+
+    - Non-alphanumeric characters are removed from `base_name` and `scenario_name`.
+    - If is a script file path or `__file__` is passed as `base_name`, the base file name without extension
+      will be taken as base name.
     """
 
+    # Preprocess results path name components, including removing non-alphanumeric characters.
+    base_name = re.sub(r'\W-+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
+    scenario_name = '' if scenario_name is None else re.sub(r'\W-+', '', scenario_name) + '_'
+    timestamp = fledge.utils.get_timestamp()
+
     # Obtain results path.
-    results_path = (
-        os.path.join(
-            fledge.config.config['paths']['results'],
-            # Remove non-alphanumeric characters, except `_`, then append timestamp string.
-            re.sub(r'\W+', '', f'{base_name}_{scenario_name}_') + fledge.utils.get_timestamp()
-        )
-    )
+    results_path = os.path.join(fledge.config.config['paths']['results'], f'{base_name}{scenario_name}{timestamp}')
 
     # Instantiate results directory.
     # TODO: Catch error if dir exists.
@@ -219,18 +430,23 @@ def get_alphanumeric_string(
 ):
     """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
 
-    return re.sub(r'\W+', '_', string).strip('_').lower()
+    return re.sub(r'\W-+', '_', string).strip('_').lower()
 
 
 def launch(path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
+    try:
+        assert os.path.exists(path)
+    except AssertionError:
+        logger.error(f'Cannot launch file or directory that does not exist: {path}')
+
     if sys.platform == 'win32':
         os.startfile(path)
     elif sys.platform == 'darwin':
-        subprocess.call(['open', path])
+        subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
-        subprocess.call(['xdg-open', path])
+        subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 @fledge.config.memoize('get_building_model')
@@ -238,3 +454,34 @@ def get_building_model(*args, **kwargs):
     """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
 
     return cobmo.building_model.BuildingModel(*args, **kwargs)
+
+
+def write_figure_plotly(
+        figure: go.Figure,
+        results_path: str,
+        file_format=fledge.config.config['plots']['file_format']
+):
+    """Utility function for writing / storing plotly figure to output file. File format can be given with
+    `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.
+
+    - `results_path` should be given as file name without file extension, because the file extension is appended
+      automatically based on given `file_format`.
+    - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'
+    """
+
+    if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
+        pio.write_image(
+            figure,
+            f"{results_path}.{file_format}",
+            width=fledge.config.config['plots']['plotly_figure_width'],
+            height=fledge.config.config['plots']['plotly_figure_height']
+        )
+    elif file_format in ['html']:
+        pio.write_html(figure, f"{results_path}.{file_format}")
+    elif file_format in ['json']:
+        pio.write_json(figure, f"{results_path}.{file_format}")
+    else:
+        raise ValueError(
+            f"Invalid `file_format` for `write_figure_plotly`: {file_format}"
+            f" - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'"
+        )

@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import multiprocess
 import os
 import pandas as pd
-import typing
+import plotly.graph_objects as go
+import plotly.io as pio
 import yaml
 
 
@@ -28,8 +29,9 @@ def get_config() -> dict:
     if not os.path.isfile(os.path.join(base_path, 'config.yml')):
         with open(os.path.join(base_path, 'config.yml'), 'w') as file:
             file.write(
-                "# Local configuration values.\n"
-                "# - Default values can be found in `fledge/config_default.yml`\n"
+                "# Local configuration parameters.\n"
+                "# - Configuration parameters and their defaults are defined in `fledge/config_default.yml`\n"
+                "# - Copy from `fledge/config_default.yml` and modify parameters here to set the local configuration.\n"
                 "paths:\n"
                 "  additional_data: []\n"
             )
@@ -151,11 +153,13 @@ if config['caching']['enable']:
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])
-matplotlib.rc('image', cmap=config['plots']['colormap'])
-matplotlib.rc('font', family=config['plots']['font_family'])
+matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
+matplotlib.rc('figure', figsize=config['plots']['matplotlib_figure_size'])
+matplotlib.rc('font', family=config['plots']['matplotlib_font_family'])
+matplotlib.rc('image', cmap=config['plots']['matplotlib_colormap'])
 matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
 matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
-matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
+matplotlib.rc('savefig', format=config['plots']['file_format'])
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.
@@ -168,3 +172,31 @@ try:
 except ValueError:
     # For compatibility with older versions of pandas.
     pd.set_option('display.max_colwidth', 0)
+
+# Modify plotly default settings.
+pio.templates.default = go.layout.Template(pio.templates['simple_white'])
+pio.templates.default.layout.update(
+    font=go.layout.Font(
+        family=config['plots']['plotly_font_family'],
+        size=config['plots']['plotly_font_size']
+    ),
+    legend=go.layout.Legend(borderwidth=1),
+    xaxis=go.layout.XAxis(showgrid=True),
+    yaxis=go.layout.YAxis(showgrid=True)
+)
+pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots']['plotly_figure_width']
+pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']
+
+# Modify optimization solver settings.
+if config['optimization']['solver_name'] == 'cplex':
+    solver_parameters = dict(cplex_params=dict())
+    if config['optimization']['time_limit'] is not None:
+        solver_parameters['cplex_params']['timelimit'] = config['optimization']['time_limit']
+elif config['optimization']['solver_name'] == 'gurobi':
+    solver_parameters = dict()
+    if config['optimization']['time_limit'] is not None:
+        solver_parameters['TimeLimit'] = config['optimization']['time_limit']
+elif config['optimization']['solver_name'] == 'osqp':
+    solver_parameters = dict(max_iter=1000000)
+else:
+    solver_parameters = dict()

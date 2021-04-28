@@ -1,3 +1,2 @@
-line_type,phase_1_conductor_type,phase_2_conductor_type,phase_3_conductor_type,neutral_conductor_type,soil_resistivity,phasing,spacing_id,phase_1_x,phase_1_y,phase_2_x,phase_2_y,phase_3_x,phase_3_y,neutral_x,neutral_y
-assembly_test_linetype_1,test_conductor_1,test_conductor_1,test_conductor_1,test_conductor_2,100.0,1 2 3 N,500,0.1,0.5,0.0,0.5,0.1,0.6,0.7,0.8
-assembly_test_linetype_2,test_conductor_1,test_conductor_1,test_conductor_1,test_conductor_2,100.0,2 1 3 N,500,0.1,0.5,0.0,0.5,0.1,0.6,0.7,0.8
+line_type,phase_1_conductor_id,phase_2_conductor_id,phase_3_conductor_id,neutral_conductor_id,soil_resistivity,phasing,spacing_id,phase_1_x,phase_1_y,phase_2_x,phase_2_y,phase_3_x,phase_3_y,neutral_x,neutral_y
+assembly_test_linetype_1,1,1,1,1,100,1 2 3 N,500,-2.1336,8.8392,-1.3716,8.8392,0,8.8392,-0.9144,7.62

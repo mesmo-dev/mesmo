@@ -228,6 +228,7 @@ class ScenarioData(object):
             excluded_columns = ['parameter_set']
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_id')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
 
@@ -436,14 +437,14 @@ class ElectricGridData(object):
         )
         self.electric_grid_line_types_assembly.index = self.electric_grid_line_types_assembly['line_type']
         self.electric_grid_line_types_conductors = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+            pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types_conductors
                 """,
                 con=database_connection
-            ))
+            )
         )
-        self.electric_grid_line_types_conductors.index = self.electric_grid_line_types_conductors['conductor_type']
+        self.electric_grid_line_types_conductors.index = self.electric_grid_line_types_conductors['conductor_id']
         self.electric_grid_line_types_matrices = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """

@@ -340,7 +340,9 @@ class ElectricGridModel(object):
         # Arif: New line type definitions below.
         ################################################################################################################
 
+        breakpoint()
         for line_type in electric_grid_data.electric_grid_line_types_assembly.index:
+            breakpoint()
 
             print(f"line_type = {line_type}")
 
@@ -354,19 +356,90 @@ class ElectricGridModel(object):
 
             # Selecting rows from tables using `.loc`.
             assembly_data_row = electric_grid_data.electric_grid_line_types_assembly.loc[line_type, :]
-            phase_1_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_1_conductor_type'], :]
-            phase_2_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_2_conductor_type'], :]
-            phase_3_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_3_conductor_type'], :]
-            neutral_conductor_data_row = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['neutral_conductor_type'], :]
+            phase_1_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_1_conductor_id'], :]
+            phase_2_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_2_conductor_id'], :]
+            phase_3_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_3_conductor_id'], :]
+            neutral_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['neutral_conductor_id'], :]
+            
+            if pd.isna(assembly_data_row.phase_3_conductor_id):
+                print()
+            
+            pd.Series(['1', 'X', '3']).isin(assembly_data_row.loc['phasing'].split(' ')).all()
+            
+            phasing = np.array(assembly_data_row.loc['phasing'].split(' '))
+            np.where('0' == phasing)
 
             # Selecting elements from rows using `.at`.
             frequency = electric_grid_data.electric_grid.at['base_frequency']
-            phase_2_conductor_resistance = phase_2_conductor_data_row.at['resistance']
+            # phase_2_conductor_resistance = phase_2_conductor_data_row.at['resistance']
 
             # Selecting elements from tables using `.at`.
-            phase_3_conductor_resistance = electric_grid_data.electric_grid_line_types_conductors.at[assembly_data_row.at['phase_3_conductor_type'], 'resistance']
+            # phase_3_conductor_resistance = electric_grid_data.electric_grid_line_types_conductors.at[assembly_data_row.at['phase_3_conductor_type'], 'resistance']
+            
+            # Just print the impedance matrix
+            
+            # Calculate the euclidean distance between each conductors
+            distance_ab = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.phase_2_x)**2 + (assembly_data_row.phase_1_y-assembly_data_row.phase_2_y)**2
+                )
+            distance_ac = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.phase_3_x)**2 + (assembly_data_row.phase_1_y-assembly_data_row.phase_3_y)**2
+                )
+            distance_an = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.neutral_x)**2 + (assembly_data_row.phase_1_y-assembly_data_row.neutral_y)**2
+                )
+            distance_bc = np.sqrt(
+                (assembly_data_row.phase_2_x-assembly_data_row.phase_3_x)**2 + (assembly_data_row.phase_2_y-assembly_data_row.phase_3_y)**2
+                )
+            distance_bn = np.sqrt(
+                (assembly_data_row.phase_2_x-assembly_data_row.neutral_x)**2 + (assembly_data_row.phase_2_y-assembly_data_row.neutral_y)**2
+                )
+            distance_cn = np.sqrt(
+                (assembly_data_row.phase_3_x-assembly_data_row.neutral_x)**2 + (assembly_data_row.phase_3_y-assembly_data_row.neutral_y)**2
+                )
 
+            phase_1_conductor_resistance = phase_1_conductor_data.conductor_resistance/1609.34 # converted from miles to meter
+            phase_2_conductor_resistance = phase_2_conductor_data.conductor_resistance/1609.34 # converted from miles to meter
+            phase_3_conductor_resistance = phase_3_conductor_data.conductor_resistance/1609.34 # converted from miles to meter
+            neutral_conductor_resistance = neutral_conductor_data.conductor_resistance/1609.34 # converted from miles to meter
+            
+            phase_1_conductor_geometric_mean_radius = phase_1_conductor_data.conductor_geometric_mean_radius*0.3048 # converted from feet to meter
+            phase_2_conductor_geometric_mean_radius = phase_2_conductor_data.conductor_geometric_mean_radius*0.3048 # converted from feet to meter
+            phase_3_conductor_geometric_mean_radius = phase_3_conductor_data.conductor_geometric_mean_radius*0.3048 # converted from feet to meter
+            neutral_conductor_geometric_mean_radius = neutral_conductor_data.conductor_geometric_mean_radius*0.3048 # converted from miles to meter
+            
+            soil_resistivity = assembly_data_row.soil_resistivity # in ohm-meters
+            De = 0.305*2160*np.sqrt(soil_resistivity/frequency) # in meters # De is equivalent depth of earth from Kersting
+            Z11 = phase_1_conductor_resistance + 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/phase_1_conductor_geometric_mean_radius) + np.log(De)) # in ohm / meters
+            Z12 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_ab) + np.log(De)) # in ohm / meters
+            Z13 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_ac) + np.log(De)) # in ohm / meters
+            Z1n = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_an) + np.log(De)) # in ohm / meters
+            
+            Z21 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_ab) + np.log(De)) # in ohm / meters
+            Z22 = phase_2_conductor_resistance + 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/phase_2_conductor_geometric_mean_radius) + np.log(De)) # in ohm / meters
+            Z23 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_bc) + np.log(De)) # in ohm / meters
+            Z2n = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_bn) + np.log(De)) # in ohm / meters
+            
+            Z31 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_ac) + np.log(De)) # in ohm / meters
+            Z32 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_bc) + np.log(De)) # in ohm / meters
+            Z33 = phase_3_conductor_resistance + 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/phase_3_conductor_geometric_mean_radius) + np.log(De)) # in ohm / meters
+            Z3n = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_cn) + np.log(De)) # in ohm / meters
+            
+            Zn1 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_an) + np.log(De)) # in ohm / meters
+            Zn2 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_bn) + np.log(De)) # in ohm / meters
+            Zn3 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_cn) + np.log(De)) # in ohm / meters
+            Znn = neutral_conductor_resistance + 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/neutral_conductor_geometric_mean_radius) + np.log(De)) # in ohm / meters
+            
             breakpoint()
+
+            # globals()['Z_' + line_type] = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
+            temp_Z = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
+           
+            # Kron's reduction
+            Zabc = temp_Z[0:3][:,0:3] # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
+            Zabcn = temp_Z[0:3][:,3]    
+            Znabc = temp_Z[3][0:3]    
+            Z_prim = Zabc-Zabcn*np.reciprocal(Znn)*Znabc
 
         ################################################################################################################
         # Arif: New line type definitions above.

@@ -78,11 +78,11 @@ CREATE TABLE electric_grid_line_types (
 );
 CREATE TABLE electric_grid_line_types_assembly (
     line_type TEXT,
-    phase_1_conductor_type TEXT,
-    phase_2_conductor_type TEXT,
-    phase_3_conductor_type TEXT,
-    neutral_conductor_type TEXT,
-    soil_resistivity TEXT,
+    phase_1_conductor_id TEXT,
+    phase_2_conductor_id TEXT,
+    phase_3_conductor_id TEXT,
+    neutral_conductor_id TEXT,
+    soil_resistivity REAL,
     phasing TEXT,
     spacing_id TEXT,
     phase_1_x REAL,
@@ -96,11 +96,16 @@ CREATE TABLE electric_grid_line_types_assembly (
     PRIMARY KEY(line_type)
 );
 CREATE TABLE electric_grid_line_types_conductors (
+    conductor_id TEXT,
+    conductor_size TEXT,
+    conductor_stranding TEXT,
+    conductor_material TEXT,
+    conductor_diameter REAL,
+    conductor_geometric_mean_radius REAL,
+    conductor_resistance REAL,
+    conductor_current_capacity REAL,
     conductor_type TEXT,
-    resistance TEXT,
-    capacitance TEXT,
-    geometric_mean_radius TEXT,
-    PRIMARY KEY(conductor_type)
+    PRIMARY KEY(conductor_id)
 );
 CREATE TABLE electric_grid_line_types_matrices (
     line_type TEXT,

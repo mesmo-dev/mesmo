@@ -14,7 +14,9 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
-    # stochastic_scenarios = ['no_reserve']
+    variable_name_vector = ['energy', 'up_reserve', 'down_reserve', 'der_active_power', 'der_reactive_power',
+                            'reactive_power_source', 'der_voltage_magnitude_no_reserve', 'der_control_vector',
+                            'der_output_vector', 'der_state_vector']
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
@@ -34,6 +36,38 @@ def main():
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
 
+    # Define bids quantity variable.
+    optimization_problem.no_reserve = (
+        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
+    )
+    optimization_problem.up_reserve = (
+        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
+    )
+    optimization_problem.down_reserve = (
+        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
+    )
+
+    optimization_problem.s1_index_locator = {}
+    # vector definition
+    optimization_problem.variable_vector_s1 = optimization_problem.no_reserve
+    # location specifier
+    optimization_problem.s1_index_locator['energy'] = [0, optimization_problem.variable_vector_s1.size-1]
+    # vector definition
+
+    temp_size = optimization_problem.variable_vector_s1.size
+    optimization_problem.variable_vector_s1 = cp.vstack(
+        (optimization_problem.variable_vector_s1, optimization_problem.up_reserve))
+    # location specifier
+    optimization_problem.s1_index_locator['up_reserve'] = [temp_size,
+                                                                optimization_problem.variable_vector_s1.size - 1]
+    # vector definition
+    temp_size = optimization_problem.variable_vector_s1.size
+    optimization_problem.variable_vector_s1 = cp.vstack(
+        (optimization_problem.variable_vector_s1, optimization_problem.down_reserve))
+    # location specifier
+    optimization_problem.s1_index_locator['down_reserve'] = [temp_size,
+                                                                optimization_problem.variable_vector_s1.size - 1]
+
     # Define model variables.
     # Define flexible DER state space variables.
     optimization_problem.state_vector = {}
@@ -50,6 +84,7 @@ def main():
                     len(der_model_set.flexible_der_models[der_name].states)
                 ))
             )
+
             optimization_problem.control_vector[der_name, stochastic_scenario] = (
                 cp.Variable((
                     len(der_model_set.flexible_der_models[der_name].timesteps),
@@ -63,6 +98,41 @@ def main():
                 ))
             )
 
+            # state vector in s1
+            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
+                temp_size = optimization_problem.variable_vector_s1.size
+                optimization_problem.variable_vector_s1 = cp.vstack((
+                    optimization_problem.variable_vector_s1, cp.Variable((
+                    len(der_model_set.flexible_der_models[der_name].states),1))
+                ))
+
+                # location specifier
+                optimization_problem.s1_index_locator[der_name, 'der_state_vector', stochastic_scenario,
+                                                      str(time_index)] = [temp_size, optimization_problem.variable_vector_s1.size - 1]
+            # control vector in s1
+            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
+                temp_size = optimization_problem.variable_vector_s1.size
+                optimization_problem.variable_vector_s1 = cp.vstack((
+                    optimization_problem.variable_vector_s1, cp.Variable((
+                    len(der_model_set.flexible_der_models[der_name].controls),1))
+                ))
+
+                # location specifier
+                optimization_problem.s1_index_locator[der_name, 'der_control_vector', stochastic_scenario,
+                                                      str(time_index)] = [temp_size, optimization_problem.variable_vector_s1.size - 1]
+
+            # output vector in s1
+            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
+                temp_size = optimization_problem.variable_vector_s1.size
+                optimization_problem.variable_vector_s1 = cp.vstack((
+                    optimization_problem.variable_vector_s1, cp.Variable((
+                    len(der_model_set.flexible_der_models[der_name].outputs),1))
+                ))
+
+                # location specifier
+                optimization_problem.s1_index_locator[der_name, 'der_output_vector', stochastic_scenario,
+                                                      str(time_index)] = [temp_size, optimization_problem.variable_vector_s1.size - 1]
+
     for stochastic_scenario in stochastic_scenarios:
         # Define DER power vector variables.
         optimization_problem.der_active_power_vector[stochastic_scenario] = (
@@ -72,16 +142,7 @@ def main():
             cp.Variable((len(der_model_set.timesteps), len(der_model_set.electric_ders)))
         )
 
-    # Define bids quantity variable.
-    optimization_problem.no_reserve = (
-        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    )
-    optimization_problem.up_reserve = (
-        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    )
-    optimization_problem.down_reserve = (
-        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    )
+
 
     # Define node voltage variable.
     optimization_problem.node_voltage_magnitude_vector = dict.fromkeys(stochastic_scenarios)

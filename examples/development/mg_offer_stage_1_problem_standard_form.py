@@ -449,13 +449,54 @@ def main():
     A_1 = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
     b_1 = np.zeros((1, A_1_column_number))
     # standard form constr definition
+    # To do - B vector definition
 
-    # constr 12 b)
     for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
+        # constr 12 b)
         A_1[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
+        A_1[time_index,
+        optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][0]:
+        optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][
+            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
 
-        A_1[time_index, optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][0]:optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][1]+1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+    # constr 12 c)
+    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
+    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
+        A_1_temp[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
+        A_1_temp[time_index, optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = 1
+        A_1_temp[time_index,
+        optimization_problem.s1_index_locator['der_active_power_vector', 'up_reserve', str(time_index)][0]:
+        optimization_problem.s1_index_locator['der_active_power_vector', 'up_reserve', str(time_index)][
+            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
 
+    A_1 = cp.vstack((A_1, A_1_temp))
+
+    # constr 12 d)
+    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
+    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
+        A_1_temp[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
+        A_1_temp[time_index, optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = -1
+        A_1_temp[time_index,
+        optimization_problem.s1_index_locator['der_active_power_vector', 'down_reserve', str(time_index)][0]:
+        optimization_problem.s1_index_locator['der_active_power_vector', 'down_reserve', str(time_index)][
+            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+
+    A_1 = cp.vstack((A_1, A_1_temp))
+
+    # constr 12 g)
+    # V^ref * Vm - M^vp * p^ref * p^der - M^vq * q^ref * q^der = -(M^vp*p^* + M^vq*q^*)
+
+    for stochastic_scenario in stochastic_scenarios:
+        for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
+            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
+            # voltage magnitude coefficient
+            A_1_temp[:,
+                     optimization_problem.s1_index_locator['node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
+                     optimization_problem.s1_index_locator['node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
+                         1] + 1] = np.diagflat(np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
+            # active power contribution: to do
+
+            A_1 = cp.vstack((A_1, A_1_temp))
 
     # Solve optimization problem.
     optimization_problem.solve()

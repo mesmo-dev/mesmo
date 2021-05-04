@@ -360,14 +360,6 @@ class ElectricGridModel(object):
             phase_2_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_2_conductor_id'], :]
             phase_3_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['phase_3_conductor_id'], :]
             neutral_conductor_data = electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data_row.at['neutral_conductor_id'], :]
-            
-            if pd.isna(assembly_data_row.phase_3_conductor_id):
-                print()
-            
-            pd.Series(['1', 'X', '3']).isin(assembly_data_row.loc['phasing'].split(' ')).all()
-            
-            phasing = np.array(assembly_data_row.loc['phasing'].split(' '))
-            np.where('0' == phasing)
 
             # Selecting elements from rows using `.at`.
             frequency = electric_grid_data.electric_grid.at['base_frequency']
@@ -429,17 +421,140 @@ class ElectricGridModel(object):
             Zn2 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_bn) + np.log(De)) # in ohm / meters
             Zn3 = 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/distance_cn) + np.log(De)) # in ohm / meters
             Znn = neutral_conductor_resistance + 9.86*10**(-7)*frequency + 1j*2*np.pi*frequency*2*10**(-7)*(np.log(1/neutral_conductor_geometric_mean_radius) + np.log(De)) # in ohm / meters
-            
+
+            temp_Z_prim = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
+
+
             breakpoint()
+            find_conductor_a = assembly_data_row.phasing.find('1')
+            find_conductor_a = -1
+            find_conductor_b = assembly_data_row.phasing.find('2')
+            find_conductor_c = assembly_data_row.phasing.find('3')
+            find_conductor_n = assembly_data_row.phasing.find('N')
+            to_remove = []
+            not_to_remove = []
+            if (find_conductor_a + find_conductor_b + find_conductor_c + find_conductor_n) >= 12:  # If all conductors are present
+                # Kron's reduction
+                Zabc = temp_Z_prim[0:3][:, 0:3]  # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
+                Zabcn = temp_Z_prim[0:3][:, 3]
+                Znabc = temp_Z_prim[3][0:3]
+                Z_prim = Zabc - Zabcn * np.reciprocal(Znn) * Znabc
+            if find_conductor_a == -1:
+                to_remove.append(0)
+            if find_conductor_a != -1:
+                not_to_remove.append(0)
+            if find_conductor_b == -1:
+                to_remove.append(1)
+            if find_conductor_b != -1:
+                not_to_remove.append(1)
+            if find_conductor_c == -1:
+                to_remove.append(2)
+            if find_conductor_c != -1:
+                not_to_remove.append(2)
+            if find_conductor_n == -1:
+                to_remove.append(3)
+            temp_Z_prim = np.delete(temp_Z_prim, to_remove, 1)
+            temp_Z_prim = np.delete(temp_Z_prim, to_remove, 0)
+
+            if find_conductor_n == -1:
+                Z_prim
+            else:
+                Znn = temp_Z_prim[-1, -1]
+                Zabc = temp_Z_prim[0:len(temp_Z_prim) - 1][:,0:len(temp_Z_prim) - 1]  # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
+                Zabcn = temp_Z_prim[0:len(temp_Z_prim) - 1][:, len(temp_Z_prim) - 1]
+                Znabc = temp_Z_prim[len(temp_Z_prim) - 1][0:len(temp_Z_prim) - 1]
+                Z_prim = Zabc - Zabcn * np.reciprocal(Znn) * Znabc
+                temp_Z_prim_zeros = np.zeros((3, 3),dtype = 'complex_')
+                for i in range(len(Z_prim)):
+                    for j in range(len(Z_prim)):
+                        temp_Z_prim_zeros[not_to_remove[i], not_to_remove[j]] = Z_prim[i, j]
+            Z_prim = temp_Z_prim_zeros
 
             # globals()['Z_' + line_type] = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
-            temp_Z = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
-           
-            # Kron's reduction
-            Zabc = temp_Z[0:3][:,0:3] # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
-            Zabcn = temp_Z[0:3][:,3]    
-            Znabc = temp_Z[3][0:3]    
-            Z_prim = Zabc-Zabcn*np.reciprocal(Znn)*Znabc
+
+            resistance_matrix = np.real(Z_prim)
+            reactance_matrix = np.imag(Z_prim)
+
+            # Start of Capacitance Matrix
+            # Calculate the euclidean distance between each conductor and their images
+            distance_a_image_a = np.abs(2*assembly_data_row.phase_1_y)
+            distance_b_image_b = np.abs(2*assembly_data_row.phase_2_y)
+            distance_c_image_c = np.abs(2*assembly_data_row.phase_3_y)
+            distance_n_image_n = np.abs(2*assembly_data_row.neutral_y)
+
+            distance_a_image_b = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.phase_2_x)**2 + (2*assembly_data_row.phase_2_y)**2
+                )
+            distance_a_image_c = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.phase_3_x)**2 + (2*assembly_data_row.phase_3_y)**2
+                )
+            distance_a_image_n = np.sqrt(
+                (assembly_data_row.phase_1_x-assembly_data_row.neutral_x)**2 + (2*assembly_data_row.neutral_y)**2
+                )
+            distance_b_image_c = np.sqrt(
+                (assembly_data_row.phase_2_x-assembly_data_row.phase_3_x)**2 + (2*assembly_data_row.phase_3_y)**2
+                )
+            distance_b_image_n = np.sqrt(
+                (assembly_data_row.phase_2_x-assembly_data_row.neutral_x)**2 + (2*assembly_data_row.neutral_y)**2
+                )
+            distance_c_image_n = np.sqrt(
+                (assembly_data_row.phase_3_x-assembly_data_row.neutral_x)**2 + (2*assembly_data_row.neutral_y)**2
+                )
+
+            eta = 8.85 * 10 ** (-12) # permittivity of the medium
+            P11 = 1/(2*np.pi*eta) * np.log( distance_a_image_a / (phase_1_conductor_data.conductor_diameter/2*0.0254) ) # in meter / Farad | diameter changed to radius and from inch to meter
+            P12 = 1/(2*np.pi*eta) * np.log( distance_a_image_b / distance_ab ) # in meter / Farad
+            P13 = 1/(2*np.pi*eta) * np.log( distance_a_image_c / distance_ac ) # in meter / Farad
+            P1n = 1/(2*np.pi*eta) * np.log( distance_a_image_n / distance_an ) # in meter / Farad
+
+            P21 = 1/(2*np.pi*eta) * np.log( distance_a_image_b / distance_ab ) # in meter / Farad
+            P22 = 1/(2*np.pi*eta) * np.log( distance_b_image_b / (phase_2_conductor_data.conductor_diameter/2*0.0254) ) # in meter / Farad | diameter changed to radius and from inch to meter
+            P23 = 1/(2*np.pi*eta) * np.log( distance_b_image_c / distance_bc ) # in meter / Farad
+            P2n = 1/(2*np.pi*eta) * np.log( distance_b_image_n / distance_bn ) # in meter / Farad
+
+            P31 = 1/(2*np.pi*eta) * np.log( distance_a_image_c / distance_ac ) # in meter / Farad
+            P32 = 1/(2*np.pi*eta) * np.log( distance_b_image_c / distance_bc ) # in meter / Farad
+            P33 = 1/(2*np.pi*eta) * np.log( distance_c_image_c / (phase_3_conductor_data.conductor_diameter/2*0.0254) ) # in meter / Farad | diameter changed to radius and from inch to meter
+            P3n = 1/(2*np.pi*eta) * np.log( distance_c_image_n / distance_cn ) # in meter / Farad
+
+            Pn1 = 1/(2*np.pi*eta) * np.log( distance_a_image_n / distance_an ) # in meter / Farad
+            Pn2 = 1/(2*np.pi*eta) * np.log( distance_b_image_n / distance_bn ) # in meter / Farad
+            Pn3 = 1/(2*np.pi*eta) * np.log( distance_c_image_n / distance_cn ) # in meter / Farad
+            Pnn = 1/(2*np.pi*eta) * np.log( distance_n_image_n / (neutral_conductor_data.conductor_diameter/2*0.0254) ) # in meter / Farad | diameter changed to radius and from inch to meter
+
+            temp_P_prim = np.array([[P11, P12, P13, P1n], [P21, P22, P23, P2n], [P31, P32, P33, P3n], [Pn1, Pn2, Pn3, Pnn]])
+
+            if (find_conductor_a + find_conductor_b + find_conductor_c + find_conductor_n) >= 12:  # If all conductors are present
+                # Kron's reduction
+                Pabc = temp_P_prim[0:3][:, 0:3]  # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
+                Pabcn = temp_P_prim[0:3][:, 3]
+                Pnabc = temp_P_prim[3][0:3]
+                P_prim = Pabc - Pabcn * np.reciprocal(Pnn) * Pnabc
+
+            temp_P_prim = np.delete(temp_P_prim, to_remove, 1)
+            temp_P_prim = np.delete(temp_P_prim, to_remove, 0)
+
+            if find_conductor_n == -1:
+                P_prim
+            else:
+                Pnn = temp_P_prim[-1, -1]
+                Pabc = temp_P_prim[0:len(temp_P_prim) - 1][:,0:len(temp_P_prim) - 1]  # in matlab a(1:3,5:9) = in numpy a[0:3][:,4:9]
+                Pabcn = temp_P_prim[0:len(temp_P_prim) - 1][:, len(temp_P_prim) - 1]
+                Pnabc = temp_P_prim[len(temp_P_prim) - 1][0:len(temp_P_prim) - 1]
+                P_prim = Pabc - Pabcn * np.reciprocal(Pnn) * Pnabc
+                capacitance_matrix = np.linalg.inv(P_prim)  # Farad / meter
+                temp_C_prim_zeros = np.zeros((3, 3),dtype = 'complex_')
+                for i in range(len(P_prim)):
+                    for j in range(len(P_prim)):
+                        temp_C_prim_zeros[not_to_remove[i], not_to_remove[j]] = capacitance_matrix[i, j]
+            capacitance_matrix = temp_C_prim_zeros
+
+            breakpoint()
+
+#                temp_P1 = np.insert(P_prim, to_remove, 0, 0)
+#                temp_P1 = np.insert(P_prim, to_remove, 0, 1)
+
+
 
         ################################################################################################################
         # Arif: New line type definitions above.

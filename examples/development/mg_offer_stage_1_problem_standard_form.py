@@ -447,9 +447,9 @@ def main():
     # initialise A_1 definition
     A_1_column_number = optimization_problem.variable_vector_s1.size
     A_1 = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    b_1 = np.zeros((1, A_1_column_number))
+    b_1 = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
     # standard form constr definition
-    # To do - B vector definition
+    # To do - b_1 vector definition
 
     for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
         # constr 12 b)
@@ -469,7 +469,8 @@ def main():
         optimization_problem.s1_index_locator['der_active_power_vector', 'up_reserve', str(time_index)][
             1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
 
-    A_1 = cp.vstack((A_1, A_1_temp))
+    b_1 = np.vstack((b_1, np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))))
+    A_1 = np.vstack((A_1, A_1_temp))
 
     # constr 12 d)
     A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
@@ -481,7 +482,8 @@ def main():
         optimization_problem.s1_index_locator['der_active_power_vector', 'down_reserve', str(time_index)][
             1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
 
-    A_1 = cp.vstack((A_1, A_1_temp))
+    b_1 = np.vstack((b_1, np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))))
+    A_1 = np.vstack((A_1, A_1_temp))
 
     # constr 12 g)
     # V^ref * Vm - M^vp * p^ref * p^der - M^vq * q^ref * q^der = -(M^vp*p^* + M^vq*q^*)
@@ -494,9 +496,56 @@ def main():
                      optimization_problem.s1_index_locator['node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
                      optimization_problem.s1_index_locator['node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
                          1] + 1] = np.diagflat(np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
-            # active power contribution: to do
+            # active power contribution:
+            A_1_temp[:,
+            optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][0]:
+            optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][
+                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active @ np.diagflat(
+                np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
+            # reactive power contribution:
+            A_1_temp[:,
+            optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][0]:
+            optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][
+                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ np.diagflat(
+                np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
 
-            A_1 = cp.vstack((A_1, A_1_temp))
+            active_reference_point_temp = np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())])
+            reactive_reference_point_temp = np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())])
+            b_1_temp = -(linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                         @ active_reference_point_temp.T +
+                         linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ reactive_reference_point_temp.T)
+            b_1 = np.vstack((b_1, b_1_temp))
+            A_1 = np.vstack((A_1, A_1_temp))
+
+    # constr 12 i) - 12k) To do
+    # Define DER constraints.
+    for stochastic_scenario in stochastic_scenarios:
+        for der_name, der_model in der_model_set.der_models.items():
+            # Fixed DERs.
+            if issubclass(type(der_model), fledge.der_models.FixedDERModel):
+                if der_model.is_electric_grid_connected:
+
+
+            # TO DO
+
+                    optimization_problem.constraints.append(
+                        optimization_problem.der_active_power_vector[stochastic_scenario][
+                        :, der_model.electric_grid_der_index
+                        ]
+                        ==
+                        np.transpose([der_model.active_power_nominal_timeseries.values])
+                        / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
+                    )
+                    optimization_problem.constraints.append(
+                        optimization_problem.der_reactive_power_vector[stochastic_scenario][
+                        :, der_model.electric_grid_der_index
+                        ]
+                        ==
+                        np.transpose([der_model.reactive_power_nominal_timeseries.values])
+                        / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
+                    )
+
+
 
     # Solve optimization problem.
     optimization_problem.solve()

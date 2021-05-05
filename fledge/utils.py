@@ -261,10 +261,11 @@ def log_time(
     - When called with given label for the first time, will log start message.
     - When called subsequently with the same / previously used label, will log end message and time duration since
       logging the start message.
-    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
-      By default, uses ``utils.logger`` as logger.
-    - Start message: "Starting `label`."
-    - End message: "Completed `label` in `duration` seconds."
+    - The log level for start / end messages can be given as keyword argument, By default, messages are logged as
+      debug messages.
+    - The logger object can be given as keyword argument. By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting ``label``."
+    - End message: "Completed ``label`` in ``duration`` seconds."
 
     Arguments:
         label (str): Label for the start / end message.

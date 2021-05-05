@@ -35,7 +35,7 @@ def main(
     # 3 - constrained thermal grid pressure head,
     # 4 - constrained electric grid branch power,
     # 5 - constrained electric grid voltage
-    scenario_name = 'paper_2020_3'
+    scenario_name = 'paper_2020_2'
 
     # Obtain results path.
     results_path = (

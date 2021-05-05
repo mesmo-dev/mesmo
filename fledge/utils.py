@@ -16,6 +16,7 @@ import plotly.io as pio
 import re
 import time
 import typing
+import scipy.sparse
 import subprocess
 import sys
 
@@ -215,6 +216,250 @@ class OptimizationProblem(object):
         # Assert that solver exited with an optimal solution. If not, raise an error.
         if not (self.cvxpy_problem.status == cp.OPTIMAL):
             raise cp.SolverError(f"Solver termination status: {self.cvxpy_problem.status}")
+
+
+class StandardForm(object):
+    """Standard form object for linear program, which is defined as ``A @ x <= b``."""
+
+    variables: pd.Index
+    constraints: pd.Index
+    a_dict: dict
+    b_dict: dict
+
+    def __init__(self):
+
+        # Instantiate index sets.
+        # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
+        # - Constraints are instantiated with 'constraint_id' keys.
+        self.variables = pd.MultiIndex.from_arrays([[], []], names=['name', 'timestep'])
+        self.constraints = pd.Index([], name='constraint_id')
+
+        # Instantiate A matrix / b vector dictionaries.
+        # - Final matrix / vector are only created in ``get_a_matrix()`` and ``get_b_vector()``.
+        self.a_dict = dict()
+        self.b_dict = dict()
+
+    def define_variable(
+            self,
+            name: str,
+            **keys
+    ):
+
+        # Add new key names to index, if any.
+        for key_name in keys.keys():
+            if key_name not in self.variables.names:
+                names = [*self.variables.names, key_name]
+                self.variables = (
+                    pd.MultiIndex.from_arrays([[] for name in names], names=names).join(self.variables, how='outer')
+                )
+
+        # Add new variable to index.
+        self.variables = (
+            pd.MultiIndex.from_frame(pd.concat([
+                self.variables.to_frame(),
+                pd.MultiIndex.from_product([[name], *keys.values()], names=['name', *keys.keys()]).to_frame()
+            ], axis='index', ignore_index=True))
+        )
+
+    def define_constraint(
+            self,
+            *elements: typing.Union[str, typing.Union[
+                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
+                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]
+            ]]
+    ):
+
+        # Instantiate constraint element aggregation variables.
+        variables = []
+        constant = 0.0
+        operator = None
+
+        # Instantiate left-hand / right-hand side indicator. Starting from left-hand side.
+        side = 'left'
+
+        # Aggregate constraint elements.
+        for element in elements:
+
+            # Tuples are variables / constants.
+            if issubclass(type(element), tuple):
+
+                # Identify variables.
+                if element[0] in ('variable', 'var', 'v'):
+
+                    # Move right-hand variables to left-hand side.
+                    if side == 'right':
+                        factor = -1.0
+                    else:
+                        factor = 1.0
+
+                    # Append element to variables.
+                    variables.append((factor * element[1], element[2]))
+
+                # Identify constants.
+                elif element[0] in ('constant', 'con', 'c'):
+
+                    # Move left-hand constants to right-hand side.
+                    if side == 'left':
+                        factor = -1.0
+                    else:
+                        factor = 1.0
+
+                    # Add element to constant.
+                    constant += factor * element[1]
+
+                # Raise error if element type cannot be identified.
+                else:
+                    raise ValueError(f"Invalid constraint element type: {element[0]}")
+
+            # Strings are operators.
+            elif element in ['==', '<=', '>=']:
+
+                # Raise error if operator is first element.
+                if element == elements[0]:
+                    ValueError(f"Operator is first element of a constraint.")
+
+                # Raise error if operator is already defined.
+                if operator is not None:
+                    ValueError(f"Multiple operators defined in one constraint.")
+
+                # Set operator.
+                operator = element
+
+                # Update left-hand / right-hand side indicator. Moving to right-hand side.
+                side = 'right'
+
+            # Raise error if element type cannot be identified.
+            else:
+                raise ValueError(f"Invalid constraint element type: {element}")
+
+        self.define_constraint_low_level(
+            variables,
+            operator,
+            constant
+        )
+
+    def define_constraint_low_level(
+            self,
+            variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
+            operator: str,
+            constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix]
+    ):
+
+        # For equality constraint, convert to upper / lower inequality.
+        if operator in ['==']:
+
+            # Define upper inequality.
+            self.define_constraint_low_level(
+                variables,
+                '>=',
+                constant
+            )
+
+            # Define lower inequality.
+            self.define_constraint_low_level(
+                variables,
+                '<=',
+                constant
+            )
+
+        # For inequality constraint, add into A matrix / b vector dictionaries.
+        elif operator in ['<=', '>=']:
+
+            # If greater-than-equal, invert signs.
+            if operator == '>=':
+                factor = -1.0
+            else:
+                factor = 1.0
+
+            # Obtain constraint index.
+            # - Dimension of constraint is based on dimension of `constant`.
+            constraint_index = tuple(range(len(self.constraints), len(self.constraints) + len(constant)))
+            self.constraints = self.constraints.append(pd.Index(constraint_index, name='constraint_id'))
+
+            # Append b vector entry.
+            self.b_dict[constraint_index] = factor * constant
+
+            # Append A matrix entries.
+            for variable in variables:
+
+                # Obtain variable index & raise error if variable or key does not exist.
+                variable_index = (
+                    tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))
+                )
+
+                # Obtain A matrix entries.
+                # - Scalar values are multiplied with identity matrix of appropriate size.
+                if len(np.shape(variable[0])) == 0:
+                    a_entry = variable[0] * scipy.sparse.eye(len(variable_index))
+                else:
+                    a_entry = variable[0]
+
+                # Raise error if variable dimensions are inconsistent.
+                if np.shape(a_entry) != (len(constraint_index), len(variable_index)):
+                    raise ValueError(f"Dimension mismatch at variable: {variable[1]}")
+
+                # Add A matrix entries to dictionary.
+                self.a_dict[constraint_index, variable_index] = factor * a_entry
+
+        # Raise error for invalid operator.
+        else:
+            ValueError(f"Invalid constraint operator: {operator}")
+
+    def get_a_matrix(self) -> scipy.sparse.spmatrix:
+
+        # Instantiate sparse matrix.
+        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=np.float)
+
+        # Fill matrix entries.
+        for constraint_index, variable_index in self.a_dict:
+            a_matrix[np.ix_(constraint_index, variable_index)] += self.a_dict[constraint_index, variable_index]
+
+        # Convert to CSR matrix.
+        a_matrix = a_matrix.tocsr(copy=True)
+
+        return a_matrix
+
+    def get_b_vector(self) -> np.ndarray:
+
+        # Instantiate array.
+        b_vector = np.zeros((len(self.constraints), 1))
+
+        # Fill vector entries.
+        for constraint_index in self.b_dict:
+            b_vector[np.ix_(constraint_index), 0] += self.b_dict[constraint_index]
+
+        return b_vector
+
+    def get_results(
+        self,
+        x_vector: cp.Variable
+    ) -> dict:
+
+        # Instantiate results object.
+        results = {}
+
+        # Obtain results for each variable.
+        for name in self.variables.get_level_values('name').unique():
+
+            # Obtain indexes.
+            variable_index = fledge.utils.get_index(self.variables, name=name)
+            timesteps = self.variables[variable_index].get_level_values('timestep').unique()
+            columns = (
+                pd.MultiIndex.from_frame(
+                    self.variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
+                )
+            )
+
+            # Instantiate results dataframe.
+            results[name] = pd.DataFrame(index=timesteps, columns=columns)
+
+            # Get results.
+            for timestep in timesteps:
+                results[name].loc[timestep, :] = (
+                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0].value
+                )
+
+        return results
 
 
 def starmap(

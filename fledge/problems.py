@@ -87,29 +87,29 @@ class NominalOperationProblem(object):
         # Instantiate results variables.
         if self.electric_grid_model is not None:
             der_power_vector = (
-                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
             )
             node_voltage_vector = (
-                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=complex)
             )
             branch_power_vector_1 = (
-                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
             )
             branch_power_vector_2 = (
-                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
             )
-            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=complex)
         if self.thermal_grid_model is not None:
             der_thermal_power_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=float)
             )
             node_head_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=float)
             )
             branch_flow_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=float)
             )
-            pump_power = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.float)
+            pump_power = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=float)
 
         # Obtain nominal DER power vector.
         if self.electric_grid_model is not None:

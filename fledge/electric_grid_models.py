@@ -273,7 +273,7 @@ class ElectricGridModel(object):
         self.ders = pd.MultiIndex.from_frame(electric_grid_data.electric_grid_ders[['der_type', 'der_name']])
 
         # Obtain reference / no load voltage vector.
-        self.node_voltage_vector_reference = np.zeros(len(self.nodes), dtype=np.complex)
+        self.node_voltage_vector_reference = np.zeros(len(self.nodes), dtype=complex)
         voltage_phase_factors = (
             np.array([
                 np.exp(0 * 1j),  # Phase 1.
@@ -293,7 +293,7 @@ class ElectricGridModel(object):
             )
 
         # Obtain reference / rated branch power vector.
-        self.branch_power_vector_magnitude_reference = np.zeros(len(self.branches), dtype=np.float)
+        self.branch_power_vector_magnitude_reference = np.zeros(len(self.branches), dtype=float)
         for line_name, line in electric_grid_data.electric_grid_lines.iterrows():
             # Obtain branch index.
             branch_index = fledge.utils.get_index(self.branches, branch_type='line', branch_name=line_name)
@@ -421,28 +421,28 @@ class ElectricGridModelDefault(ElectricGridModel):
         # Define sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrix entries.
         self.node_admittance_matrix = (
-             scipy.sparse.dok_matrix((len(self.nodes), len(self.nodes)), dtype=np.complex)
+             scipy.sparse.dok_matrix((len(self.nodes), len(self.nodes)), dtype=complex)
         )
         self.node_transformation_matrix = (
-             scipy.sparse.dok_matrix((len(self.nodes), len(self.nodes)), dtype=np.int)
+             scipy.sparse.dok_matrix((len(self.nodes), len(self.nodes)), dtype=int)
         )
         self.branch_admittance_1_matrix = (
-             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.complex)
+             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=complex)
         )
         self.branch_admittance_2_matrix = (
-             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.complex)
+             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=complex)
         )
         self.branch_incidence_1_matrix = (
-             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.int)
+             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
         )
         self.branch_incidence_2_matrix = (
-             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=np.int)
+             scipy.sparse.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
         )
         self.der_incidence_wye_matrix = (
-             scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=np.float)
+             scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=float)
         )
         self.der_incidence_delta_matrix = (
-             scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=np.float)
+             scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=float)
         )
 
         # Add lines to admittance, transformation and incidence matrices.
@@ -553,10 +553,10 @@ class ElectricGridModelDefault(ElectricGridModel):
 
             # Add line element matrices to the branch incidence matrices.
             self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += (
-                np.identity(len(branch_index), dtype=np.int)
+                np.identity(len(branch_index), dtype=int)
             )
             self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += (
-                 np.identity(len(branch_index), dtype=np.int)
+                 np.identity(len(branch_index), dtype=int)
             )
 
         # Add transformers to admittance, transformation and incidence matrices.
@@ -764,10 +764,10 @@ class ElectricGridModelDefault(ElectricGridModel):
 
             # Add transformer element matrices to the branch incidence matrices.
             self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += (
-                np.identity(len(branch_index), dtype=np.int)
+                np.identity(len(branch_index), dtype=int)
             )
             self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += (
-                np.identity(len(branch_index), dtype=np.int)
+                np.identity(len(branch_index), dtype=int)
             )
 
         # Define transformation matrix according to:
@@ -822,7 +822,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 # - Wye ders are represented as balanced ders across all
                 #   their connected phases.
                 incidence_matrix = (
-                    np.ones((len(node_index), 1), dtype=np.float)
+                    np.ones((len(node_index), 1), dtype=float)
                     / len(node_index)
                 )
                 self.der_incidence_wye_matrix[np.ix_(node_index, der_index)] = incidence_matrix
@@ -1240,7 +1240,7 @@ class PowerFlowSolution(object):
     node_voltage_vector: np.ndarray
     branch_power_vector_1: np.ndarray
     branch_power_vector_2: np.ndarray
-    loss: np.complex
+    loss: complex
 
 
 class PowerFlowSolutionFixedPoint(PowerFlowSolution):
@@ -1324,7 +1324,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         node_power_vector_wye_candidate_no_source: np.ndarray,
         node_power_vector_delta_candidate_no_source: np.ndarray,
         node_voltage_vector_initial_no_source: np.ndarray
-    ) -> np.bool:
+    ) -> bool:
         """Check conditions for fixed-point solution existence, uniqueness and non-singularity for
          given power vector candidate and initial point.
 
@@ -1690,7 +1690,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         )
 
         # Get full voltage vector.
-        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=np.complex)
+        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=complex)
         node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
             electric_grid_model.node_voltage_vector_reference_source
         )
@@ -1894,7 +1894,7 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
             )
 
         # Get full voltage vector.
-        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=np.complex)
+        node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=complex)
         node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
             electric_grid_model.node_voltage_vector_reference_source
         )
@@ -1999,7 +1999,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         # Create index for OpenDSS nodes.
         opendss_nodes = pd.Series(opendssdirect.Circuit.AllNodeNames()).str.split('.', expand=True)
         opendss_nodes.columns = ['node_name', 'phase']
-        opendss_nodes.loc[:, 'phase'] = opendss_nodes.loc[:, 'phase'].astype(np.int)
+        opendss_nodes.loc[:, 'phase'] = opendss_nodes.loc[:, 'phase'].astype(int)
         opendss_nodes = pd.MultiIndex.from_frame(opendss_nodes)
 
         # Extract nodal voltage vector and reindex to match FLEDGE nodes order.
@@ -2033,10 +2033,10 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         # Instantiate branch vectors.
         branch_power_vector_1 = (
-            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
+            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=complex)
         )
         branch_power_vector_2 = (
-            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=np.complex)
+            np.full(((opendssdirect.Lines.Count() + opendssdirect.Transformers.Count()), 3), np.nan, dtype=complex)
         )
 
         # Instantiate iteration variables.
@@ -2685,55 +2685,55 @@ class LinearElectricGridModel(object):
         # Instantiate DLMP variables.
         # TODO: Consider delta connections in nodal DLMPs.
         electric_grid_energy_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=timesteps, dtype=float)
         )
 
         # Obtain DLMPs.

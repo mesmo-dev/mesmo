@@ -314,7 +314,7 @@ def get_index(
     """
 
     # Obtain mask for each level / values combination keyword arguments.
-    mask = np.ones(len(index_set), dtype=np.bool)
+    mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
 
         # Ensure that values are passed as list.

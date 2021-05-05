@@ -37,64 +37,64 @@ def main():
 
     # Instantiate results variables.
     der_power_vector_active = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=float)
     )
     der_power_vector_reactive = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=float)
     )
     der_power_vector_active_change = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=float)
     )
     der_power_vector_reactive_change = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.ders, dtype=float)
     )
     node_voltage_vector_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=np.complex)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=complex)
     )
     node_voltage_vector_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=np.complex)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=complex)
     )
     node_voltage_vector_magnitude_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=float)
     )
     node_voltage_vector_magnitude_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=float)
     )
     branch_power_vector_1_squared_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_1_squared_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_2_squared_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_2_squared_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_1_magnitude_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_1_magnitude_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_2_magnitude_power_flow = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_2_magnitude_linear_model = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     loss_active_power_flow = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_active_linear_model = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_reactive_power_flow = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_reactive_linear_model = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
 
     # Obtain DER power / change.
@@ -194,28 +194,28 @@ def main():
 
     # Instantiate error variables.
     node_voltage_vector_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     node_voltage_vector_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     branch_power_vector_1_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     branch_power_vector_2_magnitude_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     branch_power_vector_1_squared_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     branch_power_vector_2_squared_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_active_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_reactive_error = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
 
     # Obtain error values.

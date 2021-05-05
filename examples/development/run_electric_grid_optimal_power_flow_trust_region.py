@@ -211,10 +211,10 @@ def main():
 
         # Obtain der power change value.
         der_active_power_vector_change = (
-            np.zeros(len(electric_grid_model.ders), dtype=np.float)
+            np.zeros(len(electric_grid_model.ders), dtype=float)
         )
         der_reactive_power_vector_change = (
-            np.zeros(len(electric_grid_model.ders), dtype=np.float)
+            np.zeros(len(electric_grid_model.ders), dtype=float)
         )
         for der_index, der in enumerate(electric_grid_model.ders):
             der_active_power_vector_change[der_index] = (

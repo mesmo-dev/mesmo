@@ -253,6 +253,7 @@ def starmap(
 
 def log_time(
         label: str,
+        log_level: str = 'debug',
         logger_object: logging.Logger = logger
 ):
     """Log start / end message and time duration for given label.
@@ -269,17 +270,26 @@ def log_time(
         label (str): Label for the start / end message.
 
     Keyword Arguments:
+        log_level (str): Log level to which the start / end messages are output. Choices: 'debug', 'info'.
+            Default: 'debug'.
         logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
             ``utils.logger``.
     """
 
     time_now = time.time()
 
+    if log_level == 'debug':
+        logger_handle = lambda message: logger_object.debug(message)
+    elif log_level == 'info':
+        logger_handle = lambda message: logger_object.info(message)
+    else:
+        raise ValueError(f"Invalid log level: '{log_level}'")
+
     if label in log_times.keys():
-        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+        logger_handle(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
     else:
         log_times[label] = time_now
-        logger_object.debug(f"Starting {label}.")
+        logger_handle(f"Starting {label}.")
 
 
 def get_index(

@@ -1,15 +1,14 @@
 """Example script for testing / validating the electric grid power flow solution."""
 
-import matplotlib.pyplot as plt
+import cvxpy as cp
 import numpy as np
+import matplotlib.pyplot as plt  # TODO: Remove matplotlib dependency.
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.problems
-import fledge.utils
+import fledge
 
 
 def main():

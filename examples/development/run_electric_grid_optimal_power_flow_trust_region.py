@@ -6,10 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.utils
+import fledge
 
 
 def main():

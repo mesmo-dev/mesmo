@@ -1,12 +1,10 @@
 """Test database interface."""
 
-import os
 import sqlite3
 import time
 import unittest
 
-import fledge.config
-import fledge.data_interface
+import fledge
 
 logger = fledge.config.get_logger(__name__)
 

@@ -1,13 +1,9 @@
 """Test electric grid models."""
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import time
 import unittest
 
-import fledge.config
-import fledge.electric_grid_models
+import fledge
 
 logger = fledge.config.get_logger(__name__)
 

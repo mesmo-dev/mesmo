@@ -3,9 +3,7 @@
 import time
 import unittest
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
+import fledge
 
 logger = fledge.config.get_logger(__name__)
 

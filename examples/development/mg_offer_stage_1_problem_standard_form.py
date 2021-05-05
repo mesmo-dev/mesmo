@@ -519,14 +519,24 @@ def main():
 
     # constr 12 i) - 12k) To do
     # Define DER constraints.
-    for stochastic_scenario in stochastic_scenarios:
-        for der_name, der_model in der_model_set.der_models.items():
-            # Fixed DERs.
-            if issubclass(type(der_model), fledge.der_models.FixedDERModel):
-                if der_model.is_electric_grid_connected:
 
+    for der_name, der_model in der_model_set.der_models.items():
+        # Fixed DERs.
+        if issubclass(type(der_model), fledge.der_models.FixedDERModel):
+            if der_model.is_electric_grid_connected:
+                for stochastic_scenario in stochastic_scenarios:
+                    for time_index in range(len(der_model_set.timesteps)):
 
-            # TO DO
+                        A_1_temp = np.zeros((1, A_1_column_number))
+
+                        A_1_temp[:,
+                        optimization_problem.s1_index_locator[
+                            'der_active_power_vector', stochastic_scenario, str(time_index)][0]:
+                        optimization_problem.s1_index_locator[
+                            'der_active_power_vector', stochastic_scenario, str(time_index)][
+                            1] + 1] = 1
+                        # TO DO
+
 
                     optimization_problem.constraints.append(
                         optimization_problem.der_active_power_vector[stochastic_scenario][

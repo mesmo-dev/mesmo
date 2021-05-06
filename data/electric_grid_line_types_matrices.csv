@@ -44,3 +44,9 @@ singapore_cable_22_copper_300_400amp,2,2,0.077,0.108,312.0
 singapore_cable_22_copper_300_400amp,3,1,0.0,0.0,0.0
 singapore_cable_22_copper_300_400amp,3,2,0.0,0.0,0.0
 singapore_cable_22_copper_300_400amp,3,3,0.077,0.108,312.0
+MES_test_300amp,1,1,0.077,0.108,312.0
+MES_test_300amp,2,1,0.0,0.0,0.0
+MES_test_300amp,2,2,0.077,0.108,312.0
+MES_test_300amp,3,1,0.0,0.0,0.0
+MES_test_300amp,3,2,0.0,0.0,0.0
+MES_test_300amp,3,3,0.077,0.108,312.0

@@ -1,0 +1,11 @@
+scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,electric_grid_operation_limit_type,thermal_grid_operation_limit_type,timestep_start,timestep_end,timestep_interval
+MES_test,MES_test,MES_test,MES_default,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_test_electric_only,MES_test,,MES_default,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_test_thermal_only,,MES_test,MES_default,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_1_2_3_4_5,MES_test,MES_test,MES_scenario_1_2_3_4_5,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_6_7_8,MES_test,MES_test,MES_scenario_6_7_8,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_9,MES_test,MES_test,MES_scenario_9,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES-scenario_10_11_12,MES_test,MES_test,MES_scenario_10_11_12,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_13,MES_test,MES_test,MES_scenario_13,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_14,MES_test,MES_test,MES_scenario_14,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00
+MES_scenario_15,MES_test,MES_test,MES_scenario_15,singapore_wholesale,1e-9,testing_limits,testing_limits,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00

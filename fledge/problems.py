@@ -61,55 +61,55 @@ class NominalOperationProblem(object):
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
-            start_time = fledge.utils.log_timing_start("electric grid model instantiation", logger)
+            fledge.utils.log_time("electric grid model instantiation")
             self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
             self.power_flow_solution_reference = (
                 fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
             )
-            fledge.utils.log_timing_end(start_time, "electric grid model instantiation", logger)
+            fledge.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
-            start_time = fledge.utils.log_timing_start("thermal grid model instantiation", logger)
+            fledge.utils.log_time("thermal grid model instantiation")
             self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
             self.thermal_power_flow_solution_reference = (
                 fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
             )
-            fledge.utils.log_timing_end(start_time, "thermal grid model instantiation", logger)
+            fledge.utils.log_time("thermal grid model instantiation")
 
         # Obtain DER model set.
-        start_time = fledge.utils.log_timing_start("DER model instantiation", logger)
+        fledge.utils.log_time("DER model instantiation")
         self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
-        fledge.utils.log_timing_end(start_time, "DER model instantiation", logger)
+        fledge.utils.log_time("DER model instantiation")
 
     def solve(self):
 
         # Instantiate results variables.
         if self.electric_grid_model is not None:
             der_power_vector = (
-                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
             )
             node_voltage_vector = (
-                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=complex)
             )
             branch_power_vector_1 = (
-                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
             )
             branch_power_vector_2 = (
-                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+                pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
             )
-            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+            loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=complex)
         if self.thermal_grid_model is not None:
             der_thermal_power_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.timesteps, dtype=float)
             )
             node_head_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.timesteps, dtype=float)
             )
             branch_flow_vector = (
-                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=np.float)
+                pd.DataFrame(columns=self.thermal_grid_model.branches, index=self.timesteps, dtype=float)
             )
-            pump_power = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.float)
+            pump_power = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=float)
 
         # Obtain nominal DER power vector.
         if self.electric_grid_model is not None:
@@ -128,7 +128,7 @@ class NominalOperationProblem(object):
                 )
 
         # Solve power flow.
-        start_time = fledge.utils.log_timing_start("power flow solution", logger)
+        fledge.utils.log_time("power flow solution")
         if self.electric_grid_model is not None:
             power_flow_solutions = (
                 fledge.utils.starmap(
@@ -148,7 +148,7 @@ class NominalOperationProblem(object):
                 )
             )
             thermal_power_flow_solutions = dict(zip(self.timesteps, thermal_power_flow_solutions))
-        fledge.utils.log_timing_end(start_time, "power flow solution", logger)
+        fledge.utils.log_time("power flow solution")
 
         # Obtain results.
         if self.electric_grid_model is not None:

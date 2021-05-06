@@ -24,12 +24,12 @@ class DERModel(object):
 
     der_type: str = None
     der_name: str
-    is_electric_grid_connected: np.bool
-    is_thermal_grid_connected: np.bool
+    is_electric_grid_connected: bool
+    is_thermal_grid_connected: bool
     timesteps: pd.Index
-    active_power_nominal: np.float
-    reactive_power_nominal: np.float
-    thermal_power_nominal: np.float
+    active_power_nominal: float
+    reactive_power_nominal: float
+    thermal_power_nominal: float
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
@@ -201,6 +201,7 @@ class FixedDERModel(DERModel):
         # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
         # - Otherwise, defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
+        # TODO: Remove `(electric_grid_model is None)` everywhere.
         if (electric_grid_model is None) and self.is_electric_grid_connected:
 
             # Active power cost / revenue.
@@ -309,7 +310,7 @@ class FixedGeneratorModel(FixedDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
     der_type = 'fixed_generator'
-    marginal_cost: np.float
+    marginal_cost: float
 
     def __init__(
             self,
@@ -873,7 +874,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
     """Fixed generator model object, representing a generic generator with fixed nominal output."""
 
     der_type = 'flexible_generator'
-    marginal_cost: np.float
+    marginal_cost: float
 
     def __init__(
             self,
@@ -1107,9 +1108,9 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     der_type = 'flexible_building'
 
-    power_factor_nominal: np.float
-    is_electric_grid_connected: np.bool
-    is_thermal_grid_connected: np.bool
+    power_factor_nominal: float
+    is_electric_grid_connected: bool
+    is_thermal_grid_connected: bool
 
     def __init__(
             self,
@@ -1202,7 +1203,7 @@ class CoolingPlantModel(FlexibleDERModel):
     """Cooling plant model object."""
 
     der_type = 'cooling_plant'
-    cooling_plant_efficiency: np.float
+    cooling_plant_efficiency: float
 
     def __init__(
             self,

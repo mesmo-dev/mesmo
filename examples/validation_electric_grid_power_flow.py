@@ -1,15 +1,14 @@
 """Example script for testing / validating the electric grid power flow solution."""
 
-import matplotlib.pyplot as plt
+import cvxpy as cp
 import numpy as np
+import matplotlib.pyplot as plt  # TODO: Remove matplotlib dependency.
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.problems
-import fledge.utils
+import fledge
 
 
 def main():
@@ -32,43 +31,43 @@ def main():
 
     # Instantiate results variables.
     der_power_vector = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.ders, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.ders, dtype=float)
     )
     node_voltage_vector_fledge = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=np.complex)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=complex)
     )
     node_voltage_vector_opendss = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=np.complex)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=complex)
     )
     node_voltage_vector_magnitude_fledge = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=float)
     )
     node_voltage_vector_magnitude_opendss = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.nodes, dtype=float)
     )
     branch_power_vector_1_magnitude_fledge = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=float)
     )
     branch_power_vector_1_magnitude_opendss = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=float)
     )
     branch_power_vector_2_magnitude_fledge = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=float)
     )
     branch_power_vector_2_magnitude_opendss = (
-        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=np.float)
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model_default.branches, dtype=float)
     )
     loss_active_fledge = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_active_opendss = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_reactive_fledge = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
     loss_reactive_opendss = (
-        pd.Series(index=power_multipliers, dtype=np.float)
+        pd.Series(index=power_multipliers, dtype=float)
     )
 
     # Obtain DER power / change.

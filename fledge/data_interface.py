@@ -72,7 +72,7 @@ def recreate_database(
 
                 # Load table and write to database.
                 try:
-                    table = pd.read_csv(csv_file, dtype=np.str)
+                    table = pd.read_csv(csv_file, dtype=str)
                     table.to_sql(
                         table_name,
                         con=database_connection,
@@ -207,7 +207,7 @@ class ScenarioData(object):
                 column = pd.to_numeric(column)
 
         # Explicitly parse to float, for consistent behavior independent of specific values.
-        column = column.astype(np.float)
+        column = column.astype(float)
 
         return column
 
@@ -950,7 +950,7 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
-    price_sensitivity_coefficient: np.float
+    price_sensitivity_coefficient: float
     price_timeseries: pd.DataFrame
 
     @multimethod
@@ -1056,6 +1056,7 @@ class PriceData(object):
             ]))
         )
         # TODO: Initialize more efficiently for large number of DERs.
+        # TODO: In 1/MWh.
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]

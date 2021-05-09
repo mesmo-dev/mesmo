@@ -583,37 +583,74 @@ def main():
                     if time_index == 0:
                         if any(der_model.states.isin(der_model.storage_states)):
                             A_1_temp = np.zeros((1, A_1_column_number))
+                            storage_index_temp = np.argwhere(der_model.states.isin(der_model.storage_states) == True)
+
                             A_1_temp[:,
-                            optimization_problem.s1_index_locator[der_name, 'der_state_vector', stochastic_scenario,
-                                                                  str(time_index)][0] + der_model.states.isin(
-                                der_model.storage_states)] = 1
+                                    optimization_problem.s1_index_locator[
+                                    der_name, 'der_state_vector', stochastic_scenario,
+                                    str(time_index)
+                                    ][0]
+                                    + storage_index_temp
+                            ] = 1
                             A_1_temp[:,
-                            optimization_problem.s1_index_locator[der_name, 'der_state_vector', stochastic_scenario,
-                                                                  str(len(der_model_set.timesteps)-1)][0] + der_model.states.isin(
-                                der_model.storage_states)] = -1
+                                    optimization_problem.s1_index_locator[
+                                    der_name, 'der_state_vector', stochastic_scenario,
+                                    str(len(der_model_set.timesteps)-1)
+                                    ][0]
+                                    + storage_index_temp
+                            ] = -1
 
                             b_1 = np.vstack((b_1, [0]))
                             A_1 = np.vstack((A_1, A_1_temp))
+                        elif any(~der_model.states.isin(der_model.storage_states)):
+                            not_a_storage_index_vector_temp = np.argwhere(
+                                ~der_model.states.isin(der_model.storage_states) == True
+                            )
 
+                            A_1_temp = np.zeros((not_a_storage_index_vector_temp.size, A_1_column_number))
 
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.state_vector[der_name, stochastic_scenario][
-                    #             0, der_model.states.isin(der_model.storage_states)
-                    #         ]
-                    #         ==
-                    #         optimization_problem.state_vector[der_name, stochastic_scenario][
-                    #             -1, der_model.states.isin(der_model.storage_states)
-                    #         ]
-                    #     )
-                    # # - For other states, set initial state according to the initial state vector.
-                    # if any(~der_model.states.isin(der_model.storage_states)):
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.state_vector[der_name, stochastic_scenario][
-                    #             0, ~der_model.states.isin(der_model.storage_states)
-                    #         ]
-                    #         ==
-                    #         der_model.state_vector_initial.loc[~der_model.states.isin(der_model.storage_states)].values
-                    #     )
+                            A_1_temp[:,
+                            optimization_problem.s1_index_locator[
+                                der_name, 'der_state_vector', stochastic_scenario,
+                                str(time_index)
+                            ][0]
+                            + not_a_storage_index_vector_temp
+                            ] = 1
+
+                            # here it should be a col vector
+                            b_1_temp = der_model.state_vector_initial.loc[
+                                ~der_model.states.isin(der_model.storage_states)
+                            ].values
+
+                            b_1 = np.vstack((b_1, b_1_temp))
+                            A_1 = np.vstack((A_1, A_1_temp))
+
+                    # State equation.
+                    if time_index != 0:
+                        A_1_temp = np.zeros((der_model.state_matrix.shape[0], A_1_column_number))
+
+                        A_1_temp[:,
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_state_vector', stochastic_scenario,
+                            str(time_index)
+                        ][0]:
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_state_vector', stochastic_scenario,
+                            str(time_index)
+                        ][1]+1
+                        ] = der_model.state_matrix.values
+
+                        A_1_temp[:,
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_control_vector', stochastic_scenario,
+                            str(time_index)
+                        ][0]:
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_control_vector', stochastic_scenario,
+                            str(time_index)
+                        ][1]+1
+                        ] = der_model.control_matrix.values
+
                     #
                     # # State equation.
                     # optimization_problem.constraints.append(

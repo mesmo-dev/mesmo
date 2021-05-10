@@ -705,140 +705,60 @@ def main():
                     ][1] + 1
                     ] = - der_model.control_output_matrix.values
 
-                    b_1_temp = der_model.disturbance_output_matrix.values @ np.transpose(
+                    b_1_temp = np.transpose(der_model.disturbance_output_matrix.values @ np.transpose(
                         der_model.disturbance_timeseries.iloc[time_index, :].values
-                    )
+                    )).reshape(der_model.state_output_matrix.shape[0],1)
 
                     b_1 = np.vstack((b_1, b_1_temp))
                     A_1 = np.vstack((A_1, A_1_temp))
 
                     # Define connection constraints.
                     if der_model.is_electric_grid_connected:
-                        # for active power (flexible ders)
+                        # for active power (flexible DERs)
                         A_1_temp = np.zeros((1, A_1_column_number))
-                    #
-                    #     A_1_temp[:, optimization_problem.s1_index_locator[
-                    #                     'der_active_power_vector', stochastic_scenario, str(time_index)][0
-                    #                 ] + der_model.electric_grid_der_index[0]] = 1
-                    #
-                    #     b_1_temp = [der_model.active_power_nominal_timeseries.values[time_index] / (
-                    #         der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)]
-                    #
-                    #     b_1 = np.vstack((b_1, b_1_temp))
-                    #     A_1 = np.vstack((A_1, A_1_temp))
-                    #
-                    #     # for reactive power (fixed ders)
-                    #     A_1_temp = np.zeros((1, A_1_column_number))
-                    #
-                    #     A_1_temp[:, optimization_problem.s1_index_locator[
-                    #                     'der_reactive_power_vector', stochastic_scenario, str(time_index)][
-                    #                     0] + der_model.electric_grid_der_index[0]] = 1
-                    #
-                    #     b_1_temp = [der_model.reactive_power_nominal_timeseries.values[time_index] / (
-                    #         der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)]
-                    #
-                    #     b_1 = np.vstack((b_1, b_1_temp))
-                    #     A_1 = np.vstack((A_1, A_1_temp))
 
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.der_active_power_vector[stochastic_scenario][
-                    #         :, der_model.electric_grid_der_index
-                    #         ]
-                    #         ==
-                    #         cp.transpose(
-                    #             der_model.mapping_active_power_by_output.values
-                    #             @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
-                    #         )
-                    #         / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
-                    #     )
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.der_reactive_power_vector[stochastic_scenario][
-                    #         :, der_model.electric_grid_der_index
-                    #         ]
-                    #         ==
-                    #         cp.transpose(
-                    #             der_model.mapping_reactive_power_by_output.values
-                    #             @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
-                    #         )
-                    #         / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
-                    #     )
+                        A_1_temp[:, optimization_problem.s1_index_locator[
+                                        'der_active_power_vector', stochastic_scenario, str(time_index)][0
+                                    ] + der_model.electric_grid_der_index[0]] = 1
 
-                    #
-                    # # State equation.
-                    # optimization_problem.constraints.append(
-                    #     optimization_problem.state_vector[der_name, stochastic_scenario][1:, :]
-                    #     ==
-                    #     cp.transpose(
-                    #         der_model.state_matrix.values
-                    #         @ cp.transpose(optimization_problem.state_vector[der_name, stochastic_scenario][:-1, :])
-                    #         + der_model.control_matrix.values
-                    #         @ cp.transpose(optimization_problem.control_vector[der_name, stochastic_scenario][:-1, :])
-                    #         + der_model.disturbance_matrix.values
-                    #         @ np.transpose(der_model.disturbance_timeseries.iloc[:-1, :].values)
-                    #     )
-                    # )
-                    # optimization_problem.constraints.append(
-                    #     optimization_problem.control_vector[der_name, stochastic_scenario][-1, :]
-                    #     ==
-                    #     optimization_problem.control_vector[der_name, stochastic_scenario][-2, :]
-                    # )
-                    #
-                    # # Output equation.
-                    # optimization_problem.constraints.append(
-                    #     optimization_problem.output_vector[der_name, stochastic_scenario]
-                    #     ==
-                    #     cp.transpose(
-                    #         der_model.state_output_matrix.values
-                    #         @ cp.transpose(optimization_problem.state_vector[der_name, stochastic_scenario])
-                    #         + der_model.control_output_matrix.values
-                    #         @ cp.transpose(optimization_problem.control_vector[der_name, stochastic_scenario])
-                    #         + der_model.disturbance_output_matrix.values
-                    #         @ np.transpose(der_model.disturbance_timeseries.values)
-                    #     )
-                    # )
-                    #
-                    # # Output limits.
-                    # outputs_minimum_infinite = (
-                    #     (der_model.output_minimum_timeseries == -np.inf).all()
-                    # )
-                    # optimization_problem.constraints.append(
-                    #     optimization_problem.output_vector[der_name, stochastic_scenario][:, ~outputs_minimum_infinite]
-                    #     >=
-                    #     der_model.output_minimum_timeseries.loc[:, ~outputs_minimum_infinite].values
-                    # )
-                    # outputs_maximum_infinite = (
-                    #     (der_model.output_maximum_timeseries == np.inf).all()
-                    # )
-                    # optimization_problem.constraints.append(
-                    #     optimization_problem.output_vector[der_name, stochastic_scenario][:, ~outputs_maximum_infinite]
-                    #     <=
-                    #     der_model.output_maximum_timeseries.loc[:, ~outputs_maximum_infinite].values
-                    # )
-                    #
-                    # # Define connection constraints.
-                    # if der_model.is_electric_grid_connected:
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.der_active_power_vector[stochastic_scenario][
-                    #         :, der_model.electric_grid_der_index
-                    #         ]
-                    #         ==
-                    #         cp.transpose(
-                    #             der_model.mapping_active_power_by_output.values
-                    #             @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
-                    #         )
-                    #         / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
-                    #     )
-                    #     optimization_problem.constraints.append(
-                    #         optimization_problem.der_reactive_power_vector[stochastic_scenario][
-                    #         :, der_model.electric_grid_der_index
-                    #         ]
-                    #         ==
-                    #         cp.transpose(
-                    #             der_model.mapping_reactive_power_by_output.values
-                    #             @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
-                    #         )
-                    #         / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
-                    #     )
+                        A_1_temp[:,
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_output_vector', stochastic_scenario,
+                            str(time_index)
+                        ][0]:
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_output_vector', stochastic_scenario,
+                            str(time_index)
+                        ][1] + 1
+                        ] = - der_model.mapping_active_power_by_output.values\
+                            / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
+
+                        b_1 = np.vstack((b_1, [0]))
+                        A_1 = np.vstack((A_1, A_1_temp))
+
+                        # for reactive power (flexible DERs)
+                        A_1_temp = np.zeros((1, A_1_column_number))
+
+                        A_1_temp[:, optimization_problem.s1_index_locator[
+                                        'der_reactive_power_vector', stochastic_scenario, str(time_index)][0
+                                    ] + der_model.electric_grid_der_index[0]] = 1
+
+                        A_1_temp[:,
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_output_vector', stochastic_scenario,
+                            str(time_index)
+                        ][0]:
+                        optimization_problem.s1_index_locator[
+                            der_name, 'der_output_vector', stochastic_scenario,
+                            str(time_index)
+                        ][1] + 1
+                        ] = - der_model.mapping_reactive_power_by_output.values \
+                            / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
+
+                        b_1 = np.vstack((b_1, [0]))
+                        A_1 = np.vstack((A_1, A_1_temp))
+
+
 
     # Solve optimization problem.
     optimization_problem.solve()

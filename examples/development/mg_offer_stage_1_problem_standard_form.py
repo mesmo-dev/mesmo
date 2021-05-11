@@ -2,12 +2,14 @@
 
 import cvxpy as cp
 import numpy as np
+from scipy.sparse import csr_matrix
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
 import fledge
+
 
 
 def main():
@@ -758,7 +760,110 @@ def main():
                         b_1 = np.vstack((b_1, [0]))
                         A_1 = np.vstack((A_1, A_1_temp))
 
+    # equality constraints
+    A_1 = np.vstack((-A_1, A_1))
+    b_1 = np.vstack((-b_1, b_1))
 
+    # inequality constraints
+    # Flexible DERs. # Output limits.
+    for der_name, der_model in der_model_set.der_models.items():
+        if issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
+            for stochastic_scenario in stochastic_scenarios:
+                for time_index in range(len(der_model_set.timesteps)):
+                    # upper bound
+                    A_1_temp = np.zeros((der_model.state_output_matrix.shape[0], A_1_column_number))
+
+                    A_1_temp[:,
+                    optimization_problem.s1_index_locator[
+                        der_name, 'der_output_vector', stochastic_scenario,
+                        str(time_index)
+                    ][0]:
+                    optimization_problem.s1_index_locator[
+                        der_name, 'der_output_vector', stochastic_scenario,
+                        str(time_index)
+                    ][1] + 1
+                    ] = np.eye(der_model.state_output_matrix.shape[0])
+
+                    b_1_temp = der_model.output_maximum_timeseries.loc[
+                               der_model.timesteps[time_index], :
+                               ].values.reshape(der_model.state_output_matrix.shape[0], 1)
+
+                    b_1 = np.vstack((b_1, b_1_temp))
+                    A_1 = np.vstack((A_1, A_1_temp))
+
+                    A_1_temp = np.zeros((der_model.state_output_matrix.shape[0], A_1_column_number))
+
+                    A_1_temp[:,
+                    optimization_problem.s1_index_locator[
+                        der_name, 'der_output_vector', stochastic_scenario,
+                        str(time_index)
+                    ][0]:
+                    optimization_problem.s1_index_locator[
+                        der_name, 'der_output_vector', stochastic_scenario,
+                        str(time_index)
+                    ][1] + 1
+                    ] = -np.eye(der_model.state_output_matrix.shape[0])
+
+                    b_1_temp = -der_model.output_minimum_timeseries.loc[
+                               der_model.timesteps[time_index], :
+                               ].values.reshape(der_model.state_output_matrix.shape[0], 1)
+
+                    b_1 = np.vstack((b_1, b_1_temp))
+                    A_1 = np.vstack((A_1, A_1_temp))
+
+    for stochastic_scenario in stochastic_scenarios:
+        for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
+            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
+            # voltage magnitude coefficient
+            A_1_temp[:,
+            optimization_problem.s1_index_locator[
+                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
+            optimization_problem.s1_index_locator[
+                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
+                1] + 1] = np.diagflat(
+                np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
+
+            b_1_temp = np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()])/np.array(
+                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
+            ))
+
+            b_1 = np.vstack((b_1, b_1_temp))
+            A_1 = np.vstack((A_1, A_1_temp))
+
+            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
+            # voltage magnitude coefficient
+            A_1_temp[:,
+            optimization_problem.s1_index_locator[
+                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
+            optimization_problem.s1_index_locator[
+                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
+                1] + 1] = - np.diagflat(
+                np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
+
+            b_1_temp = np.transpose(-np.array([node_voltage_magnitude_vector_minimum.ravel()])/np.array(
+                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
+            ))
+
+            b_1 = np.vstack((b_1, b_1_temp))
+            A_1 = np.vstack((A_1, A_1_temp))
+
+    # # Define upper/lower bounds for voltage magnitude.
+    # for stochastic_scenario in stochastic_scenarios:
+    #     optimization_problem.voltage_magnitude_vector_minimum_constraint = (
+    #             optimization_problem.node_voltage_magnitude_vector[stochastic_scenario]
+    #             - np.array([node_voltage_magnitude_vector_minimum.ravel()])
+    #             / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
+    #             >=
+    #             0.0
+    #     )
+    #     optimization_problem.constraints.append(optimization_problem.voltage_magnitude_vector_minimum_constraint)
+    #     optimization_problem.voltage_magnitude_vector_maximum_constraint = (
+    #             optimization_problem.node_voltage_magnitude_vector[stochastic_scenario]
+    #             - np.array([node_voltage_magnitude_vector_maximum.ravel()])
+    #             / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
+    #             <=
+    #             0.0
+    #     )
 
     # Solve optimization problem.
     optimization_problem.solve()

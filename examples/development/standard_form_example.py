@@ -45,19 +45,19 @@ def main():
             '==',
             ('variable', 1.0, dict(
                 name='state_vector', timestep=der_model.timesteps[0],
-                state=der_model.states[~der_model.states.isin(der_model.storage_states)].values.tolist()
+                state=der_model.states[~der_model.states.isin(der_model.storage_states)]
             ))
         )
     if any(der_model.states.isin(der_model.storage_states)):
         standard_form.define_constraint(
             ('variable', 1.0, dict(
                 name='state_vector', timestep=der_model.timesteps[0],
-                state=der_model.states[der_model.states.isin(der_model.storage_states)].values.tolist()
+                state=der_model.states[der_model.states.isin(der_model.storage_states)]
             )),
             '==',
             ('variable', 1.0, dict(
                 name='state_vector', timestep=der_model.timesteps[-1],
-                state=der_model.states[der_model.states.isin(der_model.storage_states)].values.tolist()
+                state=der_model.states[der_model.states.isin(der_model.storage_states)]
             ))
         )
 

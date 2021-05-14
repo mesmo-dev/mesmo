@@ -325,6 +325,9 @@ def get_index(
             # Convert numpy arrays to list.
             values = values.tolist()
             values = [values] if not isinstance(values, list) else values
+        elif isinstance(values, pd.Index):
+            # Convert pandas index to list.
+            values = values.to_list()
         else:
             # Convert single values into list with one item.
             values = [values]

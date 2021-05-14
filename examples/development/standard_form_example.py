@@ -39,25 +39,27 @@ def main():
 
     # Initial state.
     # - TODO: For states which represent storage state of charge, initial state of charge is final state of charge.
-    standard_form.define_constraint(
-        ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]),
-        '==',
-        ('variable', 1.0, dict(
-            name='state_vector', timestep=der_model.timesteps[0],
-            state=der_model.states[~der_model.states.isin(der_model.storage_states)]
-        ))
-    )
-    standard_form.define_constraint(
-        ('variable', 1.0, dict(
-            name='state_vector', timestep=der_model.timesteps[0],
-            state=der_model.states[der_model.states.isin(der_model.storage_states)]
-        )),
-        '==',
-        ('variable', 1.0, dict(
-            name='state_vector', timestep=der_model.timesteps[-1],
-            state=der_model.states[der_model.states.isin(der_model.storage_states)]
-        ))
-    )
+    if any(~der_model.states.isin(der_model.storage_states)):
+        standard_form.define_constraint(
+            ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]),
+            '==',
+            ('variable', 1.0, dict(
+                name='state_vector', timestep=der_model.timesteps[0],
+                state=der_model.states[~der_model.states.isin(der_model.storage_states)].values.tolist()
+            ))
+        )
+    if any(der_model.states.isin(der_model.storage_states)):
+        standard_form.define_constraint(
+            ('variable', 1.0, dict(
+                name='state_vector', timestep=der_model.timesteps[0],
+                state=der_model.states[der_model.states.isin(der_model.storage_states)].values.tolist()
+            )),
+            '==',
+            ('variable', 1.0, dict(
+                name='state_vector', timestep=der_model.timesteps[-1],
+                state=der_model.states[der_model.states.isin(der_model.storage_states)].values.tolist()
+            ))
+        )
 
     # State equation.
     for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):

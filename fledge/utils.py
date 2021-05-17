@@ -257,7 +257,10 @@ class StandardForm(object):
         self.variables = (
             pd.MultiIndex.from_frame(pd.concat([
                 self.variables.to_frame(),
-                pd.MultiIndex.from_product([[name], *keys.values()], names=['name', *keys.keys()]).to_frame()
+                pd.MultiIndex.from_product(
+                    [[name], *[list(value) for value in keys.values()]],
+                    names=['name', *keys.keys()]
+                ).to_frame()
             ], axis='index', ignore_index=True))
         )
 
@@ -594,8 +597,15 @@ def get_index(
     for level, values in levels_values.items():
 
         # Ensure that values are passed as list.
-        if isinstance(values, (list, tuple)):
+        if isinstance(values, list):
             pass
+        elif isinstance(values, tuple):
+            # If values are passed as tuple, wrap in list, but only if index
+            # level values are tuples. Otherwise, convert to list.
+            if isinstance(index_set.get_level_values(level).dropna()[0], tuple):
+                values = [values]
+            else:
+                values = list(values)
         elif isinstance(values, np.ndarray):
             # Convert numpy arrays to list.
             values = values.tolist()

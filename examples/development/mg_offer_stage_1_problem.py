@@ -34,23 +34,6 @@ def main():
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define model variables.
-    optimization_problem.s1_var_vector = {}
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     # Define flexible DER state space variables.
     optimization_problem.state_vector = {}

@@ -503,13 +503,13 @@ def main():
             A_1_temp[:,
             optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][0]:
             optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active @ np.diagflat(
+                1] + 1] = - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active @ np.diagflat(
                 np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
             # reactive power contribution:
             A_1_temp[:,
             optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][0]:
             optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ np.diagflat(
+                1] + 1] = - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ np.diagflat(
                 np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
 
             active_reference_point_temp = np.array(
@@ -868,19 +868,19 @@ def main():
     price_temp = price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
         * timestep_interval_hours
     for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['energy', str(time_index)][0]] = price_temp[time_index]
+        f_1[:, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = price_temp[time_index]
 
     # up reserve
     price_temp = -0.1 * price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
         * timestep_interval_hours
     for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = price_temp[time_index]
+        f_1[:, optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = price_temp[time_index]
 
     # down reserve
     price_temp = - 1.1 * price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
         * timestep_interval_hours
     for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = price_temp[time_index]
+        f_1[:, optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = price_temp[time_index]
 
     optimization_problem.objective += (f_1 @ optimization_problem.variable_vector_s1)
 

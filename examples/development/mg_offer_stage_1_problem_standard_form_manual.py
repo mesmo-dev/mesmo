@@ -821,9 +821,7 @@ def main():
                 1] + 1] = np.diagflat(
                 np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
 
-            b_1_temp = np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()])/np.array(
-                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
-            ))
+            b_1_temp = np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()]))
 
             b_1 = np.vstack((b_1, b_1_temp))
             A_1 = np.vstack((A_1, A_1_temp))
@@ -838,9 +836,7 @@ def main():
                 1] + 1] = - np.diagflat(
                 np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
 
-            b_1_temp = np.transpose(-np.array([node_voltage_magnitude_vector_minimum.ravel()])/np.array(
-                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
-            ))
+            b_1_temp = np.transpose(-np.array([node_voltage_magnitude_vector_minimum.ravel()]))
 
             b_1 = np.vstack((b_1, b_1_temp))
             A_1 = np.vstack((A_1, A_1_temp))

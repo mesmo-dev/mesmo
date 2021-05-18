@@ -201,10 +201,11 @@ def main():
                 # # - TODO: For states which represent storage state of charge, initial state of charge is final state of charge.
                 if any(~der_model.states.isin(der_model.storage_states)):
                     standard_form.define_constraint(
-                        ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]),
+                        ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]
+                         ),
                         '==',
                         ('variable', 1.0, dict(
-                            name='state_vector', der_name = [der_model.der_name], timestep=der_model.timesteps[0],
+                            name='state_vector', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
                             state=der_model.states[~der_model.states.isin(der_model.storage_states)],
                             scenario=[stochastic_scenario],
                         ))
@@ -225,527 +226,94 @@ def main():
                         ))
                     )
 
+                # State equation.
+                for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
+                    standard_form.define_constraint(
+                        ('variable', 1.0, dict(name='state_vector', der_name=[der_model.der_name], timestep=timestep,
+                                               state=der_model.states, scenario=[stochastic_scenario])),
+                        '==',
+                        ('variable', der_model.state_matrix.values, dict(name='state_vector',
+                                                                         der_name=[der_model.der_name],
+                                                                         timestep=timestep_previous,
+                                                                         state=der_model.states,
+                                                                         scenario=[stochastic_scenario])),
+                        ('variable', der_model.control_matrix.values, dict(name='control_vector',
+                                                                           der_name=[der_model.der_name],
+                                                                           timestep=timestep,
+                                                                           control=der_model.controls,
+                                                                           scenario=[stochastic_scenario]
+                                                                           )
+                         ),
+                        ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
+                    )
 
-    # # State equation.
-    # for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='state_vector', timestep=timestep)),
-    #         '==',
-    #         ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=timestep_previous)),
-    #         ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=timestep)),
-    #         ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
-    #     )
-    #
-    # # Output equation.
-    # for timestep in der_model.timesteps:
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=timestep)),
-    #         '==',
-    #         ('variable', der_model.state_output_matrix.values, dict(name='state_vector', timestep=timestep)),
-    #         ('variable', der_model.control_output_matrix.values, dict(name='control_vector', timestep=timestep)),
-    #         ('constant',
-    #          der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
-    #     )
-    #
-    # # Output limits.
-    # for timestep in der_model.timesteps:
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=timestep)),
-    #         '>=',
-    #         ('constant', der_model.output_minimum_timeseries.loc[timestep, :].values),
-    #     )
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=timestep)),
-    #         '<=',
-    #         ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values),
-    #     )
+                # Output equation.
+                for timestep in der_model.timesteps:
+                    standard_form.define_constraint(
+                        ('variable', 1.0, dict(name='output_vector', der_name=[der_model.der_name],
+                                               timestep=timestep, output=der_model.outputs,
+                                               scenario=[stochastic_scenario])),
+                        '==',
+                        ('variable', der_model.state_output_matrix.values, dict(name='state_vector',
+                                                                                der_name=[der_model.der_name],
+                                                                                timestep=timestep,
+                                                                                state=der_model.states,
+                                                                                scenario=[stochastic_scenario])),
+                        ('variable', der_model.control_output_matrix.values, dict(name='control_vector',
+                                                                                  der_name=[der_model.der_name],
+                                                                                  timestep=timestep,
+                                                                                  control=der_model.controls,
+                                                                                  scenario=[stochastic_scenario])),
+                        ('constant',
+                         der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
+                    )
 
-
-
-    optimization_problem.s1_index_locator = {}
-    # vector definition
-    optimization_problem.variable_vector_s1 = (
-        cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    )
-    # location specifier
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        # location specifier
-        optimization_problem.s1_index_locator['energy', str(time_index)] = [time_index, time_index]
-
-    # vector definition
-
-    temp_size = optimization_problem.variable_vector_s1.size
-    optimization_problem.variable_vector_s1 = cp.vstack(
-        (optimization_problem.variable_vector_s1,
-         cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1)))
-    )
-    # location specifier
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        optimization_problem.s1_index_locator['up_reserve', str(time_index)] = [temp_size + time_index,
-                                                                                temp_size + time_index]
-    # vector definition
-    temp_size = optimization_problem.variable_vector_s1.size
-    optimization_problem.variable_vector_s1 = cp.vstack(
-        (optimization_problem.variable_vector_s1,
-         cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1)))
-    )
-    # location specifier
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        optimization_problem.s1_index_locator['down_reserve', str(time_index)] = [temp_size + time_index,
-                                                                                  temp_size + time_index]
-
-    for stochastic_scenario in stochastic_scenarios:
-        for der_name in der_model_set.flexible_der_names:
-
-            # state vector in s1
-            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
-                temp_size = optimization_problem.variable_vector_s1.size
-                optimization_problem.variable_vector_s1 = cp.vstack((
-                    optimization_problem.variable_vector_s1, cp.Variable((
-                        len(der_model_set.flexible_der_models[der_name].states), 1))
-                ))
-
-                # location specifier
-                optimization_problem.s1_index_locator[der_name, 'der_state_vector', stochastic_scenario,
-                                                      str(time_index)] = [temp_size,
-                                                                          optimization_problem.variable_vector_s1.size - 1]
-            # control vector in s1
-            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
-                temp_size = optimization_problem.variable_vector_s1.size
-                optimization_problem.variable_vector_s1 = cp.vstack((
-                    optimization_problem.variable_vector_s1, cp.Variable((
-                        len(der_model_set.flexible_der_models[der_name].controls), 1))
-                ))
-
-                # location specifier
-                optimization_problem.s1_index_locator[der_name, 'der_control_vector', stochastic_scenario,
-                                                      str(time_index)] = [temp_size,
-                                                                          optimization_problem.variable_vector_s1.size - 1]
-
-            # output vector in s1
-            for time_index in range(len(der_model_set.flexible_der_models[der_name].timesteps)):
-                temp_size = optimization_problem.variable_vector_s1.size
-                optimization_problem.variable_vector_s1 = cp.vstack((
-                    optimization_problem.variable_vector_s1, cp.Variable((
-                        len(der_model_set.flexible_der_models[der_name].outputs), 1))
-                ))
-
-                # location specifier
-                optimization_problem.s1_index_locator[der_name, 'der_output_vector', stochastic_scenario,
-                                                      str(time_index)] = [temp_size,
-                                                                          optimization_problem.variable_vector_s1.size - 1]
-
-    for stochastic_scenario in stochastic_scenarios:
-        # # Define DER power vector variables.
-        # optimization_problem.der_active_power_vector[stochastic_scenario] = (
-        #     cp.Variable((len(der_model_set.timesteps), len(der_model_set.electric_ders)))
-        # )
-        # optimization_problem.der_reactive_power_vector[stochastic_scenario] = (
-        #     cp.Variable((len(der_model_set.timesteps), len(der_model_set.electric_ders)))
-        # )
-
-        for time_index in range(len(der_model_set.timesteps)):
-            temp_size = optimization_problem.variable_vector_s1.size
-            optimization_problem.variable_vector_s1 = cp.vstack((
-                optimization_problem.variable_vector_s1, cp.Variable((len(der_model_set.electric_ders), 1))
-            ))
-
-            # location specifier
-            optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario,
-                                                  str(time_index)] = [temp_size,
-                                                                      optimization_problem.variable_vector_s1.size - 1]
-
-        for time_index in range(len(der_model_set.timesteps)):
-            temp_size = optimization_problem.variable_vector_s1.size
-            optimization_problem.variable_vector_s1 = cp.vstack((
-                optimization_problem.variable_vector_s1, cp.Variable((len(der_model_set.electric_ders), 1))
-            ))
-
-            # location specifier
-            optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario,
-                                                  str(time_index)] = [temp_size,
-                                                                      optimization_problem.variable_vector_s1.size - 1]
-
-    for stochastic_scenario in stochastic_scenarios:
-
-        for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-            temp_size = optimization_problem.variable_vector_s1.size
-            optimization_problem.variable_vector_s1 = cp.vstack((
-                optimization_problem.variable_vector_s1,
-                cp.Variable((len(linear_electric_grid_model.electric_grid_model.nodes), 1))
-            ))
-
-            # location specifier
-            optimization_problem.s1_index_locator['node_voltage_magnitude_vector', stochastic_scenario,
-                                                  str(time_index)] = [temp_size,
-                                                                      optimization_problem.variable_vector_s1.size - 1]
-
-
-
-    # Obtain timestep interval in hours, for conversion of power to energy.
-    timestep_interval_hours = (
-            (price_data.price_timeseries.index[1] - price_data.price_timeseries.index[0])
-            / pd.Timedelta('1h')
-    )
-
-    # initialise A_1 definition
-    A_1_column_number = optimization_problem.variable_vector_s1.size
-    A_1 = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    b_1 = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    # standard form constr definition
-    # To do - b_1 vector definition
-
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        # constr 12 b)
-        A_1[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
-        A_1[time_index,
-        optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][0]:
-        optimization_problem.s1_index_locator['der_active_power_vector', 'no_reserve', str(time_index)][
-            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-
-    # constr 12 c)
-    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        A_1_temp[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
-        A_1_temp[time_index, optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = 1
-        A_1_temp[time_index,
-        optimization_problem.s1_index_locator['der_active_power_vector', 'up_reserve', str(time_index)][0]:
-        optimization_problem.s1_index_locator['der_active_power_vector', 'up_reserve', str(time_index)][
-            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-
-    b_1 = np.vstack((b_1, np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))))
-    A_1 = np.vstack((A_1, A_1_temp))
-
-    # constr 12 d)
-    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        A_1_temp[time_index, optimization_problem.s1_index_locator['energy', str(time_index)][0]] = 1
-        A_1_temp[time_index, optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = -1
-        A_1_temp[time_index,
-        optimization_problem.s1_index_locator['der_active_power_vector', 'down_reserve', str(time_index)][0]:
-        optimization_problem.s1_index_locator['der_active_power_vector', 'down_reserve', str(time_index)][
-            1] + 1] = np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-
-    b_1 = np.vstack((b_1, np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))))
-    A_1 = np.vstack((A_1, A_1_temp))
-
-    # constr 12 g)
-    # V^ref * Vm - M^vp * p^ref * p^der - M^vq * q^ref * q^der = -(M^vp*p^* + M^vq*q^*)
-
-    for stochastic_scenario in stochastic_scenarios:
-        for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
-            # voltage magnitude coefficient
-            A_1_temp[:,
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = np.diagflat(
-                np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
-            # active power contribution:
-            A_1_temp[:,
-            optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][0]:
-            optimization_problem.s1_index_locator['der_active_power_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active @ np.diagflat(
-                np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
-            # reactive power contribution:
-            A_1_temp[:,
-            optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][0]:
-            optimization_problem.s1_index_locator['der_reactive_power_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ np.diagflat(
-                np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]))
-
-            active_reference_point_temp = np.array(
-                [np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())])
-            reactive_reference_point_temp = np.array(
-                [np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())])
-            b_1_temp = -(linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                         @ active_reference_point_temp.T +
-                         linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive @ reactive_reference_point_temp.T)
-            b_1 = np.vstack((b_1, b_1_temp))
-            A_1 = np.vstack((A_1, A_1_temp))
-
-    # constr 12 i) - 12k)
-    # Define DER constraints.
-
-    for der_name, der_model in der_model_set.der_models.items():
-        # Fixed DERs.
-        if issubclass(type(der_model), fledge.der_models.FixedDERModel):
-            if der_model.is_electric_grid_connected:
-                for stochastic_scenario in stochastic_scenarios:
-                    for time_index in range(len(der_model_set.timesteps)):
-                        # for active power (fixed ders)
-                        A_1_temp = np.zeros((1, A_1_column_number))
-
-                        A_1_temp[:, optimization_problem.s1_index_locator[
-                                        'der_active_power_vector', stochastic_scenario, str(time_index)][0
-                                    ] + der_model.electric_grid_der_index[0]] = 1
-
-                        b_1_temp = [der_model.active_power_nominal_timeseries.values[time_index] / (
-                            der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)]
-
-                        b_1 = np.vstack((b_1, b_1_temp))
-                        A_1 = np.vstack((A_1, A_1_temp))
-
-                        # for reactive power (fixed ders)
-                        A_1_temp = np.zeros((1, A_1_column_number))
-
-                        A_1_temp[:, optimization_problem.s1_index_locator[
-                                        'der_reactive_power_vector', stochastic_scenario, str(time_index)][
-                                        0] + der_model.electric_grid_der_index[0]] = 1
-
-                        b_1_temp = [der_model.reactive_power_nominal_timeseries.values[time_index] / (
-                            der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)]
-
-                        b_1 = np.vstack((b_1, b_1_temp))
-                        A_1 = np.vstack((A_1, A_1_temp))
-
-    # Flexible DERs.
-    for der_name, der_model in der_model_set.der_models.items():
-        if issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
-
-            # # Manipulate building model to avoid over-consumption for up-reserves.
-            # if issubclass(type(der_model), fledge.der_models.FlexibleBuildingModel):
-            #     der_model.output_maximum_timeseries.loc[
-            #     :, der_model.output_maximum_timeseries.columns.str.contains('_heat_')
-            #     ] = 0.0
-            # Initial state.
-            # - For states which represent storage state of charge, initial state of charge is final state of charge.
-            for stochastic_scenario in stochastic_scenarios:
-                for time_index in range(len(der_model_set.timesteps)):
-                    print(time_index)
-
-                    # Initial state
-                    if time_index == 0:
-                        if any(der_model.states.isin(der_model.storage_states)):
-                            A_1_temp = np.zeros((1, A_1_column_number))
-                            storage_index_temp = np.argwhere(der_model.states.isin(der_model.storage_states) == True)
-
-                            A_1_temp[:,
-                                    optimization_problem.s1_index_locator[
-                                    der_name, 'der_state_vector', stochastic_scenario,
-                                    str(time_index)
-                                    ][0]
-                                    + storage_index_temp
-                            ] = 1
-                            A_1_temp[:,
-                                    optimization_problem.s1_index_locator[
-                                    der_name, 'der_state_vector', stochastic_scenario,
-                                    str(len(der_model_set.timesteps)-1)
-                                    ][0]
-                                    + storage_index_temp
-                            ] = -1
-
-                            b_1 = np.vstack((b_1, [0]))
-                            A_1 = np.vstack((A_1, A_1_temp))
-                        elif any(~der_model.states.isin(der_model.storage_states)):
-                            not_a_storage_index_vector_temp = np.argwhere(
-                                ~der_model.states.isin(der_model.storage_states) == True
-                            )
-
-                            A_1_temp = np.zeros((not_a_storage_index_vector_temp.size, A_1_column_number))
-
-                            A_1_temp[:,
-                            optimization_problem.s1_index_locator[
-                                der_name, 'der_state_vector', stochastic_scenario,
-                                str(time_index)
-                            ][0]
-                            + not_a_storage_index_vector_temp
-                            ] = 1
-
-                            # here it should be a col vector
-                            b_1_temp = der_model.state_vector_initial.loc[
-                                ~der_model.states.isin(der_model.storage_states)
-                            ].values
-
-                            b_1 = np.vstack((b_1, b_1_temp))
-                            A_1 = np.vstack((A_1, A_1_temp))
-
-                    # State equation.
-                    if time_index != 0:
-                        A_1_temp = np.zeros((der_model.state_matrix.shape[0], A_1_column_number))
-
-                        A_1_temp[:,
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_state_vector', stochastic_scenario,
-                            str(time_index)
-                        ][0]:
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_state_vector', stochastic_scenario,
-                            str(time_index)
-                        ][1] + 1
-                        ] = np.eye(der_model.state_matrix.shape[0])
-
-                        A_1_temp[:,
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_state_vector', stochastic_scenario,
-                            str(time_index-1)
-                        ][0]:
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_state_vector', stochastic_scenario,
-                            str(time_index-1)
-                        ][1]+1
-                        ] = - der_model.state_matrix.values
-
-                        A_1_temp[:,
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_control_vector', stochastic_scenario,
-                            str(time_index)
-                        ][0]:
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_control_vector', stochastic_scenario,
-                            str(time_index)
-                        ][1]+1
-                        ] = - der_model.control_matrix.values
-
-                        b_1_temp = der_model.disturbance_matrix.values @ np.transpose(
-                            der_model.disturbance_timeseries.iloc[time_index, :].values
+                # Define connection constraints.
+                if der_model.is_electric_grid_connected:
+                    for timestep in der_model.timesteps:
+                        # active power
+                        standard_form.define_constraint(
+                            ('variable', der_model.mapping_active_power_by_output.values
+                             / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0),
+                             dict(name='output_vector', der_name=[der_model.der_name],
+                                  timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario])
+                             ),
+                            '==',
+                            ('variable', 1.0, dict(name='der_active_power_vector', timestep=timestep,
+                                                   der_model=(der_model.der_type, der_model.der_name),
+                                                   scenario=[stochastic_scenario]))
                         )
 
-                        b_1 = np.vstack((b_1, b_1_temp))
-                        A_1 = np.vstack((A_1, A_1_temp))
+                        standard_form.define_constraint(
+                            ('variable', der_model.mapping_reactive_power_by_output.values
+                             / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0),
+                             dict(name='output_vector', der_name=[der_model.der_name],
+                                  timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario])
+                             ),
+                            '==',
+                            ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=timestep,
+                                                   der_model=(der_model.der_type, der_model.der_name),
+                                                   scenario=[stochastic_scenario]))
+                        )
 
-                    # Output equation.
-                    A_1_temp = np.zeros((der_model.state_output_matrix.shape[0], A_1_column_number))
+                # Output limits.
+                for timestep in der_model.timesteps:
+                    standard_form.define_constraint(
+                        ('variable', 1.0, dict(name='output_vector', der_name=[der_model.der_name],
+                                               timestep=timestep, output=der_model.outputs,
+                                               scenario=[stochastic_scenario])),
+                        '>=',
+                        ('constant', der_model.output_minimum_timeseries.loc[timestep, :].values)
+                    )
 
-                    A_1_temp[:,
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][0]:
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][1] + 1
-                    ] = np.eye(der_model.state_output_matrix.shape[0])
-
-                    A_1_temp[:,
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_state_vector', stochastic_scenario,
-                        str(time_index)
-                    ][0]:
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_state_vector', stochastic_scenario,
-                        str(time_index)
-                    ][1] + 1
-                    ] = - der_model.state_output_matrix.values
-
-                    A_1_temp[:,
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_control_vector', stochastic_scenario,
-                        str(time_index)
-                    ][0]:
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_control_vector', stochastic_scenario,
-                        str(time_index)
-                    ][1] + 1
-                    ] = - der_model.control_output_matrix.values
-
-                    b_1_temp = np.transpose(der_model.disturbance_output_matrix.values @ np.transpose(
-                        der_model.disturbance_timeseries.iloc[time_index, :].values
-                    )).reshape(der_model.state_output_matrix.shape[0],1)
-
-                    b_1 = np.vstack((b_1, b_1_temp))
-                    A_1 = np.vstack((A_1, A_1_temp))
-
-                    # Define connection constraints.
-                    if der_model.is_electric_grid_connected:
-                        # for active power (flexible DERs)
-                        A_1_temp = np.zeros((1, A_1_column_number))
-
-                        A_1_temp[:, optimization_problem.s1_index_locator[
-                                        'der_active_power_vector', stochastic_scenario, str(time_index)][0
-                                    ] + der_model.electric_grid_der_index[0]] = 1
-
-                        A_1_temp[:,
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_output_vector', stochastic_scenario,
-                            str(time_index)
-                        ][0]:
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_output_vector', stochastic_scenario,
-                            str(time_index)
-                        ][1] + 1
-                        ] = - der_model.mapping_active_power_by_output.values\
-                            / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
-
-                        b_1 = np.vstack((b_1, [0]))
-                        A_1 = np.vstack((A_1, A_1_temp))
-
-                        # for reactive power (flexible DERs)
-                        A_1_temp = np.zeros((1, A_1_column_number))
-
-                        A_1_temp[:, optimization_problem.s1_index_locator[
-                                        'der_reactive_power_vector', stochastic_scenario, str(time_index)][0
-                                    ] + der_model.electric_grid_der_index[0]] = 1
-
-                        A_1_temp[:,
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_output_vector', stochastic_scenario,
-                            str(time_index)
-                        ][0]:
-                        optimization_problem.s1_index_locator[
-                            der_name, 'der_output_vector', stochastic_scenario,
-                            str(time_index)
-                        ][1] + 1
-                        ] = - der_model.mapping_reactive_power_by_output.values \
-                            / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
-
-                        b_1 = np.vstack((b_1, [0]))
-                        A_1 = np.vstack((A_1, A_1_temp))
-
-    # equality constraints
-    A_1 = np.vstack((-A_1, A_1))
-    b_1 = np.vstack((-b_1, b_1))
-
-    # inequality constraints
-    # Flexible DERs. # Output limits.
-    for der_name, der_model in der_model_set.der_models.items():
-        if issubclass(type(der_model), fledge.der_models.FlexibleDERModel):
-            for stochastic_scenario in stochastic_scenarios:
-                for time_index in range(len(der_model_set.timesteps)):
-                    # upper bound
-                    A_1_temp = np.zeros((der_model.state_output_matrix.shape[0], A_1_column_number))
-
-                    A_1_temp[:,
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][0]:
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][1] + 1
-                    ] = np.eye(der_model.state_output_matrix.shape[0])
-
-                    b_1_temp = der_model.output_maximum_timeseries.loc[
-                               der_model.timesteps[time_index], :
-                               ].values.reshape(der_model.state_output_matrix.shape[0], 1)
-
-                    b_1 = np.vstack((b_1, b_1_temp))
-                    A_1 = np.vstack((A_1, A_1_temp))
-
-                    A_1_temp = np.zeros((der_model.state_output_matrix.shape[0], A_1_column_number))
-
-                    A_1_temp[:,
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][0]:
-                    optimization_problem.s1_index_locator[
-                        der_name, 'der_output_vector', stochastic_scenario,
-                        str(time_index)
-                    ][1] + 1
-                    ] = -np.eye(der_model.state_output_matrix.shape[0])
-
-                    b_1_temp = -der_model.output_minimum_timeseries.loc[
-                               der_model.timesteps[time_index], :
-                               ].values.reshape(der_model.state_output_matrix.shape[0], 1)
-
-                    b_1 = np.vstack((b_1, b_1_temp))
-                    A_1 = np.vstack((A_1, A_1_temp))
-
+                    standard_form.define_constraint(
+                        ('variable', 1.0, dict(name='output_vector', der_name=[der_model.der_name],
+                                               timestep=timestep, output=der_model.outputs,
+                                               scenario=[stochastic_scenario])),
+                        '<=',
+                        ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values)
+                    )
+    # voltage upper/lower bound
     node_voltage_magnitude_vector_minimum = (
             0.5 * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
     )
@@ -754,85 +322,96 @@ def main():
     )
 
     for stochastic_scenario in stochastic_scenarios:
-        for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
-            # voltage magnitude coefficient
-            A_1_temp[:,
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = np.diagflat(
-                np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
+        for timestep_grid in linear_electric_grid_model.electric_grid_model.timesteps:
+            standard_form.define_constraint(
+                ('variable', np.diagflat(
+                 np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
+                 dict(name='nodal_voltage_magnitude', timestep=timestep_grid,
+                      grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+                      scenario=[stochastic_scenario])),
+                '>=',
+                ('constant', np.transpose(np.array([node_voltage_magnitude_vector_minimum.ravel()])))
+            )
 
-            b_1_temp = np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()])/np.array(
-                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
-            ))
+            standard_form.define_constraint(
+                ('variable', np.diagflat(
+                 np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
+                 dict(name='nodal_voltage_magnitude', timestep=timestep_grid,
+                      grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+                      scenario=[stochastic_scenario])),
+                '<=',
+                ('constant', np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()])))
+            )
 
-            b_1 = np.vstack((b_1, b_1_temp))
-            A_1 = np.vstack((A_1, A_1_temp))
+    for timestep_grid in linear_electric_grid_model.electric_grid_model.timesteps:
+            # positive offer
+        standard_form.define_constraint(
+            ('variable', 1.0,
+             dict(name='energy', timestep=timestep_grid)),
+            '>=',
+            ('constant', 0.0)
+        )
 
-            A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.nodes), A_1_column_number))
-            # voltage magnitude coefficient
-            A_1_temp[:,
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][0]:
-            optimization_problem.s1_index_locator[
-                'node_voltage_magnitude_vector', stochastic_scenario, str(time_index)][
-                1] + 1] = - np.diagflat(
-                np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]))
+        standard_form.define_constraint(
+            ('variable', 1.0,
+             dict(name='up_reserve', timestep=timestep_grid)),
+            '>=',
+            ('constant', 0.0)
+        )
 
-            b_1_temp = np.transpose(-np.array([node_voltage_magnitude_vector_minimum.ravel()])/np.array(
-                [np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)]
-            ))
+        standard_form.define_constraint(
+            ('variable', 1.0,
+             dict(name='down_reserve', timestep=timestep_grid)),
+            '>=',
+            ('constant', 0.0)
+        )
 
-            b_1 = np.vstack((b_1, b_1_temp))
-            A_1 = np.vstack((A_1, A_1_temp))
+    a_matrix = standard_form.get_a_matrix()
+    b_vector = standard_form.get_b_vector()
 
-    # constr 12 m)
-    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    b_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        A_1_temp[time_index, optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = -1
+    # Instantiate optimization problem.
+    optimization_problem_1 = fledge.utils.OptimizationProblem()
+    optimization_problem_1.x_vector = cp.Variable((len(standard_form.variables), 1))
+    optimization_problem_1.constraints.append(
+        a_matrix.toarray() @ optimization_problem_1.x_vector <= b_vector
+    )
 
-    b_1 = np.vstack((b_1, b_1_temp))
-    A_1 = np.vstack((A_1, A_1_temp))
+    # Obtain timestep interval in hours, for conversion of power to energy.
+    timestep_interval_hours = (der_model.timesteps[1] - der_model.timesteps[0]) / pd.Timedelta('1h')
 
-    A_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), A_1_column_number))
-    b_1_temp = np.zeros((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        A_1_temp[time_index, optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = -1
-
-    b_1 = np.vstack((b_1, b_1_temp))
-    A_1 = np.vstack((A_1, A_1_temp))
-
-    # Define objective vector.
-    f_1 = np.zeros((1, A_1_column_number))
     # energy
     price_temp = price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
         * timestep_interval_hours
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['energy', str(time_index)][0]] = price_temp[time_index]
 
-    # up reserve
-    price_temp = -0.1 * price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
-        * timestep_interval_hours
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['up_reserve', str(time_index)][0]] = price_temp[time_index]
+    # Define objective.
+    # Active power cost / revenue.
+    # - Cost for load / demand, revenue for generation / supply.
+    for timestep in linear_electric_grid_model.electric_grid_model.timesteps:
 
-    # down reserve
-    price_temp = - 1.1 * price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T \
-        * timestep_interval_hours
-    for time_index in range(len(linear_electric_grid_model.electric_grid_model.timesteps)):
-        f_1[optimization_problem.s1_index_locator['down_reserve', str(time_index)][0]] = price_temp[time_index]
+        x_index_energy = fledge.utils.get_index(standard_form.variables, name='energy', timestep=timestep)
+        x_index_up_reserve = fledge.utils.get_index(standard_form.variables, name='up_reserve', timestep=timestep)
+        x_index_down_reserve = fledge.utils.get_index(standard_form.variables, name='down_reserve', timestep=timestep)
 
-    optimization_problem.objective += (f_1 @ optimization_problem.variable_vector_s1)
+        optimization_problem_1.objective += (
+                (
+                        price_temp @ optimization_problem_1.x_vector[x_index_energy, :]
 
-    optimization_problem.constraints.append(
-            A_1 @ optimization_problem.variable_vector_s1 <= b_1)
+                )
+                + (
+                        -0.1 * price_temp @ optimization_problem_1.x_vector[x_index_up_reserve, :]
+
+                )
+                + (
+                        -1.1 * price_temp @ optimization_problem_1.x_vector[x_index_down_reserve, :]
+
+                )
+        )
 
     # Solve optimization problem.
     optimization_problem.solve()
+
+
+
 
     # Obtain reserve results.
     no_reserve = pd.Series(optimization_problem.no_reserve.value.ravel(), index=der_model_set.timesteps)

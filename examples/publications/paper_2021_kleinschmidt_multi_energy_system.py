@@ -1,4 +1,6 @@
-"""Example script for setting up and solving a multi-grid optimal operation problem."""
+"""Run script for reproducing results of the Paper: 'Flexibility in distribution systems – Modelling a thermal-electric
+multi-energy system in FLEDGE'.
+"""
 
 import numpy as np
 import os

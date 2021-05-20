@@ -65,17 +65,14 @@ def recreate_database(
                 # Obtain table name.
                 table_name = os.path.splitext(os.path.basename(csv_file))[0]
                 # Raise exception, if table doesn't exist.
-                try:
-                    assert table_name in valid_table_names
-                except AssertionError:
-                    logger.exception(
+                if not (table_name in valid_table_names):
+                    raise NameError(
                         f"Error loading '{csv_file}' into database, because there is no table named '{table_name}'."
                     )
-                    raise
 
                 # Load table and write to database.
                 try:
-                    table = pd.read_csv(csv_file, dtype=np.str)
+                    table = pd.read_csv(csv_file, dtype=str)
                     table.to_sql(
                         table_name,
                         con=database_connection,
@@ -122,8 +119,12 @@ class ScenarioData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain parameters.
         self.parameters = (
@@ -153,11 +154,8 @@ class ScenarioData(object):
             ))
         )
         # Raise error, if scenario not found.
-        try:
-            assert len(scenario) > 0
-        except AssertionError:
-            logger.exception(f"No scenario found for scenario name '{scenario_name}'.")
-            raise
+        if not (len(scenario) > 0):
+            raise ValueError(f"No scenario found for scenario name '{scenario_name}'.")
         # Convert to Series for shorter indexing.
         self.scenario = scenario.iloc[0].copy()
 
@@ -189,6 +187,7 @@ class ScenarioData(object):
             column: np.ndarray
     ):
         """Parse parameters into one column of a dataframe.
+
         - Replace strings that match `parameter_name` with `parameter_value`.
         - Other strings are are directly parsed into numbers.
         - If a string doesn't match any match `parameter_name` and cannot be parsed, it is replaced with NaN.
@@ -208,7 +207,7 @@ class ScenarioData(object):
                 column = pd.to_numeric(column)
 
         # Explicitly parse to float, for consistent behavior independent of specific values.
-        column = column.astype(np.float)
+        column = column.astype(float)
 
         return column
 
@@ -218,6 +217,7 @@ class ScenarioData(object):
             excluded_columns: list = None
     ):
         """Parse parameters into a dataframe.
+
         - Applies `parse_parameters_column` for all string columns.
         - Columns in `excluded_columns` are not parsed. By default this includes `_name`, `_type`, `connection` columns.
         """
@@ -241,7 +241,67 @@ class ScenarioData(object):
         for column in selected_columns:
             dataframe[column] = self.parse_parameters_column(dataframe[column].values)
 
+        # Apply scaling.
+        if 'active_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'active_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'reactive_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'reactive_power_nominal'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'resistance' in dataframe.columns:
+            dataframe.loc[:, 'resistance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'reactance' in dataframe.columns:
+            dataframe.loc[:, 'reactance'] *= (
+                self.scenario.at['base_apparent_power']
+                / self.scenario.at['base_voltage'] ** 2
+            )
+        if 'capacitance' in dataframe.columns:
+            dataframe.loc[:, 'capacitance'] *= (
+                self.scenario.at['base_voltage'] ** 2
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'maximum_current' in dataframe.columns:
+            dataframe.loc[:, 'maximum_current'] *= (
+                self.scenario.at['base_voltage']
+                / self.scenario.at['base_apparent_power']
+            )
+        if 'voltage' in dataframe.columns:
+            dataframe.loc[:, 'voltage'] /= (
+                self.scenario.at['base_voltage']
+            )
+        if 'apparent_power' in dataframe.columns:
+            dataframe.loc[:, 'apparent_power'] /= (
+                self.scenario.at['base_apparent_power']
+            )
+        if 'enthalpy_difference_distribution_water' in dataframe.columns:
+            dataframe.loc[:, 'enthalpy_difference_distribution_water'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+        # TODO: Align enthalpy variable names (see above & below).
+        if 'condenser_water_enthalpy_difference' in dataframe.columns:
+            dataframe.loc[:, 'condenser_water_enthalpy_difference'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'distribution_pump_efficiency' in dataframe.columns:
+            dataframe.loc[:, 'distribution_pump_efficiency'] *= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'plant_pump_efficiency' in dataframe.columns:
+            dataframe.loc[:, 'plant_pump_efficiency'] *= (
+                self.scenario.at['base_thermal_power']
+            )
+        if 'thermal_power_nominal' in dataframe.columns:
+            dataframe.loc[:, 'thermal_power_nominal'] /= (
+                self.scenario.at['base_thermal_power']
+            )
+
         # If dataframe contains `in_service` column, remove all not-in-service elements.
+        # - This operation should be last, to avoid pandas warnings for operation on copy of dataframe.
         if 'in_service' in dataframe.columns:
             dataframe = dataframe.loc[dataframe.loc[:, 'in_service'] == 1, :]
 
@@ -263,9 +323,12 @@ class ElectricGridData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
-        """Load electric grid data from database for given `scenario_name`."""
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -402,9 +465,12 @@ class ThermalGridData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
-        """Load thermal grid data from database for given `scenario_name`."""
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -488,8 +554,12 @@ class DERData(object):
     def __init__(
             self,
             scenario_name: str,
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -622,29 +692,29 @@ class DERData(object):
 
                 # Append `definition_index`, for more convenient indexing into DER definitions.
                 # - Add `accumulative` flag to ensure correct interpolation / resampling behavior.
-                self.der_definitions[definition_index].at['arrival_definition_index'] = (
-                    self.der_definitions[definition_index].at['arrival_definition_type'] + '_accumulative',
-                    self.der_definitions[definition_index].at['arrival_definition_name']
+                self.der_definitions[definition_index].at['maximum_charging_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_charging_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_charging_definition_name']
                 )
-                self.der_definitions[definition_index].at['departure_definition_index'] = (
-                    self.der_definitions[definition_index].at['departure_definition_type'] + '_accumulative',
-                    self.der_definitions[definition_index].at['departure_definition_name']
+                self.der_definitions[definition_index].at['maximum_discharging_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_name']
                 )
-                self.der_definitions[definition_index].at['occupancy_definition_index'] = (
-                    self.der_definitions[definition_index].at['occupancy_definition_type'],
-                    self.der_definitions[definition_index].at['occupancy_definition_name']
+                self.der_definitions[definition_index].at['maximum_energy_definition_index'] = (
+                    self.der_definitions[definition_index].at['maximum_energy_definition_type'],
+                    self.der_definitions[definition_index].at['maximum_energy_definition_name']
                 )
-                self.der_definitions[definition_index].at['bidirectional_definition_index'] = (
-                    self.der_definitions[definition_index].at['bidirectional_definition_type'],
-                    self.der_definitions[definition_index].at['bidirectional_definition_name']
+                self.der_definitions[definition_index].at['departing_energy_definition_index'] = (
+                    self.der_definitions[definition_index].at['departing_energy_definition_type'] + '_accumulative',
+                    self.der_definitions[definition_index].at['departing_energy_definition_name']
                 )
 
                 # Append arrival / occupancy timeseries / schedule to additional definitions.
                 additional_der_definitions.update({
-                    self.der_definitions[definition_index].at['arrival_definition_index']: None,
-                    self.der_definitions[definition_index].at['departure_definition_index']: None,
-                    self.der_definitions[definition_index].at['occupancy_definition_index']: None,
-                    self.der_definitions[definition_index].at['bidirectional_definition_index']: None
+                    self.der_definitions[definition_index].at['maximum_charging_definition_index']: None,
+                    self.der_definitions[definition_index].at['maximum_discharging_definition_index']: None,
+                    self.der_definitions[definition_index].at['maximum_energy_definition_index']: None,
+                    self.der_definitions[definition_index].at['departing_energy_definition_index']: None
                 })
 
         # Append additional DER definitions.
@@ -687,6 +757,8 @@ class DERData(object):
                         index_col=['time']
                     )
                 )
+                if not (len(der_timeseries) > 0):
+                    raise ValueError(f"No DER time series definition found for definition name '{definition_index[1]}'.")
 
                 # Resample / interpolate / fill values.
                 if 'accumulative' in definition_index[0]:
@@ -754,6 +826,8 @@ class DERData(object):
                         index_col=['time_period']
                     )
                 )
+                if not (len(der_schedule) > 0):
+                    raise ValueError(f"No DER schedule definition found for definition name '{definition_index[1]}'.")
 
                 # Show warning, if `time_period` does not start with '01T00:00'.
                 try:
@@ -876,7 +950,7 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
-    price_sensitivity_coefficient: np.float
+    price_sensitivity_coefficient: float
     price_timeseries: pd.DataFrame
 
     @multimethod
@@ -884,8 +958,12 @@ class PriceData(object):
             self,
             scenario_name: str,
             price_type='',
-            database_connection=connect_database()
+            database_connection=None
     ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
 
         # Obtain scenario data.
         scenario_data = ScenarioData(scenario_name)
@@ -941,8 +1019,6 @@ class PriceData(object):
                     limit=int(pd.to_timedelta('1h') / scenario_data.scenario['timestep_interval'])
                 )
             ).loc[:, 'price_value']
-            # TODO: Fix price unit conversion.
-            # price_timeseries *= 1.0e-3  # 1/kWh in 1/Wh.
 
         # Obtain price timeseries for each DER.
         prices = (
@@ -979,13 +1055,19 @@ class PriceData(object):
                 })
             ]))
         )
+        # TODO: Initialize more efficiently for large number of DERs.
+        # TODO: In 1/MWh.
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]
+            / 1e3  # 1/kWh in 1/Wh.
+            * scenario_data.scenario.at['base_apparent_power']
         )
         # TODO: Proper thermal power price definition.
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'thermal_power'] += (
             price_timeseries.values[:, None]
+            / 1e3  # 1/kWh in 1/Wh.
+            * scenario_data.scenario.at['base_thermal_power']
         )
 
     def copy(self):

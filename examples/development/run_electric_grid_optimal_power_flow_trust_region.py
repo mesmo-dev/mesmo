@@ -6,10 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.utils
+import fledge
 
 
 def main():
@@ -214,10 +211,10 @@ def main():
 
         # Obtain der power change value.
         der_active_power_vector_change = (
-            np.zeros(len(electric_grid_model.ders), dtype=np.float)
+            np.zeros(len(electric_grid_model.ders), dtype=float)
         )
         der_reactive_power_vector_change = (
-            np.zeros(len(electric_grid_model.ders), dtype=np.float)
+            np.zeros(len(electric_grid_model.ders), dtype=float)
         )
         for der_index, der in enumerate(electric_grid_model.ders):
             der_active_power_vector_change[der_index] = (

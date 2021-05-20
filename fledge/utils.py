@@ -57,14 +57,11 @@ class ObjectBase(object):
 
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
-        try:
-            assert attribute_name in typing.get_type_hints(type(self))
-        except AssertionError:
-            logger.error(
+        if not (attribute_name in typing.get_type_hints(type(self))):
+            raise AttributeError(
                 f"Cannot set invalid attribute '{attribute_name}'. "
                 f"Please ensure that the attribute has been defined with type declaration in the class definition."
             )
-            raise
 
         # Set attribute value.
         super().__setattr__(attribute_name, value)
@@ -193,7 +190,8 @@ class OptimizationProblem(object):
 
     def solve(
             self,
-            keep_problem=False
+            keep_problem=False,
+            **kwargs
     ):
 
         # Instantiate CVXPY problem object.
@@ -209,15 +207,14 @@ class OptimizationProblem(object):
                 if fledge.config.config['optimization']['solver_name'] is not None
                 else None
             ),
-            verbose=fledge.config.config['optimization']['show_solver_output']
+            verbose=fledge.config.config['optimization']['show_solver_output'],
+            **kwargs,
+            **fledge.config.solver_parameters
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
-        try:
-            assert self.cvxpy_problem.status == cp.OPTIMAL
-        except AssertionError:
-            logger.error(f"Solver termination status: {self.cvxpy_problem.status}")
-            raise
+        if not (self.cvxpy_problem.status == cp.OPTIMAL):
+            raise cp.SolverError(f"Solver termination status: {self.cvxpy_problem.status}")
 
 
 def starmap(
@@ -254,42 +251,46 @@ def starmap(
     return results
 
 
-def log_timing_start(
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
-
-    logger_object.debug(f"Start {message}.")
-
-    return time.time()
-
-
-def log_timing_end(
-        start_time: float,
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log end message and execution time based on given start time. Should be used together with `log_timing_start`."""
-
-    logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
-
-    return time.time()
-
-
 def log_time(
         label: str,
+        log_level: str = 'debug',
         logger_object: logging.Logger = logger
 ):
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
+    """Log start / end message and time duration for given label.
+
+    - When called with given label for the first time, will log start message.
+    - When called subsequently with the same / previously used label, will log end message and time duration since
+      logging the start message.
+    - The log level for start / end messages can be given as keyword argument, By default, messages are logged as
+      debug messages.
+    - The logger object can be given as keyword argument. By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting ``label``."
+    - End message: "Completed ``label`` in ``duration`` seconds."
+
+    Arguments:
+        label (str): Label for the start / end message.
+
+    Keyword Arguments:
+        log_level (str): Log level to which the start / end messages are output. Choices: 'debug', 'info'.
+            Default: 'debug'.
+        logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
+            ``utils.logger``.
+    """
 
     time_now = time.time()
 
+    if log_level == 'debug':
+        logger_handle = lambda message: logger_object.debug(message)
+    elif log_level == 'info':
+        logger_handle = lambda message: logger_object.info(message)
+    else:
+        raise ValueError(f"Invalid log level: '{log_level}'")
+
     if label in log_times.keys():
-        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+        logger_handle(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
     else:
         log_times[label] = time_now
-        logger_object.debug(f"Starting {label}.")
+        logger_handle(f"Starting {label}.")
 
 
 def get_index(
@@ -314,7 +315,7 @@ def get_index(
     """
 
     # Obtain mask for each level / values combination keyword arguments.
-    mask = np.ones(len(index_set), dtype=np.bool)
+    mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
 
         # Ensure that values are passed as list.
@@ -324,6 +325,9 @@ def get_index(
             # Convert numpy arrays to list.
             values = values.tolist()
             values = [values] if not isinstance(values, list) else values
+        elif isinstance(values, pd.Index):
+            # Convert pandas index to list.
+            values = values.to_list()
         else:
             # Convert single values into list with one item.
             values = [values]
@@ -336,11 +340,8 @@ def get_index(
 
     # Assert that index is not empty.
     if raise_empty_index_error:
-        try:
-            assert len(index) > 0
-        except AssertionError:
-            logger.error(f"Empty index returned for: {levels_values}")
-            raise
+        if not (len(index) > 0):
+            raise ValueError(f"Empty index returned for: {levels_values}")
 
     return index
 
@@ -401,8 +402,8 @@ def get_results_path(
     """
 
     # Preprocess results path name components, including removing non-alphanumeric characters.
-    base_name = re.sub(r'\W+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
-    scenario_name = '' if scenario_name is None else re.sub(r'\W+', '', scenario_name) + '_'
+    base_name = re.sub(r'\W-+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
+    scenario_name = '' if scenario_name is None else re.sub(r'\W-+', '', scenario_name) + '_'
     timestamp = fledge.utils.get_timestamp()
 
     # Obtain results path.
@@ -420,7 +421,7 @@ def get_alphanumeric_string(
 ):
     """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
 
-    return re.sub(r'\W+', '_', string).strip('_').lower()
+    return re.sub(r'\W-+', '_', string).strip('_').lower()
 
 
 def launch(path):
@@ -460,14 +461,18 @@ def write_figure_plotly(
     """
 
     if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
-        pio.write_image(figure, f"{results_path}.{file_format}")
+        pio.write_image(
+            figure,
+            f"{results_path}.{file_format}",
+            width=fledge.config.config['plots']['plotly_figure_width'],
+            height=fledge.config.config['plots']['plotly_figure_height']
+        )
     elif file_format in ['html']:
         pio.write_html(figure, f"{results_path}.{file_format}")
     elif file_format in ['json']:
         pio.write_json(figure, f"{results_path}.{file_format}")
     else:
-        logger.error(
+        raise ValueError(
             f"Invalid `file_format` for `write_figure_plotly`: {file_format}"
             f" - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'"
         )
-        raise ValueError

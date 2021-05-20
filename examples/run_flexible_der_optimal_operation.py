@@ -1,15 +1,13 @@
 """Example script for setting up and solving a flexible DER optimal operation problem."""
 
+import cvxpy as cp
 import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.utils
+import fledge
 
 
 def main():
@@ -90,6 +88,22 @@ def main():
         )
         # figure.show()
         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, output))
+
+    for disturbance in flexible_der_model.disturbances:
+
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=flexible_der_model.disturbance_timeseries.index,
+            y=flexible_der_model.disturbance_timeseries.loc[:, disturbance].values,
+            line=go.scatter.Line(shape='hv')
+        ))
+        figure.update_layout(
+            title=f'Disturbance: {disturbance}',
+            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            showlegend=False
+        )
+        # figure.show()
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, disturbance))
 
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
 

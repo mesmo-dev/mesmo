@@ -16,6 +16,7 @@ caching:
   get_building_model: true
 optimization:
   solver_name: gurobi  # Must be valid solver name for CVXPY.
+  time_limit:  # Solver time limit in seconds. Infinite if not defined. Only for Gurobi / CPLEX.
   show_solver_output: true  # If True, activate verbose solver output.
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.

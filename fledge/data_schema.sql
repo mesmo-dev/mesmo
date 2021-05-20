@@ -17,16 +17,14 @@ CREATE TABLE der_cooling_plants (
 );
 CREATE TABLE der_ev_chargers (
     definition_name TEXT,
-    arrival_definition_type TEXT,
-    arrival_definition_name TEXT,
-    departure_definition_type TEXT,
-    departure_definition_name TEXT,
-    occupancy_definition_type TEXT,
-    occupancy_definition_name TEXT,
-    bidirectional_definition_type TEXT,
-    bidirectional_definition_name TEXT,
-    vehicle_energy_demand TEXT,
-    maximum_active_power TEXT,
+    maximum_charging_definition_type TEXT,
+    maximum_charging_definition_name TEXT,
+    maximum_discharging_definition_type TEXT,
+    maximum_discharging_definition_name TEXT,
+    maximum_energy_definition_type TEXT,
+    maximum_energy_definition_name TEXT,
+    departing_energy_definition_type TEXT,
+    departing_energy_definition_name TEXT,
     PRIMARY KEY(definition_name)
 );
 CREATE TABLE der_models (
@@ -174,6 +172,9 @@ CREATE TABLE scenarios (
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,
+    base_apparent_power REAL DEFAULT 1,
+    base_voltage REAL DEFAULT 1,
+    base_thermal_power REAL DEFAULT 1,
     PRIMARY KEY(scenario_name)
 );
 CREATE TABLE thermal_grid_ders (

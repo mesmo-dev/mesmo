@@ -1,18 +1,13 @@
 """Example script for setting up and solving a multi-grid optimal operation problem."""
 
+import cvxpy as cp
 import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.problems
-import fledge.thermal_grid_models
-import fledge.utils
+import fledge
 
 
 def main():
@@ -101,7 +96,9 @@ def main():
     )
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_data
+        price_data,
+        electric_grid_model=electric_grid_model,
+        thermal_grid_model=thermal_grid_model
     )
 
     # Solve optimization problem.

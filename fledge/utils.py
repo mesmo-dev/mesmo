@@ -376,7 +376,15 @@ class StandardForm(object):
 
             # Obtain constraint index.
             # - Dimension of constraint is based on dimension of `constant`.
-            constraint_index = tuple(range(len(self.constraints), len(self.constraints) + len(constant)))
+            if type(constant) is not float:
+                # Raise error if constant is not a column vector (n, 1) or flat array (n, ).
+                if len(np.shape(constant)) > 1:
+                    if np.shape(constant)[0] < np.shape(constant)[1]:
+                        raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
+                dimension_constant = len(constant)
+            else:
+                dimension_constant = 1
+            constraint_index = tuple(range(len(self.constraints), len(self.constraints) + dimension_constant))
             self.constraints = self.constraints.append(pd.Index(constraint_index, name='constraint_id'))
 
             # Append b vector entry.

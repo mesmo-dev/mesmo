@@ -1,6 +1,3 @@
 scenario_name,electric_grid_name,thermal_grid_name,parameter_set,price_type,price_sensitivity_coefficient,electric_grid_operation_limit_type,thermal_grid_operation_limit_type,timestep_start,timestep_end,timestep_interval
-MES_ISGT_scenario_0,MES_paper_ISGT,MES_paper_ISGT,MES_ISGT_scenario_0,MES_ISGT_prices,1e-9,testing_limits,testing_limits,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00
 MES_ISGT_scenario_1,MES_paper_ISGT,MES_paper_ISGT,MES_ISGT_scenario_1,MES_ISGT_prices,1e-9,testing_limits,testing_limits,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00
 MES_ISGT_scenario_2,MES_paper_ISGT,MES_paper_ISGT,MES_ISGT_scenario_2,MES_ISGT_prices,1e-9,testing_limits,testing_limits,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00
-MES_ISGT_scenario_3,MES_paper_ISGT,MES_paper_ISGT,MES_ISGT_scenario_3,MES_ISGT_prices,1e-9,testing_limits,testing_limits,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00
-MES_ISGT_scenario_4,MES_paper_ISGT,MES_paper_ISGT,MES_ISGT_scenario_4,MES_ISGT_prices,1e-9,testing_limits,testing_limits,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00

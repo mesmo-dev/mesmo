@@ -75,7 +75,7 @@ def main():
     for stochastic_scenario in stochastic_scenarios:
         standard_form.define_variable(
             'nodal_voltage_magnitude', timestep=der_model_set.timesteps,
-            grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+            grid_node=linear_electric_grid_model.electric_grid_model.nodes,
             scenario=[stochastic_scenario]
         )
 
@@ -138,7 +138,7 @@ def main():
                 ('variable', np.diagflat(
                     np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                     dict(name='nodal_voltage_magnitude', timestep=timestep_grid,
-                         grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+                         grid_node=linear_electric_grid_model.electric_grid_model.nodes,
                          scenario=[stochastic_scenario])
                  ),
                 ('variable',
@@ -206,7 +206,6 @@ def main():
                 #for timestep_der in der_model_set.timesteps:
 
                 # # Initial state.
-                # # - TODO: For states which represent storage state of charge, initial state of charge is final state of charge.
                 if any(~der_model.states.isin(der_model.storage_states)):
                     standard_form.define_constraint(
                         ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]
@@ -252,9 +251,9 @@ def main():
                                                                            scenario=[stochastic_scenario]
                                                                            )
                          ),
-                        ('constant', der_model.disturbance_matrix.values @
-                            der_model.disturbance_timeseries.loc[timestep, :].values
-                        )
+                        ('constant',
+                         der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values
+                         )
                     )
 
                 # Output equation.
@@ -275,7 +274,8 @@ def main():
                                                                                   control=der_model.controls,
                                                                                   scenario=[stochastic_scenario])),
                         ('constant',
-                         der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
+                         der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values
+                         )
                     )
 
                 # Define connection constraints.
@@ -323,6 +323,7 @@ def main():
                         '<=',
                         ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values)
                     )
+
     # voltage upper/lower bound
     node_voltage_magnitude_vector_minimum = (
             0.5 * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
@@ -337,7 +338,7 @@ def main():
                 ('variable', np.diagflat(
                  np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                  dict(name='nodal_voltage_magnitude', timestep=timestep_grid,
-                      grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+                      grid_node=linear_electric_grid_model.electric_grid_model.nodes,
                       scenario=[stochastic_scenario])),
                 '>=',
                 ('constant', np.transpose(np.array([node_voltage_magnitude_vector_minimum.ravel()]))[:, 0])
@@ -347,20 +348,20 @@ def main():
                 ('variable', np.diagflat(
                  np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                  dict(name='nodal_voltage_magnitude', timestep=timestep_grid,
-                      grid_node=linear_electric_grid_model.electric_grid_model.nodes.to_numpy(),
+                      grid_node=linear_electric_grid_model.electric_grid_model.nodes,
                       scenario=[stochastic_scenario])),
                 '<=',
                 ('constant', np.transpose(np.array([node_voltage_magnitude_vector_maximum.ravel()]))[:, 0])
             )
 
     for timestep_grid in linear_electric_grid_model.electric_grid_model.timesteps:
-            # positive offer
-        standard_form.define_constraint(
-            ('variable', 1.0,
-             dict(name='energy', timestep=timestep_grid)),
-            '>=',
-            ('constant', 0.0)
-        )
+        #     # positive offer
+        # standard_form.define_constraint(
+        #     ('variable', 1.0,
+        #      dict(name='energy', timestep=timestep_grid)),
+        #     '>=',
+        #     ('constant', 0.0)
+        # )
 
         standard_form.define_constraint(
             ('variable', 1.0,
@@ -422,8 +423,8 @@ def main():
     # Solve optimization problem.
     optimization_problem_1.solve()
 
-
-
+    # Obtain results.
+    results_1 = standard_form.get_results(optimization_problem_1.x_vector)
 
     # Obtain reserve results.
     no_reserve = pd.Series(optimization_problem.no_reserve.value.ravel(), index=der_model_set.timesteps)

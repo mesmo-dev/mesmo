@@ -455,11 +455,11 @@ class StandardForm(object):
             # Obtain indexes.
             variable_index = fledge.utils.get_index(self.variables, name=name)
             timesteps = self.variables[variable_index].get_level_values('timestep').unique()
-            columns = (
-                pd.MultiIndex.from_frame(
-                    self.variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
-                )
-            )
+            columns = self.variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
+            if len(columns.columns) > 0:
+                columns = pd.MultiIndex.from_frame(columns)
+            else:
+                columns = pd.Index(['total'])
 
             # Instantiate results dataframe.
             results[name] = pd.DataFrame(index=timesteps, columns=columns)

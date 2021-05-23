@@ -426,146 +426,149 @@ def main():
     # Obtain results.
     results_1 = standard_form.get_results(optimization_problem_1.x_vector)
 
-    # Obtain reserve results.
-    no_reserve = pd.Series(optimization_problem.no_reserve.value.ravel(), index=der_model_set.timesteps)
-    up_reserve = pd.Series(optimization_problem.up_reserve.value.ravel(), index=der_model_set.timesteps)
-    down_reserve = pd.Series(optimization_problem.down_reserve.value.ravel(), index=der_model_set.timesteps)
+    energy_result = results_1['energy']
 
-    # Instantiate DER results variables.
-    state_vector = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.states)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    control_vector = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.controls)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    output_vector = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.outputs)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    der_active_power_vector = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    der_active_power_vector_per_unit = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    der_reactive_power_vector = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
-        for stochastic_scenario in stochastic_scenarios
-    }
-    der_reactive_power_vector_per_unit = {
-        stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
-        for stochastic_scenario in stochastic_scenarios
-    }
-
-    # Obtain DER results.
-    for stochastic_scenario in stochastic_scenarios:
-        for der_name in der_model_set.flexible_der_names:
-            state_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                optimization_problem.state_vector[der_name, stochastic_scenario].value
-            )
-            control_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                optimization_problem.control_vector[der_name, stochastic_scenario].value
-            )
-            output_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                optimization_problem.output_vector[der_name, stochastic_scenario].value
-            )
-        for der_name in der_model_set.der_names:
-            if der_model_set.der_models[der_name].is_electric_grid_connected:
-                der_active_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)] = (
-                    optimization_problem.der_active_power_vector[stochastic_scenario][
-                    :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
-                    ].value
-                )
-                der_active_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
-                        der_active_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)].values
-                        * der_model_set.der_models[der_name].active_power_nominal
-                )
-                der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)] = (
-                    optimization_problem.der_reactive_power_vector[stochastic_scenario][
-                    :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
-                    ].value
-                )
-                der_reactive_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
-                        der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)].values
-                        * der_model_set.der_models[der_name].reactive_power_nominal
-                )
-
-    # Plot some results.
-    figure = go.Figure()
-    figure.add_scatter(
-        x=no_reserve.index,
-        y=no_reserve.values,
-        name='no_reserve',
-        line=go.scatter.Line(shape='hv', width=5, dash='dot')
-    )
-    figure.add_scatter(
-        x=up_reserve.index,
-        y=up_reserve.values,
-        name='up_reserve',
-        line=go.scatter.Line(shape='hv', width=4, dash='dot')
-    )
-    figure.add_scatter(
-        x=down_reserve.index,
-        y=down_reserve.values,
-        name='down_reserve',
-        line=go.scatter.Line(shape='hv', width=3, dash='dot')
-    )
-    figure.add_scatter(
-        x=up_reserve.index,
-        y=(no_reserve + up_reserve).values,
-        name='no_reserve + up_reserve',
-        line=go.scatter.Line(shape='hv', width=2, dash='dot')
-    )
-    figure.add_scatter(
-        x=up_reserve.index,
-        y=(no_reserve - down_reserve).values,
-        name='no_reserve - down_reserve',
-        line=go.scatter.Line(shape='hv', width=1, dash='dot')
-    )
-    figure.update_layout(
-        title=f'Power balance',
-        xaxis=go.layout.XAxis(tickformat='%H:%M'),
-        legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
-    )
-    # figure.show()
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
-
-    for der_name, der_model in der_model_set.flexible_der_models.items():
-
-        for output in der_model.outputs:
-            figure = go.Figure()
-            figure.add_scatter(
-                x=der_model.output_maximum_timeseries.index,
-                y=der_model.output_maximum_timeseries.loc[:, output].values,
-                name='Maximum',
-                line=go.scatter.Line(shape='hv')
-            )
-            figure.add_scatter(
-                x=der_model.output_minimum_timeseries.index,
-                y=der_model.output_minimum_timeseries.loc[:, output].values,
-                name='Minimum',
-                line=go.scatter.Line(shape='hv')
-            )
-            for number, stochastic_scenario in enumerate(stochastic_scenarios):
-                figure.add_scatter(
-                    x=output_vector[stochastic_scenario].index,
-                    y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
-                    name=f'Optimal: {stochastic_scenario}',
-                    line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
-                )
-            figure.update_layout(
-                title=f'DER: ({der_model.der_type}, {der_name}) / Output: {output}',
-                xaxis=go.layout.XAxis(tickformat='%H:%M'),
-                legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
-            )
-            # figure.show()
-            fledge.utils.write_figure_plotly(figure, os.path.join(
-                results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
-            ))
+    #
+    # # Obtain reserve results.
+    # no_reserve = pd.Series(optimization_problem.no_reserve.value.ravel(), index=der_model_set.timesteps)
+    # up_reserve = pd.Series(optimization_problem.up_reserve.value.ravel(), index=der_model_set.timesteps)
+    # down_reserve = pd.Series(optimization_problem.down_reserve.value.ravel(), index=der_model_set.timesteps)
+    #
+    # # Instantiate DER results variables.
+    # state_vector = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.states)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # control_vector = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.controls)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # output_vector = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.outputs)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # der_active_power_vector = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # der_active_power_vector_per_unit = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # der_reactive_power_vector = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    # der_reactive_power_vector_per_unit = {
+    #     stochastic_scenario: pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.electric_ders)
+    #     for stochastic_scenario in stochastic_scenarios
+    # }
+    #
+    # # Obtain DER results.
+    # for stochastic_scenario in stochastic_scenarios:
+    #     for der_name in der_model_set.flexible_der_names:
+    #         state_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
+    #             optimization_problem.state_vector[der_name, stochastic_scenario].value
+    #         )
+    #         control_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
+    #             optimization_problem.control_vector[der_name, stochastic_scenario].value
+    #         )
+    #         output_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
+    #             optimization_problem.output_vector[der_name, stochastic_scenario].value
+    #         )
+    #     for der_name in der_model_set.der_names:
+    #         if der_model_set.der_models[der_name].is_electric_grid_connected:
+    #             der_active_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)] = (
+    #                 optimization_problem.der_active_power_vector[stochastic_scenario][
+    #                 :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
+    #                 ].value
+    #             )
+    #             der_active_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
+    #                     der_active_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)].values
+    #                     * der_model_set.der_models[der_name].active_power_nominal
+    #             )
+    #             der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)] = (
+    #                 optimization_problem.der_reactive_power_vector[stochastic_scenario][
+    #                 :, fledge.utils.get_index(der_model_set.electric_ders, der_name=der_name)
+    #                 ].value
+    #             )
+    #             der_reactive_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
+    #                     der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)].values
+    #                     * der_model_set.der_models[der_name].reactive_power_nominal
+    #             )
+    #
+    # # Plot some results.
+    # figure = go.Figure()
+    # figure.add_scatter(
+    #     x=no_reserve.index,
+    #     y=no_reserve.values,
+    #     name='no_reserve',
+    #     line=go.scatter.Line(shape='hv', width=5, dash='dot')
+    # )
+    # figure.add_scatter(
+    #     x=up_reserve.index,
+    #     y=up_reserve.values,
+    #     name='up_reserve',
+    #     line=go.scatter.Line(shape='hv', width=4, dash='dot')
+    # )
+    # figure.add_scatter(
+    #     x=down_reserve.index,
+    #     y=down_reserve.values,
+    #     name='down_reserve',
+    #     line=go.scatter.Line(shape='hv', width=3, dash='dot')
+    # )
+    # figure.add_scatter(
+    #     x=up_reserve.index,
+    #     y=(no_reserve + up_reserve).values,
+    #     name='no_reserve + up_reserve',
+    #     line=go.scatter.Line(shape='hv', width=2, dash='dot')
+    # )
+    # figure.add_scatter(
+    #     x=up_reserve.index,
+    #     y=(no_reserve - down_reserve).values,
+    #     name='no_reserve - down_reserve',
+    #     line=go.scatter.Line(shape='hv', width=1, dash='dot')
+    # )
+    # figure.update_layout(
+    #     title=f'Power balance',
+    #     xaxis=go.layout.XAxis(tickformat='%H:%M'),
+    #     legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
+    # )
+    # # figure.show()
+    # fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
+    #
+    # for der_name, der_model in der_model_set.flexible_der_models.items():
+    #
+    #     for output in der_model.outputs:
+    #         figure = go.Figure()
+    #         figure.add_scatter(
+    #             x=der_model.output_maximum_timeseries.index,
+    #             y=der_model.output_maximum_timeseries.loc[:, output].values,
+    #             name='Maximum',
+    #             line=go.scatter.Line(shape='hv')
+    #         )
+    #         figure.add_scatter(
+    #             x=der_model.output_minimum_timeseries.index,
+    #             y=der_model.output_minimum_timeseries.loc[:, output].values,
+    #             name='Minimum',
+    #             line=go.scatter.Line(shape='hv')
+    #         )
+    #         for number, stochastic_scenario in enumerate(stochastic_scenarios):
+    #             figure.add_scatter(
+    #                 x=output_vector[stochastic_scenario].index,
+    #                 y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+    #                 name=f'Optimal: {stochastic_scenario}',
+    #                 line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
+    #             )
+    #         figure.update_layout(
+    #             title=f'DER: ({der_model.der_type}, {der_name}) / Output: {output}',
+    #             xaxis=go.layout.XAxis(tickformat='%H:%M'),
+    #             legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
+    #         )
+    #         # figure.show()
+    #         fledge.utils.write_figure_plotly(figure, os.path.join(
+    #             results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
+    #         ))
 
         # for control in der_model.controls:
         #     figure = go.Figure()
@@ -603,25 +606,25 @@ def main():
         #         results_path, f'der_{der_model.der_type}_{der_name}_disturbance_{disturbance}'
         #     ))
 
-    for commodity_type in ['active_power', 'reactive_power']:
-
-        if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):
-            figure = go.Figure()
-            figure.add_scatter(
-                x=price_data.price_timeseries.index,
-                y=price_data.price_timeseries.loc[:, (commodity_type, 'source', 'source')].values,
-                line=go.scatter.Line(shape='hv')
-            )
-            figure.update_layout(
-                title=f'Price: {commodity_type}',
-                xaxis=go.layout.XAxis(tickformat='%H:%M')
-            )
-            # figure.show()
-            fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
-
-    # Print results path.
-    fledge.utils.launch(results_path)
-    print(f"Results are stored in: {results_path}")
+    # for commodity_type in ['active_power', 'reactive_power']:
+    #
+    #     if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):
+    #         figure = go.Figure()
+    #         figure.add_scatter(
+    #             x=price_data.price_timeseries.index,
+    #             y=price_data.price_timeseries.loc[:, (commodity_type, 'source', 'source')].values,
+    #             line=go.scatter.Line(shape='hv')
+    #         )
+    #         figure.update_layout(
+    #             title=f'Price: {commodity_type}',
+    #             xaxis=go.layout.XAxis(tickformat='%H:%M')
+    #         )
+    #         # figure.show()
+    #         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+    #
+    # # Print results path.
+    # fledge.utils.launch(results_path)
+    # print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

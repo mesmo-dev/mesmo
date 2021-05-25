@@ -832,6 +832,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 phases_list = fledge.utils.get_element_phases_array(der).tolist()
 
                 # Select connection node based on phase arrangement of delta der.
+                # TODO: Why no multi-phase delta DERs?
                 # - Delta DERs must be single-phase.
                 if phases_list in ([1, 2], [2, 3]):
                     node_index = [node_index[0]]

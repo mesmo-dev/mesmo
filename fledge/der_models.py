@@ -947,6 +947,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         )
 
         # Construct output constraint timeseries
+        # TODO: Revise constraints with pu limits.
         self.output_maximum_timeseries = (
             pd.concat([
                 self.active_power_nominal_timeseries,

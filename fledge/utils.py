@@ -321,6 +321,10 @@ class StandardForm(object):
                 if element == elements[0]:
                     ValueError(f"Operator is first element of a constraint.")
 
+                # Raise error if operator is last element.
+                if element == elements[-1]:
+                    ValueError(f"Operator is last element of a constraint.")
+
                 # Raise error if operator is already defined.
                 if operator is not None:
                     ValueError(f"Multiple operators defined in one constraint.")

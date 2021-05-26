@@ -404,17 +404,26 @@ def main():
 
     s1_last_index = max(voltage_varibale_index)
 
-    a_2_matrix = a_matrix[:, 0:s1_last_index+1]
+    A2_matrix = a_matrix[:, 0:s1_last_index+1]
 
-    delta_indices = 
+    delta_indices = np.array([])
+
     for der_name, der_model in der_model_set.flexible_der_models.items():
         if not der_model.disturbances.empty:
             temp_indices = fledge.utils.get_index(standard_form.variables, name='uncertainty_disturbances_vector_s2',
                                    timestep=der_model.timesteps, der_name=[der_model.der_name],
                                    disturbance=der_model.disturbances,
                                     )
+            delta_indices = np.hstack((delta_indices, temp_indices))
 
+    C2_matrix = a_matrix[:, delta_indices]
 
+    temp_indices = np.linspace(0, s1_last_index, s1_last_index+1)
+
+    s2_indices = np.setdiff1d(np.linspace(0, a_matrix.shape[1]-1, a_matrix.shape[1]),
+                              np.hstack((temp_indices, delta_indices)))
+
+    B2_matrix = a_matrix[:, s2_indices]
 
     # Instantiate optimization problem.
     optimization_problem_1 = fledge.utils.OptimizationProblem()

@@ -337,6 +337,13 @@ def main():
             * timestep_interval_hours  # In Wh.
             @ optimization_problem.down_reserve
         )
+        + (
+            1e+2 * cp.sum(
+                optimization_problem.no_reserve
+                + optimization_problem.up_reserve
+                + optimization_problem.down_reserve
+            )
+        )
     )
 
     # Solve optimization problem.

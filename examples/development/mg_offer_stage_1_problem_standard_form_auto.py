@@ -496,6 +496,13 @@ def main():
             -1.1 * np.array([price_timeseries_energy])
             @ optimization_problem.x_vector[x_index_down_reserve, :]
         )
+        + (
+            1e+2 * cp.sum(
+                optimization_problem.x_vector[x_index_energy, :]
+                + optimization_problem.x_vector[x_index_up_reserve, :]
+                + optimization_problem.x_vector[x_index_down_reserve, :]
+            )
+        )
     )
 
     # Solve optimization problem.

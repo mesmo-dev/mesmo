@@ -397,6 +397,12 @@ class StandardForm(object):
             # Append A matrix entries.
             for variable in variables:
 
+                # If any variable key values are empty, ignore variable & do not add any A matrix entry.
+                for key_value in variable[1].values():
+                    if isinstance(key_value, (list, tuple, pd.Index, np.ndarray)):
+                        if len(key_value) == 0:
+                            continue  # Skip variable & go to next iteration.
+
                 # Obtain variable index & raise error if variable or key does not exist.
                 variable_index = (
                     tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))

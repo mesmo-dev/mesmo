@@ -397,10 +397,13 @@ def main():
     a_matrix = standard_form.get_a_matrix()
     b_vector = standard_form.get_b_vector()
 
-    # Slicing matrices
-    voltage_varibale_index = fledge.utils.get_index(standard_form.variables, name='nodal_voltage_magnitude_s1',
-                                                timestep=der_model_set.timesteps, grid_node=linear_electric_grid_model.electric_grid_model.nodes,
-                                                scenario=[stochastic_scenario])
+    # Slicing matrices - getting respective matrices for DRO
+    # constr matrices
+    voltage_varibale_index = fledge.utils.get_index(
+        standard_form.variables, name='nodal_voltage_magnitude_s1',
+        timestep=der_model_set.timesteps, grid_node=linear_electric_grid_model.electric_grid_model.nodes,
+        scenario=[stochastic_scenario]
+    )
 
     s1_last_index = max(voltage_varibale_index)
 
@@ -418,12 +421,48 @@ def main():
 
     C2_matrix = a_matrix[:, delta_indices]
 
-    temp_indices = np.linspace(0, s1_last_index, s1_last_index+1)
+    s1_indices = np.linspace(0, s1_last_index, s1_last_index+1)
 
-    s2_indices = np.setdiff1d(np.linspace(0, a_matrix.shape[1]-1, a_matrix.shape[1]),
-                              np.hstack((temp_indices, delta_indices)))
+    s2_indices = np.setdiff1d(
+        np.linspace(0, a_matrix.shape[1]-1, a_matrix.shape[1]), np.hstack((s1_indices, delta_indices))
+    )
 
     B2_matrix = a_matrix[:, s2_indices]
+
+    # objective matrices
+    M_Q2_delta = np.zeros((s1_indices.shape[0], delta_indices.shape[0]))
+
+    up_reserve_s1_indices = fledge.utils.get_index(
+        standard_form.variables, name='up_reserve_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    down_reserve_s1_indices = fledge.utils.get_index(
+        standard_form.variables, name='down_reserve_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    up_reserve_s1_indices = fledge.utils.get_index(
+        standard_form.variables, name='up_reserve_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    down_reserve_s1_indices = fledge.utils.get_index(
+        standard_form.variables, name='down_reserve_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    up_reserve_price_deviation_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_up_reserve_price_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    down_reserve_price_deviation_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_down_reserve_price_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    M_Q2_delta = 
 
     # Instantiate optimization problem.
     optimization_problem_1 = fledge.utils.OptimizationProblem()

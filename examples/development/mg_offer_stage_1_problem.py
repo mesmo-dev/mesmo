@@ -86,6 +86,45 @@ def main():
     # Define node voltage variable.
     optimization_problem.node_voltage_magnitude_vector = dict.fromkeys(stochastic_scenarios)
 
+    # Define power balance constraints.
+    for stochastic_scenario in stochastic_scenarios:
+        if stochastic_scenario == 'no_reserve':
+            optimization_problem.constraints.append(
+                optimization_problem.no_reserve
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
+            )
+        elif stochastic_scenario == 'up_reserve':
+            optimization_problem.constraints.append(
+                optimization_problem.no_reserve
+                + optimization_problem.up_reserve
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
+            )
+        else:
+            optimization_problem.constraints.append(
+                optimization_problem.no_reserve
+                - optimization_problem.down_reserve
+                ==
+                -1.0 * cp.sum(cp.multiply(
+                    optimization_problem.der_active_power_vector[stochastic_scenario],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                ), axis=1, keepdims=True)
+            )
+
+    optimization_problem.constraints.append(
+        optimization_problem.up_reserve >= 0
+    )
+    optimization_problem.constraints.append(
+        optimization_problem.down_reserve >= 0
+    )
+
     for stochastic_scenario in stochastic_scenarios:
         optimization_problem.node_voltage_magnitude_vector[stochastic_scenario] = (
             cp.Variable((
@@ -117,14 +156,13 @@ def main():
             / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
         )
 
+    # Define upper / lower bounds for voltage magnitude.
     node_voltage_magnitude_vector_minimum = (
         0.5 * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
     )
     node_voltage_magnitude_vector_maximum = (
         1.5 * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
     )
-
-    # Define upper/lower bounds for voltage magnitude.
     for stochastic_scenario in stochastic_scenarios:
         optimization_problem.voltage_magnitude_vector_minimum_constraint = (
             optimization_problem.node_voltage_magnitude_vector[stochastic_scenario]
@@ -273,46 +311,6 @@ def main():
                         )
                         / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
                     )
-    # Define Substation constr. TO DO
-
-    # Define power balance constraints.
-    for stochastic_scenario in stochastic_scenarios:
-        if stochastic_scenario == 'no_reserve':
-            optimization_problem.constraints.append(
-                optimization_problem.no_reserve
-                ==
-                -1.0 * cp.sum(cp.multiply(
-                    optimization_problem.der_active_power_vector[stochastic_scenario],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ), axis=1, keepdims=True)
-            )
-        elif stochastic_scenario == 'up_reserve':
-            optimization_problem.constraints.append(
-                optimization_problem.no_reserve
-                + optimization_problem.up_reserve
-                ==
-                -1.0 * cp.sum(cp.multiply(
-                    optimization_problem.der_active_power_vector[stochastic_scenario],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ), axis=1, keepdims=True)
-            )
-        else:
-            optimization_problem.constraints.append(
-                optimization_problem.no_reserve
-                - optimization_problem.down_reserve
-                ==
-                -1.0 * cp.sum(cp.multiply(
-                    optimization_problem.der_active_power_vector[stochastic_scenario],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ), axis=1, keepdims=True)
-            )
-
-    optimization_problem.constraints.append(
-        optimization_problem.up_reserve >= 0
-    )
-    optimization_problem.constraints.append(
-        optimization_problem.down_reserve >= 0
-    )
 
     # Obtain timestep interval in hours, for conversion of power to energy.
     timestep_interval_hours = (
@@ -338,6 +336,13 @@ def main():
             * price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T
             * timestep_interval_hours  # In Wh.
             @ optimization_problem.down_reserve
+        )
+        + (
+            1e+2 * cp.sum(
+                optimization_problem.no_reserve
+                + optimization_problem.up_reserve
+                + optimization_problem.down_reserve
+            )
         )
     )
 

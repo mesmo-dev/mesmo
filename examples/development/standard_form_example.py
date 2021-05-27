@@ -67,8 +67,8 @@ def main():
             ('variable', 1.0, dict(name='state_vector', timestep=timestep)),
             '==',
             ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=timestep_previous)),
-            ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=timestep)),
-            ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
+            ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=timestep_previous)),
+            ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep_previous, :].values)
         )
 
     # Output equation.

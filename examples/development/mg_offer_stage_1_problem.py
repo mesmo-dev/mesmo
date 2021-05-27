@@ -270,46 +270,54 @@ def main():
                 )
 
                 # Output limits.
-                outputs_minimum_infinite = (
-                    (der_model.output_minimum_timeseries == -np.inf).all()
-                )
                 optimization_problem.constraints.append(
-                    optimization_problem.output_vector[der_name, stochastic_scenario][:, ~outputs_minimum_infinite]
+                    optimization_problem.output_vector[der_name, stochastic_scenario]
                     >=
-                    der_model.output_minimum_timeseries.loc[:, ~outputs_minimum_infinite].values
-                )
-                outputs_maximum_infinite = (
-                    (der_model.output_maximum_timeseries == np.inf).all()
+                    der_model.output_minimum_timeseries.values
                 )
                 optimization_problem.constraints.append(
-                    optimization_problem.output_vector[der_name, stochastic_scenario][:, ~outputs_maximum_infinite]
+                    optimization_problem.output_vector[der_name, stochastic_scenario]
                     <=
-                    der_model.output_maximum_timeseries.loc[:, ~outputs_maximum_infinite].values
+                    der_model.output_maximum_timeseries.values
                 )
 
                 # Define connection constraints.
                 if der_model.is_electric_grid_connected:
                     optimization_problem.constraints.append(
                         optimization_problem.der_active_power_vector[stochastic_scenario][
-                            :, der_model.electric_grid_der_index
+                            :-1, der_model.electric_grid_der_index
                         ]
                         ==
                         cp.transpose(
                             der_model.mapping_active_power_by_output.values
-                            @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
+                            @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario][:-1, :])
                         )
                         / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
                     )
                     optimization_problem.constraints.append(
                         optimization_problem.der_reactive_power_vector[stochastic_scenario][
-                            :, der_model.electric_grid_der_index
+                            :-1, der_model.electric_grid_der_index
                         ]
                         ==
                         cp.transpose(
                             der_model.mapping_reactive_power_by_output.values
-                            @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario])
+                            @ cp.transpose(optimization_problem.output_vector[der_name, stochastic_scenario][:-1, :])
                         )
                         / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
+                    )
+                    optimization_problem.constraints.append(
+                        optimization_problem.der_active_power_vector[stochastic_scenario][
+                            -1, der_model.electric_grid_der_index
+                        ]
+                        ==
+                        0.0
+                    )
+                    optimization_problem.constraints.append(
+                        optimization_problem.der_reactive_power_vector[stochastic_scenario][
+                            -1, der_model.electric_grid_der_index
+                        ]
+                        ==
+                        0.0
                     )
 
     # Obtain timestep interval in hours, for conversion of power to energy.
@@ -337,13 +345,13 @@ def main():
             * timestep_interval_hours  # In Wh.
             @ optimization_problem.down_reserve
         )
-        + (
-            1e+2 * cp.sum(
-                optimization_problem.no_reserve
-                + optimization_problem.up_reserve
-                + optimization_problem.down_reserve
-            )
-        )
+        # + (
+        #     1e-2 * cp.sum(
+        #         optimization_problem.no_reserve ** 2
+        #         + optimization_problem.up_reserve ** 2
+        #         + optimization_problem.down_reserve ** 2
+        #     )
+        # )
     )
 
     # Solve optimization problem.

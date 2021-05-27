@@ -324,14 +324,14 @@ def main():
                             'variable',
                             der_model.control_matrix.values,
                             dict(
-                                name='control_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='control_vector', der_name=[der_model.der_name], timestep=timestep_previous,
                                 control=der_model.controls, scenario=[stochastic_scenario]
                             )
                         ),
                         (
                             'constant',
                             der_model.disturbance_matrix.values
-                            @ der_model.disturbance_timeseries.loc[timestep, :].values
+                            @ der_model.disturbance_timeseries.loc[timestep_previous, :].values
                         )
                     )
 
@@ -377,12 +377,17 @@ def main():
                         # Active power.
                         standard_form.define_constraint(
                             (
-                                'variable',
-                                der_model.mapping_active_power_by_output.values
-                                / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0),
-                                dict(
-                                    name='output_vector', der_name=[der_model.der_name], timestep=timestep,
-                                    output=der_model.outputs, scenario=[stochastic_scenario]
+                                (
+                                    'variable',
+                                    der_model.mapping_active_power_by_output.values
+                                    / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0),
+                                    dict(
+                                        name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                        output=der_model.outputs, scenario=[stochastic_scenario]
+                                    )
+                                ) if timestep != der_model.timesteps[-1] else (
+                                    'constant',
+                                    0.0
                                 )
                             ),
                             '==',
@@ -399,12 +404,17 @@ def main():
                         # Reactive power.
                         standard_form.define_constraint(
                             (
-                                'variable',
-                                der_model.mapping_reactive_power_by_output.values
-                                / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0),
-                                dict(
-                                    name='output_vector', der_name=[der_model.der_name], timestep=timestep,
-                                    output=der_model.outputs, scenario=[stochastic_scenario]
+                                (
+                                    'variable',
+                                    der_model.mapping_reactive_power_by_output.values
+                                    / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0),
+                                    dict(
+                                        name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                        output=der_model.outputs, scenario=[stochastic_scenario]
+                                    )
+                                ) if timestep != der_model.timesteps[-1] else (
+                                    'constant',
+                                    0.0
                                 )
                             ),
                             '==',
@@ -432,7 +442,6 @@ def main():
                         '>=',
                         ('constant', der_model.output_minimum_timeseries.loc[timestep, :].values)
                     )
-
                     standard_form.define_constraint(
                         (
                             'variable',
@@ -496,13 +505,13 @@ def main():
             -1.1 * np.array([price_timeseries_energy])
             @ optimization_problem.x_vector[x_index_down_reserve, :]
         )
-        + (
-            1e+2 * cp.sum(
-                optimization_problem.x_vector[x_index_energy, :]
-                + optimization_problem.x_vector[x_index_up_reserve, :]
-                + optimization_problem.x_vector[x_index_down_reserve, :]
-            )
-        )
+        # + (
+        #     1e-2 * cp.sum(
+        #         optimization_problem.x_vector[x_index_energy, :] ** 2
+        #         + optimization_problem.x_vector[x_index_up_reserve, :] ** 2
+        #         + optimization_problem.x_vector[x_index_down_reserve, :] ** 2
+        #     )
+        # )
     )
 
     # Solve optimization problem.

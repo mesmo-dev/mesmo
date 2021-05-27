@@ -144,8 +144,7 @@ def main():
 
 
 
-    for timestep_grid, timestep_der in zip(linear_electric_grid_model.electric_grid_model.timesteps,
-                                           der_model.timesteps):
+    for timestep_grid, timestep_der in zip(linear_electric_grid_model.electric_grid_model.timesteps, der_model.timesteps):
         standard_form.define_constraint(
             ('variable', np.diagflat(
                 np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
@@ -166,10 +165,13 @@ def main():
              ),
             '==',
             ('constant', (-(linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                           @ active_reference_point_temp.T +
-                           linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                           @ reactive_reference_point_temp.T) + np.transpose(np.array([np.abs(
-                                linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])))[:, 0]
+                            @ active_reference_point_temp.T +
+                            linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                            @ reactive_reference_point_temp.T) +
+                            np.transpose(
+                              np.array([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])
+                            )
+                          )[:, 0]
             )
         )
 
@@ -231,7 +233,9 @@ def main():
                         state=der_model.states[der_model.states.isin(der_model.storage_states)]
                     ))
                 )
+
             print(der_model.der_name)
+
             # State equation.
             for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
                 if not der_model.disturbances.empty:
@@ -239,24 +243,22 @@ def main():
                         ('variable', 1.0, dict(name='state_vector_s2', der_name=[der_model.der_name], timestep=timestep,
                                                state=der_model.states)),
                         '==',
-                        ('variable', der_model.state_matrix.values, dict(name='state_vector_s2',
-                                                                         der_name=[der_model.der_name],
-                                                                         timestep=timestep_previous,
-                                                                         state=der_model.states)
+                        ('variable', der_model.state_matrix.values, dict(
+                            name='state_vector_s2', der_name=[der_model.der_name], timestep=timestep_previous,
+                            state=der_model.states)
                          ),
-                        ('variable', der_model.control_matrix.values, dict(name='control_vector_s2',
-                                                                           der_name=[der_model.der_name],
-                                                                           timestep=timestep,
-                                                                           control=der_model.controls)
+                        ('variable', der_model.control_matrix.values, dict(
+                            name='control_vector_s2', der_name=[der_model.der_name], timestep=timestep_previous,
+                            control=der_model.controls)
                          ),
                         ('constant',
                          der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values
                          ),
                         ('variable',
-                         der_model.disturbance_matrix.values, dict(name='uncertainty_disturbances_vector_s2',
-                                                                   timestep=timestep,
-                                                                   der_name=[der_model.der_name],
-                                                                   disturbance=der_model.disturbances)
+                         der_model.disturbance_matrix.values, dict(
+                            name='uncertainty_disturbances_vector_s2', timestep=timestep_previous,
+                            der_name=[der_model.der_name], disturbance=der_model.disturbances
+                         )
                          )
                     )
                 else:
@@ -459,6 +461,11 @@ def main():
     # M_Q2_delta matrix
     M_Q2_delta = np.zeros((s1_indices.shape[0], delta_indices.shape[0]))
 
+    energy_s1_indices = fledge.utils.get_index(
+        standard_form.variables, name='energy_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
     up_reserve_s1_indices = fledge.utils.get_index(
         standard_form.variables, name='up_reserve_s1',
         timestep=linear_electric_grid_model.electric_grid_model.timesteps
@@ -466,6 +473,11 @@ def main():
 
     down_reserve_s1_indices = fledge.utils.get_index(
         standard_form.variables, name='down_reserve_s1',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    energy_price_deviation_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_energy_price_deviation_s2',
         timestep=linear_electric_grid_model.electric_grid_model.timesteps
     )
 
@@ -482,7 +494,30 @@ def main():
     M_Q2_delta[np.where(pd.Index(s1_indices).isin(up_reserve_s1_indices)),
                np.where(pd.Index(delta_indices).isin(up_reserve_price_deviation_s2_indices))] = 0.4
 
+    M_Q2_delta[np.where(pd.Index(s1_indices).isin(down_reserve_s1_indices)),
+               np.where(pd.Index(delta_indices).isin(down_reserve_price_deviation_s2_indices))] = 0.6
 
+    M_Q2_delta[np.where(pd.Index(s1_indices).isin(energy_s1_indices)),
+               np.where(pd.Index(delta_indices).isin(energy_price_deviation_s2_indices))] = -1
+
+    # m_Q2_s2 vector
+    m_Q2_s2 = np.zeros((s2_indices.shape[0], 1))
+    penalty_factor = 0.1
+    der_cost_factor = 0.01
+
+    energy_deviation_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='energy_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    m_Q2_s2[np.where(pd.Index(s2_indices).isin(energy_deviation_s2_indices)), 0] = -penalty_factor
+
+    der_active_power_vector_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='der_active_power_vector_s2', timestep=der_model_set.timesteps,
+        der_model=der_model_set.ders,
+    )
+
+    m_Q2_s2[np.where(pd.Index(s2_indices).isin(der_active_power_vector_s2_indices)), 0] = -der_cost_factor
 
 
     # Instantiate optimization problem.

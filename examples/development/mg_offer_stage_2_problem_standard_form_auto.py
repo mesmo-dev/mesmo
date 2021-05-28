@@ -477,7 +477,7 @@ def main():
     a_matrix = standard_form.get_a_matrix()
     b_vector = standard_form.get_b_vector()
 
-    # Slicing matrices - getting respective matrices for DRO
+    # Obtain DRO constr matrices: A2, B2, and C2 by slicing matrices
     # A2 matrix
     voltage_varibale_index = fledge.utils.get_index(
         standard_form.variables, name='nodal_voltage_magnitude_s1',

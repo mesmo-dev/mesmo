@@ -72,7 +72,7 @@ def main():
 
         standard_form.define_variable(
             'nodal_voltage_magnitude_s1', timestep=der_model_set.timesteps,
-            grid_node=linear_electric_grid_model.electric_grid_model.nodes,
+            node=linear_electric_grid_model.electric_grid_model.nodes,
             scenario=[stochastic_scenario]
         )
 
@@ -366,73 +366,153 @@ def main():
 
                 # State equation.
                 for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
-                    standard_form.define_constraint(
-                        (
-                            'variable',
-                            1.0,
-                            dict(
-                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
-                                state=der_model.states, scenario=[stochastic_scenario]
+                    if not der_model.disturbances.empty:
+                        standard_form.define_constraint(
+                            (
+                                'variable',
+                                1.0,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            '==',
+                            (
+                                'variable',
+                                der_model.state_matrix.values,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'variable',
+                                der_model.control_matrix.values,
+                                dict(
+                                    name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
+                                    control=der_model.controls, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'constant',
+                                der_model.disturbance_matrix.values
+                                @ der_model.disturbance_timeseries.loc[timestep_previous, :].values
+                            ),
+                            (
+                                'variable', der_model.disturbance_matrix.values, dict(
+                                 name='uncertainty_disturbances_vector_s2', timestep=timestep_previous,
+                                 der_name=[der_model.der_name], disturbance=der_model.disturbances
+                                )
                             )
-                        ),
-                        '==',
-                        (
-                            'variable',
-                            der_model.state_matrix.values,
-                            dict(
-                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
-                                state=der_model.states, scenario=[stochastic_scenario]
-                            )
-                        ),
-                        (
-                            'variable',
-                            der_model.control_matrix.values,
-                            dict(
-                                name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
-                                control=der_model.controls, scenario=[stochastic_scenario]
-                            )
-                        ),
-                        (
-                            'constant',
-                            der_model.disturbance_matrix.values
-                            @ der_model.disturbance_timeseries.loc[timestep_previous, :].values
                         )
-                    )
+                    else:
+                        standard_form.define_constraint(
+                            (
+                                'variable',
+                                1.0,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            '==',
+                            (
+                                'variable',
+                                der_model.state_matrix.values,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'variable',
+                                der_model.control_matrix.values,
+                                dict(
+                                    name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
+                                    control=der_model.controls, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'constant',
+                                der_model.disturbance_matrix.values
+                                @ der_model.disturbance_timeseries.loc[timestep_previous, :].values
+                            )
+                        )
 
                 # Output equation.
                 for timestep in der_model.timesteps:
-                    standard_form.define_constraint(
-                        (
-                            'variable',
-                            1.0,
-                            dict(
-                                name='output_vector_s3', der_name=[der_model.der_name],
-                                timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario]
+                    if not der_model.disturbances.empty:
+                        standard_form.define_constraint(
+                            (
+                                'variable',
+                                1.0,
+                                dict(
+                                    name='output_vector_s3', der_name=[der_model.der_name],
+                                    timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            '==',
+                            (
+                                'variable',
+                                der_model.state_output_matrix.values,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'variable',
+                                der_model.control_output_matrix.values,
+                                dict(
+                                    name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    control=der_model.controls, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'constant',
+                                der_model.disturbance_output_matrix.values
+                                @ der_model.disturbance_timeseries.loc[timestep, :].values
+                            ),
+                            (
+                                'variable', der_model.disturbance_output_matrix.values, dict(
+                                    name='uncertainty_disturbances_vector_s2', timestep=timestep,
+                                    der_name=[der_model.der_name], disturbance=der_model.disturbances
+                                )
                             )
-                        ),
-                        '==',
-                        (
-                            'variable',
-                            der_model.state_output_matrix.values,
-                            dict(
-                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
-                                state=der_model.states, scenario=[stochastic_scenario]
-                            )
-                        ),
-                        (
-                            'variable',
-                            der_model.control_output_matrix.values,
-                            dict(
-                                name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep,
-                                control=der_model.controls, scenario=[stochastic_scenario]
-                            )
-                        ),
-                        (
-                            'constant',
-                            der_model.disturbance_output_matrix.values
-                            @ der_model.disturbance_timeseries.loc[timestep, :].values
                         )
-                    )
+                    else:
+                        standard_form.define_constraint(
+                            (
+                                'variable',
+                                1.0,
+                                dict(
+                                    name='output_vector_s3', der_name=[der_model.der_name],
+                                    timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            '==',
+                            (
+                                'variable',
+                                der_model.state_output_matrix.values,
+                                dict(
+                                    name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    state=der_model.states, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'variable',
+                                der_model.control_output_matrix.values,
+                                dict(
+                                    name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep,
+                                    control=der_model.controls, scenario=[stochastic_scenario]
+                                )
+                            ),
+                            (
+                                'constant',
+                                der_model.disturbance_output_matrix.values
+                                @ der_model.disturbance_timeseries.loc[timestep, :].values
+                            )
+                        )
 
                 # Define connection constraints.
                 if der_model.is_electric_grid_connected:
@@ -522,6 +602,78 @@ def main():
     # Obtain standard form matrix / vector representation.
     a_matrix = standard_form.get_a_matrix()
     b_vector = standard_form.get_b_vector()
+
+    # Obtain DRO constraint matrices A3, B3, C3 and D3
+
+    # A3 matrix
+    voltage_s1_index = fledge.utils.get_index(
+        standard_form.variables, name='nodal_voltage_magnitude_s1',
+        timestep=der_model_set.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes,
+        scenario=['down_reserve']
+    )
+
+    s1_last_index = max(voltage_s1_index)
+
+    A3_matrix = a_matrix[:, 0:s1_last_index+1]
+
+    # C3 matrix
+    delta_indices = np.array([])
+
+    temp_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_energy_price_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    delta_indices = np.hstack((delta_indices, temp_indices))
+
+    temp_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_up_reserve_price_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    delta_indices = np.hstack((delta_indices, temp_indices))
+
+    temp_indices = fledge.utils.get_index(
+        standard_form.variables, name='uncertainty_down_reserve_price_deviation_s2',
+        timestep=linear_electric_grid_model.electric_grid_model.timesteps
+    )
+
+    delta_indices = np.hstack((delta_indices, temp_indices))
+
+    for der_name, der_model in der_model_set.flexible_der_models.items():
+        if not der_model.disturbances.empty:
+            temp_indices = fledge.utils.get_index(
+                standard_form.variables, name='uncertainty_disturbances_vector_s2',
+                timestep=der_model.timesteps, der_name=[der_model.der_name],
+                disturbance=der_model.disturbances,
+            )
+
+            delta_indices = np.hstack((delta_indices, temp_indices))
+
+    C3_matrix = a_matrix[:, delta_indices]
+
+    # B3 matrix
+    s1_indices = np.linspace(0, s1_last_index, s1_last_index+1)
+
+    voltage_s2_index = fledge.utils.get_index(
+        standard_form.variables, name='nodal_voltage_magnitude_s2', timestep=der_model_set.timesteps,
+        node=linear_electric_grid_model.electric_grid_model.nodes,
+    )
+
+    s2_last_index = max(voltage_s2_index)
+
+    s2_indices = np.setdiff1d(
+        np.linspace(0, s2_last_index, s2_last_index+1), np.hstack((s1_indices, delta_indices))
+    )
+
+    B3_matrix = a_matrix[:, s2_indices]
+
+    # D3 matrix
+    s3_indices = np.setdiff1d(
+        np.linspace(0, a_matrix.shape[1]-1, a_matrix.shape[1]), np.hstack((s1_indices, s2_indices, delta_indices))
+    )
+
+    D3_matrix = a_matrix[:, s3_indices]
 
     # Define optimization problem.
     optimization_problem.x_vector = cp.Variable((len(standard_form.variables), 1))

@@ -16,6 +16,7 @@ def main():
     # Settings.
     scenario_name = 'singapore_6node'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
+    stochastic_scenarios_stage_3 = ['up_reserve_activated', 'down_reserve_activated']
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
@@ -38,99 +39,164 @@ def main():
     # Instantiate standard form.
     standard_form = fledge.utils.StandardForm()
 
-    # Define variables.
-    standard_form.define_variable('energy', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
-    standard_form.define_variable('up_reserve', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
-    standard_form.define_variable('down_reserve', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    # Define variables for stage 1.
+    standard_form.define_variable('energy_s1', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    standard_form.define_variable('up_reserve_s1', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    standard_form.define_variable('down_reserve_s1', timestep=linear_electric_grid_model.electric_grid_model.timesteps)
 
     for stochastic_scenario in stochastic_scenarios:
         for der_name, der_model in der_model_set.flexible_der_models.items():
             standard_form.define_variable(
-                'state_vector', timestep=der_model.timesteps, scenario=[stochastic_scenario],
-                der_name=[der_model.der_name], state=der_model.states
+                'state_vector_s1', timestep=der_model.timesteps, der_name=[der_model.der_name], state=der_model.states,
+                scenario=[stochastic_scenario]
             )
             standard_form.define_variable(
-                'control_vector', timestep=der_model.timesteps, scenario=[stochastic_scenario],
-                der_name=[der_model.der_name], control=der_model.controls
+                'control_vector_s1', timestep=der_model.timesteps, der_name=[der_model.der_name],
+                control=der_model.controls,
+                scenario=[stochastic_scenario])
+            standard_form.define_variable(
+                'output_vector_s1', timestep=der_model.timesteps, der_name=[der_model.der_name],
+                output=der_model.outputs,
+                scenario=[stochastic_scenario]
+            )
+
+        standard_form.define_variable(
+            'der_active_power_vector_s1', timestep=der_model_set.timesteps, der_model=der_model_set.ders,
+            scenario=[stochastic_scenario]
+        )
+
+        standard_form.define_variable(
+            'der_reactive_power_vector_s1', timestep=der_model_set.timesteps, der_model=der_model_set.ders,
+            scenario=[stochastic_scenario]
+        )
+
+        standard_form.define_variable(
+            'nodal_voltage_magnitude_s1', timestep=der_model_set.timesteps,
+            grid_node=linear_electric_grid_model.electric_grid_model.nodes,
+            scenario=[stochastic_scenario]
+        )
+
+    # Define variables stage 2.
+    standard_form.define_variable('energy_deviation_s2',
+                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    standard_form.define_variable('uncertainty_energy_price_deviation_s2',
+                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    standard_form.define_variable('uncertainty_up_reserve_price_deviation_s2',
+                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    standard_form.define_variable('uncertainty_down_reserve_price_deviation_s2',
+                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+
+    for der_name, der_model in der_model_set.flexible_der_models.items():
+        standard_form.define_variable(
+            'state_vector_s2', timestep=der_model.timesteps, der_name=[der_model.der_name], state=der_model.states
+        )
+        standard_form.define_variable(
+            'control_vector_s2', timestep=der_model.timesteps, der_name=[der_model.der_name],
+            control=der_model.controls
+        )
+        standard_form.define_variable(
+            'output_vector_s2', timestep=der_model.timesteps, der_name=[der_model.der_name],
+            output=der_model.outputs
+        )
+        if not der_model.disturbances.empty:
+            standard_form.define_variable(
+                'uncertainty_disturbances_vector_s2', timestep=der_model.timesteps, der_name=[der_model.der_name],
+                disturbance=der_model.disturbances,
+            )
+
+    standard_form.define_variable(
+        'der_active_power_vector_s2', timestep=der_model_set.timesteps, der_model=der_model_set.ders,
+    )
+
+    standard_form.define_variable(
+        'der_reactive_power_vector_s2', timestep=der_model_set.timesteps, der_model=der_model_set.ders,
+    )
+
+    standard_form.define_variable(
+        'nodal_voltage_magnitude_s2', timestep=der_model_set.timesteps,
+        node=linear_electric_grid_model.electric_grid_model.nodes,
+    )
+
+    # Define variables for stage 3.
+    for stochastic_scenario in stochastic_scenarios_stage_3:
+        standard_form.define_variable(
+            'energy_deviation_s3', timestep=linear_electric_grid_model.electric_grid_model.timesteps,
+            scenario=[stochastic_scenario]
+        )
+
+        for der_name, der_model in der_model_set.flexible_der_models.items():
+            standard_form.define_variable(
+                'state_vector_s3', timestep=der_model.timesteps, der_name=[der_model.der_name], state=der_model.states,
+                scenario=[stochastic_scenario]
             )
             standard_form.define_variable(
-                'output_vector', timestep=der_model.timesteps, scenario=[stochastic_scenario],
-                der_name=[der_model.der_name], output=der_model.outputs
+                'control_vector_s3', timestep=der_model.timesteps, der_name=[der_model.der_name],
+                control=der_model.controls,
+                scenario=[stochastic_scenario])
+            standard_form.define_variable(
+                'output_vector_s3', timestep=der_model.timesteps, der_name=[der_model.der_name],
+                output=der_model.outputs,
+                scenario=[stochastic_scenario]
             )
+
         standard_form.define_variable(
-            'der_active_power_vector', timestep=der_model_set.timesteps, scenario=[stochastic_scenario],
-            der=der_model_set.ders
+            'der_active_power_vector_s3', timestep=der_model_set.timesteps, der=der_model_set.ders,
+            scenario=[stochastic_scenario]
         )
+
         standard_form.define_variable(
-            'der_reactive_power_vector', timestep=der_model_set.timesteps, scenario=[stochastic_scenario],
-            der=der_model_set.ders
+            'der_reactive_power_vector_s3', timestep=der_model_set.timesteps, der=der_model_set.ders,
+            scenario=[stochastic_scenario]
         )
+
         standard_form.define_variable(
-            'nodal_voltage_magnitude', timestep=der_model_set.timesteps, scenario=[stochastic_scenario],
+            'nodal_voltage_magnitude_s3', timestep=der_model_set.timesteps,
             node=linear_electric_grid_model.electric_grid_model.nodes,
+            scenario=[stochastic_scenario]
         )
 
     # Define power balance constraints.
     for timestep in der_model_set.timesteps:
         standard_form.define_constraint(
-            ('variable', 1.0, dict(name='energy', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_s1', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_deviation_s2', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_deviation_s3', timestep=timestep, scenario=['up_reserve_activated'])),
+            ('variable', 1.0, dict(name='up_reserve_s1', timestep=timestep)),
             '==',
             (
                 'variable',
                 -1.0 * np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]),
                 dict(
-                    name='der_active_power_vector', timestep=timestep,
-                    der=der_model_set.ders, scenario='no_reserve'
+                    name='der_active_power_vector_s3', timestep=timestep,
+                    der=der_model_set.ders, scenario=['up_reserve_activated']
                 )
             ),
         )
         standard_form.define_constraint(
-            ('variable', 1.0, dict(name='energy', timestep=timestep)),
-            ('variable', 1.0, dict(name='up_reserve', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_s1', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_deviation_s2', timestep=timestep)),
+            ('variable', 1.0, dict(name='energy_deviation_s3', timestep=timestep, scenario=['down_reserve_activated'])),
+            ('variable', -1.0, dict(name='down_reserve_s1', timestep=timestep)),
             '==',
             (
                 'variable',
                 -1.0 * np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]),
                 dict(
-                    name='der_active_power_vector', timestep=timestep,
-                    der=der_model_set.ders, scenario='up_reserve'
+                    name='der_active_power_vector_s3', timestep=timestep,
+                    der=der_model_set.ders, scenario=['down_reserve_activated']
                 )
             ),
         )
-        standard_form.define_constraint(
-            ('variable', 1.0, dict(name='energy', timestep=timestep)),
-            ('variable', -1.0, dict(name='down_reserve', timestep=timestep)),
-            '==',
-            (
-                'variable',
-                -1.0 * np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)]),
-                dict(
-                    name='der_active_power_vector', timestep=timestep,
-                    der=der_model_set.ders, scenario='down_reserve'
-                )
-            ),
-        )
-
-    standard_form.define_constraint(
-        ('variable', 1.0, dict(name='up_reserve')),
-        '>=',
-        ('constant', np.zeros(len(der_model_set.timesteps)))
-    )
-    standard_form.define_constraint(
-        ('variable', 1.0, dict(name='down_reserve')),
-        '>=',
-        ('constant', np.zeros(len(der_model_set.timesteps)))
-    )
 
     # Define power flow constraints.
-    for stochastic_scenario in stochastic_scenarios:
+    for stochastic_scenario in stochastic_scenarios_stage_3:
         for timestep in der_model_set.timesteps:
             standard_form.define_constraint(
                 (
                     'variable',
                     np.diagflat(np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                     dict(
-                        name='nodal_voltage_magnitude', timestep=timestep,
+                        name='nodal_voltage_magnitude_s3', timestep=timestep,
                         node=linear_electric_grid_model.electric_grid_model.nodes,
                         scenario=[stochastic_scenario]
                     )
@@ -140,7 +206,7 @@ def main():
                     -linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
                     @ np.diagflat(np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])),
                     dict(
-                        name='der_active_power_vector', timestep=timestep,
+                        name='der_active_power_vector_s3', timestep=timestep,
                         der=der_model_set.ders, scenario=[stochastic_scenario]
                     )
                 ),
@@ -149,7 +215,7 @@ def main():
                     -linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
                     @ np.diagflat(np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])),
                     dict(
-                        name='der_reactive_power_vector', timestep=timestep,
+                        name='der_reactive_power_vector_s3', timestep=timestep,
                         der=der_model_set.ders, scenario=[stochastic_scenario]
                     )
                 ),
@@ -174,14 +240,14 @@ def main():
     node_voltage_magnitude_vector_maximum = (
         1.5 * np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
     )
-    for stochastic_scenario in stochastic_scenarios:
+    for stochastic_scenario in stochastic_scenarios_stage_3:
         for timestep in linear_electric_grid_model.electric_grid_model.timesteps:
             standard_form.define_constraint(
                 (
                     'variable',
                     np.diagflat(np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                     dict(
-                        name='nodal_voltage_magnitude', timestep=timestep,
+                        name='nodal_voltage_magnitude_s3', timestep=timestep,
                         node=linear_electric_grid_model.electric_grid_model.nodes, scenario=[stochastic_scenario]
                     )
                 ),
@@ -193,7 +259,7 @@ def main():
                     'variable',
                     np.diagflat(np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])),
                     dict(
-                        name='nodal_voltage_magnitude', timestep=timestep,
+                        name='nodal_voltage_magnitude_s3', timestep=timestep,
                         node=linear_electric_grid_model.electric_grid_model.nodes, scenario=[stochastic_scenario]
                     )
                 ),
@@ -202,18 +268,17 @@ def main():
             )
 
     for der_name, der_model in der_model_set.der_models.items():
-
         # Fixed DERs.
         if issubclass(type(der_model), fledge.der_models.FixedDERModel):
             if der_model.is_electric_grid_connected:
-                for stochastic_scenario in stochastic_scenarios:
+                for stochastic_scenario in stochastic_scenarios_stage_3:
                     for timestep in der_model_set.timesteps:
                         standard_form.define_constraint(
                             (
                                 'variable',
                                 1.0,
                                 dict(
-                                    name='der_active_power_vector', timestep=timestep,
+                                    name='der_active_power_vector_s3', timestep=timestep,
                                     der=(der_model.der_type, der_model.der_name), scenario=[stochastic_scenario]
                                 )
                             ),
@@ -232,7 +297,7 @@ def main():
                                 'variable',
                                 1.0,
                                 dict(
-                                    name='der_reactive_power_vector', timestep=timestep,
+                                    name='der_reactive_power_vector_s3', timestep=timestep,
                                     der=(der_model.der_type, der_model.der_name), scenario=[stochastic_scenario]
                                 )
                             ),
@@ -257,8 +322,7 @@ def main():
 
             # Initial state.
             # - For states which represent storage state of charge, initial state of charge is final state of charge.
-            for stochastic_scenario in stochastic_scenarios:
-
+            for stochastic_scenario in stochastic_scenarios_stage_3:
                 # Initial state.
                 if any(~der_model.states.isin(der_model.storage_states)):
                     standard_form.define_constraint(
@@ -271,7 +335,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
                                 state=der_model.states[~der_model.states.isin(der_model.storage_states)],
                                 scenario=[stochastic_scenario],
                             )
@@ -283,7 +347,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
                                 state=der_model.states[der_model.states.isin(der_model.storage_states)],
                                 scenario=[stochastic_scenario]
                             )
@@ -293,7 +357,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=der_model.timesteps[-1],
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=der_model.timesteps[-1],
                                 state=der_model.states[der_model.states.isin(der_model.storage_states)],
                                 scenario=[stochastic_scenario]
                             )
@@ -307,7 +371,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                 state=der_model.states, scenario=[stochastic_scenario]
                             )
                         ),
@@ -316,7 +380,7 @@ def main():
                             'variable',
                             der_model.state_matrix.values,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=timestep_previous,
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
                                 state=der_model.states, scenario=[stochastic_scenario]
                             )
                         ),
@@ -324,7 +388,7 @@ def main():
                             'variable',
                             der_model.control_matrix.values,
                             dict(
-                                name='control_vector', der_name=[der_model.der_name], timestep=timestep_previous,
+                                name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep_previous,
                                 control=der_model.controls, scenario=[stochastic_scenario]
                             )
                         ),
@@ -342,7 +406,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='output_vector', der_name=[der_model.der_name],
+                                name='output_vector_s3', der_name=[der_model.der_name],
                                 timestep=timestep, output=der_model.outputs, scenario=[stochastic_scenario]
                             )
                         ),
@@ -351,7 +415,7 @@ def main():
                             'variable',
                             der_model.state_output_matrix.values,
                             dict(
-                                name='state_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='state_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                 state=der_model.states, scenario=[stochastic_scenario]
                             )
                         ),
@@ -359,7 +423,7 @@ def main():
                             'variable',
                             der_model.control_output_matrix.values,
                             dict(
-                                name='control_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='control_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                 control=der_model.controls, scenario=[stochastic_scenario]
                             )
                         ),
@@ -382,7 +446,7 @@ def main():
                                     der_model.mapping_active_power_by_output.values
                                     / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0),
                                     dict(
-                                        name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                        name='output_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                         output=der_model.outputs, scenario=[stochastic_scenario]
                                     )
                                 ) if timestep != der_model.timesteps[-1] else (
@@ -395,7 +459,7 @@ def main():
                                 'variable',
                                 1.0,
                                 dict(
-                                    name='der_active_power_vector', timestep=timestep,
+                                    name='der_active_power_vector_s3', timestep=timestep,
                                     der=(der_model.der_type, der_model.der_name), scenario=[stochastic_scenario]
                                 )
                             )
@@ -409,7 +473,7 @@ def main():
                                     der_model.mapping_reactive_power_by_output.values
                                     / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0),
                                     dict(
-                                        name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                        name='output_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                         output=der_model.outputs, scenario=[stochastic_scenario]
                                     )
                                 ) if timestep != der_model.timesteps[-1] else (
@@ -422,7 +486,7 @@ def main():
                                 'variable',
                                 1.0,
                                 dict(
-                                    name='der_reactive_power_vector', timestep=timestep,
+                                    name='der_reactive_power_vector_s3', timestep=timestep,
                                     der=(der_model.der_type, der_model.der_name), scenario=[stochastic_scenario]
                                 )
                             )
@@ -435,7 +499,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='output_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                 output=der_model.outputs, scenario=[stochastic_scenario]
                             )
                         ),
@@ -447,7 +511,7 @@ def main():
                             'variable',
                             1.0,
                             dict(
-                                name='output_vector', der_name=[der_model.der_name], timestep=timestep,
+                                name='output_vector_s3', der_name=[der_model.der_name], timestep=timestep,
                                 output=der_model.outputs, scenario=[stochastic_scenario]
                             )
                         ),

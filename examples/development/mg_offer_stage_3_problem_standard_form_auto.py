@@ -675,6 +675,56 @@ def main():
 
     D3_matrix = a_matrix[:, s3_indices]
 
+    # objective matrices
+    # m_Q3_s2
+    der_cost_factor = 0.01
+    penalty_factor = 0.1
+    up_reserve_activated_probability = 0.3
+    down_reserve_activated_probability = 0.25
+    m_Q3_s2 = np.zeros((s2_indices.shape[0], 1))
+
+    der_active_power_vector_s2_indices = fledge.utils.get_index(
+        standard_form.variables, name='der_active_power_vector_s2', timestep=der_model_set.timesteps,
+        der_model=der_model_set.ders,
+    )
+
+    m_Q3_s2[np.where(pd.Index(s2_indices).isin(der_active_power_vector_s2_indices)), 0] = \
+        (up_reserve_activated_probability+down_reserve_activated_probability)*der_cost_factor
+
+    # m_Q3_s3
+    m_Q3_s3 = np.zeros((s3_indices.shape[0], 1))
+
+    energy_deviation_up_reserve_s3_indices = fledge.utils.get_index(
+        standard_form.variables, name='energy_deviation_s3', timestep=linear_electric_grid_model.electric_grid_model.timesteps,
+            scenario=['up_reserve_activated']
+    )
+
+    energy_deviation_down_reserve_s3_indices = fledge.utils.get_index(
+        standard_form.variables, name='energy_deviation_s3', timestep=linear_electric_grid_model.electric_grid_model.timesteps,
+            scenario=['down_reserve_activated']
+    )
+
+    der_active_power_vector_up_reserve_s3_indices = fledge.utils.get_index(
+        standard_form.variables, name='der_active_power_vector_s3', timestep=der_model_set.timesteps,
+        der=der_model_set.ders, scenario=['up_reserve_activated']
+    )
+    der_active_power_vector_down_reserve_s3_indices = fledge.utils.get_index(
+        standard_form.variables, name='der_active_power_vector_s3', timestep=der_model_set.timesteps,
+        der=der_model_set.ders, scenario=['down_reserve_activated']
+    )
+
+    m_Q3_s3[np.where(pd.Index(s3_indices).isin(energy_deviation_up_reserve_s3_indices)), 0] = \
+        -penalty_factor*up_reserve_activated_probability
+
+    m_Q3_s3[np.where(pd.Index(s3_indices).isin(energy_deviation_down_reserve_s3_indices)), 0] = \
+        -penalty_factor*down_reserve_activated_probability
+
+    m_Q3_s3[np.where(pd.Index(s3_indices).isin(der_active_power_vector_up_reserve_s3_indices)), 0] = \
+        -der_cost_factor*up_reserve_activated_probability
+
+    m_Q3_s3[np.where(pd.Index(s3_indices).isin(der_active_power_vector_down_reserve_s3_indices)), 0] = \
+        -der_cost_factor*down_reserve_activated_probability
+
     # Define optimization problem.
     optimization_problem.x_vector = cp.Variable((len(standard_form.variables), 1))
     optimization_problem.constraints.append(

@@ -7,18 +7,14 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-
+import scipy.sparse
 import fledge
 
-
-def main():
-
+def stage_1_problem_standard_form():
+    print('stage 1 problem modelling...')
     # Settings.
     scenario_name = 'singapore_6node'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
-
-    # Get results path.
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
     fledge.data_interface.recreate_database()
@@ -32,8 +28,6 @@ def main():
     # Getting linear electric grid model using "global approximation" method.
     linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
 
-    # Instantiate optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
 
     # Instantiate standard form.
     standard_form = fledge.utils.StandardForm()
@@ -459,11 +453,6 @@ def main():
     a_matrix = standard_form.get_a_matrix()
     b_vector = standard_form.get_b_vector()
 
-    # Define optimization problem.
-    optimization_problem.x_vector = cp.Variable((len(standard_form.variables), 1))
-    optimization_problem.constraints.append(
-        a_matrix.toarray() @ optimization_problem.x_vector <= b_vector
-    )
 
     # Obtain timestep interval in hours, for conversion of power to energy.
     timestep_interval_hours = (der_model_set.timesteps[1] - der_model_set.timesteps[0]) / pd.Timedelta('1h')
@@ -492,33 +481,64 @@ def main():
         )
     )
 
-    optimization_problem.objective += (
-        (
-            np.array([price_timeseries_energy])
-            @ optimization_problem.x_vector[x_index_energy, :]
-        )
-        + (
-            -0.1 * np.array([price_timeseries_energy])
-            @ optimization_problem.x_vector[x_index_up_reserve, :]
-        )
-        + (
-            -1.1 * np.array([price_timeseries_energy])
-            @ optimization_problem.x_vector[x_index_down_reserve, :]
-        )
-        # + (
-        #     1e-2 * cp.sum(
-        #         optimization_problem.x_vector[x_index_energy, :] ** 2
-        #         + optimization_problem.x_vector[x_index_up_reserve, :] ** 2
-        #         + optimization_problem.x_vector[x_index_down_reserve, :] ** 2
-        #     )
-        # )
+    f_vector = np.zeros((len(standard_form.variables), 1))
+    f_vector[x_index_energy, 0] = np.array([price_timeseries_energy])
+    f_vector[x_index_up_reserve, 0] = -0.1 * np.array([price_timeseries_energy])
+    f_vector[x_index_down_reserve, 0] = -1.1 * np.array([price_timeseries_energy])
+
+    # optimization_problem.objective += (
+    #     (
+    #         np.array([price_timeseries_energy])
+    #         @ optimization_problem.x_vector[x_index_energy, :]
+    #     )
+    #     + (
+    #         -0.1 * np.array([price_timeseries_energy])
+    #         @ optimization_problem.x_vector[x_index_up_reserve, :]
+    #     )
+    #     + (
+    #         -1.1 * np.array([price_timeseries_energy])
+    #         @ optimization_problem.x_vector[x_index_down_reserve, :]
+    #     )
+    #     # + (
+    #     #     1e-2 * cp.sum(
+    #     #         optimization_problem.x_vector[x_index_energy, :] ** 2
+    #     #         + optimization_problem.x_vector[x_index_up_reserve, :] ** 2
+    #     #         + optimization_problem.x_vector[x_index_down_reserve, :] ** 2
+    #     #     )
+    #     # )
+    # )
+    return standard_form, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set
+
+def main():
+    scenario_name = 'singapore_6node'
+    price_data = fledge.data_interface.PriceData(scenario_name)
+
+    # Get results path.
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+
+    standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set\
+        = stage_1_problem_standard_form()
+    # Instantiate optimization problem.
+    optimization_problem = fledge.utils.OptimizationProblem()
+
+    # Define optimization problem.
+    optimization_problem.x_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
+    optimization_problem.constraints.append(
+        a_matrix.toarray() @ optimization_problem.x_vector <= b_vector
     )
+    optimization_problem.objective += (
+            (
+                f_vector.T
+                @ optimization_problem.x_vector
+            )
+    )
+    # Define optimization objective
 
     # Solve optimization problem.
     optimization_problem.solve()
 
     # Obtain results.
-    results = standard_form.get_results(optimization_problem.x_vector)
+    results = standard_form_stage_1.get_results(optimization_problem.x_vector)
 
     # Obtain reserve results.
     no_reserve = pd.Series(results['energy'].values.ravel(), index=der_model_set.timesteps)

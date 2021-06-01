@@ -22,4 +22,4 @@ singapore_tanjongpagar_modified,20,flexible_building,tanjongpagar_building_20,20
 singapore_tanjongpagar_modified,21,flexible_building,tanjongpagar_building_21,21,1,1,1,wye,-27667483.11,-13833741.56,1
 singapore_tanjongpagar_modified,22,flexible_building,tanjongpagar_building_22,22,1,1,1,wye,-29249248.84,-14624624.42,1
 singapore_tanjongpagar_modified,23,cooling_plant,cooling_plant_singapore,22,1,1,1,wye,cooling_plant_active_power,cooling_plant_reactive_power,cooling_plant_in_service
-singapore_tanjongpagar_modified,24,flexible_generator,photovoltaic,22,1,1,1,wye,pv_plant_active_power,pv_plant_reactive_power,pv_plant_in_service
+singapore_tanjongpagar_modified,24,flexible_generator,photovoltaic_generic,22,1,1,1,wye,pv_plant_active_power,pv_plant_reactive_power,pv_plant_in_service

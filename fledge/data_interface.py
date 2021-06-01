@@ -571,67 +571,84 @@ class DERData(object):
         # Obtain DERs.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
-        self.ders = (
+        ders = (
             pd.merge(
-                pd.merge(
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    how='outer',
-                    on=['der_name', 'der_type', 'der_model_name'],
-                    suffixes=('_electric_grid', '_thermal_grid')
-                ),
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
-                    SELECT * FROM der_models
-                    WHERE (der_type, der_model_name) IN (
-                        SELECT der_type, der_model_name
-                        FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                    )
-                    OR (der_type, der_model_name) IN (
-                        SELECT der_type, der_model_name
-                        FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
+                    SELECT * FROM electric_grid_ders
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
                     )
                     """,
                     con=database_connection,
-                    params=[
-                        scenario_name,
-                        scenario_name
-                    ]
+                    params=[scenario_name]
                 )),
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM thermal_grid_ders
+                    WHERE thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                how='outer',
+                on=['der_name', 'der_type', 'der_model_name'],
+                suffixes=('_electric_grid', '_thermal_grid')
+            )
+        )
+        der_models = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM der_models
+                WHERE (der_type, der_model_name) IN (
+                    SELECT der_type, der_model_name
+                    FROM electric_grid_ders
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                OR (der_type, der_model_name) IN (
+                    SELECT der_type, der_model_name
+                    FROM thermal_grid_ders
+                    WHERE thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """,
+                con=database_connection,
+                params=[
+                    scenario_name,
+                    scenario_name
+                ]
+            ))
+        )
+        self.ders = (
+            pd.merge(
+                ders,
+                der_models,
                 how='left',
                 on=['der_type', 'der_model_name'],
             )
         )
         self.ders.index = self.ders['der_name']
         self.ders = self.ders.reindex(index=natsort.natsorted(self.ders.index))
+
+        # Raise error, if any undefined DER models.
+        # - That is: `der_model_name` is in `electric_grid_ders` or `thermal_grid_ders`, but not in `der_models`.
+        # - Except for `flexible_building` models, which are defined through CoBMo.
+        if (
+                ~ders.loc[:, 'der_model_name'].isin(der_models.loc[:, 'der_model_name'])
+                & ~ders.loc[:, 'der_type'].isin(['flexible_building'])  # CoBMo models
+        ).any():
+            raise ValueError(
+                "Some `der_model_name` in `electric_grid_ders` or `thermal_grid_ders` are not defined in `der_models`."
+            )
 
         # Obtain unique `definition_type` / `definition_name`.
         der_definitions_unique = self.ders.loc[:, ['definition_type', 'definition_name']].drop_duplicates()

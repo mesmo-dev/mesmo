@@ -535,6 +535,10 @@ class LinearThermalGridModel(object):
         optimization_problem.pump_power = (
             cp.Variable((len(timesteps), 1))
         )
+        # # TODO: Pump power not non-negative?
+        # optimization_problem.pump_power = (
+        #     cp.Variable((len(timesteps), 1))
+        # )
 
     def define_optimization_constraints(
             self,

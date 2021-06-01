@@ -9,6 +9,8 @@ logger = fledge.config.get_logger(__name__)
 
 class TestDERModels(unittest.TestCase):
 
+    # TODO: Add tests for new DER ode types.
+
     def test_fixed_load_model(self):
         # Obtain test data.
         der_data = fledge.data_interface.DERData(fledge.config.config['tests']['scenario_name'])

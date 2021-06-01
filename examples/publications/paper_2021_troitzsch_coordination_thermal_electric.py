@@ -1,4 +1,6 @@
-"""Run script for reproducing results of the Paper XXX."""
+"""Run script for reproducing results of the Paper: 'Coordinated Market Clearing for Combined Thermal and Electric
+Distribution Grid Operation'.
+"""
 
 import cvxpy as cp
 import numpy as np
@@ -28,7 +30,7 @@ def main(
     # 3 - constrained thermal grid pressure head,
     # 4 - constrained electric grid branch power,
     # 5 - constrained electric grid voltage
-    scenario_name = 'paper_2020_2'
+    scenario_name = 'paper_2021_troitzsch_admm'
 
     # Obtain results path.
     results_path = (
@@ -43,7 +45,7 @@ def main(
     fledge.utils.log_time(f"model setup")
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -53,7 +55,7 @@ def main(
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.cooling_plant_efficiency = 10.0  # Change model parameter to incentivize use of thermal grid.
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,
@@ -882,7 +884,6 @@ def main(
                 x=results_baseline['thermal_grid_total_dlmp_der_thermal_power'].index,
                 y=(
                     results_baseline['thermal_grid_total_dlmp_der_thermal_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -894,7 +895,6 @@ def main(
                 x=admm_lambda_thermal_der_thermal_power.index,
                 y=(
                     admm_lambda_thermal_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -905,7 +905,6 @@ def main(
                 x=admm_lambda_aggregator_der_thermal_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -929,7 +928,6 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_active_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_active_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -941,7 +939,6 @@ def main(
                 x=admm_lambda_electric_der_active_power.index,
                 y=(
                     admm_lambda_electric_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -952,7 +949,6 @@ def main(
                 x=admm_lambda_aggregator_der_active_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -977,7 +973,6 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_reactive_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_reactive_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -989,7 +984,6 @@ def main(
                 x=admm_lambda_electric_der_reactive_power.index,
                 y=(
                     admm_lambda_electric_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -1000,7 +994,6 @@ def main(
                 x=admm_lambda_aggregator_der_reactive_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')

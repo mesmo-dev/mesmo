@@ -2,43 +2,31 @@
 multi-energy system in FLEDGE'.
 """
 
+import matplotlib.dates
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.problems
-import fledge.thermal_grid_models
-import fledge.utils
-
-import matplotlib.dates
-import matplotlib.pyplot as plt
-import networkx as nx
-
+import fledge
 
 
 def main(
-        scenario_number = 1
+        scenario_number=1
 ):
-
 
     # Settings.
     if scenario_number in [1]:
         scenario_name = 'MES_ISGT_scenario_1'
     elif scenario_number in [2]:
         scenario_name = 'MES_ISGT_scenario_2'
-    elif scenario_number in [3]:
-        scenario_name = 'MES_ISGT_scenario_3'
-    elif scenario_number in [4]:
-        scenario_name = 'MES_ISGT_scenario_4'
+    else:
+        raise ValueError(f"Unknown scenario number: {scenario_number}")
 
-
-
+    # Obtain results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -47,7 +35,6 @@ def main(
     # Obtain data.
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
-
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -58,7 +45,6 @@ def main(
             power_flow_solution
         )
     )
-
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.cooling_plant_efficiency = 5
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
@@ -68,9 +54,7 @@ def main(
             thermal_power_flow_solution
         )
     )
-
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
-
 
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
@@ -80,27 +64,21 @@ def main(
         optimization_problem,
         scenario_data.timesteps
     )
-
     linear_thermal_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
-
     der_model_set.define_optimization_variables(
         optimization_problem
     )
 
     # Define constraints.
+
+    # Modify electric grid limits for scenarios.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
-    # Modify limits for scenarios.
     if scenario_number in [2]:
-        branch_power_magnitude_vector_maximum[
-            fledge.utils.get_index(electric_grid_model.branches, branch_name='10')
-        ] *= 1 / 10.0
-
-    if scenario_number in [4]:
         branch_power_magnitude_vector_maximum[
             fledge.utils.get_index(electric_grid_model.branches, branch_name='10')
         ] *= 1 / 10.0
@@ -114,19 +92,14 @@ def main(
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
+
+    # Modify thermal grid limits for scenarios.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 10.0 * thermal_power_flow_solution.branch_flow_vector
-    # Modify limits for scenarios.
     if scenario_number in [2]:
         branch_flow_vector_maximum[
             fledge.utils.get_index(thermal_grid_model.branches, branch_name='10')
-        ] *= 1.14/ 10.0
-
-
-    if scenario_number in [4]:
-        branch_flow_vector_maximum[
-            fledge.utils.get_index(thermal_grid_model.branches, branch_name='10')
-        ] *= 1.14/ 10.0
+        ] *= 1.14 / 10.0
     else:
         pass
 
@@ -136,6 +109,7 @@ def main(
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
+
     der_model_set.define_optimization_constraints(
         optimization_problem,
         electric_grid_model=electric_grid_model,
@@ -499,42 +473,9 @@ def main(
             # plt.show()
             plt.close()
 
-    # Plot electric grid line utilization.
-    # fledge.plots.plot_grid_line_utilization(
-    #     electric_grid_model,
-    #     electric_grid_graph,
-    #     results[f'branch_power_magnitude_vector_1{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
-    #     results_path,
-    #     value_unit='%' if in_per_unit else 'kW',
-    # )
-    # fledge.plots.plot_grid_line_utilization(
-    #     thermal_grid_model,
-    #     thermal_grid_graph,
-    #     results[f'branch_flow_vector{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
-    #     results_path,
-    #     value_unit='%' if in_per_unit else 'kW',
-    # )
-
-
-
-
-    # # Plot electric grid nodes voltage drop.
-    # fledge.plots.plot_grid_node_utilization(
-    #     electric_grid_model,
-    #     electric_grid_graph,
-    #     results['node_voltage_magnitude_vector_per_unit'],
-    #     results_path
-    # )
-
-
-
-
-
-
     # Print results path.
     fledge.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
-
 
 
 if __name__ == '__main__':

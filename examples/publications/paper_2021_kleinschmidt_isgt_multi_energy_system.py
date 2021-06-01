@@ -20,9 +20,9 @@ def main(
 
     # Settings.
     if scenario_number in [1]:
-        scenario_name = 'MES_ISGT_scenario_1'
+        scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'
     elif scenario_number in [2]:
-        scenario_name = 'MES_ISGT_scenario_2'
+        scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_2'
     else:
         raise ValueError(f"Unknown scenario number: {scenario_number}")
 

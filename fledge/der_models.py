@@ -854,7 +854,7 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_reactive_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
 
 
 class FlexibleEVChargerModel(FlexibleDERModel):
@@ -1147,7 +1147,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_reactive_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
 
 
 class StorageModel(FlexibleDERModel):
@@ -1498,7 +1498,7 @@ class CoolingPlantModel(FlexibleDERModel):
             self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
 
         # Instantiate initial state.
         self.state_vector_initial = (
@@ -1607,7 +1607,7 @@ class HeatPumpModel(FlexibleDERModel):
             self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_reactive_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
 
         # Instantiate initial state.
         self.state_vector_initial = (
@@ -1736,7 +1736,7 @@ class FlexibleCHP(FlexibleDERModel):
             self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
 
         # Instantiate initial state.
         self.state_vector_initial = (

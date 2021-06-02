@@ -45,7 +45,7 @@ def main(
     fledge.utils.log_time(f"model setup")
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch')
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_admm_dlmp')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -55,7 +55,7 @@ def main(
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.cooling_plant_efficiency = 10.0  # Change model parameter to incentivize use of thermal grid.
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch')
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_admm_dlmp')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,

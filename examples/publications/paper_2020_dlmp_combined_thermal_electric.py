@@ -1,5 +1,5 @@
 """Run script for reproducing results of the Paper: 'Distribution Locational Marginal Pricing for Combined Thermal
-and Electric Grid Operation', available at: <https://doi.org/10.36227/techrxiv.11918712.v1>.
+and Electric Grid Operation'.
 """
 
 import matplotlib.dates
@@ -14,7 +14,7 @@ import fledge
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'paper_2020_troitzsch_dlmp'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
     results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario}_{scenario_name}')
 
@@ -35,8 +35,8 @@ def main():
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_grid_model.energy_transfer_station_head_loss = 0.0  # TODO: Document modifications for Thermal Electric DLMP paper
-    thermal_grid_model.cooling_plant_efficiency = 10.0  # TODO: Document modifications for Thermal Electric DLMP paper
+    thermal_grid_model.energy_transfer_station_head_loss = 0.0  # Modification for Thermal Electric DLMP paper
+    thermal_grid_model.cooling_plant_efficiency = 10.0  # Modification for Thermal Electric DLMP paper.
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
@@ -110,11 +110,10 @@ def main():
         price_data,
         scenario_data.timesteps
     )
-
-    # Define DER objective.
-    der_model_set.define_optimization_objective(
+    linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
-        price_data
+        price_data,
+        scenario_data.timesteps
     )
 
     # Solve optimization problem.
@@ -190,12 +189,9 @@ def main():
 
         # Obtain corresponding node.
         node = (
-            thermal_grid_model.nodes[
-                thermal_grid_model.der_node_incidence_matrix[
-                :,
-                thermal_grid_model.ders.get_loc(der)
-                ].toarray().ravel() == 1
-                ][0]
+            thermal_grid_model.nodes[(
+                thermal_grid_model.der_node_incidence_matrix[:, thermal_grid_model.ders.get_loc(der)]
+            ).toarray().ravel() == 1][0]
         )
 
         # Create plot.
@@ -205,7 +201,7 @@ def main():
             scenario_data.timesteps,
             (
                 thermal_grid_dlmp.loc[:, (slice(None), *node)].droplevel(['node_type', 'node_name'], axis='columns').T
-                * 1.0e3
+                * 1.0e6
             ),
             labels=['Energy', 'Pumping', 'Head', 'Congest.'],
             colors=[colors[0], colors[1], colors[2], colors[3]],
@@ -213,7 +209,6 @@ def main():
         )
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Price [S$/MWh]')
-        # ax1.set_ylim((0.0, 10.0))
         ax2 = plt.twinx(ax1)
         ax2.plot(
             results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
@@ -233,7 +228,7 @@ def main():
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
         ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
-        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 30.0))
+        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 70.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)

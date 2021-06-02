@@ -47,17 +47,21 @@ def recreate_database(
         if additional_data_paths is not None
         else [fledge.config.config['paths']['data']]
     )
+    cobmo_data_paths = []
     valid_table_names = (
         pd.read_sql("SELECT name FROM sqlite_master WHERE type='table'", database_connection).iloc[:, 0].tolist()
     )
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Exclude CSV files from CoBMo data folders.
-            if (
-                    (os.path.join('cobmo', 'data') not in csv_file)
-                    and (os.path.join('data', 'cobmo_data') not in csv_file)
-            ):
+            # Exclude CSV files from CoBMo folders, but add to CoBMo data path.
+            if (os.path.join('cobmo', '') in csv_file) or (os.path.join('cobmo_data', '') in csv_file):
+
+                # Add to CoBMo data path.
+                if os.path.dirname(csv_file) not in cobmo_data_paths:
+                    cobmo_data_paths.append(os.path.dirname(csv_file))
+
+            else:
 
                 # Debug message.
                 logger.debug(f"Loading {csv_file} into database.")
@@ -90,7 +94,7 @@ def recreate_database(
     # TODO: Modify CoBMo config instead.
     cobmo.data_interface.recreate_database(
         additional_data_paths=[
-            os.path.join(fledge.config.config['paths']['data'], 'cobmo_data'),
+            *cobmo_data_paths,
             *fledge.config.config['paths']['cobmo_additional_data']
         ]
     )

@@ -1,17 +1,23 @@
 
-\.idea/
+.idea
 
-\.vscode/
+.vscode
 
-*.egg-info/
+.spyproject
 
-*/__pycache__/
+*.egg-info
+
+*__pycache__
 
 *.pyc
 
-\.pytest_cache/
+.pytest_cache
+
+cache/
 
 *.sqlite
+
+*.sqlite-journal
 
 *.DS_Store
 
@@ -20,3 +26,5 @@ docs/_build/
 results/*
 
 !results/README\.md
+
+config.yml

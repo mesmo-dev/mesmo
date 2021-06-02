@@ -1,5 +1,1 @@
-electric_grid_name,source_node_name,source_voltage,n_phases,voltage_bases_string,load_multiplier,control_mode_string,extra_definitions_string,has_extra_definitions_file,dashboard_map_zoom
-ieee_4_mod,1,12470.0,3,"[12.47, 4.16] ",1.0,OFF,mvasc3=200000 200000,0.0,15.5
-singapore_6node,1,22000.0,3,"[22, 6.6, 0.415] ",1.0,OFF,mvasc3=2000000 2000000,0.0,15.5
-hougang_405node,1,66000.0,3,"[66, 22] ",0.1,OFF,mvasc3=200000000 200000000,0.0,12.5
-singapore_tanjongpagar,0,22000.0,3,"[22] ",0.1,OFF,mvasc3=200000000 200000000,0.0,15.5
+electric_grid_name,source_node_name,base_frequency

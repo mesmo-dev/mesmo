@@ -1,0 +1,3 @@
+electric_grid_name,line_name,line_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,length
+ieee_4node,1,mtx601,1,2,1,1,1,0.3787879
+ieee_4node,2,mtx602,3,4,1,1,0,0.4734848

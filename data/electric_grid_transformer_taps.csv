@@ -1,3 +1,0 @@
-transformer_name,electric_grid_name,winding,tap_maximum_voltage_per_unit,tap_minimum_voltage_per_unit
-1,ieee_4_mod,1,1.1,0.9
-1,ieee_4_mod,2,1.1,0.9

@@ -1,18 +1,9 @@
 # Configuration file for the Sphinx documentation builder.
 # - Documentation: <http://www.sphinx-doc.org/en/master/config>
 
-# Path settings.
-# - If extensions (or modules to document with autodoc) are in another directory,
-#   add these directories to sys.path here. If the directory is relative to the
-#   documentation root, use os.path.abspath to make it absolute, like shown here.
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.join(os.path.abspath('..'), 'cobmo'))
-
 # Project information.
 project = 'FLEDGE'
-copyright = '2020, TUMCREATE'
+copyright = '2018-2020, TUMCREATE'
 author = 'TUMCREATE'
 
 # Extensions.
@@ -21,21 +12,41 @@ author = 'TUMCREATE'
 #   ones.
 extensions = [
     'sphinx.ext.napoleon',
-    'sphinx_markdown_tables',  # TODO: `sphinx_markdown_tables` doesn't support Readthedocs PDF properly.
+    'sphinx_markdown_tables',
     'sphinx.ext.mathjax',
     'recommonmark',
+    'sphinx_multiversion'
 ]
 
 # Extension settings.
 # - sphinx.ext.autodoc: <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>
 # - sphinx.ext.napoleon: <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>
-autoclass_content = 'both'
 autodoc_default_options = {
     'members': None,
-    'undoc-members': None,
-    'show-inheritance': None
+    'show-inheritance': None,
+    'member-order': 'bysource'
 }
-autodoc_typehints = 'none'
+autodoc_typehints = 'description'
+autodoc_mock_imports = [
+    # Please note: Do not remove deprecated dependencies, because these are still needed for docs of previous versions.
+    'cvxpy',
+    'cobmo',
+    'cv2',
+    'diskcache',
+    'dill',
+    'kaleido',
+    'matplotlib',
+    'multimethod',
+    'multiprocess',
+    'networkx',
+    'natsort',
+    'numpy',
+    'opendssdirect',
+    'pandas',
+    'plotly',
+    'pyomo',  # Deprecated.
+    'scipy',
+]
 napoleon_use_ivar = True
 
 # Source settings.
@@ -55,6 +66,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 # - The theme to use for HTML and HTML Help pages.  See the documentation for
 #   a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
+html_favicon = 'assets/favicon.ico'
+templates_path = ['templates']
+
+# Sphinx multiversion settings.
+# - Explicitly include all branches, tags from all remotes.
+smv_tag_whitelist = r'^.*$'
+smv_branch_whitelist = r'^.*$'
+smv_remote_whitelist = r'^.*$'
 
 # Recommonmark settings.
 # - Documentation: <https://recommonmark.readthedocs.io/en/latest/auto_structify.html>

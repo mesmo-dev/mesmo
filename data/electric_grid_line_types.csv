@@ -1,6 +1,9 @@
-line_type,n_phases,base_frequency,maximum_current
-mtx601,3,60.0,1000000000.0
-mtx602,2,60.0,1000000000.0
-hougang_linetype_66,3,60.0,
-hougang_linetype_22,3,60.0,
-hougang_linetype_0.415,3,60.0,
+line_type,n_phases,maximum_current
+ieee_123node_line_type1,3,530
+mtx601,3,1000000000.0
+mtx602,2,1000000000.0
+hougang_linetype_66,3,585.0
+hougang_linetype_22,3,585.0
+hougang_linetype_0.415,3,585.0
+singapore_cable_22_copper_300,3,585.0
+singapore_cable_22_copper_300_400amp,3,400.0

@@ -1,42 +1,27 @@
 """Example script for setting up and solving an electric grid optimal operation problem."""
 
+import cvxpy as cp
 import numpy as np
 import os
 import pandas as pd
-import pyomo.environ as pyo
+import plotly.express as px
+import plotly.graph_objects as go
 
-import cobmo.database_interface
-import fledge.config
-import fledge.database_interface
-import fledge.der_models
-import fledge.electric_grid_models
+import fledge
 
 
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
-    results_path = (
-        os.path.join(
-            fledge.config.results_path,
-            f'run_electric_grid_optimal_operation_{fledge.config.timestamp}'
-        )
-    )
-
-    # Instantiate results directory.
-    os.mkdir(results_path)
+    scenario_name = 'singapore_6node'
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.database_interface.recreate_database()
-    cobmo.database_interface.recreate_database()
+    fledge.data_interface.recreate_database()
 
     # Obtain data.
-    scenario_data = fledge.database_interface.ScenarioData(scenario_name)
-    price_data = fledge.database_interface.PriceData(scenario_name)
-
-    # Obtain price timeseries.
-    price_name = 'energy'
-    price_timeseries = price_data.price_timeseries_dict[price_name]
+    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+    price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain models.
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -50,126 +35,86 @@ def main():
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = pyo.ConcreteModel()
+    optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define linear electric grid model variables.
+    # Define optimization variables.
     linear_electric_grid_model.define_optimization_variables(
         optimization_problem,
         scenario_data.timesteps
     )
-
-    # Define linear electric grid model constraints.
-    linear_electric_grid_model.define_optimization_constraints(
-        optimization_problem,
-        scenario_data.timesteps
-    )
-
-    # Define DER variables.
     der_model_set.define_optimization_variables(
         optimization_problem
     )
 
-    # Define DER constraints.
-    der_model_set.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define constraints for the connection with the DER power vector of the electric grid.
-    der_model_set.define_optimization_connection_grid(
+    # Define constraints.
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
+    linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        power_flow_solution,
-        electric_grid_model
+        scenario_data.timesteps,
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
+    )
+    der_model_set.define_optimization_constraints(
+        optimization_problem,
+        electric_grid_model=electric_grid_model
     )
 
-    # Define branch limit constraints.
-    branch_power_vector_1_squared = (  # Define shorthand for squared branch power vector.
-        lambda branch:
-        np.abs(power_flow_solution.branch_power_vector_1.ravel()[electric_grid_model.branches.get_loc(branch)] ** 2)
+    # Define objective.
+    linear_electric_grid_model.define_optimization_objective(
+        optimization_problem,
+        price_data,
+        scenario_data.timesteps
     )
-    optimization_problem.branch_limit_constraints = pyo.Constraint(
-        scenario_data.timesteps.to_list(),
-        electric_grid_model.branches.to_list(),
-        rule=lambda optimization_problem, timestep, *branch: (
-            optimization_problem.branch_power_vector_1_squared_change[timestep, branch]
-            + branch_power_vector_1_squared(branch)
-            <=
-            100.0 * branch_power_vector_1_squared(branch)
+    der_model_set.define_optimization_objective(
+        optimization_problem,
+        price_data
+    )
+
+    # Solve optimization problem.
+    optimization_problem.solve()
+
+    # Obtain results.
+    results = fledge.problems.Results()
+    results.update(
+        linear_electric_grid_model.get_optimization_results(
+            optimization_problem,
+            power_flow_solution,
+            scenario_data.timesteps,
+        )
+    )
+    results.update(
+        der_model_set.get_optimization_results(
+            optimization_problem
         )
     )
 
-    # Define electric grid objective.
-    # TODO: Not considering loss costs due to unrealiable loss model.
-    # if optimization_problem.find_component('objective') is None:
-    #     optimization_problem.objective = pyo.Objective(expr=0.0, sense=pyo.minimize)
-    # optimization_problem.objective.expr += (
-    #     sum(
-    #         price_timeseries.at[timestep, 'price_value']
-    #         * (
-    #             optimization_problem.loss_active_change[timestep]
-    #             + np.sum(np.real(power_flow_solution.loss))
-    #         )
-    #         for timestep in scenario_data.timesteps
-    #     )
-    # )
-
-    # Define DER objective.
-    der_model_set.define_optimization_objective(optimization_problem, price_timeseries)
-
-    # Solve optimization problem.
-    optimization_problem.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-    optimization_solver = pyo.SolverFactory(fledge.config.solver_name)
-    optimization_result = optimization_solver.solve(optimization_problem, tee=fledge.config.solver_output)
-    try:
-        assert optimization_result.solver.termination_condition is pyo.TerminationCondition.optimal
-    except AssertionError:
-        raise AssertionError(f"Solver termination condition: {optimization_result.solver.termination_condition}")
-    # optimization_problem.display()
-
-    # Obtain results.
-    (
-        der_active_power_vector,
-        der_reactive_power_vector,
-        voltage_magnitude_vector,
-        branch_power_vector_1_squared,
-        branch_power_vector_2_squared,
-        loss_active,
-        loss_reactive
-    ) = linear_electric_grid_model.get_optimization_results(
-        optimization_problem,
-        power_flow_solution,
-        scenario_data.timesteps,
-        in_per_unit=True,
-        with_mean=True
-    )
-
     # Print results.
-    print(f"der_active_power_vector = \n{der_active_power_vector.to_string()}")
-    print(f"der_reactive_power_vector = \n{der_reactive_power_vector.to_string()}")
-    print(f"voltage_magnitude_vector = \n{voltage_magnitude_vector.to_string()}")
-    print(f"branch_power_vector_1_squared = \n{branch_power_vector_1_squared.to_string()}")
-    print(f"branch_power_vector_2_squared = \n{branch_power_vector_2_squared.to_string()}")
-    print(f"loss_active = \n{loss_active.to_string()}")
-    print(f"loss_reactive = \n{loss_reactive.to_string()}")
+    print(results)
 
-    # Store results as CSV.
-    der_active_power_vector.to_csv(os.path.join(results_path, 'der_active_power_vector.csv'))
-    der_reactive_power_vector.to_csv(os.path.join(results_path, 'der_reactive_power_vector.csv'))
-    voltage_magnitude_vector.to_csv(os.path.join(results_path, 'voltage_magnitude_vector.csv'))
-    branch_power_vector_1_squared.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared.csv'))
-    branch_power_vector_2_squared.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared.csv'))
-    loss_active.to_csv(os.path.join(results_path, 'loss_active.csv'))
-    loss_reactive.to_csv(os.path.join(results_path, 'loss_reactive.csv'))
+    # Store results to CSV.
+    results.save(results_path)
 
-    # Obtain / print duals.
-    branch_limit_duals = (
-        pd.DataFrame(columns=electric_grid_model.branches, index=scenario_data.timesteps, dtype=np.float)
+    # Obtain DLMPs.
+    dlmps = (
+        linear_electric_grid_model.get_optimization_dlmps(
+            optimization_problem,
+            price_data,
+            scenario_data.timesteps
+        )
     )
-    for timestep in scenario_data.timesteps:
-        for branch_phase_index, branch in enumerate(electric_grid_model.branches):
-            branch_limit_duals.at[timestep, branch] = (
-                optimization_problem.dual[optimization_problem.branch_limit_constraints[timestep, branch]]
-            )
-    print(f"branch_limit_duals = \n{branch_limit_duals.to_string()}")
+
+    # Print DLMPs.
+    print(dlmps)
+
+    # Store DLMPs to CSV.
+    dlmps.save(results_path)
+
+    # Print results path.
+    fledge.utils.launch(results_path)
+    print(f"Results are stored in: {results_path}")
 
 
 if __name__ == '__main__':

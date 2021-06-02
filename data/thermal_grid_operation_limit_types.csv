@@ -1,0 +1,3 @@
+thermal_grid_operation_limit_type,node_head_per_unit_maximum,pipe_flow_per_unit_maximum
+testing_limits,2.0,10.0
+default_limits,1.1,1.0

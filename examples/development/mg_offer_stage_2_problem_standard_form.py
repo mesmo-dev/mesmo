@@ -589,7 +589,7 @@ def stage_2_problem_standard_form():
 
     m_Q2_s2[np.where(pd.Index(s2_indices).isin(der_active_power_vector_s2_indices)), 0] = -der_cost_factor
 
-    return standard_form, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2
+    return standard_form, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices, delta_indices, s1_indices
 
 
 def main():

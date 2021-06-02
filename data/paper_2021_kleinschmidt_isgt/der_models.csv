@@ -8,3 +8,5 @@ fixed_generator,solarthermal_isgt_2021,schedule_per_unit,solarthermal_isgt_2021,
 flexible_generator,photovoltaic_isgt_2021,schedule_per_unit,photovoltaic_isgt_2021,0,1,,,,,,0.1,,,
 flexible_generator,solarthermal_isgt_2021,schedule_per_unit,solarthermal_isgt_2021,0,1,,,,,,0.1,,,
 cooling_plant,heating_plant_isgt_2021,cooling_plant,heating_plant_isgt_2021,,,,,,,,,,,
+heat_pump,heat_pump_isgt_2021,schedule_per_unit,heat_pump_isgt_2021,0,1,,,6,,,1,1.2,,
+flexible_chp,flexible_chp_isgt_2021,schedule_per_unit,flexible_chp_isgt_2021,0,1,,,6,,,1,,0.55,0.37

@@ -47,7 +47,7 @@ paper_2021_kleinschmidt_isgt,01_5,flexible_generator,photovoltaic_isgt_2021,5,1,
 paper_2021_kleinschmidt_isgt,01_13,flexible_generator,photovoltaic_isgt_2021,13,1,1,1,wye,6600,0,flexible_generator_in_service
 paper_2021_kleinschmidt_isgt,01_16,flexible_generator,photovoltaic_isgt_2021,16,1,1,1,wye,4800,0,flexible_generator_in_service
 paper_2021_kleinschmidt_isgt,01_18,flexible_generator,photovoltaic_isgt_2021,18,1,1,1,wye,5100,0,flexible_generator_in_service
-paper_2021_kleinschmidt_isgt,2_18,flexible_chp,flexible_chp_generic,18,1,1,1,wye,11900,0,conversion_constrained_in_service
-paper_2021_kleinschmidt_isgt,2_7,heat_pump,heat_pump_generic,7,1,1,1,wye,-8400,-4200,conversion_unconstrained_in_service
-paper_2021_kleinschmidt_isgt,2_6,flexible_chp,flexible_chp_generic,6,1,1,1,wye,10600,0,conversion_unconstrained_in_service
-paper_2021_kleinschmidt_isgt,2_15,heat_pump,heat_pump_generic,15,1,1,1,wye,-6900,-3450,conversion_constrained_in_service
+paper_2021_kleinschmidt_isgt,2_18,flexible_chp,flexible_chp_isgt_2021,18,1,1,1,wye,11900,0,conversion_constrained_in_service
+paper_2021_kleinschmidt_isgt,2_7,heat_pump,heat_pump_isgt_2021,7,1,1,1,wye,-8400,-4200,conversion_unconstrained_in_service
+paper_2021_kleinschmidt_isgt,2_6,flexible_chp,flexible_chp_isgt_2021,6,1,1,1,wye,10600,0,conversion_unconstrained_in_service
+paper_2021_kleinschmidt_isgt,2_15,heat_pump,heat_pump_isgt_2021,15,1,1,1,wye,-6900,-3450,conversion_constrained_in_service

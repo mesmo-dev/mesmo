@@ -3,7 +3,6 @@
 import copy
 import cvxpy as cp
 import datetime
-import dill
 import functools
 import glob
 import itertools
@@ -11,6 +10,7 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
 import re
@@ -143,7 +143,7 @@ class ResultsBase(ObjectBase):
             else:
                 # Other objects are stored to pickle binary file (PKL).
                 with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
-                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+                    pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
     def load(
             self,
@@ -167,7 +167,7 @@ class ResultsBase(ObjectBase):
                     value = pd.read_csv(file)
                 else:
                     with open(file, 'rb') as input_file:
-                        value = dill.load(input_file)
+                        value = pickle.load(input_file)
                 self.__setattr__(attribute_name, value)
             else:
                 # Files which do not match any valid results attribute are not loaded.

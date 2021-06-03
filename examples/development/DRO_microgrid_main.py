@@ -15,6 +15,8 @@ from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
 def main():
     scenario_name = 'singapore_6node'
     price_data = fledge.data_interface.PriceData(scenario_name)
+    price_categories = ['energy', 'up_reserve', 'down_reserve']
+    ambiguity_set_dual_variables_categories = ['mu_1', 'nu_1', 'mu_2', 'nu_2', 'mu_3', 'nu_3', 'mu_4', 'nu_4']
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
@@ -33,7 +35,14 @@ def main():
     optimization_problem_dro = fledge.utils.OptimizationProblem()
 
     # TODO: we need proper initialization of DRO data
-    optimization_problem_dro.gamma = 100*np.ones((len(delta_indices_stage2), 1))
+    # constants
+    optimization_problem_dro.gamma = 30*np.ones((len(delta_indices_stage2), 1))
+
+    optimization_problem_dro.delta_lower_bound = - 1 * np.ones((len(delta_indices_stage2), 1))
+
+    optimization_problem_dro.delta_upper_bound = 1 * np.ones((len(delta_indices_stage2), 1))
+
+    optimization_problem_dro.u_upper_bound = 100 * np.ones((len(delta_indices_stage2), 1))
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
@@ -58,22 +67,44 @@ def main():
 
     # TODO: define mu nu with standard_form_stage_2, need a function to get the index and length of the variable...
 
+    optimization_problem_dro.ambiguity_set_duals_uncertain_price = {}
 
-    standard_form.define_variable('uncertainty_energy_price_deviation_s2',
-                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
-    standard_form.define_variable('uncertainty_up_reserve_price_deviation_s2',
-                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
-    standard_form.define_variable('uncertainty_down_reserve_price_deviation_s2',
-                                  timestep=linear_electric_grid_model.electric_grid_model.timesteps)
+    for price_category in price_categories:
+        for time_step in der_model_set.timesteps:
+            for dual_category in ambiguity_set_dual_variables_categories:
+                if dual_category == 'mu_3' or dual_category == 'nu_3':
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                        price_category, time_step, dual_category
+                    ] = cp.Variable((2, 1))
+                else:
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                        price_category, time_step, dual_category
+                    ] = cp.Variable((1, 1))
+
+    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance = {}
 
     for der_name, der_model in der_model_set.flexible_der_models.items():
         if not der_model.disturbances.empty:
-            standard_form.define_variable(
-                'uncertainty_disturbances_vector_s2', timestep=der_model.timesteps, der_name=[der_model.der_name],
-                disturbance=der_model.disturbances,
-            )
+            for time_step in der_model_set.timesteps:
 
+                index_temp_der_disturbance = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+                    timestep=time_step, der_name=[der_name], disturbance=der_model.disturbances,
+                )
 
+                size_der_disturbance = index_temp_der_disturbance.shape[0]
+                print(size_der_disturbance)
+
+                for dual_category in ambiguity_set_dual_variables_categories:
+                    if dual_category == 'mu_3' or dual_category == 'nu_3':
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                            der_name, time_step, dual_category
+                        ] = cp.Variable((2 * size_der_disturbance, 1))
+
+                    else:
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                            der_name, time_step, dual_category
+                        ] = cp.Variable((size_der_disturbance, 1))
 
 
     # constr 32b)
@@ -84,6 +115,102 @@ def main():
     optimization_problem_dro.constraints.append(
         optimization_problem_dro.beta >= 0
     )
+
+    # constr 35a)
+    temp_35a = np.transpose((m_Q2_s2 + m_Q3_s2)) @ optimization_problem_dro.k_0_s2 + \
+        np.transpose((m_Q3_s3)) @ optimization_problem_dro.k_0_s3
+
+    for price_category in price_categories:
+        for time_step in der_model_set.timesteps:
+            if price_category == 'energy':
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2', timestep=time_step
+                )
+            elif price_category == 'up_reserve':
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2', timestep=time_step
+                )
+            else:
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2', timestep=time_step
+                )
+
+            temp_35a += (
+                            optimization_problem_dro.delta_lower_bound[
+                            np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), :] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                            price_category, time_step, 'mu_1']
+                        )
+
+            temp_35a += (
+                                -optimization_problem_dro.delta_lower_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), :] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_1']
+                        )
+
+            temp_35a += (
+                                -optimization_problem_dro.delta_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), :] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'mu_2']
+                        )
+
+            temp_35a += (
+                                optimization_problem_dro.delta_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), :] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_2']
+                        )
+
+            temp_35a += np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'mu_3']
+
+            temp_35a += 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_3']
+
+            temp_35a += (
+                            optimization_problem_dro.u_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), :
+                            ]
+                        ) * \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_4']
+                        )
+
+
+    # for der_name, der_model in der_model_set.flexible_der_models.items():
+    #     if not der_model.disturbances.empty:
+    #         for time_step in der_model_set.timesteps:
+    #
+    #             index_temp_der_disturbance = fledge.utils.get_index(
+    #                 standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+    #                 timestep=time_step, der_name=[der_name], disturbance=der_model.disturbances,
+    #             )
+    #
+    #             size_der_disturbance = index_temp_der_disturbance.shape[0]
+    #             print(size_der_disturbance)
+    #
+    #             for dual_category in ambiguity_set_dual_variables_categories:
+    #                 if dual_category == 'mu_3' or dual_category == 'nu_3':
+    #                     optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+    #                         der_name, time_step, dual_category
+    #                     ] = cp.Variable((2 * size_der_disturbance, 1))
+    #
+    #                 else:
+    #                     optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+    #                         der_name, time_step, dual_category
+    #                     ] = cp.Variable((size_der_disturbance, 1))
+
 
 
     optimization_problem_dro.objective += (

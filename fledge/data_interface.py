@@ -47,17 +47,21 @@ def recreate_database(
         if additional_data_paths is not None
         else [fledge.config.config['paths']['data']]
     )
+    cobmo_data_paths = []
     valid_table_names = (
         pd.read_sql("SELECT name FROM sqlite_master WHERE type='table'", database_connection).iloc[:, 0].tolist()
     )
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Exclude CSV files from CoBMo data folders.
-            if (
-                    (os.path.join('cobmo', 'data') not in csv_file)
-                    and (os.path.join('data', 'cobmo_data') not in csv_file)
-            ):
+            # Exclude CSV files from CoBMo folders, but add to CoBMo data path.
+            if (os.path.join('cobmo', '') in csv_file) or (os.path.join('cobmo_data', '') in csv_file):
+
+                # Add to CoBMo data path.
+                if os.path.dirname(csv_file) not in cobmo_data_paths:
+                    cobmo_data_paths.append(os.path.dirname(csv_file))
+
+            else:
 
                 # Debug message.
                 logger.debug(f"Loading {csv_file} into database.")
@@ -72,7 +76,7 @@ def recreate_database(
 
                 # Load table and write to database.
                 try:
-                    table = pd.read_csv(csv_file, dtype=np.str)
+                    table = pd.read_csv(csv_file, dtype=str)
                     table.to_sql(
                         table_name,
                         con=database_connection,
@@ -90,7 +94,7 @@ def recreate_database(
     # TODO: Modify CoBMo config instead.
     cobmo.data_interface.recreate_database(
         additional_data_paths=[
-            os.path.join(fledge.config.config['paths']['data'], 'cobmo_data'),
+            *cobmo_data_paths,
             *fledge.config.config['paths']['cobmo_additional_data']
         ]
     )
@@ -207,7 +211,7 @@ class ScenarioData(object):
                 column = pd.to_numeric(column)
 
         # Explicitly parse to float, for consistent behavior independent of specific values.
-        column = column.astype(np.float)
+        column = column.astype(float)
 
         return column
 
@@ -600,67 +604,84 @@ class DERData(object):
         # Obtain DERs.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
-        self.ders = (
+        ders = (
             pd.merge(
-                pd.merge(
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                        """
-                        SELECT * FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                        """,
-                        con=database_connection,
-                        params=[scenario_name]
-                    )),
-                    how='outer',
-                    on=['der_name', 'der_type', 'der_model_name'],
-                    suffixes=('_electric_grid', '_thermal_grid')
-                ),
                 self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                     """
-                    SELECT * FROM der_models
-                    WHERE (der_type, der_model_name) IN (
-                        SELECT der_type, der_model_name
-                        FROM electric_grid_ders
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                    )
-                    OR (der_type, der_model_name) IN (
-                        SELECT der_type, der_model_name
-                        FROM thermal_grid_ders
-                        WHERE thermal_grid_name = (
-                            SELECT thermal_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
+                    SELECT * FROM electric_grid_ders
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
                     )
                     """,
                     con=database_connection,
-                    params=[
-                        scenario_name,
-                        scenario_name
-                    ]
+                    params=[scenario_name]
                 )),
+                self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                    """
+                    SELECT * FROM thermal_grid_ders
+                    WHERE thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name]
+                )),
+                how='outer',
+                on=['der_name', 'der_type', 'der_model_name'],
+                suffixes=('_electric_grid', '_thermal_grid')
+            )
+        )
+        der_models = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM der_models
+                WHERE (der_type, der_model_name) IN (
+                    SELECT der_type, der_model_name
+                    FROM electric_grid_ders
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                OR (der_type, der_model_name) IN (
+                    SELECT der_type, der_model_name
+                    FROM thermal_grid_ders
+                    WHERE thermal_grid_name = (
+                        SELECT thermal_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """,
+                con=database_connection,
+                params=[
+                    scenario_name,
+                    scenario_name
+                ]
+            ))
+        )
+        self.ders = (
+            pd.merge(
+                ders,
+                der_models,
                 how='left',
                 on=['der_type', 'der_model_name'],
             )
         )
         self.ders.index = self.ders['der_name']
         self.ders = self.ders.reindex(index=natsort.natsorted(self.ders.index))
+
+        # Raise error, if any undefined DER models.
+        # - That is: `der_model_name` is in `electric_grid_ders` or `thermal_grid_ders`, but not in `der_models`.
+        # - Except for `flexible_building` models, which are defined through CoBMo.
+        if (
+                ~ders.loc[:, 'der_model_name'].isin(der_models.loc[:, 'der_model_name'])
+                & ~ders.loc[:, 'der_type'].isin(['flexible_building'])  # CoBMo models
+        ).any():
+            raise ValueError(
+                "Some `der_model_name` in `electric_grid_ders` or `thermal_grid_ders` are not defined in `der_models`."
+            )
 
         # Obtain unique `definition_type` / `definition_name`.
         der_definitions_unique = self.ders.loc[:, ['definition_type', 'definition_name']].drop_duplicates()
@@ -979,7 +1000,7 @@ class DERData(object):
 class PriceData(object):
     """Price data object."""
 
-    price_sensitivity_coefficient: np.float
+    price_sensitivity_coefficient: float
     price_timeseries: pd.DataFrame
 
     @multimethod
@@ -1085,6 +1106,7 @@ class PriceData(object):
             ]))
         )
         # TODO: Initialize more efficiently for large number of DERs.
+        # TODO: In 1/MWh.
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values('commodity_type') == 'active_power'] += (
             price_timeseries.values[:, None]

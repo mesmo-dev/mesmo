@@ -63,7 +63,7 @@ class ThermalGridModel(object):
 
         # Define branch to node incidence matrix.
         self.branch_node_incidence_matrix = (
-            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=np.int)
+            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=int)
         )
         for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for branch_index, branch in enumerate(self.branches):
@@ -75,7 +75,7 @@ class ThermalGridModel(object):
 
         # Define DER to node incidence matrix.
         self.der_node_incidence_matrix = (
-            scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=np.int)
+            scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
         )
         for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for der_index, der_name in enumerate(self.der_names):
@@ -108,13 +108,13 @@ class ThermalGridModel(object):
 
         # Obtain other system parameters.
         self.energy_transfer_station_head_loss = (
-            np.float(thermal_grid_data.thermal_grid['energy_transfer_station_head_loss'])
+            float(thermal_grid_data.thermal_grid['energy_transfer_station_head_loss'])
         )
         self.enthalpy_difference_distribution_water = (
-            np.float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
+            float(thermal_grid_data.thermal_grid['enthalpy_difference_distribution_water'])
         )
         self.distribution_pump_efficiency = (
-            np.float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
+            float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
         )
 
         # Obtain cooling plant efficiency.
@@ -191,16 +191,16 @@ class ThermalPowerFlowSolution(object):
 
     der_thermal_power_vector: np.ndarray
     der_flow_vector: np.ndarray
-    source_flow: np.float
+    source_flow: float
     branch_flow_vector: np.ndarray
     branch_velocity_vector: np.ndarray
     branch_reynold_vector: np.ndarray
     branch_friction_factor_vector: np.ndarray
     branch_head_vector: np.ndarray
-    source_head: np.float
+    source_head: float
     node_head_vector: np.ndarray
-    pump_power: np.float
-    source_electric_power_cooling_plant: np.float
+    pump_power: float
+    source_electric_power_cooling_plant: float
 
     @multimethod
     def __init__(
@@ -348,7 +348,7 @@ class ThermalPowerFlowSolution(object):
         self.source_head = (
             np.max(np.abs(node_head_vector_no_source))
         )
-        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=np.float)
+        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
         self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
             node_head_vector_no_source
         )
@@ -427,7 +427,7 @@ class LinearThermalGridModel(object):
         branch_node_incidence_matrix_inverse = (
             scipy.sparse.dok_matrix(
                 (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)),
-                dtype=np.float
+                dtype=float
             )
         )
         branch_node_incidence_matrix_inverse[np.ix_(
@@ -442,7 +442,7 @@ class LinearThermalGridModel(object):
         branch_node_incidence_matrix_transpose_inverse = (
             scipy.sparse.dok_matrix(
                 (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)),
-                dtype=np.float
+                dtype=float
             )
         )
         branch_node_incidence_matrix_transpose_inverse[np.ix_(
@@ -535,6 +535,10 @@ class LinearThermalGridModel(object):
         optimization_problem.pump_power = (
             cp.Variable((len(timesteps), 1))
         )
+        # # TODO: Pump power not non-negative?
+        # optimization_problem.pump_power = (
+        #     cp.Variable((len(timesteps), 1))
+        # )
 
     def define_optimization_constraints(
             self,
@@ -718,29 +722,29 @@ class LinearThermalGridModel(object):
 
         # Instantiate DLMP variables.
         thermal_grid_energy_dlmp_node_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=float)
         )
         thermal_grid_head_dlmp_node_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=float)
         )
         thermal_grid_congestion_dlmp_node_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=float)
         )
         thermal_grid_pump_dlmp_node_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.nodes, index=timesteps, dtype=float)
         )
 
         thermal_grid_energy_dlmp_der_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=float)
         )
         thermal_grid_head_dlmp_der_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=float)
         )
         thermal_grid_congestion_dlmp_der_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=float)
         )
         thermal_grid_pump_dlmp_der_thermal_power = (
-            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.thermal_grid_model.ders, index=timesteps, dtype=float)
         )
 
         # Obtain DLMPs.

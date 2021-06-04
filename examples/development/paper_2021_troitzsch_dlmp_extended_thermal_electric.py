@@ -7,14 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.plots
-import fledge.problems
-import fledge.thermal_grid_models
-import fledge.utils
+import fledge
 
 
 def main(
@@ -42,21 +35,21 @@ def main(
     # 15 - added cooling plant (more expensive than source) + added very large PV plant (cheaper than source)
     #      + constrained electric grid branch power + constrained thermal grid branch flow.
     if scenario_number in [1, 2, 3, 4, 5]:
-        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5'
     elif scenario_number in [6, 7, 8]:
-        scenario_name = 'paper_2020_2_scenario_6_7_8'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_6_7_8'
     elif scenario_number in [9]:
-        scenario_name = 'paper_2020_2_scenario_9'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_9'
     elif scenario_number in [10, 11, 12]:
-        scenario_name = 'paper_2020_2_scenario_10_11_12'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_10_11_12'
     elif scenario_number in [13]:
-        scenario_name = 'paper_2020_2_scenario_13'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_13'
     elif scenario_number in [14]:
-        scenario_name = 'paper_2020_2_scenario_14'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_14'
     elif scenario_number in [15]:
-        scenario_name = 'paper_2020_2_scenario_15'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_15'
     else:
-        scenario_name = 'paper_2020_2_scenario_1_2_3_4_5'
+        scenario_name = 'paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5'
 
     # Obtain results path.
     results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_{scenario_name}')
@@ -72,7 +65,7 @@ def main(
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2020_2_scenario_1_2_3_4_5')
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -82,7 +75,7 @@ def main(
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2020_2_scenario_1_2_3_4_5')
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,

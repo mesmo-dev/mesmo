@@ -1,23 +1,19 @@
 """Validation script for solving a decentralized DER operation problem based on DLMPs from the centralized problem."""
 
+import cvxpy as cp
 import numpy as np
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.problems
-import fledge.utils
+import fledge
 
 
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = fledge.config.config['tests']['scenario_name']
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -161,14 +157,23 @@ def main():
     print(results_validation)
 
     # Plot: Price comparison.
-    values_1 = price_data.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
-    values_2 = price_data_dlmps.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
-    values_3 = price_data_dlmps.price_timeseries.loc[:, ('reactive_power', slice(None), der_name)].iloc[:, 0]
+    values_1 = (
+        1e6 / scenario_data.scenario.at['base_apparent_power']
+        * price_data.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+    )
+    values_2 = (
+        1e6 / scenario_data.scenario.at['base_apparent_power']
+        * price_data_dlmps.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+    )
+    values_3 = (
+        1e6 / scenario_data.scenario.at['base_apparent_power']
+        * price_data_dlmps.price_timeseries.loc[:, ('reactive_power', slice(None), der_name)].iloc[:, 0]
+    )
 
     title = 'Price comparison'
     filename = 'price_timeseries_comparison'
     y_label = 'Price'
-    value_unit = 'S$/kWh'
+    value_unit = 'S$/MWh'
 
     figure = go.Figure()
     figure.add_trace(go.Scatter(
@@ -199,11 +204,17 @@ def main():
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.5, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + '.png'))
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
     # Plot: Active power comparison.
-    values_1 = -1e-6 * results['output_vector'].loc[:, (der_name, 'active_power')]
-    values_2 = -1e-6 * results_validation['output_vector'].loc[:, 'active_power']
+    values_1 = (
+        1e-6 * scenario_data.scenario.at['base_apparent_power']
+        * results['output_vector'].loc[:, (der_name, 'active_power')].abs()
+    )
+    values_2 = (
+        1e-6 * scenario_data.scenario.at['base_apparent_power']
+        * results_validation['output_vector'].loc[:, 'active_power'].abs()
+    )
 
     title = 'Active power comparison'
     filename = 'active_power_comparison'
@@ -232,7 +243,7 @@ def main():
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + '.png'))
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
     # Print results path.
     fledge.utils.launch(results_path)

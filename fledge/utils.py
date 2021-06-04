@@ -3,7 +3,6 @@
 import copy
 import cvxpy as cp
 import datetime
-import dill
 import functools
 import glob
 import itertools
@@ -11,6 +10,7 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
 import re
@@ -143,7 +143,7 @@ class ResultsBase(ObjectBase):
             else:
                 # Other objects are stored to pickle binary file (PKL).
                 with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
-                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+                    pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
     def load(
             self,
@@ -167,7 +167,7 @@ class ResultsBase(ObjectBase):
                     value = pd.read_csv(file)
                 else:
                     with open(file, 'rb') as input_file:
-                        value = dill.load(input_file)
+                        value = pickle.load(input_file)
                 self.__setattr__(attribute_name, value)
             else:
                 # Files which do not match any valid results attribute are not loaded.
@@ -251,31 +251,9 @@ def starmap(
     return results
 
 
-def log_timing_start(
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
-
-    logger_object.debug(f"Start {message}.")
-
-    return time.time()
-
-
-def log_timing_end(
-        start_time: float,
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log end message and execution time based on given start time. Should be used together with `log_timing_start`."""
-
-    logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
-
-    return time.time()
-
-
 def log_time(
         label: str,
+        log_level: str = 'debug',
         logger_object: logging.Logger = logger
 ):
     """Log start / end message and time duration for given label.
@@ -283,26 +261,36 @@ def log_time(
     - When called with given label for the first time, will log start message.
     - When called subsequently with the same / previously used label, will log end message and time duration since
       logging the start message.
-    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
-      By default, uses ``utils.logger`` as logger.
-    - Start message: "Starting `label`."
-    - End message: "Completed `label` in `duration` seconds."
+    - The log level for start / end messages can be given as keyword argument, By default, messages are logged as
+      debug messages.
+    - The logger object can be given as keyword argument. By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting ``label``."
+    - End message: "Completed ``label`` in ``duration`` seconds."
 
     Arguments:
         label (str): Label for the start / end message.
 
     Keyword Arguments:
+        log_level (str): Log level to which the start / end messages are output. Choices: 'debug', 'info'.
+            Default: 'debug'.
         logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
             ``utils.logger``.
     """
 
     time_now = time.time()
 
+    if log_level == 'debug':
+        logger_handle = lambda message: logger_object.debug(message)
+    elif log_level == 'info':
+        logger_handle = lambda message: logger_object.info(message)
+    else:
+        raise ValueError(f"Invalid log level: '{log_level}'")
+
     if label in log_times.keys():
-        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+        logger_handle(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
     else:
         log_times[label] = time_now
-        logger_object.debug(f"Starting {label}.")
+        logger_handle(f"Starting {label}.")
 
 
 def get_index(
@@ -327,7 +315,7 @@ def get_index(
     """
 
     # Obtain mask for each level / values combination keyword arguments.
-    mask = np.ones(len(index_set), dtype=np.bool)
+    mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
 
         # Ensure that values are passed as list.
@@ -337,6 +325,9 @@ def get_index(
             # Convert numpy arrays to list.
             values = values.tolist()
             values = [values] if not isinstance(values, list) else values
+        elif isinstance(values, pd.Index):
+            # Convert pandas index to list.
+            values = values.to_list()
         else:
             # Convert single values into list with one item.
             values = [values]

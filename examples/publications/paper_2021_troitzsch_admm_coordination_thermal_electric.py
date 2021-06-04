@@ -1,4 +1,6 @@
-"""Run script for reproducing results of the Paper XXX."""
+"""Run script for reproducing results of the Paper: 'Coordinated Market Clearing for Combined Thermal and Electric
+Distribution Grid Operation'.
+"""
 
 import cvxpy as cp
 import numpy as np
@@ -8,14 +10,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.plots
-import fledge.problems
-import fledge.thermal_grid_models
-import fledge.utils
+import fledge
 
 
 def main(
@@ -24,10 +19,10 @@ def main(
 ):
 
     # Settings.
-    admm_iteration_limit = 10000
+    admm_iteration_limit = 1000
     admm_rho = 1e-1 if admm_rho is None else admm_rho
-    admm_primal_residual_termination_limit = 1e-6
-    admm_dual_residual_termination_limit = 1e-6
+    admm_primal_residual_termination_limit = 1e-1
+    admm_dual_residual_termination_limit = 1e-1
     scenario_number = 2 if scenario_number is None else scenario_number
     # Choices (Note that constrained cases may not solve reliably):
     # 1 - unconstrained operation,
@@ -35,7 +30,7 @@ def main(
     # 3 - constrained thermal grid pressure head,
     # 4 - constrained electric grid branch power,
     # 5 - constrained electric grid voltage
-    scenario_name = 'paper_2020_3'
+    scenario_name = 'paper_2021_troitzsch_admm'
 
     # Obtain results path.
     results_path = (
@@ -50,7 +45,7 @@ def main(
     fledge.utils.log_time(f"model setup")
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('singapore_tanjongpagar_modified')
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_admm_dlmp')
     linear_electric_grid_model = (
         fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
@@ -58,8 +53,9 @@ def main(
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_grid_model.cooling_plant_efficiency = 10.0  # Change model parameter to incentivize use of thermal grid.
     # Use base scenario power flow for consistent linear model behavior and per unit values.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('singapore_tanjongpagar_modified')
+    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_admm_dlmp')
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(
             thermal_grid_model,
@@ -888,7 +884,6 @@ def main(
                 x=results_baseline['thermal_grid_total_dlmp_der_thermal_power'].index,
                 y=(
                     results_baseline['thermal_grid_total_dlmp_der_thermal_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -900,7 +895,6 @@ def main(
                 x=admm_lambda_thermal_der_thermal_power.index,
                 y=(
                     admm_lambda_thermal_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Thermal grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -911,7 +905,6 @@ def main(
                 x=admm_lambda_aggregator_der_thermal_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_thermal_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -935,7 +928,6 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_active_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_active_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -947,7 +939,6 @@ def main(
                 x=admm_lambda_electric_der_active_power.index,
                 y=(
                     admm_lambda_electric_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -958,7 +949,6 @@ def main(
                 x=admm_lambda_aggregator_der_active_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_active_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')
@@ -983,7 +973,6 @@ def main(
                 x=results_baseline['electric_grid_total_dlmp_der_reactive_power'].index,
                 y=(
                     results_baseline['electric_grid_total_dlmp_der_reactive_power'].loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Centralized op.',
                 # fill='tozeroy',
@@ -995,7 +984,6 @@ def main(
                 x=admm_lambda_electric_der_reactive_power.index,
                 y=(
                     admm_lambda_electric_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Electric grid op.',
                 # line=go.scatter.Line(width=6, shape='hv')
@@ -1006,7 +994,6 @@ def main(
                 x=admm_lambda_aggregator_der_reactive_power.index,
                 y=(
                     -1.0 * admm_lambda_aggregator_der_reactive_power.loc[:, (slice(None), der_name)].iloc[:, 0]
-                    / 1e3
                 ).values,
                 name='Flexible load agg.',
                 # line=go.scatter.Line(width=3, shape='hv')

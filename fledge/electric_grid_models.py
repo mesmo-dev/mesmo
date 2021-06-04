@@ -340,21 +340,21 @@ class ElectricGridModel(object):
         # Arif: New line type definitions below.
         ################################################################################################################
 
-        for line_type in electric_grid_data.electric_grid_line_types_assembly.index:
+        for line_type in electric_grid_data.electric_grid_line_types_overhead.index:
 
             # Obtain shorthands.
-            assembly_data = electric_grid_data.electric_grid_line_types_assembly.loc[line_type, :]
+            assembly_data = electric_grid_data.electric_grid_line_types_overhead.loc[line_type, :]
             phase_1_conductor_data = (
-                electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data.at['phase_1_conductor_id'], :]
+                electric_grid_data.electric_grid_line_types_overhead_conductors.loc[assembly_data.at['phase_1_conductor_id'], :]
             )
             phase_2_conductor_data = (
-                electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data.at['phase_2_conductor_id'], :]
+                electric_grid_data.electric_grid_line_types_overhead_conductors.loc[assembly_data.at['phase_2_conductor_id'], :]
             )
             phase_3_conductor_data = (
-                electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data.at['phase_3_conductor_id'], :]
+                electric_grid_data.electric_grid_line_types_overhead_conductors.loc[assembly_data.at['phase_3_conductor_id'], :]
             )
             neutral_conductor_data = (
-                electric_grid_data.electric_grid_line_types_conductors.loc[assembly_data.at['neutral_conductor_id'], :]
+                electric_grid_data.electric_grid_line_types_overhead_conductors.loc[assembly_data.at['neutral_conductor_id'], :]
             )
 
             # Selecting elements from rows using `.at`.

@@ -322,8 +322,8 @@ class ElectricGridData(object):
     electric_grid_ders: pd.DataFrame
     electric_grid_lines: pd.DataFrame
     electric_grid_line_types: pd.DataFrame
-    electric_grid_line_types_assembly: pd.DataFrame
-    electric_grid_line_types_conductors: pd.DataFrame
+    electric_grid_line_types_overhead: pd.DataFrame
+    electric_grid_line_types_overhead_conductors: pd.DataFrame
     electric_grid_line_types_matrices: pd.DataFrame
     electric_grid_transformers: pd.DataFrame
 
@@ -423,10 +423,10 @@ class ElectricGridData(object):
             ))
         )
         self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
-        self.electric_grid_line_types_assembly = (
+        self.electric_grid_line_types_overhead = (
             pd.read_sql(
                 """
-                SELECT * FROM electric_grid_line_types_assembly
+                SELECT * FROM electric_grid_line_types_overhead
                 WHERE line_type IN (
                     SELECT line_type FROM electric_grid_lines
                     WHERE electric_grid_name = (
@@ -439,16 +439,16 @@ class ElectricGridData(object):
                 params=[scenario_name]
             )
         )
-        self.electric_grid_line_types_assembly.index = self.electric_grid_line_types_assembly['line_type']
-        self.electric_grid_line_types_conductors = (
+        self.electric_grid_line_types_overhead.index = self.electric_grid_line_types_overhead['line_type']
+        self.electric_grid_line_types_overhead_conductors = (
             pd.read_sql(
                 """
-                SELECT * FROM electric_grid_line_types_conductors
+                SELECT * FROM electric_grid_line_types_overhead_conductors
                 """,
                 con=database_connection
             )
         )
-        self.electric_grid_line_types_conductors.index = self.electric_grid_line_types_conductors['conductor_id']
+        self.electric_grid_line_types_overhead_conductors.index = self.electric_grid_line_types_overhead_conductors['conductor_id']
         self.electric_grid_line_types_matrices = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """

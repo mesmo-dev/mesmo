@@ -76,10 +76,19 @@ CREATE TABLE electric_grid_line_types (
     line_type TEXT,
     n_phases TEXT,
     maximum_current TEXT,
-    definition_type TEXT,
+    definition_type TEXT DEFAULT 'matrix',
     PRIMARY KEY(line_type)
 );
-CREATE TABLE electric_grid_line_types_assembly (
+CREATE TABLE electric_grid_line_types_matrices (
+    line_type TEXT,
+    row INTEGER,
+    col INTEGER,
+    resistance TEXT,
+    reactance TEXT,
+    capacitance TEXT,
+    PRIMARY KEY(line_type,row,col)
+);
+CREATE TABLE electric_grid_line_types_overhead (
     line_type TEXT,
     phase_1_conductor_id TEXT,
     phase_2_conductor_id TEXT,
@@ -98,7 +107,7 @@ CREATE TABLE electric_grid_line_types_assembly (
     neutral_y REAL,
     PRIMARY KEY(line_type)
 );
-CREATE TABLE electric_grid_line_types_conductors (
+CREATE TABLE electric_grid_line_types_overhead_conductors (
     conductor_id TEXT,
     conductor_size_description TEXT,
     conductor_stranding_description TEXT,
@@ -108,15 +117,6 @@ CREATE TABLE electric_grid_line_types_conductors (
     conductor_resistance REAL,
     conductor_maximum_current REAL,
     PRIMARY KEY(conductor_id)
-);
-CREATE TABLE electric_grid_line_types_matrices (
-    line_type TEXT,
-    row INTEGER,
-    col INTEGER,
-    resistance TEXT,
-    reactance TEXT,
-    capacitance TEXT,
-    PRIMARY KEY(line_type,row,col)
 );
 CREATE TABLE electric_grid_lines (
     electric_grid_name TEXT,

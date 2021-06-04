@@ -95,6 +95,19 @@ Electric line type definitions are split into `electric_grid_line_types` for the
 | `n_phases` | - | Number of phases. |
 | `maximum_current` | A | Maximum permissible current (thermal line limit). |
 
+### `electric_grid_line_types_conductors`
+
+| Column | Unit | Description |
+| --- |:---:| --- |
+| `conductor_id` | | Unique identifier. |
+| `conductor_size_description` | | Conductor size description string (see [Kersting, 2018, Appendix A](https://doi.org/10.1201/9781315120782)). |
+| `conductor_stranding_description` | | Conductor stranding description string (see [Kersting, 2018, Appendix A](https://doi.org/10.1201/9781315120782)). |
+| `conductor_material_description` | | Conductor material description string (see [Kersting, 2018, Appendix A](https://doi.org/10.1201/9781315120782)). |
+| `conductor_diameter` | mm | Conductor diameter. |
+| `conductor_geometric_mean_radius` | mm | Conductor geometric mean radius (GMR). |
+| `conductor_resistance` | Ω/km | Specific resistance of conductor. |
+| `conductor_maximum_current` | A | Maximum permissible current (thermal conductor limit). |
+
 ### `electric_grid_line_types_matrices`
 
 Electric line characteristics are defined in terms of element property matrices. Note that the matrices are expected to be symmetric and therefore only the lower triangular matrix should be defined. The matrices are defined element-wise (indexed by row / column pairs), to allow definition of single-phase line types alongside multi-phase line types.

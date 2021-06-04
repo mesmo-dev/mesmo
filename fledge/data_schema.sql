@@ -100,14 +100,13 @@ CREATE TABLE electric_grid_line_types_assembly (
 );
 CREATE TABLE electric_grid_line_types_conductors (
     conductor_id TEXT,
-    conductor_size TEXT,
-    conductor_stranding TEXT,
-    conductor_material TEXT,
+    conductor_size_description TEXT,
+    conductor_stranding_description TEXT,
+    conductor_material_description TEXT,
     conductor_diameter REAL,
     conductor_geometric_mean_radius REAL,
     conductor_resistance REAL,
-    conductor_current_capacity REAL,
-    conductor_type TEXT,
+    conductor_maximum_current REAL,
     PRIMARY KEY(conductor_id)
 );
 CREATE TABLE electric_grid_line_types_matrices (

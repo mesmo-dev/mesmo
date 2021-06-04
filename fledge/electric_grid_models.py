@@ -404,7 +404,7 @@ class ElectricGridModel(object):
             phase_2_conductor_resistance = phase_2_conductor_data.at['conductor_resistance'] / 1609.34
             phase_3_conductor_resistance = phase_3_conductor_data.at['conductor_resistance'] / 1609.34
             neutral_conductor_resistance = neutral_conductor_data.at['conductor_resistance'] / 1609.34
-            
+
             # Convert feet to meters.
             # TODO: Move this to data definition?
             phase_1_conductor_geometric_mean_radius = phase_1_conductor_data.at['conductor_geometric_mean_radius'] * 0.3048
@@ -420,6 +420,8 @@ class ElectricGridModel(object):
             # Impedance in ohm / meters.
             # TODO: Is 9.86 same as pi ** 2 ?
             # TODO: Compress with for loop + if else statement?
+            # TODO: Z = dict()
+            # TODO: for i, j in zip()
             Z11 = (
                 phase_1_conductor_resistance + 9.86 * 1e-7 * frequency
                 + 1j * 2 * np.pi * frequency * 2 * 1e-7
@@ -495,6 +497,7 @@ class ElectricGridModel(object):
             # Assemble matix.
             temp_Z_prim = np.array([[Z11, Z12, Z13, Z1n], [Z21, Z22, Z23, Z2n], [Z31, Z32, Z33, Z3n], [Zn1, Zn2, Zn3, Znn]])
 
+            # TODO: phase = '1 2 3 N'
             # TODO: Phase arrangements: Do we need 'phasing' column?
             # TODO: Has it been tested with missing phases?
 
@@ -507,6 +510,7 @@ class ElectricGridModel(object):
             not_to_remove = []
             # TODO: Use elif instead of repeated if?
             if (find_conductor_a + find_conductor_b + find_conductor_c + find_conductor_n) >= 12:
+                # TODO: To remove.
                 # Kron's reduction
                 Zabc = temp_Z_prim[0:3][:, 0:3]
                 Zabcn = temp_Z_prim[0:3][:, 3]
@@ -531,8 +535,10 @@ class ElectricGridModel(object):
 
             # TODO: What does this do?
             if find_conductor_n == -1:
-                Z_prim  # TODO: This doesn't do anything?
+                # No Kron reduction needed if neutral is absent.
+                pass
             else:
+                # Only if neutral exists.
                 Znn = temp_Z_prim[-1, -1]
                 Zabc = temp_Z_prim[0:len(temp_Z_prim) - 1][:, 0:len(temp_Z_prim) - 1]
                 Zabcn = temp_Z_prim[0:len(temp_Z_prim) - 1][:, len(temp_Z_prim) - 1]
@@ -588,7 +594,7 @@ class ElectricGridModel(object):
                 )
             )
 
-            # TODO: ??? in meter / Farad
+            # Potential coefficients in meter / Farad
             # - Diameter changed to radius and from inch to meter.
             eta = 8.85 * 10 ** (-12) # permittivity of the medium
             P11 = (
@@ -662,6 +668,7 @@ class ElectricGridModel(object):
 
             # TODO: Which columns in conductors table are needed?
             # TODO: Underground lines (cables)?
+            # TODO: Fix dates in conductors table.
 
         ################################################################################################################
         # Arif: New line type definitions above.

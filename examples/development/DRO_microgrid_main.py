@@ -26,11 +26,11 @@ def main():
     standard_form_stage_1, A1_matrix, b1_vector, f_vector, stochastic_scenarios, der_model_set \
         = stage_1_problem_standard_form()
 
-    standard_form_stage_2, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
+    standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
         delta_indices_stage2, s1_indices = stage_2_problem_standard_form()
 
-    standard_form_stage_3, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, delta_indices_stage3, \
-           s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form()
+    standard_form_stage_3, b3_vector, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, \
+        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form()
 
     # Instantiate optimization problem.
     optimization_problem_dro = fledge.utils.OptimizationProblem()
@@ -119,7 +119,7 @@ def main():
 
     # constr 35a)
     temp_35a = np.transpose((m_Q2_s2 + m_Q3_s2)) @ optimization_problem_dro.k_0_s2 + \
-        np.transpose((m_Q3_s3)) @ optimization_problem_dro.k_0_s3
+        np.transpose((m_Q3_s3)) @ optimization_problem_dro.k_0_s3 + optimization_problem_dro.sigma
 
     for price_category in price_categories:
         for time_step in der_model_set.timesteps:
@@ -136,7 +136,7 @@ def main():
                     standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2', timestep=time_step
                 )
 
-            temp_35a += (
+            temp_35a -= (
                             optimization_problem_dro.delta_lower_bound[
                             np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
                         ) @ \
@@ -145,7 +145,7 @@ def main():
                             price_category, time_step, 'mu_1']
                         )
 
-            temp_35a += (
+            temp_35a -= (
                              -optimization_problem_dro.delta_lower_bound[
                              np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
                         ) @ \
@@ -154,7 +154,7 @@ def main():
                             price_category, time_step, 'nu_1']
                         )
 
-            temp_35a += (
+            temp_35a -= (
                                 -optimization_problem_dro.delta_upper_bound[
                                 np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
                         ) @ \
@@ -163,7 +163,7 @@ def main():
                                 price_category, time_step, 'mu_2']
                         )
 
-            temp_35a += (
+            temp_35a -= (
                             optimization_problem_dro.delta_upper_bound[
                                 np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
                         ) @ \
@@ -172,13 +172,13 @@ def main():
                                 price_category, time_step, 'nu_2']
                         )
 
-            temp_35a += np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+            temp_35a -= np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
                                 price_category, time_step, 'mu_3']
 
-            temp_35a += 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+            temp_35a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_price[
                                 price_category, time_step, 'nu_3']
 
-            temp_35a += (
+            temp_35a -= (
                             optimization_problem_dro.u_upper_bound[
                                 np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0
                             ]
@@ -202,7 +202,7 @@ def main():
                 print(size_der_disturbance)
 
                 if size_der_disturbance == 1:
-                    temp_35a += (
+                    temp_35a -= (
                                         optimization_problem_dro.delta_lower_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin(
                                                 index_temp_der_disturbance)), 0] + 1
@@ -213,7 +213,7 @@ def main():
                                     ]
                                 )
 
-                    temp_35a += (
+                    temp_35a -= (
                                         -optimization_problem_dro.delta_lower_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin(
                                                 index_temp_der_disturbance)), 0] + 1
@@ -224,7 +224,7 @@ def main():
                                     ]
                                 )
 
-                    temp_35a += (
+                    temp_35a -= (
                                         -optimization_problem_dro.delta_upper_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin(
                                                 index_temp_der_disturbance)), 0] + 1
@@ -235,7 +235,7 @@ def main():
                                     ]
                                 )
 
-                    temp_35a += (
+                    temp_35a -= (
                                         optimization_problem_dro.delta_upper_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin(
                                                 index_temp_der_disturbance)), 0] + 1
@@ -246,16 +246,16 @@ def main():
                                     ]
                                 )
 
-                    temp_35a += np.array([[0.5, 0]]) @ \
+                    temp_35a -= np.array([[0.5, 0]]) @ \
                                     optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                         der_name, time_step, 'mu_3'
                                     ]
 
-                    temp_35a += 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                    temp_35a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                         der_name, time_step, 'nu_3'
                                     ]
 
-                    temp_35a += (
+                    temp_35a -= (
                                     optimization_problem_dro.u_upper_bound[
                                         np.where(pd.Index(delta_indices_stage2).isin(index_temp_der_disturbance)), 0
                                     ]
@@ -267,7 +267,7 @@ def main():
                                 )
                 else:
                     for index_within_der_disturbance in index_temp_der_disturbance:
-                        temp_35a += (
+                        temp_35a -= (
                                             optimization_problem_dro.delta_lower_bound[
                                                 np.where(pd.Index(delta_indices_stage2).isin(
                                                     [index_within_der_disturbance])), 0] + 1
@@ -281,7 +281,7 @@ def main():
                                          ]
                                     )
 
-                        temp_35a += (
+                        temp_35a -= (
                                             -optimization_problem_dro.delta_lower_bound[
                                                 np.where(pd.Index(delta_indices_stage2).isin(
                                                     [index_within_der_disturbance])), 0] + 1
@@ -295,7 +295,7 @@ def main():
                                          ]
                                     )
 
-                        temp_35a += (
+                        temp_35a -= (
                                             -optimization_problem_dro.delta_upper_bound[
                                                 np.where(pd.Index(delta_indices_stage2).isin(
                                                     [index_within_der_disturbance])), 0] + 1
@@ -309,7 +309,7 @@ def main():
                                          ]
                                     )
 
-                        temp_35a += (
+                        temp_35a -= (
                                             optimization_problem_dro.delta_upper_bound[
                                                 np.where(pd.Index(delta_indices_stage2).isin(
                                                     [index_within_der_disturbance])), 0] + 1
@@ -323,25 +323,25 @@ def main():
                                          ]
                                     )
 
-                        temp_35a += np.array([[0.5, 0]]) @ \
+                        temp_35a -= np.array([[0.5, 0]]) @ \
                                     optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                         der_name, time_step, 'mu_3'
                                     ][
                                         [
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                     [index_within_der_disturbance]))[0].item(),
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                     [index_within_der_disturbance]))[0].item()+1
                                         ], :
                                     ]
 
-                        temp_35a += 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                        temp_35a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                             der_name, time_step, 'nu_3'
                             ][
                                 np.where(pd.Index(index_temp_der_disturbance).isin([index_within_der_disturbance]))
                              ]
 
-                        temp_35a += (
+                        temp_35a -= (
                                         optimization_problem_dro.u_upper_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin([index_within_der_disturbance])),0
                                         ]
@@ -446,9 +446,9 @@ def main():
                             optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                 der_name, time_step, 'mu_3'][
                                         [
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                     [index_within_der_disturbance]))[0].item(),
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                     [index_within_der_disturbance]))[0].item()+1
                                         ], :
                                     ]
@@ -529,7 +529,7 @@ def main():
                 )
 
                 size_der_disturbance = index_temp_der_disturbance.shape[0]
-
+                #  constr 35 c)
                 if size_der_disturbance == 1:
                     optimization_problem_dro.constraints.append(
                         np.array([[-0.5, 0]]) @
@@ -580,15 +580,16 @@ def main():
                     )
 
                 else:
+                    #  constr 35 c)
                     for index_within_der_disturbance in index_temp_der_disturbance:
                         optimization_problem_dro.constraints.append(
                             + np.array([[-0.5, 0]]) @
                             optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                 der_name, time_step, 'mu_3'][
                                 [
-                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                    2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                         [index_within_der_disturbance]))[0].item(),
-                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                    2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                         [index_within_der_disturbance]))[0].item() + 1
                                 ], :
                             ]
@@ -648,9 +649,9 @@ def main():
                                 optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
                                     der_name, time_step, 'mu_3'][
                                         [
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                 [index_within_der_disturbance]))[0].item(),
-                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
                                                 [index_within_der_disturbance]))[0].item() + 1
                                         ], :
                                     ][:, 0]
@@ -672,7 +673,425 @@ def main():
                             )
                         )
 
+    # constr 40 a)
+    temp_40a = b2_vector - A2_matrix @ optimization_problem_dro.s1_vector - B2_matrix @ optimization_problem_dro.k_0_s2
 
+    for price_category in price_categories:
+        for time_step in der_model_set.timesteps:
+            if price_category == 'energy':
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2', timestep=time_step
+                )
+            elif price_category == 'up_reserve':
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2', timestep=time_step
+                )
+            else:
+                index_temp_uncertain_prices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2', timestep=time_step
+                )
+
+            temp_40a -= (
+                            optimization_problem_dro.delta_lower_bound[
+                            np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                            price_category, time_step, 'mu_1']
+                        )
+
+            temp_40a -= (
+                             -optimization_problem_dro.delta_lower_bound[
+                             np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                            price_category, time_step, 'nu_1']
+                        )
+
+            temp_40a -= (
+                                -optimization_problem_dro.delta_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'mu_2']
+                        )
+
+            temp_40a -= (
+                            optimization_problem_dro.delta_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0] + 1
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_2']
+                        )
+
+            temp_40a -= np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'mu_3']
+
+            temp_40a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_3']
+
+            temp_40a -= (
+                            optimization_problem_dro.u_upper_bound[
+                                np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices)), 0
+                            ]
+                        ) @ \
+                        (
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                                price_category, time_step, 'nu_4']
+                        )
+
+    for der_name, der_model in der_model_set.flexible_der_models.items():
+        if not der_model.disturbances.empty:
+            for time_step in der_model_set.timesteps:
+
+                index_temp_der_disturbance = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+                    timestep=time_step, der_name=[der_name], disturbance=der_model.disturbances,
+                )
+
+                size_der_disturbance = index_temp_der_disturbance.shape[0]
+                print(size_der_disturbance)
+
+                if size_der_disturbance == 1:
+                    temp_40a -= (
+                                        optimization_problem_dro.delta_lower_bound[
+                                            np.where(pd.Index(delta_indices_stage2).isin(
+                                                index_temp_der_disturbance)), 0] + 1
+                                ) @ \
+                                (
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'mu_1'
+                                    ]
+                                )
+
+                    temp_40a -= (
+                                        -optimization_problem_dro.delta_lower_bound[
+                                            np.where(pd.Index(delta_indices_stage2).isin(
+                                                index_temp_der_disturbance)), 0] + 1
+                                ) @ \
+                                (
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'nu_1'
+                                    ]
+                                )
+
+                    temp_40a -= (
+                                        -optimization_problem_dro.delta_upper_bound[
+                                            np.where(pd.Index(delta_indices_stage2).isin(
+                                                index_temp_der_disturbance)), 0] + 1
+                                ) @ \
+                                (
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'mu_2'
+                                    ]
+                                )
+
+                    temp_40a -= (
+                                        optimization_problem_dro.delta_upper_bound[
+                                            np.where(pd.Index(delta_indices_stage2).isin(
+                                                index_temp_der_disturbance)), 0] + 1
+                                ) @ \
+                                (
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'nu_2'
+                                    ]
+                                )
+
+                    temp_40a -= np.array([[0.5, 0]]) @ \
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'mu_3'
+                                    ]
+
+                    temp_40a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'nu_3'
+                                    ]
+
+                    temp_40a -= (
+                                    optimization_problem_dro.u_upper_bound[
+                                        np.where(pd.Index(delta_indices_stage2).isin(index_temp_der_disturbance)), 0
+                                    ]
+                                ) @ \
+                                (
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'nu_4'
+                                    ]
+                                )
+                else:
+                    for index_within_der_disturbance in index_temp_der_disturbance:
+                        temp_40a -= (
+                                            optimization_problem_dro.delta_lower_bound[
+                                                np.where(pd.Index(delta_indices_stage2).isin(
+                                                    [index_within_der_disturbance])), 0] + 1
+                                    ) @ \
+                                    (
+                                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                            der_name, time_step, 'mu_1'
+                                        ][
+                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))
+                                         ]
+                                    )
+
+                        temp_40a -= (
+                                            -optimization_problem_dro.delta_lower_bound[
+                                                np.where(pd.Index(delta_indices_stage2).isin(
+                                                    [index_within_der_disturbance])), 0] + 1
+                                    ) @ \
+                                    (
+                                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                            der_name, time_step, 'nu_1'
+                                        ][
+                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))
+                                         ]
+                                    )
+
+                        temp_40a -= (
+                                            -optimization_problem_dro.delta_upper_bound[
+                                                np.where(pd.Index(delta_indices_stage2).isin(
+                                                    [index_within_der_disturbance])), 0] + 1
+                                    ) @ \
+                                    (
+                                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                            der_name, time_step, 'mu_2'
+                                        ][
+                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))
+                                         ]
+                                    )
+
+                        temp_40a -= (
+                                            optimization_problem_dro.delta_upper_bound[
+                                                np.where(pd.Index(delta_indices_stage2).isin(
+                                                    [index_within_der_disturbance])), 0] + 1
+                                    ) @ \
+                                    (
+                                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                            der_name, time_step, 'nu_2'
+                                        ][
+                                            np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))
+                                         ]
+                                    )
+
+                        temp_40a -= np.array([[0.5, 0]]) @ \
+                                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                        der_name, time_step, 'mu_3'
+                                    ][
+                                        [
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))[0].item(),
+                                            2*np.where(pd.Index(index_temp_der_disturbance).isin(
+                                                    [index_within_der_disturbance]))[0].item()+1
+                                        ], :
+                                    ]
+
+                        temp_40a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                            der_name, time_step, 'nu_3'
+                            ][
+                                np.where(pd.Index(index_temp_der_disturbance).isin([index_within_der_disturbance]))
+                             ]
+
+                        temp_40a -= (
+                                        optimization_problem_dro.u_upper_bound[
+                                            np.where(pd.Index(delta_indices_stage2).isin([index_within_der_disturbance])),0
+                                        ]
+                                    ) @ \
+                                    (
+                                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                            der_name, time_step, 'nu_4'
+                                        ][
+                                            np.where(pd.Index(index_temp_der_disturbance).isin([index_within_der_disturbance]))
+                                        ]
+
+                                    )
+
+    optimization_problem_dro.constraints.append(
+        temp_40a >= 0
+    )
+
+    # constr 40 b)
+    temp_40b = C2_matrix - B2_matrix @ optimization_problem_dro.K_delta_s2
+
+    for row_index in range(temp_40b.shape[0]):
+        for price_category in price_categories:
+            for time_step in der_model_set.timesteps:
+                if price_category == 'energy':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2', timestep=time_step
+                    )
+                elif price_category == 'up_reserve':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+                else:
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+
+                optimization_problem_dro.constraints.append(
+                    - optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'mu_1']
+                    + optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_1']
+                    + optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'mu_2']
+                    - optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_2']
+                    + np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                        price_category, time_step, 'mu_3']
+                    ==
+                    temp_40b[row_index, np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices))]
+                )
+
+        for der_name, der_model in der_model_set.flexible_der_models.items():
+            if not der_model.disturbances.empty:
+                for time_step in der_model_set.timesteps:
+
+                    index_temp_der_disturbance = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+                        timestep=time_step, der_name=[der_name], disturbance=der_model.disturbances,
+                    )
+
+                    size_der_disturbance = index_temp_der_disturbance.shape[0]
+
+                    if size_der_disturbance == 1:
+                        optimization_problem_dro.constraints.append(
+                            - optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'mu_1']
+                            + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'nu_1']
+                            + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'mu_2']
+                            - optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'nu_2']
+                            + np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'mu_3']
+                            ==
+                            temp_40b[row_index, np.where(pd.Index(delta_indices_stage2).isin(index_temp_der_disturbance))]
+                        )
+                    else:
+                        for index_within_der_disturbance in index_temp_der_disturbance:
+                            optimization_problem_dro.constraints.append(
+                                - optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'mu_1'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'nu_1'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'mu_2'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                - optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'nu_2'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                + np.array([[0.0, 1.0]]) @
+                                optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'mu_3'][
+                                [
+                                    2 * np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))[0].item(),
+                                    2 * np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))[0].item() + 1
+                                ], :
+                                ]
+                                ==
+                                temp_40b[row_index, np.where(pd.Index(delta_indices_stage2).isin([index_within_der_disturbance]))]
+                            )
+
+    #  constr 40 c)
+    temp_40c = - B2_matrix @ optimization_problem_dro.K_u_s2
+
+    for row_index in range(temp_40c.shape[0]):
+        for price_category in price_categories:
+            for time_step in der_model_set.timesteps:
+                if price_category == 'energy':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2',
+                        timestep=time_step
+                    )
+                elif price_category == 'up_reserve':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+                else:
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+                #  constr 40 c)
+                optimization_problem_dro.constraints.append(
+                    + np.array([[-0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                        price_category, time_step, 'mu_3']
+                    + 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_price[
+                        price_category, time_step, 'nu_3']
+                    + optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'mu_4']
+                    ==
+                    temp_40c[row_index, np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices))]
+                )
+
+        for der_name, der_model in der_model_set.flexible_der_models.items():
+            if not der_model.disturbances.empty:
+                for time_step in der_model_set.timesteps:
+
+                    index_temp_der_disturbance = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+                        timestep=time_step, der_name=[der_name], disturbance=der_model.disturbances,
+                    )
+
+                    size_der_disturbance = index_temp_der_disturbance.shape[0]
+                    #  constr 40 c)
+                    if size_der_disturbance == 1:
+                        optimization_problem_dro.constraints.append(
+                            np.array([[-0.5, 0]]) @
+                            optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'mu_3']
+                            + 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'nu_3']
+                            + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                der_name, time_step, 'mu_4']
+                            ==
+                            temp_40c[row_index, np.where(pd.Index(delta_indices_stage2).isin(index_temp_der_disturbance))]
+                        )
+
+                    else:
+                        #  constr 40 c)
+                        for index_within_der_disturbance in index_temp_der_disturbance:
+                            optimization_problem_dro.constraints.append(
+                                + np.array([[-0.5, 0]]) @
+                                optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'mu_3'][
+                                [
+                                    2 * np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))[0].item(),
+                                    2 * np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))[0].item() + 1
+                                ], :
+                                ]
+                                + 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'nu_3'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                + optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[
+                                    der_name, time_step, 'mu_4'][
+                                    np.where(pd.Index(index_temp_der_disturbance).isin(
+                                        [index_within_der_disturbance]))
+                                ]
+                                ==
+                                temp_40c[row_index,
+                                         np.where(pd.Index(delta_indices_stage2).isin([index_within_der_disturbance]))]
+                            )
 
 
     optimization_problem_dro.objective += (

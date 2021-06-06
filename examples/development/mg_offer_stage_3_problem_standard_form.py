@@ -725,7 +725,7 @@ def stage_3_problem_standard_form():
     m_Q3_s3[np.where(pd.Index(s3_indices).isin(der_active_power_vector_down_reserve_s3_indices)), 0] = \
         -der_cost_factor*down_reserve_activated_probability
 
-    return standard_form, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, delta_indices, \
+    return standard_form, b_vector, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, delta_indices, \
            s1_indices, s2_indices, s3_indices
 
 

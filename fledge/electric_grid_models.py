@@ -424,6 +424,7 @@ class ElectricGridModel(object):
             phases_non_neutral = phases[~phases.isin(['n'])]
 
             # Other parameter shorthands.
+            # TODO: Check units.
             frequency = electric_grid_data.electric_grid.at['base_frequency']
             soil_resistivity = line_type_data.at['soil_resistivity']  # In Ωm.
             equivalent_depth = 0.305 * 2160 * np.sqrt(soil_resistivity / frequency)  # Equivalent depth of earth in m.
@@ -457,17 +458,21 @@ class ElectricGridModel(object):
             # Apply Kron reduction.
             z_matrix = (
                 pd.DataFrame(
-                    z_matrix.loc[phases_non_neutral, phases_non_neutral].values
-                    - z_matrix.loc[phases_non_neutral, phases_neutral].values
-                    @ z_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
-                    @ z_matrix.loc[phases_neutral, phases_non_neutral].values
+                    (
+                        z_matrix.loc[phases_non_neutral, phases_non_neutral].values
+                        - z_matrix.loc[phases_non_neutral, phases_neutral].values
+                        @ z_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
+                        @ z_matrix.loc[phases_neutral, phases_non_neutral].values
+                    ),
+                    index=phases_non_neutral,
+                    columns=phases_non_neutral
                 )
             )
 
             # Obtain potentials matrix in km/F.
             # TODO: Validate units.
             # TODO: Add reference.
-            p_matrix = pd.DataFrame(index=phases, columns=phases, dtype=complex)
+            p_matrix = pd.DataFrame(index=phases, columns=phases, dtype=float)
             for phase_row, phase_col in itertools.product(phases, phases):
                 if phase_row == phase_col:
                     p_matrix.at[phase_row, phase_col] = (
@@ -492,17 +497,38 @@ class ElectricGridModel(object):
             # Apply Kron reduction.
             p_matrix = (
                 pd.DataFrame(
-                    p_matrix.loc[phases_non_neutral, phases_non_neutral].values
-                    - p_matrix.loc[phases_non_neutral, phases_neutral].values
-                    @ p_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
-                    @ p_matrix.loc[phases_neutral, phases_non_neutral].values
+                    (
+                        p_matrix.loc[phases_non_neutral, phases_non_neutral].values
+                        - p_matrix.loc[phases_non_neutral, phases_neutral].values
+                        @ p_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
+                        @ p_matrix.loc[phases_neutral, phases_non_neutral].values
+                    ),
+                    index=phases_non_neutral,
+                    columns=phases_non_neutral
                 )
             )
 
-            # Assign element matrices.
-            resistance_matrix = np.real(z_matrix.values)
-            reactance_matrix = np.imag(z_matrix.values)
+            # Obtain element matrices.
+            resistance_matrix = z_matrix.apply(np.real)
+            reactance_matrix = z_matrix.apply(np.imag)
             capacitance_matrix = p_matrix ** -1
+
+            # Add to line type matrices definition.
+            for phase_row, phase_col in itertools.combinations_with_replacement(phases_non_neutral, 2):
+                electric_grid_data.electric_grid_line_types_matrices = (
+                    electric_grid_data.electric_grid_line_types_matrices.append(
+                        pd.Series({
+                            'line_type': line_type,
+                            'row': phase_row,
+                            'col': phase_col,
+                            'resistance': resistance_matrix.at[phase_row, phase_col],
+                            'reactance': reactance_matrix.at[phase_row, phase_col],
+                            'capacitance': capacitance_matrix.at[phase_row, phase_col]
+                        }),
+                        ignore_index=True
+                    )
+                )
+
             breakpoint()
 
         ################################################################################################################

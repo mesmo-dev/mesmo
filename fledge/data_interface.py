@@ -235,6 +235,7 @@ class ScenarioData(object):
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_id')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('description')])
 
         # Select non-excluded, string columns and apply `parse_parameters_column`.
         selected_columns = (
@@ -424,7 +425,7 @@ class ElectricGridData(object):
         )
         self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
         self.electric_grid_line_types_overhead = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types_overhead
                 WHERE line_type IN (
@@ -437,16 +438,16 @@ class ElectricGridData(object):
                 """,
                 con=database_connection,
                 params=[scenario_name]
-            )
+            ))
         )
         self.electric_grid_line_types_overhead.index = self.electric_grid_line_types_overhead['line_type']
         self.electric_grid_line_types_overhead_conductors = (
-            pd.read_sql(
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types_overhead_conductors
                 """,
                 con=database_connection
-            )
+            ))
         )
         self.electric_grid_line_types_overhead_conductors.index = self.electric_grid_line_types_overhead_conductors['conductor_id']
         self.electric_grid_line_types_matrices = (

@@ -419,8 +419,8 @@ class ElectricGridModel(object):
 
             # Other parameter shorthands.
             frequency = electric_grid_data.electric_grid.at['base_frequency']  # In Hz.
-            soil_resistivity = line_type_data.at['soil_resistivity']  # In Ωm.
-            air_permittivity = 8.85  # In nF/km from Kersting <https://doi.org/10.1201/9781315120782>.
+            earth_resistivity = line_type_data.at['earth_resistivity']  # In Ωm.
+            air_permittivity = line_type_data.at['air_permittivity']  # In nF/km.
             g_factor = 1e-4  # In Ω/km from 0.1609347e-3 Ω/mile from Kersting <https://doi.org/10.1201/9781315120782>.
 
             # Obtain impedance matrix in Ω/km based on Kersting <https://doi.org/10.1201/9781315120782>.
@@ -432,7 +432,7 @@ class ElectricGridModel(object):
                 s_angle = np.pi / 2 - np.arcsin((phase_y.at[phase_row] + phase_y.at[phase_col]) / s_distance)
                 # Calculate Kersting / Carson parameters.
                 k_factor = (
-                    8.565e-4 * s_distance * np.sqrt(frequency / soil_resistivity)
+                    8.565e-4 * s_distance * np.sqrt(frequency / earth_resistivity)
                 )
                 p_factor = (
                     np.pi / 8

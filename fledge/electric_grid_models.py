@@ -1093,15 +1093,6 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_wye_matrix = self.der_incidence_wye_matrix.tocsr()
         self.der_incidence_delta_matrix = self.der_incidence_delta_matrix.tocsr()
 
-        # Calculate inverse of node admittance matrix.
-        # - Raise error if not invertible.
-        try:
-            self.node_admittance_matrix_inverse = scipy.sparse.linalg.inv(self.node_admittance_matrix.tocsc())
-            assert not np.isnan(self.node_admittance_matrix_inverse.data).any()
-        except (RuntimeError, AssertionError):
-            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
-            raise
-
         # Define shorthands for no-source variables.
         # TODO: Add in class documentation.
         # TODO: Validate behavior if source node not first node.
@@ -1143,6 +1134,19 @@ class ElectricGridModelDefault(ElectricGridModel):
                 fledge.utils.get_index(self.nodes, node_type='source')
             ]
         )
+
+        # Calculate inverse of no-source node admittance matrix.
+        # - Raise error if not invertible.
+        # - Only checking invertibility of no-source node admittance matrix, because full node admittance matrix may
+        #   be non-invertible, e.g. zero entries when connecting a multi-phase line at three-phase source node.
+        try:
+            self.node_admittance_matrix_no_source_inverse = (
+                scipy.sparse.linalg.inv(self.node_admittance_matrix_no_source.tocsc())
+            )
+            assert not np.isnan(self.node_admittance_matrix_no_source_inverse.data).any()
+        except (RuntimeError, AssertionError):
+            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
+            raise
 
 
 class ElectricGridModelOpenDSS(ElectricGridModel):

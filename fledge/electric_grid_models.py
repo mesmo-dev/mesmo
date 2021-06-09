@@ -341,6 +341,8 @@ class ElectricGridModel(object):
         # Arif: New line type definitions below.
         ################################################################################################################
 
+        # Process over-head line type definitions.
+        # TODO: Call this before branch power reference vector definition.
         for line_type, line_type_data in electric_grid_data.electric_grid_line_types_overhead.iterrows():
 
             # Obtain data shorthands.
@@ -361,20 +363,12 @@ class ElectricGridModel(object):
                     'n': line_type_data.at['neutral_conductor_id']
                 }).loc[phases]
             )
-            phase_x = (
-                pd.Series({
-                    1: line_type_data.at['phase_1_x'],
-                    2: line_type_data.at['phase_2_x'],
-                    3: line_type_data.at['phase_3_x'],
-                    'n': line_type_data.at['neutral_x']
-                }).loc[phases]
-            )
             phase_y = (
                 pd.Series({
-                    1: line_type_data.at['phase_1_x'],
-                    2: line_type_data.at['phase_2_x'],
-                    3: line_type_data.at['phase_3_x'],
-                    'n': line_type_data.at['neutral_x']
+                    1: line_type_data.at['phase_1_y'],
+                    2: line_type_data.at['phase_2_y'],
+                    3: line_type_data.at['phase_3_y'],
+                    'n': line_type_data.at['neutral_y']
                 }).loc[phases]
             )
             phase_xy = (
@@ -424,34 +418,58 @@ class ElectricGridModel(object):
             phases_non_neutral = phases[~phases.isin(['n'])]
 
             # Other parameter shorthands.
-            # TODO: Check units.
-            frequency = electric_grid_data.electric_grid.at['base_frequency']
+            frequency = electric_grid_data.electric_grid.at['base_frequency']  # In Hz.
             soil_resistivity = line_type_data.at['soil_resistivity']  # In Ωm.
-            equivalent_depth = 0.305 * 2160 * np.sqrt(soil_resistivity / frequency)  # Equivalent depth of earth in m.
-            permittivity = 8.85 * 10 ** (-12)  # TODO: Unit? Source?
+            air_permittivity = 8.85  # In nF/km from Kersting <https://doi.org/10.1201/9781315120782>.
+            g_factor = 1e-4  # In Ω/km from 0.1609347e-3 Ω/mile from Kersting <https://doi.org/10.1201/9781315120782>.
 
-            # Obtain impedance matrix in Ω/km.
-            # TODO: Validate units.
-            # TODO: Add reference.
+            # Obtain impedance matrix in Ω/km based on Kersting <https://doi.org/10.1201/9781315120782>.
             z_matrix = pd.DataFrame(index=phases, columns=phases, dtype=complex)
             for phase_row, phase_col in itertools.product(phases, phases):
+                # Calculate geometric parameters.
+                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
+                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
+                s_angle = np.pi / 2 - np.arcsin((phase_y.at[phase_row] + phase_y.at[phase_col]) / s_distance)
+                # Calculate Kersting / Carson parameters.
+                k_factor = (
+                    8.565e-4 * s_distance * np.sqrt(frequency / soil_resistivity)
+                )
+                p_factor = (
+                    np.pi / 8
+                    - (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(s_angle)
+                    - k_factor ** 2 / 16 * np.cos(2 * s_angle) * (0.6728 + np.log(2 / k_factor))
+                )
+                q_factor = (
+                    -0.0386
+                    + 0.5 * np.log(2 / k_factor)
+                    + (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(2 * s_angle)
+                )
+                x_factor = (
+                    2 * np.pi * frequency * g_factor
+                    * np.log(
+                        phase_conductor_diameter[phase_row]
+                        / phase_conductor_geometric_mean_radius.at[phase_row]
+                    )
+                )
+                # Calculate admittance according to Kersting / Carson <https://doi.org/10.1201/9781315120782>.
                 if phase_row == phase_col:
                     z_matrix.at[phase_row, phase_col] = (
                         phase_conductor_resistance.at[phase_row]
-                        + 9.86 * 1e-7 * frequency
-                        + 1j * 2 * np.pi * frequency * 2 * 1e-7
-                        * (
-                            np.log(1 / phase_conductor_geometric_mean_radius.at[phase_row])
-                            + np.log(equivalent_depth)
+                        + 4 * np.pi * frequency * p_factor * g_factor
+                        + 1j * (
+                            x_factor
+                            + 2 * np.pi * frequency * g_factor
+                            * np.log(s_distance / phase_conductor_diameter[phase_row])
+                            + 4 * np.pi * frequency * q_factor * g_factor
                         )
                     )
                 else:
                     z_matrix.at[phase_row, phase_col] = (
-                        9.86 * 1e-7 * frequency
-                        + 1j * 2 * np.pi * frequency * 2 * 1e-7
-                        * (
-                            np.log(1 / np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col]))
-                            + np.log(equivalent_depth)
+                        4 * np.pi * frequency * p_factor * g_factor
+                        + 1j * (
+                            2 * np.pi * frequency * g_factor
+                            * np.log(s_distance / d_distance)
+                            + 4 * np.pi * frequency * q_factor * g_factor
                         )
                     )
 
@@ -469,29 +487,22 @@ class ElectricGridModel(object):
                 )
             )
 
-            # Obtain potentials matrix in km/F.
-            # TODO: Validate units.
-            # TODO: Add reference.
+            # Obtain potentials matrix in km/nF based on Kersting <https://doi.org/10.1201/9781315120782>.
             p_matrix = pd.DataFrame(index=phases, columns=phases, dtype=float)
             for phase_row, phase_col in itertools.product(phases, phases):
+                # Calculate geometric parameters.
+                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
+                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
+                # Calculate potential according to Kersting <https://doi.org/10.1201/9781315120782>.
                 if phase_row == phase_col:
                     p_matrix.at[phase_row, phase_col] = (
-                        1 / (2 * np.pi * permittivity)
-                        * np.log(
-                            np.abs(2 * phase_y.at[phase_row])
-                            / (phase_conductor_diameter.at[phase_row] / 2 * 0.0254)
-                        )
+                        1 / (2 * np.pi * air_permittivity)
+                        * np.log(s_distance / phase_conductor_diameter.at[phase_row])
                     )
                 else:
                     p_matrix.at[phase_row, phase_col] = (
-                        1 / (2 * np.pi * permittivity)
-                        * np.log(
-                            np.sqrt(
-                                (phase_x.at[phase_row] - phase_x.at[phase_col]) ** 2
-                                + (2 * phase_y.at[phase_col]) ** 2
-                            )
-                            / np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
-                        )
+                        1 / (2 * np.pi * air_permittivity)
+                        * np.log(s_distance / d_distance)
                     )
 
             # Apply Kron reduction.
@@ -508,10 +519,10 @@ class ElectricGridModel(object):
                 )
             )
 
-            # Obtain element matrices.
-            resistance_matrix = z_matrix.apply(np.real)
-            reactance_matrix = z_matrix.apply(np.imag)
-            capacitance_matrix = p_matrix ** -1
+            # Obtain final element matrices.
+            resistance_matrix = z_matrix.apply(np.real)  # In Ω/km.
+            reactance_matrix = z_matrix.apply(np.imag)  # In Ω/km.
+            capacitance_matrix = p_matrix ** -1  # In nF/km.
 
             # Add to line type matrices definition.
             for phase_row, phase_col in itertools.combinations_with_replacement(phases_non_neutral, 2):
@@ -528,6 +539,12 @@ class ElectricGridModel(object):
                         ignore_index=True
                     )
                 )
+
+            # Obtain maximum current.
+            # TODO: Validate this.
+            electric_grid_data.electric_grid_line_types.loc[line_type, 'maximum_current'] = (
+                phase_conductor_maximum_current.loc[phases_non_neutral].mean()
+            )
 
             breakpoint()
 

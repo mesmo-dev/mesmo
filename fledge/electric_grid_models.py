@@ -551,7 +551,7 @@ class ElectricGridModel(object):
                 phase_conductor_maximum_current.loc[phases_non_neutral].mean()
             )
 
-            return electric_grid_data
+        return electric_grid_data
 
 
 class ElectricGridModelDefault(ElectricGridModel):

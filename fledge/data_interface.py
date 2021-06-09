@@ -429,11 +429,15 @@ class ElectricGridData(object):
                 """
                 SELECT * FROM electric_grid_line_types_overhead
                 WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_lines
-                    WHERE electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
                     )
+                    AND definition_type = 'overhead'
                 )
                 """,
                 con=database_connection,
@@ -455,11 +459,15 @@ class ElectricGridData(object):
                 """
                 SELECT * FROM electric_grid_line_types_matrices
                 WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_lines
-                    WHERE electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
                     )
+                    AND definition_type = 'matrix'
                 )
                 ORDER BY line_type ASC, row ASC, col ASC
                 """,

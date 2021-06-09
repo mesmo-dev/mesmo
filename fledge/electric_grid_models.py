@@ -391,6 +391,7 @@ class ElectricGridModel(object):
                     ]
                     for phase in phases
                 ], index=phases)
+                * 1e-3  # mm to m.
             )
             phase_conductor_geometric_mean_radius = (
                 pd.Series([
@@ -399,6 +400,7 @@ class ElectricGridModel(object):
                     ]
                     for phase in phases
                 ], index=phases)
+                * 1e-3  # mm to m.
             )
             phase_conductor_resistance = (
                 pd.Series([
@@ -524,26 +526,33 @@ class ElectricGridModel(object):
                 )
             )
 
+            # Obtain capacitance matrix in nF/km.
+            c_matrix = pd.DataFrame(np.linalg.inv(p_matrix), index=phases_non_neutral, columns=phases_non_neutral)
+
             # Obtain final element matrices.
             resistance_matrix = z_matrix.apply(np.real)  # In Ω/km.
             reactance_matrix = z_matrix.apply(np.imag)  # In Ω/km.
-            capacitance_matrix = p_matrix ** -1  # In nF/km.
+            capacitance_matrix = c_matrix  # In nF/km.
 
             # Add to line type matrices definition.
-            for phase_row, phase_col in itertools.combinations_with_replacement(phases_non_neutral, 2):
-                electric_grid_data.electric_grid_line_types_matrices = (
-                    electric_grid_data.electric_grid_line_types_matrices.append(
-                        pd.Series({
-                            'line_type': line_type,
-                            'row': phase_row,
-                            'col': phase_col,
-                            'resistance': resistance_matrix.at[phase_row, phase_col],
-                            'reactance': reactance_matrix.at[phase_row, phase_col],
-                            'capacitance': capacitance_matrix.at[phase_row, phase_col]
-                        }),
-                        ignore_index=True
+            for phase_row in phases_non_neutral:
+                for phase_col in phases_non_neutral[phases_non_neutral <= phase_row]:
+                    electric_grid_data.electric_grid_line_types_matrices = (
+                        electric_grid_data.electric_grid_line_types_matrices.append(
+                            pd.Series({
+                                'line_type': line_type,
+                                'row': phase_row,
+                                'col': phase_col,
+                                'resistance': resistance_matrix.at[phase_row, phase_col],
+                                'reactance': reactance_matrix.at[phase_row, phase_col],
+                                'capacitance': capacitance_matrix.at[phase_row, phase_col]
+                            }),
+                            ignore_index=True
+                        )
                     )
-                )
+
+            # Obtain number of phases.
+            electric_grid_data.electric_grid_line_types.loc[line_type, 'n_phases'] = len(phases_non_neutral)
 
             # Obtain maximum current.
             # TODO: Validate this.

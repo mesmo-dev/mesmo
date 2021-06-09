@@ -14,13 +14,17 @@ from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
 
 
 def main():
-    scenario_name = 'singapore_6node'
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    scenario_name = 'singapore_6node_custom'
+
     price_categories = ['energy', 'up_reserve', 'down_reserve']
     ambiguity_set_dual_variables_categories = ['mu_1', 'nu_1', 'mu_2', 'nu_2', 'mu_3', 'nu_3', 'mu_4', 'nu_4']
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
+
+    fledge.data_interface.recreate_database()
+
+    price_data = fledge.data_interface.PriceData(scenario_name)
 
     # initialize all three stage problem
     standard_form_stage_1, A1_matrix, b1_vector, f_vector, stochastic_scenarios, der_model_set \
@@ -39,7 +43,7 @@ def main():
 
     # TODO: we need proper initialization of DRO data
     # constants
-    optimization_problem_dro.gamma = 30*np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.gamma = 300*np.ones((len(delta_indices_stage2), 1))
 
     optimization_problem_dro.delta_lower_bound = - 1 * np.ones((len(delta_indices_stage2), 1))
 
@@ -680,6 +684,7 @@ def main():
     print('define constr 40 (a-d)')
 
     optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40 = {}
+    length_b2_vector = b2_vector.shape[0]
 
     for price_category in price_categories:
         for time_step in der_model_set.timesteps:
@@ -959,39 +964,41 @@ def main():
     )
 
     # constr 40 b)
-    temp_40b = C2_matrix - B2_matrix @ optimization_problem_dro.K_delta_s2
+    temp_40b = -C2_matrix + B2_matrix @ optimization_problem_dro.K_delta_s2
 
-    for price_category in price_categories:
-        for time_step in der_model_set.timesteps:
-            if price_category == 'energy':
-                index_temp_uncertain_prices = fledge.utils.get_index(
-                    standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2', timestep=time_step
-                )
-            elif price_category == 'up_reserve':
-                index_temp_uncertain_prices = fledge.utils.get_index(
-                    standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
-                    timestep=time_step
-                )
-            else:
-                index_temp_uncertain_prices = fledge.utils.get_index(
-                    standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
-                    timestep=time_step
+    for row_index in range(temp_40b.shape[0]):
+        for price_category in price_categories:
+            for time_step in der_model_set.timesteps:
+                if price_category == 'energy':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2', timestep=time_step
+                    )
+                elif price_category == 'up_reserve':
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+                else:
+                    index_temp_uncertain_prices = fledge.utils.get_index(
+                        standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
+                        timestep=time_step
+                    )
+
+                optimization_problem_dro.constraints.append(
+                    - optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                        price_category, time_step, 'mu_1']
+                    + optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                        price_category, time_step, 'nu_1']
+                    + optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                        price_category, time_step, 'mu_2']
+                    - optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                        price_category, time_step, 'nu_2']
+                    + np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                        price_category, time_step, 'mu_3']
+                    ==
+                    temp_40b[row_index, np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices))[0]]
                 )
 
-            optimization_problem_dro.constraints.append(
-                - optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
-                    price_category, time_step, 'mu_1']
-                + optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
-                    price_category, time_step, 'nu_1']
-                + optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
-                    price_category, time_step, 'mu_2']
-                - optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
-                    price_category, time_step, 'nu_2']
-                + np.array([[0.5, 0]]) @ optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
-                    price_category, time_step, 'mu_3']
-                ==
-                temp_40b[:, np.where(pd.Index(delta_indices_stage2).isin(index_temp_uncertain_prices))[0]]
-            )
 
     for der_name, der_model in der_model_set.flexible_der_models.items():
         if not der_model.disturbances.empty:
@@ -1239,7 +1246,8 @@ def main():
                             optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
                                 der_name, time_step, 'nu_3'][0],
                             optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
-                                der_name, time_step, 'mu_3'][:, 0])
+                                der_name, time_step, 'mu_3'][:, 0]
+                        )
                     )
 
                     optimization_problem_dro.constraints.append(

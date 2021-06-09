@@ -11,8 +11,9 @@ import fledge
 
 
 def main():
+
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
     # stochastic_scenarios = ['no_reserve']
 

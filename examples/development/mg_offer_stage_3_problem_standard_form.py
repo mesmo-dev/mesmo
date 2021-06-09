@@ -14,7 +14,7 @@ import fledge
 def stage_3_problem_standard_form():
     print('stage 3 problem modelling...')
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
     stochastic_scenarios_stage_3 = ['up_reserve_activated', 'down_reserve_activated']
 

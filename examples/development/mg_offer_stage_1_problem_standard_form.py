@@ -13,7 +13,7 @@ import fledge
 def stage_1_problem_standard_form():
     print('stage 1 problem modelling...')
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
@@ -510,7 +510,7 @@ def stage_1_problem_standard_form():
     return standard_form, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set
 
 def main():
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Get results path.

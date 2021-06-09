@@ -232,8 +232,10 @@ class ScenarioData(object):
             excluded_columns = ['parameter_set']
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_name')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_type')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('_id')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('connection')])
         excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('timestep')])
+        excluded_columns.extend(dataframe.columns[dataframe.columns.str.contains('description')])
 
         # Select non-excluded, string columns and apply `parse_parameters_column`.
         selected_columns = (
@@ -321,6 +323,8 @@ class ElectricGridData(object):
     electric_grid_ders: pd.DataFrame
     electric_grid_lines: pd.DataFrame
     electric_grid_line_types: pd.DataFrame
+    electric_grid_line_types_overhead: pd.DataFrame
+    electric_grid_line_types_overhead_conductors: pd.DataFrame
     electric_grid_line_types_matrices: pd.DataFrame
     electric_grid_transformers: pd.DataFrame
 
@@ -420,16 +424,50 @@ class ElectricGridData(object):
             ))
         )
         self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
+        self.electric_grid_line_types_overhead = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_overhead
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                    )
+                    AND definition_type = 'overhead'
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_line_types_overhead.index = self.electric_grid_line_types_overhead['line_type']
+        self.electric_grid_line_types_overhead_conductors = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_overhead_conductors
+                """,
+                con=database_connection
+            ))
+        )
+        self.electric_grid_line_types_overhead_conductors.index = self.electric_grid_line_types_overhead_conductors['conductor_id']
         self.electric_grid_line_types_matrices = (
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM electric_grid_line_types_matrices
                 WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_lines
-                    WHERE electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
                     )
+                    AND definition_type = 'matrix'
                 )
                 ORDER BY line_type ASC, row ASC, col ASC
                 """,

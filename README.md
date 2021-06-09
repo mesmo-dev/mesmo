@@ -56,5 +56,5 @@ Information on citing FLEDGE and a list of related publications is available at 
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
 - Sebastian Troitzsch implemented the initial version of FLEDGE and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
-- Arif Ahmed implemented the implicit Z-bus power flow solution method.
+- Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modelling and approximation methodologies.

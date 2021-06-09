@@ -37,7 +37,7 @@ autodoc_mock_imports = [
     'kaleido',
     'matplotlib',
     'multimethod',
-    'multiprocess',
+    'multiprocess',  # Deprecated.
     'networkx',
     'natsort',
     'numpy',
@@ -45,6 +45,7 @@ autodoc_mock_imports = [
     'pandas',
     'plotly',
     'pyomo',  # Deprecated.
+    'ray',
     'scipy',
 ]
 napoleon_use_ivar = True

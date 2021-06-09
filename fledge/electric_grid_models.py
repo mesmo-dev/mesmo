@@ -73,6 +73,10 @@ class ElectricGridModel(object):
             electric_grid_data: fledge.data_interface.ElectricGridData
     ):
 
+        # Process overhead line type definitions.
+        # - This is implemented as direct modification on the electric grid data object and therefore done first.
+        electric_grid_data = self.process_line_types_overhead(electric_grid_data)
+
         # Obtain index sets for phases / node names / node types / line names / transformer names /
         # branch types / DER names.
         self.phases = (
@@ -337,12 +341,13 @@ class ElectricGridModel(object):
         if self.is_single_phase_equivalent:
             self.branch_power_vector_magnitude_reference[fledge.utils.get_index(self.branches, branch_type='line')] *= 3
 
-        ################################################################################################################
-        # Arif: New line type definitions below.
-        ################################################################################################################
+    @staticmethod
+    def process_line_types_overhead(
+            electric_grid_data: fledge.data_interface.ElectricGridData
+    ) -> fledge.data_interface.ElectricGridData:
+        """Process overhead line type definitions in electric grid data object."""
 
         # Process over-head line type definitions.
-        # TODO: Call this before branch power reference vector definition.
         for line_type, line_type_data in electric_grid_data.electric_grid_line_types_overhead.iterrows():
 
             # Obtain data shorthands.
@@ -546,11 +551,7 @@ class ElectricGridModel(object):
                 phase_conductor_maximum_current.loc[phases_non_neutral].mean()
             )
 
-            breakpoint()
-
-        ################################################################################################################
-        # Arif: New line type definitions above.
-        ################################################################################################################
+            return electric_grid_data
 
 
 class ElectricGridModelDefault(ElectricGridModel):

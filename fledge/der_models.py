@@ -1594,7 +1594,7 @@ class HeatPumpModel(FlexibleDERModel):
     """Heat pump model object."""
 
     der_type = 'heat_pump'
-    heat_pump_efficiency: np.float
+    heat_pump_efficiency: float
 
     def __init__(
             self,
@@ -1716,9 +1716,9 @@ class HeatPumpModel(FlexibleDERModel):
 class FlexibleCHP(FlexibleDERModel):
 
     der_type = 'flexible_chp'
-    marginal_cost: np.float
-    thermal_efficiency: np.float
-    electric_efficiency: np.float
+    marginal_cost: float
+    thermal_efficiency: float
+    electric_efficiency: float
 
     def __init__(
             self,

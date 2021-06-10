@@ -2451,18 +2451,18 @@ class PowerFlowSolutionSet(object):
 
         # Instantiate results variables.
         der_power_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=np.complex)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
         )
         node_voltage_vector = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=np.complex)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=complex)
         )
         branch_power_vector_1 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
         )
         branch_power_vector_2 = (
-            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=np.complex)
+            pd.DataFrame(columns=self.electric_grid_model.branches, index=self.timesteps, dtype=complex)
         )
-        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=np.complex)
+        loss = pd.DataFrame(columns=['total'], index=self.timesteps, dtype=complex)
 
         # Obtain results.
         for timestep in self.timesteps:
@@ -3124,55 +3124,55 @@ class LinearElectricGridModel(object):
         # Instantiate DLMP variables.
         # TODO: Consider delta connections in nodal DLMPs.
         electric_grid_energy_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         # Obtain DLMPs.
@@ -5095,55 +5095,55 @@ class LinearElectricGridModelSet(object):
         # Instantiate DLMP variables.
         # TODO: Consider delta connections in nodal DLMPs.
         electric_grid_energy_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_node_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_active_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         electric_grid_energy_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_voltage_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_congestion_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
         electric_grid_loss_dlmp_der_reactive_power = (
-            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=np.float)
+            pd.DataFrame(columns=self.electric_grid_model.ders, index=self.electric_grid_model.timesteps, dtype=float)
         )
 
         # Obtain DLMPs.

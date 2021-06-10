@@ -432,7 +432,7 @@ class StandardForm(object):
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
         # Instantiate sparse matrix.
-        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=np.float)
+        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=float)
 
         # Fill matrix entries.
         for constraint_index, variable_index in self.a_dict:

@@ -586,7 +586,7 @@ def log_time(
         raise ValueError(f"Invalid log level: '{log_level}'")
 
     if label in log_times.keys():
-        logger_handle(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+        logger_handle(f"Completed {label} in {(time_now - log_times.pop(label)):.6f} seconds.")
     else:
         log_times[label] = time_now
         logger_handle(f"Starting {label}.")

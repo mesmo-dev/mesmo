@@ -54,8 +54,7 @@ def main():
     # Define objective.
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_data,
-        thermal_grid_model=thermal_grid_model
+        price_data
     )
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,

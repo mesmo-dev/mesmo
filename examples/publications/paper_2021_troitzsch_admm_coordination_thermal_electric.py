@@ -206,16 +206,13 @@ def main(
     # Define thermal grid objective.
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem_baseline,
-        price_data,
-        timesteps=scenario_data.timesteps
+        price_data
     )
 
     # Define DER objective.
     der_model_set.define_optimization_objective(
         optimization_problem_baseline,
-        price_data,
-        electric_grid_model=electric_grid_model,
-        thermal_grid_model=thermal_grid_model
+        price_data
     )
 
     # Log progress.
@@ -329,8 +326,7 @@ def main(
     # Define thermal grid objective.
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem_thermal,
-        price_data,
-        timesteps=scenario_data.timesteps
+        price_data
     )
 
     # Define ADMM objective.
@@ -471,10 +467,10 @@ def main(
             results_electric = linear_electric_grid_model.get_optimization_results(optimization_problem_electric)
 
             # Get thermal sub-problem results.
-            results_thermal = (linear_thermal_grid_model.get_optimization_results(optimization_problem_thermal))
+            results_thermal = linear_thermal_grid_model.get_optimization_results(optimization_problem_thermal)
 
             # Get aggregator sub-problem results.
-            results_aggregator = (der_model_set.get_optimization_results(optimization_problem_aggregator))
+            results_aggregator = der_model_set.get_optimization_results(optimization_problem_aggregator)
 
             # Update ADMM variables.
             admm_exchange_der_active_power.value = (

@@ -643,6 +643,9 @@ class LinearThermalGridModel(object):
             timestep_index=slice(None)  # TODO: Enable passing as time step / list of time steps.
     ):
 
+        # Set objective flag.
+        optimization_problem.has_thermal_grid_objective = True
+
         # Obtain timestep interval in hours, for conversion of power to energy.
         if len(self.thermal_grid_model.timesteps) > 1:
             timestep_interval_hours = (

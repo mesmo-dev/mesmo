@@ -889,7 +889,10 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         # Construct nominal active and reactive power timeseries.
         if (
                 pd.notnull(der.at['nominal_charging_definition_type'])
-                and (('schedule' in der.at['nominal_charging_definition_type']) or ('timeseries' in der.at['definition_type']))
+                and (
+                    ('schedule' in der.at['nominal_charging_definition_type'])
+                    or ('timeseries' in der.at['nominal_charging_definition_type'])
+                )
                 and self.is_electric_grid_connected
         ):
             self.active_power_nominal_timeseries = (
@@ -2025,11 +2028,14 @@ class DERModelSet(DERModelSetBase):
             self,
             results: DERModelSetOperationResults,
             price_data: fledge.data_interface.PriceData,
-            **kwargs
+            has_electric_grid_objective: bool = False,
+            has_thermal_grid_objective: bool = False
     ) -> float:
 
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
+        optimization_problem.has_electric_grid_objective = has_electric_grid_objective
+        optimization_problem.has_thermal_grid_objective = has_thermal_grid_objective
 
         # Instantiate optimization variables as parameters using results values.
         optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
@@ -2044,8 +2050,7 @@ class DERModelSet(DERModelSetBase):
         # Define objective.
         self.define_optimization_objective(
             optimization_problem,
-            price_data,
-            **kwargs
+            price_data
         )
 
         return float(optimization_problem.objective.value)

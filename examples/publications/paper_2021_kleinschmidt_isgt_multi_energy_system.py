@@ -113,9 +113,7 @@ def main(
     )
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_data,
-        electric_grid_model=electric_grid_model,
-        thermal_grid_model=thermal_grid_model
+        price_data
     )
 
     # Solve optimization problem.

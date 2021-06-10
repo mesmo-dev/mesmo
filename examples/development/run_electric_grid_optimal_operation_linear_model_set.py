@@ -59,7 +59,7 @@ def main():
         der_model_set.evaluate_optimization_objective(
             pre_solve_der_results,
             price_data,
-            electric_grid_model=electric_grid_model
+            has_electric_grid_objective=True
         )
     )
     pre_solve_objective_value += (

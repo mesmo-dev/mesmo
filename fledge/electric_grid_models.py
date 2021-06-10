@@ -2718,7 +2718,7 @@ class LinearElectricGridModel(object):
     def define_optimization_constraints(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            timestep_index=slice(None),
+            timestep_index=slice(None),  # TODO: Enable passing as time step / list of time steps.
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None
@@ -2909,8 +2909,11 @@ class LinearElectricGridModel(object):
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData,
-            timestep_index=slice(None)
+            timestep_index=slice(None)  # TODO: Enable passing as time step / list of time steps.
     ):
+
+        # Set objective flag.
+        optimization_problem.has_electric_grid_objective = True
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         if len(price_data.price_timeseries.index) > 1:
@@ -2921,59 +2924,65 @@ class LinearElectricGridModel(object):
         else:
             timestep_interval_hours = 1.0
 
-        # Define active power cost / revenue.
-        # - Cost for load / demand, revenue for generation / supply.
-        optimization_problem.objective += (
-            (
-                np.array([
-                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
-                ])
-                * timestep_interval_hours  # In Wh.
-                @ cp.sum(-1.0 * (
-                    cp.multiply(
-                        optimization_problem.der_active_power_vector[timestep_index, :],
-                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
-                    )
-                ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
-            )
-            + ((
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours  # In Wh.
-                * cp.sum((
-                    cp.multiply(
-                        optimization_problem.der_active_power_vector[timestep_index, :],
-                        np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
-                    )
-                ) ** 2)
-            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-        )
+        # Define objective for electric loads.
+        # - Defined as cost of electric supply at electric grid source node.
+        # - Only defined here, if not yet defined as cost of electric power supply at the DER node
+        #   in `fledge.der_models.DERModel.define_optimization_objective`.
+        if not optimization_problem.has_der_objective:
 
-        # Define reactive power cost / revenue.
-        # - Cost for load / demand, revenue for generation / supply.
-        optimization_problem.objective += (
-            (
-                np.array([
-                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values[timestep_index]
-                ])
-                * timestep_interval_hours  # In Wh.
-                @ cp.sum(-1.0 * (
-                    cp.multiply(
-                        optimization_problem.der_reactive_power_vector[timestep_index, :],
-                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
-                    )
-                ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    np.array([
+                        price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
+                    ])
+                    * timestep_interval_hours  # In Wh.
+                    @ cp.sum(-1.0 * (
+                        cp.multiply(
+                            optimization_problem.der_active_power_vector[timestep_index, :],
+                            np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                        )
+                    ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
+                )
+                + ((
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum((
+                        cp.multiply(
+                            optimization_problem.der_active_power_vector[timestep_index, :],
+                            np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
+                        )
+                    ) ** 2)
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
             )
-            + ((
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours  # In Wh.
-                * cp.sum((
-                    cp.multiply(
-                        optimization_problem.der_reactive_power_vector[timestep_index, :],
-                        np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
-                    )
-                ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
-            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-        )
+
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.objective += (
+                (
+                    np.array([
+                        price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values[timestep_index]
+                    ])
+                    * timestep_interval_hours  # In Wh.
+                    @ cp.sum(-1.0 * (
+                        cp.multiply(
+                            optimization_problem.der_reactive_power_vector[timestep_index, :],
+                            np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                        )
+                    ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
+                )
+                + ((
+                    price_data.price_sensitivity_coefficient
+                    * timestep_interval_hours  # In Wh.
+                    * cp.sum((
+                        cp.multiply(
+                            optimization_problem.der_reactive_power_vector[timestep_index, :],
+                            np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
+                        )
+                    ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
+                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+            )
 
         # Define active loss cost.
         optimization_problem.objective += (
@@ -4955,6 +4964,9 @@ class LinearElectricGridModelSet(object):
             optimization_problem: fledge.utils.OptimizationProblem,
             price_data: fledge.data_interface.PriceData
     ):
+
+        # Set objective flag.
+        optimization_problem.has_electric_grid_objective = True
 
         for timestep in self.timesteps:
             self.linear_electric_grid_models[timestep].define_optimization_objective(

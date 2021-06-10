@@ -327,10 +327,7 @@ class OptimalOperationProblem(object):
 
         # Define linear electric grid model variables and constraints.
         if self.electric_grid_model is not None:
-            self.linear_electric_grid_model.define_optimization_variables(
-                self.optimization_problem,
-                self.timesteps
-            )
+            self.linear_electric_grid_model.define_optimization_variables(self.optimization_problem)
             node_voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
@@ -351,7 +348,6 @@ class OptimalOperationProblem(object):
             )
             self.linear_electric_grid_model.define_optimization_constraints(
                 self.optimization_problem,
-                self.timesteps,
                 node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
                 node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
                 branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
@@ -359,10 +355,7 @@ class OptimalOperationProblem(object):
 
         # Define thermal grid model variables and constraints.
         if self.thermal_grid_model is not None:
-            self.linear_thermal_grid_model.define_optimization_variables(
-                self.optimization_problem,
-                self.timesteps
-            )
+            self.linear_thermal_grid_model.define_optimization_variables(self.optimization_problem)
             node_head_vector_minimum = (
                 scenario_data.scenario['node_head_per_unit_maximum']
                 * self.thermal_power_flow_solution_reference.node_head_vector
@@ -377,39 +370,28 @@ class OptimalOperationProblem(object):
             )
             self.linear_thermal_grid_model.define_optimization_constraints(
                 self.optimization_problem,
-                self.timesteps,
                 node_head_vector_minimum=node_head_vector_minimum,
                 branch_flow_vector_maximum=branch_flow_vector_maximum
             )
 
         # Define DER variables and constraints.
-        self.der_model_set.define_optimization_variables(
-            self.optimization_problem
-        )
-        self.der_model_set.define_optimization_constraints(
-            self.optimization_problem,
-            electric_grid_model=self.electric_grid_model,
-            thermal_grid_model=self.thermal_grid_model
-        )
+        self.der_model_set.define_optimization_variables(self.optimization_problem)
+        self.der_model_set.define_optimization_constraints(self.optimization_problem)
 
         # Define objective.
         if self.thermal_grid_model is not None:
             self.linear_thermal_grid_model.define_optimization_objective(
                 self.optimization_problem,
-                self.price_data,
-                self.timesteps
+                self.price_data
             )
         if self.electric_grid_model is not None:
             self.linear_electric_grid_model.define_optimization_objective(
                 self.optimization_problem,
-                self.price_data,
-                self.timesteps
+                self.price_data
             )
         self.der_model_set.define_optimization_objective(
             self.optimization_problem,
-            self.price_data,
-            electric_grid_model=self.electric_grid_model,
-            thermal_grid_model=self.thermal_grid_model
+            self.price_data
         )
 
     def solve(self):
@@ -420,45 +402,25 @@ class OptimalOperationProblem(object):
     def get_results(self) -> Results:
 
         # Instantiate results.
-        self.results = (
-            Results(
-                price_data=self.price_data
-            )
-        )
+        self.results = (Results(price_data=self.price_data))
 
         # Obtain electric grid results.
         if self.electric_grid_model is not None:
-            self.results.update(
-                self.linear_electric_grid_model.get_optimization_results(
-                    self.optimization_problem,
-                    self.power_flow_solution_reference,
-                    self.timesteps
-                )
-            )
+            self.results.update(self.linear_electric_grid_model.get_optimization_results(self.optimization_problem))
 
         # Obtain thermal grid results.
         if self.thermal_grid_model is not None:
-            self.results.update(
-                self.linear_thermal_grid_model.get_optimization_results(
-                    self.optimization_problem,
-                    self.timesteps
-                )
-            )
+            self.results.update(self.linear_thermal_grid_model.get_optimization_results(self.optimization_problem))
 
         # Obtain DER results.
-        self.results.update(
-            self.der_model_set.get_optimization_results(
-                self.optimization_problem
-            )
-        )
+        self.results.update(self.der_model_set.get_optimization_results(self.optimization_problem))
 
         # Obtain electric DLMPs.
         if self.electric_grid_model is not None:
             self.results.update(
                 self.linear_electric_grid_model.get_optimization_dlmps(
                     self.optimization_problem,
-                    self.price_data,
-                    self.timesteps
+                    self.price_data
                 )
             )
 
@@ -467,8 +429,7 @@ class OptimalOperationProblem(object):
             self.results.update(
                 self.linear_thermal_grid_model.get_optimization_dlmps(
                     self.optimization_problem,
-                    self.price_data,
-                    self.timesteps
+                    self.price_data
                 )
             )
 

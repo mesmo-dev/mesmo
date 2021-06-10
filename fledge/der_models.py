@@ -155,9 +155,7 @@ class DERModel(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         raise NotImplementedError("This method must be implemented by the subclass.")
@@ -165,9 +163,7 @@ class DERModel(object):
     def define_optimization_objective(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            price_data: fledge.data_interface.PriceData
     ):
 
         raise NotImplementedError("This method must be implemented by the subclass.")
@@ -194,9 +190,7 @@ class FixedDERModel(DERModel):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Define connection constraints.
@@ -224,20 +218,20 @@ class FixedDERModel(DERModel):
     def define_optimization_objective(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            price_data: fledge.data_interface.PriceData
     ):
+
+        # Set objective flag.
+        optimization_problem.has_der_objective = True
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
         # Define objective for electric loads.
-        # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
-        # - Otherwise, defined as cost of electric supply at electric grid source node
+        # - Defined as cost of electric power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
-        # TODO: Remove `(electric_grid_model is None)` everywhere.
-        if (electric_grid_model is None) and self.is_electric_grid_connected:
+        if self.is_electric_grid_connected and not optimization_problem.has_electric_grid_objective:
 
             # Active power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
@@ -270,11 +264,10 @@ class FixedDERModel(DERModel):
             )
 
         # TODO: Define objective for thermal loads.
-        # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
-        # - Otherwise, defined as cost of thermal supply at thermal grid source node
-        #   in `LinearThermalGridModel.define_optimization_objective`.
-        # - This enables proper calculation of the DLMPs.
-        if (thermal_grid_model is None) and self.is_thermal_grid_connected:
+        # - Defined as cost of thermal power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
+        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        if self.is_thermal_grid_connected and not optimization_problem.has_thermal_grid_objective:
             pass
 
         # Define objective for electric generators.
@@ -420,9 +413,7 @@ class FlexibleDERModel(DERModel):
 
     def define_optimization_constraints(
         self,
-        optimization_problem: fledge.utils.OptimizationProblem,
-        electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-        thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
+        optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Initial state.
@@ -525,19 +516,17 @@ class FlexibleDERModel(DERModel):
     def define_optimization_objective(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            price_data: fledge.data_interface.PriceData
     ):
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
         # Define objective for electric loads.
-        # - If no electric grid model is given, defined here as cost of electric power supply at the DER node.
-        # - Otherwise, defined as cost of electric supply at electric grid source node
+        # - Defined as cost of electric power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
         #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
-        if (electric_grid_model is None) and self.is_electric_grid_connected:
+        if self.is_electric_grid_connected and not optimization_problem.has_electric_grid_objective:
 
             # Active power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
@@ -582,11 +571,10 @@ class FlexibleDERModel(DERModel):
             )
 
         # Define objective for thermal loads.
-        # - If no thermal grid model is given, defined here as cost of thermal power supply at the DER node.
-        # - Otherwise, defined as cost of thermal supply at thermal grid source node
-        #   in `LinearThermalGridModel.define_optimization_objective`.
-        # - This enables proper calculation of the DLMPs.
-        if (thermal_grid_model is None) and self.is_thermal_grid_connected:
+        # - Defined as cost of thermal power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
+        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        if self.is_thermal_grid_connected and not optimization_problem.has_thermal_grid_objective:
 
             # Thermal power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
@@ -2010,34 +1998,27 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Define DER constraints for each DER.
         for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_constraints(
-                optimization_problem,
-                electric_grid_model,
-                thermal_grid_model
-            )
+            self.der_models[der_name].define_optimization_constraints(optimization_problem)
 
     def define_optimization_objective(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            price_data: fledge.data_interface.PriceData
     ):
+
+        # Set objective flag.
+        optimization_problem.has_der_objective = True
 
         # Define objective for each DER.
         for der_name in self.der_names:
             self.der_models[der_name].define_optimization_objective(
                 optimization_problem,
-                price_data,
-                electric_grid_model,
-                thermal_grid_model
+                price_data
             )
 
     def evaluate_optimization_objective(

@@ -180,10 +180,7 @@ def main():
         # )
 
         # Define DER constraints.
-        der_model_set.define_optimization_constraints(
-            optimization_problem=optimization_problem,
-            electric_grid_model=electric_grid_model
-        )
+        der_model_set.define_optimization_constraints(optimization_problem)
 
         # ---------------------------------------------------------------------------------------------------------
         # Define trust region constraints.

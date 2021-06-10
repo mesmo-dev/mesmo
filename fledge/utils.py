@@ -182,6 +182,9 @@ class OptimizationProblem(object):
 
     constraints: list
     objective: cp.Expression
+    has_der_objective: bool = False
+    has_electric_grid_objective: bool = False
+    has_thermal_grid_objective: bool = False
     cvxpy_problem: cp.Problem
 
     def __init__(self):

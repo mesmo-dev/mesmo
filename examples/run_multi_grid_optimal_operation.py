@@ -46,17 +46,9 @@ def main():
     optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define optimization variables.
-    linear_electric_grid_model.define_optimization_variables(
-        optimization_problem,
-        scenario_data.timesteps
-    )
-    linear_thermal_grid_model.define_optimization_variables(
-        optimization_problem,
-        scenario_data.timesteps
-    )
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
+    linear_electric_grid_model.define_optimization_variables(optimization_problem)
+    linear_thermal_grid_model.define_optimization_variables(optimization_problem)
+    der_model_set.define_optimization_variables(optimization_problem)
 
     # Define constraints.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
@@ -64,7 +56,6 @@ def main():
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
@@ -73,26 +64,19 @@ def main():
     branch_flow_vector_maximum = 10.0 * thermal_power_flow_solution.branch_flow_vector
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
-    der_model_set.define_optimization_constraints(
-        optimization_problem,
-        electric_grid_model=electric_grid_model,
-        thermal_grid_model=thermal_grid_model
-    )
+    der_model_set.define_optimization_constraints(optimization_problem)
 
     # Define objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
-        price_data,
-        scenario_data.timesteps
+        price_data
     )
     linear_thermal_grid_model.define_optimization_objective(
         optimization_problem,
-        price_data,
-        scenario_data.timesteps
+        price_data
     )
     der_model_set.define_optimization_objective(
         optimization_problem,
@@ -106,24 +90,9 @@ def main():
 
     # Obtain results.
     results = fledge.problems.Results()
-    results.update(
-        linear_electric_grid_model.get_optimization_results(
-            optimization_problem,
-            power_flow_solution,
-            scenario_data.timesteps
-        )
-    )
-    results.update(
-        linear_thermal_grid_model.get_optimization_results(
-            optimization_problem,
-            scenario_data.timesteps
-        )
-    )
-    results.update(
-        der_model_set.get_optimization_results(
-            optimization_problem
-        )
-    )
+    results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
+    results.update(linear_thermal_grid_model.get_optimization_results(optimization_problem))
+    results.update(der_model_set.get_optimization_results(optimization_problem))
 
     # Print results.
     print(results)
@@ -136,15 +105,13 @@ def main():
     dlmps.update(
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
     dlmps.update(
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
 

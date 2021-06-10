@@ -171,51 +171,36 @@ def main(
     fledge.utils.log_time(f"baseline problem setup")
 
     # Define linear electric grid model variables.
-    linear_electric_grid_model.define_optimization_variables(
-        optimization_problem_baseline,
-        scenario_data.timesteps
-    )
+    linear_electric_grid_model.define_optimization_variables(optimization_problem_baseline)
 
     # Define linear electric grid model constraints.
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem_baseline,
-        scenario_data.timesteps,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
     # Define thermal grid model variables.
-    linear_thermal_grid_model.define_optimization_variables(
-        optimization_problem_baseline,
-        scenario_data.timesteps
-    )
+    linear_thermal_grid_model.define_optimization_variables(optimization_problem_baseline)
 
     # Define thermal grid model constraints.
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem_baseline,
-        scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
 
     # Define DER variables.
-    der_model_set.define_optimization_variables(
-        optimization_problem_baseline
-    )
+    der_model_set.define_optimization_variables(optimization_problem_baseline)
 
     # Define DER constraints.
-    der_model_set.define_optimization_constraints(
-        optimization_problem_baseline,
-        electric_grid_model=electric_grid_model,
-        thermal_grid_model=thermal_grid_model
-    )
+    der_model_set.define_optimization_constraints(optimization_problem_baseline)
 
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem_baseline,
-        price_data,
-        timesteps=scenario_data.timesteps
+        price_data
     )
 
     # Define thermal grid objective.
@@ -243,38 +228,21 @@ def main(
 
     # Get baseline results.
     results_baseline = fledge.problems.Results()
-    results_baseline.update(
-        linear_electric_grid_model.get_optimization_results(
-            optimization_problem_baseline,
-            power_flow_solution,
-            scenario_data.timesteps
-        )
-    )
+    results_baseline.update(linear_electric_grid_model.get_optimization_results(optimization_problem_baseline))
     results_baseline.update(
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem_baseline,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
-    results_baseline.update(
-        linear_thermal_grid_model.get_optimization_results(
-            optimization_problem_baseline,
-            scenario_data.timesteps
-        )
-    )
+    results_baseline.update(linear_thermal_grid_model.get_optimization_results(optimization_problem_baseline))
     results_baseline.update(
         linear_thermal_grid_model.get_optimization_dlmps(
             optimization_problem_baseline,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
-    results_baseline.update(
-        der_model_set.get_optimization_results(
-            optimization_problem_baseline
-        )
-    )
+    results_baseline.update(der_model_set.get_optimization_results(optimization_problem_baseline))
 
     # ADMM: Electric sub-problem.
 
@@ -282,15 +250,11 @@ def main(
     fledge.utils.log_time(f"electric sub-problem setup")
 
     # Define linear electric grid model variables.
-    linear_electric_grid_model.define_optimization_variables(
-        optimization_problem_electric,
-        scenario_data.timesteps
-    )
+    linear_electric_grid_model.define_optimization_variables(optimization_problem_electric)
 
     # Define linear electric grid model constraints.
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem_electric,
-        scenario_data.timesteps,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
@@ -299,8 +263,7 @@ def main(
     # Define electric grid objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem_electric,
-        price_data,
-        timesteps=scenario_data.timesteps
+        price_data
     )
 
     # Define ADMM objective.
@@ -354,15 +317,11 @@ def main(
     fledge.utils.log_time(f"thermal sub-problem setup")
 
     # Define thermal grid model variables.
-    linear_thermal_grid_model.define_optimization_variables(
-        optimization_problem_thermal,
-        scenario_data.timesteps
-    )
+    linear_thermal_grid_model.define_optimization_variables(optimization_problem_thermal)
 
     # Define thermal grid model constraints.
     linear_thermal_grid_model.define_optimization_constraints(
         optimization_problem_thermal,
-        scenario_data.timesteps,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
@@ -412,18 +371,12 @@ def main(
     )
 
     # Define DER constraints.
-    der_model_set.define_optimization_constraints(
-        optimization_problem_aggregator,
-        electric_grid_model=electric_grid_model,
-        thermal_grid_model=thermal_grid_model
-    )
+    der_model_set.define_optimization_constraints(optimization_problem_aggregator)
 
     # # Define DER objective.
     # der_model_set.define_optimization_objective(
     #     optimization_problem_aggregator,
-    #     price_data,
-    #     electric_grid_model=electric_grid_model,
-    #     thermal_grid_model=thermal_grid_model
+    #     price_data
     # )
 
     # Define ADMM objective.
@@ -515,28 +468,13 @@ def main(
             fledge.utils.log_time(f"ADMM intermediate steps #{admm_iteration}")
 
             # Get electric sub-problem results.
-            results_electric = (
-                linear_electric_grid_model.get_optimization_results(
-                    optimization_problem_electric,
-                    power_flow_solution,
-                    scenario_data.timesteps
-                )
-            )
+            results_electric = linear_electric_grid_model.get_optimization_results(optimization_problem_electric)
 
             # Get thermal sub-problem results.
-            results_thermal = (
-                linear_thermal_grid_model.get_optimization_results(
-                    optimization_problem_thermal,
-                    scenario_data.timesteps
-                )
-            )
+            results_thermal = (linear_thermal_grid_model.get_optimization_results(optimization_problem_thermal))
 
             # Get aggregator sub-problem results.
-            results_aggregator = (
-                der_model_set.get_optimization_results(
-                    optimization_problem_aggregator
-                )
-            )
+            results_aggregator = (der_model_set.get_optimization_results(optimization_problem_aggregator))
 
             # Update ADMM variables.
             admm_exchange_der_active_power.value = (

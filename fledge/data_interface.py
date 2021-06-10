@@ -797,21 +797,22 @@ class DERData(object):
 
         # Load DER definitions, for timeseries / schedule definitions, for each `definition_name`.
         fledge.utils.log_time('load DER timeseries / schedule definitions')
-        der_definitions = (
-            fledge.utils.starmap(
-                load_der_timeseries_schedules,
-                zip(
-                    fledge.utils.chunk_dict(self.der_definitions)
-                ),
-                dict(
-                    timestep_frequency=timestep_frequency,
-                    timesteps=self.scenario_data.timesteps
+        if len(self.der_definitions) > 0:
+            der_definitions = (
+                fledge.utils.starmap(
+                    load_der_timeseries_schedules,
+                    zip(
+                        fledge.utils.chunk_dict(self.der_definitions)
+                    ),
+                    dict(
+                        timestep_frequency=timestep_frequency,
+                        timesteps=self.scenario_data.timesteps
+                    )
                 )
             )
-        )
-        for chunk in der_definitions:
-            self.der_definitions.update(chunk)
-        fledge.utils.log_time('load DER timeseries / schedule definitions')
+            for chunk in der_definitions:
+                self.der_definitions.update(chunk)
+            fledge.utils.log_time('load DER timeseries / schedule definitions')
 
 
 def load_der_timeseries_schedules(

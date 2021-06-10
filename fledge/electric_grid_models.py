@@ -337,10 +337,8 @@ class ElectricGridModel(object):
 
         # Obtain flag for single-phase-equivalent modelling.
         if electric_grid_data.electric_grid.at['is_single_phase_equivalent'] == 1:
-            try:
-                assert len(self.phases) == 1
-            except AssertionError:
-                logger.error(f"Cannot model electric grid with {len(self.phases)} phase as single-phase-equivalent.")
+            if len(self.phases) != 1:
+                raise ValueError(f"Cannot model electric grid with {len(self.phases)} phase as single-phase-equivalent.")
             self.is_single_phase_equivalent = True
         else:
             self.is_single_phase_equivalent = False
@@ -1158,9 +1156,10 @@ class ElectricGridModelDefault(ElectricGridModel):
                 scipy.sparse.linalg.inv(self.node_admittance_matrix_no_source.tocsc())
             )
             assert not np.isnan(self.node_admittance_matrix_no_source_inverse.data).any()
-        except (RuntimeError, AssertionError):
-            logger.error(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
-            raise
+        except (RuntimeError, AssertionError) as exception:
+            raise (
+                ValueError(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
+            ) from exception
 
 
 class ElectricGridModelOpenDSS(ElectricGridModel):

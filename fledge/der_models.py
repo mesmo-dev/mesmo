@@ -1919,7 +1919,7 @@ class DERModelSet(DERModelSetBase):
                 self.flexible_der_models[der_name] = self.der_models[der_name]
             else:
                 # Raise error, if DER model object is neither fixed nor flexible DER model.
-                logger.error(
+                raise TypeError(
                     f"DER model class `{type(self.der_models[der_name])}` for DER '{der_name}' "
                     f"is not a subclass of `FixedDERModel` or `FlexibleDERModel`."
                 )

@@ -83,9 +83,8 @@ def recreate_database(
                         if_exists='append',
                         index=False
                     )
-                except Exception:
-                    logger.error(f"Error loading {csv_file} into database.")
-                    raise
+                except Exception as exception:
+                    raise ImportError(f"Error loading {csv_file} into database.") from exception
 
     cursor.close()
     database_connection.close()
@@ -925,9 +924,7 @@ def load_der_timeseries_schedules(
                 raise ValueError(f"No DER schedule definition found for definition name '{definition_index[1]}'.")
 
             # Show warning, if `time_period` does not start with '01T00:00'.
-            try:
-                assert der_schedule.index[0] == '01T00:00'
-            except AssertionError:
+            if der_schedule.index[0] != '01T00:00':
                 logger.warning(
                     f"First time period is '{der_schedule.index[0]}' in DER schedule with definition name "
                     f"'{definition_index[1]}'. Schedules should start with time period '01T00:00'. "

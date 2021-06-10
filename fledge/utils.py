@@ -3,7 +3,6 @@
 import copy
 import cvxpy as cp
 import datetime
-import dill
 import functools
 import glob
 import itertools
@@ -11,6 +10,7 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
 import re
@@ -144,7 +144,7 @@ class ResultsBase(ObjectBase):
             else:
                 # Other objects are stored to pickle binary file (PKL).
                 with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
-                    dill.dump(attributes[attribute_name], output_file, dill.HIGHEST_PROTOCOL)
+                    pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
     def load(
             self,
@@ -168,7 +168,7 @@ class ResultsBase(ObjectBase):
                     value = pd.read_csv(file)
                 else:
                     with open(file, 'rb') as input_file:
-                        value = dill.load(input_file)
+                        value = pickle.load(input_file)
                 self.__setattr__(attribute_name, value)
             else:
                 # Files which do not match any valid results attribute are not loaded.
@@ -182,6 +182,9 @@ class OptimizationProblem(object):
 
     constraints: list
     objective: cp.Expression
+    has_der_objective: bool = False
+    has_electric_grid_objective: bool = False
+    has_thermal_grid_objective: bool = False
     cvxpy_problem: cp.Problem
 
     def __init__(self):
@@ -429,7 +432,7 @@ class StandardForm(object):
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
         # Instantiate sparse matrix.
-        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=np.float)
+        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=float)
 
         # Fill matrix entries.
         for constraint_index, variable_index in self.a_dict:
@@ -492,7 +495,7 @@ def starmap(
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
 
     - If configuration parameter `run_parallel` is set to True, execution is passed to `starmap`
-      of `multiprocess.Pool`, hence running the function calls in parallel.
+      of multiprocessing pool, hence running the function calls in parallel.
     - Otherwise, execution is passed to `itertools.starmap`, which is the non-parallel equivalent.
     """
 
@@ -503,13 +506,13 @@ def starmap(
         function_partial = function
 
     if fledge.config.config['multiprocessing']['run_parallel']:
-        # If `run_parallel`, use starmap from `multiprocess.Pool` for parallel execution.
+        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
         if fledge.config.parallel_pool is None:
             # Setup parallel pool on first execution.
             log_time('parallel pool setup')
             fledge.config.parallel_pool = fledge.config.get_parallel_pool()
             log_time('parallel pool setup')
-        results = fledge.config.parallel_pool.starmap(function_partial, argument_sequence)
+        results = fledge.config.parallel_pool.starmap(function_partial, list(argument_sequence))
     else:
         # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
         results = list(itertools.starmap(function_partial, argument_sequence))
@@ -517,31 +520,39 @@ def starmap(
     return results
 
 
-def log_timing_start(
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log start message and return start time. Should be used together with `log_timing_end`."""
+def chunk_dict(
+        dict_in: dict,
+        chunk_count: int = os.cpu_count()
+):
+    """Divide dictionary into equally sized chunks."""
 
-    logger_object.debug(f"Start {message}.")
+    chunk_size = int(np.ceil(len(dict_in) / chunk_count))
+    dict_iter = iter(dict_in)
 
-    return time.time()
+    return [
+        {j: dict_in[j] for j in itertools.islice(dict_iter, chunk_size)}
+        for i in range(0, len(dict_in), chunk_size)
+    ]
 
 
-def log_timing_end(
-        start_time: float,
-        message: str,
-        logger_object: logging.Logger = logger
-) -> float:
-    """Log end message and execution time based on given start time. Should be used together with `log_timing_start`."""
+def chunk_list(
+        list_in: typing.Union[typing.Iterable, typing.Sized],
+        chunk_count: int = os.cpu_count()
+):
+    """Divide list into equally sized chunks."""
 
-    logger_object.debug(f"Completed {message} in {(time.time() - start_time):.6f} seconds.")
+    chunk_size = int(np.ceil(len(list_in) / chunk_count))
+    list_iter = iter(list_in)
 
-    return time.time()
+    return [
+        [j for j in itertools.islice(list_iter, chunk_size)]
+        for i in range(0, len(list_in), chunk_size)
+    ]
 
 
 def log_time(
         label: str,
+        log_level: str = 'debug',
         logger_object: logging.Logger = logger
 ):
     """Log start / end message and time duration for given label.
@@ -549,26 +560,36 @@ def log_time(
     - When called with given label for the first time, will log start message.
     - When called subsequently with the same / previously used label, will log end message and time duration since
       logging the start message.
-    - Start / end messages are logged as debug messages. The logger object can be given as keyword argument.
-      By default, uses ``utils.logger`` as logger.
-    - Start message: "Starting `label`."
-    - End message: "Completed `label` in `duration` seconds."
+    - The log level for start / end messages can be given as keyword argument, By default, messages are logged as
+      debug messages.
+    - The logger object can be given as keyword argument. By default, uses ``utils.logger`` as logger.
+    - Start message: "Starting ``label``."
+    - End message: "Completed ``label`` in ``duration`` seconds."
 
     Arguments:
         label (str): Label for the start / end message.
 
     Keyword Arguments:
+        log_level (str): Log level to which the start / end messages are output. Choices: 'debug', 'info'.
+            Default: 'debug'.
         logger_object (logging.logger.Logger): Logger object to which the start / end messages are output. Default:
             ``utils.logger``.
     """
 
     time_now = time.time()
 
+    if log_level == 'debug':
+        logger_handle = lambda message: logger_object.debug(message)
+    elif log_level == 'info':
+        logger_handle = lambda message: logger_object.info(message)
+    else:
+        raise ValueError(f"Invalid log level: '{log_level}'")
+
     if label in log_times.keys():
-        logger_object.debug(f"Completed {label} in {(time_now - log_times[label]):.6f} seconds.")
+        logger_handle(f"Completed {label} in {(time_now - log_times.pop(label)):.6f} seconds.")
     else:
         log_times[label] = time_now
-        logger_object.debug(f"Starting {label}.")
+        logger_handle(f"Starting {label}.")
 
 
 def get_index(
@@ -593,7 +614,7 @@ def get_index(
     """
 
     # Obtain mask for each level / values combination keyword arguments.
-    mask = np.ones(len(index_set), dtype=np.bool)
+    mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
 
         # Ensure that values are passed as list.
@@ -712,10 +733,8 @@ def get_alphanumeric_string(
 def launch(path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
-    try:
-        assert os.path.exists(path)
-    except AssertionError:
-        logger.error(f'Cannot launch file or directory that does not exist: {path}')
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'Cannot launch file or directory that does not exist: {path}')
 
     if sys.platform == 'win32':
         os.startfile(path)

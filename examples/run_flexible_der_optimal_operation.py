@@ -25,7 +25,7 @@ def main():
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain model.
-    flexible_der_model = fledge.der_models.make_der_model(der_data, der_name)
+    flexible_der_model = fledge.der_models.make_der_model(der_name, der_data)
 
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()

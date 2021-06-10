@@ -12,6 +12,8 @@ import fledge
 
 def main():
 
+    # TODO: Currently not working. Review limits below.
+
     # Settings.
     scenario_name = fledge.config.config['tests']['scenario_name']
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
@@ -38,46 +40,36 @@ def main():
     optimization_problem = fledge.utils.OptimizationProblem()
 
     # Define optimization variables.
-    linear_electric_grid_model.define_optimization_variables(
-        optimization_problem,
-        scenario_data.timesteps
-    )
-    der_model_set.define_optimization_variables(
-        optimization_problem
-    )
+    linear_electric_grid_model.define_optimization_variables(optimization_problem)
+    der_model_set.define_optimization_variables(optimization_problem)
 
     # Define constraints.
+    # TODO: Review limits.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    node_voltage_magnitude_vector_minimum[
-        fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
-    ] *= 0.965 / 0.5
+    # node_voltage_magnitude_vector_minimum[
+    #     fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
+    # ] *= 0.965 / 0.5
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
-    branch_power_magnitude_vector_maximum[
-        fledge.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
-    ] *= 1.2 / 10.0
+    # branch_power_magnitude_vector_maximum[
+    #     fledge.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
+    # ] *= 1.2 / 10.0
     linear_electric_grid_model.define_optimization_constraints(
         optimization_problem,
-        scenario_data.timesteps,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
-    der_model_set.define_optimization_constraints(
-        optimization_problem,
-        electric_grid_model=electric_grid_model
-    )
+    der_model_set.define_optimization_constraints(optimization_problem)
 
     # Define objective.
     linear_electric_grid_model.define_optimization_objective(
         optimization_problem,
-        price_data,
-        scenario_data.timesteps
+        price_data
     )
     der_model_set.define_optimization_objective(
         optimization_problem,
-        price_data,
-        electric_grid_model=electric_grid_model
+        price_data
     )
 
     # Solve centralized optimization problem.
@@ -85,18 +77,8 @@ def main():
 
     # Obtain results.
     results = fledge.problems.Results()
-    results.update(
-        linear_electric_grid_model.get_optimization_results(
-            optimization_problem,
-            power_flow_solution,
-            scenario_data.timesteps
-        )
-    )
-    results.update(
-        der_model_set.get_optimization_results(
-            optimization_problem
-        )
-    )
+    results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
+    results.update(der_model_set.get_optimization_results(optimization_problem))
 
     # Print results.
     print(results)
@@ -108,8 +90,7 @@ def main():
     dlmps = (
         linear_electric_grid_model.get_optimization_dlmps(
             optimization_problem,
-            price_data,
-            scenario_data.timesteps
+            price_data
         )
     )
 

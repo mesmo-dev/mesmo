@@ -520,7 +520,7 @@ class ThermalGridData(object):
             self.scenario_data.parse_parameters_dataframe(pd.read_sql(
                 """
                 SELECT * FROM thermal_grids
-                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.plant_model_name
+                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.source_der_model_name
                 WHERE thermal_grid_name = (
                     SELECT thermal_grid_name FROM scenarios
                     WHERE scenario_name = ?

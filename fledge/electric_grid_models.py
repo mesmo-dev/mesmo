@@ -79,7 +79,8 @@ class ElectricGridModel(object):
 
         # Process overhead line type definitions.
         # - This is implemented as direct modification on the electric grid data object and therefore done first.
-        electric_grid_data = self.process_line_types_overhead(electric_grid_data)
+        logger.warning("Overhead line type definitions processing has been disabled for development.")
+        # electric_grid_data = self.process_line_types_overhead(electric_grid_data)
 
         # Obtain index set for time steps.
         # - This is needed for optimization problem definitions within linear electric grid models.

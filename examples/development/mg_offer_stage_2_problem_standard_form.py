@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import fledge
-
+from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 
 def stage_2_problem_standard_form():
     print('stage 2 problem modelling...')
@@ -593,7 +593,44 @@ def stage_2_problem_standard_form():
 
 
 def main():
-    print()
+    scenario_name = 'singapore_6node_custom'
+    price_data = fledge.data_interface.PriceData(scenario_name)
+
+    # Get results path.
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+
+    standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set \
+        = stage_1_problem_standard_form()
+    # Instantiate optimization problem.
+    optimization_problem_stage_1 = fledge.utils.OptimizationProblem()
+
+    # Define optimization problem.
+    optimization_problem_stage_1.x_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
+    optimization_problem_stage_1.constraints.append(
+        a_matrix.toarray() @ optimization_problem_stage_1.x_vector <= b_vector
+    )
+    optimization_problem_stage_1.objective += (
+        (
+                f_vector.T
+                @ optimization_problem_stage_1.x_vector
+        )
+    )
+    # Define optimization objective
+
+    # Solve optimization problem.
+    optimization_problem_stage_1.solve()
+
+    # Obtain results.
+    results = standard_form_stage_1.get_results(optimization_problem_stage_1.x_vector)
+
+
+    standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
+        delta_indices_stage2, s1_indices = stage_2_problem_standard_form()
+
+
+
+
+
 
 
 if __name__ == '__main__':

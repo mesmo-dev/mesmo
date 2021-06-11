@@ -25,7 +25,7 @@ def main():
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain model.
-    der_model: fledge.der_models.FlexibleDERModel = fledge.der_models.make_der_model(der_data, der_name)
+    der_model: fledge.der_models.FlexibleDERModel = fledge.der_models.make_der_model(der_name, der_data)
 
     # Obtain standard form.
     standard_form = fledge.utils.StandardForm()
@@ -38,7 +38,7 @@ def main():
     # Define constraints.
 
     # Initial state.
-    # - TODO: For states which represent storage state of charge, initial state of charge is final state of charge.
+    # - For states which represent storage state of charge, initial state of charge is final state of charge.
     if any(~der_model.states.isin(der_model.storage_states)):
         standard_form.define_constraint(
             ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]),
@@ -48,6 +48,7 @@ def main():
                 state=der_model.states[~der_model.states.isin(der_model.storage_states)]
             ))
         )
+    # - For other states, set initial state according to the initial state vector.
     if any(der_model.states.isin(der_model.storage_states)):
         standard_form.define_constraint(
             ('variable', 1.0, dict(
@@ -276,7 +277,7 @@ def main():
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
         # figure.show()
-        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, output))
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'output_{output}'))
 
     for disturbance in der_model.disturbances:
 
@@ -292,7 +293,7 @@ def main():
             showlegend=False
         )
         # figure.show()
-        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, disturbance))
+        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'disturbance_{disturbance}'))
 
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
 

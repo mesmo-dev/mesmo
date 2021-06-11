@@ -525,11 +525,47 @@ def main():
                 )
             )
 
+            # constr 35e
+            optimization_problem_dro.constraints.append(
+                optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_1'][0] >= 0
+            )
 
+            optimization_problem_dro.constraints.append(
+                optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_2'][0] >= 0
+            )
+
+            optimization_problem_dro.constraints.append(
+                optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_3'][0] >= 0
+            )
+
+            optimization_problem_dro.constraints.append(
+                optimization_problem_dro.ambiguity_set_duals_uncertain_price[price_category, time_step, 'nu_4'][0] >= 0
+            )
 
     for der_name, der_model in der_model_set.flexible_der_models.items():
         if not der_model.disturbances.empty:
             for time_step in der_model_set.timesteps:
+
+                # constr 35e
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[der_name, time_step, 'nu_1'][
+                        0] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[der_name, time_step, 'nu_2'][
+                        0] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[der_name, time_step, 'nu_3'][
+                        0] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance[der_name, time_step, 'nu_4'][
+                        0] >= 0
+                )
 
                 index_temp_der_disturbance = fledge.utils.get_index(
                     standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
@@ -1201,9 +1237,51 @@ def main():
                     )
                 )
 
+                # constr 40 e
+                optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                            price_category, time_step, 'nu_1', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                            price_category, time_step, 'nu_2', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                            price_category, time_step, 'nu_3', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_40[
+                            price_category, time_step, 'nu_4', row_index] >= 0
+                )
+
         for der_name, der_model in der_model_set.flexible_der_models.items():
             if not der_model.disturbances.empty:
                 for time_step in der_model_set.timesteps:
+
+                    # constr 40e
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
+                            der_name, time_step, 'nu_1', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
+                            der_name, time_step, 'nu_2', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
+                            der_name, time_step, 'nu_3', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
+                            der_name, time_step, 'nu_4', row_index] >= 0
+                    )
 
                     index_temp_der_disturbance = fledge.utils.get_index(
                         standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
@@ -1316,6 +1394,7 @@ def main():
                                 )
                             )
 
+    print('define constr 41 a')
     optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_41 = {}
     optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41 = {}
 
@@ -1353,7 +1432,7 @@ def main():
                             optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41[
                                 der_name, time_step, dual_category, row_index
                             ] = cp.Variable((size_der_disturbance, 1))
-    print('define constr 41 a')
+
     # constr 41 a)
     temp_41a_orig = b3_vector - A3_matrix @ optimization_problem_dro.s1_vector - \
         B3_matrix @ optimization_problem_dro.k_0_s2 - D3_matrix @ optimization_problem_dro.k_0_s3
@@ -1837,9 +1916,51 @@ def main():
                     )
                 )
 
+                # constr 41e
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_41[
+                        price_category, time_step, 'nu_1', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_41[
+                        price_category, time_step, 'nu_2', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_41[
+                        price_category, time_step, 'nu_3', row_index] >= 0
+                )
+
+                optimization_problem_dro.constraints.append(
+                    optimization_problem_dro.ambiguity_set_duals_uncertain_price_constr_41[
+                        price_category, time_step, 'nu_4', row_index] >= 0
+                )
+
         for der_name, der_model in der_model_set.flexible_der_models.items():
             if not der_model.disturbances.empty:
                 for time_step in der_model_set.timesteps:
+
+                    # constr 41e
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41[
+                            der_name, time_step, 'nu_1', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41[
+                            der_name, time_step, 'nu_2', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41[
+                            der_name, time_step, 'nu_3', row_index] >= 0
+                    )
+
+                    optimization_problem_dro.constraints.append(
+                        optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_41[
+                            der_name, time_step, 'nu_4', row_index] >= 0
+                    )
 
                     index_temp_der_disturbance = fledge.utils.get_index(
                         standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',

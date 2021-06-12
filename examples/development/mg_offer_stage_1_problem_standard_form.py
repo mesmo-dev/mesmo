@@ -10,10 +10,11 @@ import plotly.graph_objects as go
 import scipy.sparse
 import fledge
 
-def stage_1_problem_standard_form():
+
+def stage_1_problem_standard_form(scenario_name):
     print('stage 1 problem modelling...')
     # Settings.
-    scenario_name = 'singapore_6node_custom'
+
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
@@ -510,14 +511,17 @@ def stage_1_problem_standard_form():
     return standard_form, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set
 
 def main():
-    scenario_name = 'singapore_6node_custom'
+    scenario_name = 'singapore_6node'
+    fledge.data_interface.recreate_database()
+
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set\
-        = stage_1_problem_standard_form()
+        = stage_1_problem_standard_form(scenario_name)
+
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
 

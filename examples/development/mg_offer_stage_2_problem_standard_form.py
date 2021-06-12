@@ -10,20 +10,20 @@ import plotly.graph_objects as go
 import fledge
 from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 
-def stage_2_problem_standard_form():
+def stage_2_problem_standard_form(scenario_name):
     print('stage 2 problem modelling...')
+
     # Settings.
-    scenario_name = 'singapore_6node_custom'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
-    fledge.data_interface.recreate_database()
+    #fledge.data_interface.recreate_database()
 
     # Obtain price data object.
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    #price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain DER & grid model objects.
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
@@ -593,14 +593,14 @@ def stage_2_problem_standard_form():
 
 
 def main():
-    scenario_name = 'singapore_6node_custom'
+    scenario_name = 'singapore_6node'
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set \
-        = stage_1_problem_standard_form()
+        = stage_1_problem_standard_form(scenario_name)
     # Instantiate optimization problem.
     optimization_problem_stage_1 = fledge.utils.OptimizationProblem()
 
@@ -623,14 +623,62 @@ def main():
     # Obtain results.
     results = standard_form_stage_1.get_results(optimization_problem_stage_1.x_vector)
 
+    energy_offer_stage_1 = pd.Series(results['energy'].values.ravel(), index=der_model_set.timesteps)
 
     standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
-        delta_indices_stage2, s1_indices = stage_2_problem_standard_form()
+        delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name)
 
+    # Define stage 2 problem
+    optimization_problem_stage_2 = fledge.utils.OptimizationProblem()
+    # Define optimization problem.
+    optimization_problem_stage_2.s_1 = cp.Variable((len(s1_indices), 1))
+    optimization_problem_stage_2.s_2 = cp.Variable((len(s2_indices_stage2), 1))
+    optimization_problem_stage_2.delta = cp.Variable((len(delta_indices_stage2), 1))
 
+    optimization_problem_stage_2.constraints.append(
+        A2_matrix.toarray() @ optimization_problem_stage_2.s_1 + B2_matrix.toarray() @ optimization_problem_stage_2.s_2
+        + C2_matrix @ optimization_problem_stage_2.delta <= b2_vector
+    )
 
+    optimization_problem_stage_2.constraints.append(
+         optimization_problem_stage_2.delta == 0
+    )
 
+    index_energy_stage_2 = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='energy_s1',
+        timestep=der_model_set.timesteps,
+    )
 
+    optimization_problem_stage_2.constraints.append(
+         optimization_problem_stage_2.s_1[np.where(pd.Index(s1_indices).isin(index_energy_stage_2))[0], 0]
+         == np.transpose(energy_offer_stage_1.to_numpy())
+    )
+
+    optimization_problem_stage_2.constraints.append(
+         optimization_problem_stage_2.s_1[25:-1, 0]
+         == 0
+    )
+
+    optimization_problem_stage_2.objective += (
+   #     (
+   #         optimization_problem_stage_2.s_1.T @ M_Q2_delta @ optimization_problem_stage_2.delta
+   #    ) +
+        (
+            m_Q2_s2.T @ optimization_problem_stage_2.s_2
+        )
+    )
+
+    # Solve optimization problem.
+    optimization_problem_stage_2.solve()
+
+    # Obtain results.
+    index_energy_deviation_stage_2 = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='energy_deviation_s2',
+        timestep=der_model_set.timesteps,
+    )
+
+    result_energy_deviation_stage_2 = \
+        optimization_problem_stage_2.s_2.value[np.where(pd.Index(s2_indices_stage2).isin(index_energy_deviation_stage_2))[0], 0]
 
 
 if __name__ == '__main__':

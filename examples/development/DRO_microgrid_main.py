@@ -14,7 +14,8 @@ from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
 
 
 def main():
-    scenario_name = 'singapore_6node_custom'
+    #scenario_name = 'singapore_6node_custom'
+    scenario_name = 'singapore_6node'
 
     price_categories = ['energy', 'up_reserve', 'down_reserve']
     ambiguity_set_dual_variables_categories = ['mu_1', 'nu_1', 'mu_2', 'nu_2', 'mu_3', 'nu_3', 'mu_4', 'nu_4']
@@ -28,13 +29,13 @@ def main():
 
     # initialize all three stage problem
     standard_form_stage_1, A1_matrix, b1_vector, f_vector, stochastic_scenarios, der_model_set \
-        = stage_1_problem_standard_form()
+        = stage_1_problem_standard_form(scenario_name)
 
     standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
-        delta_indices_stage2, s1_indices = stage_2_problem_standard_form()
+        delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name)
 
     standard_form_stage_3, b3_vector, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, \
-        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form()
+        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form(scenario_name)
 
     # Instantiate optimization problem.
     optimization_problem_dro = fledge.utils.OptimizationProblem()
@@ -897,7 +898,7 @@ def main():
                         temp_40a -= 0.5 * optimization_problem_dro.ambiguity_set_duals_uncertain_der_disturbance_constr_40[
                                             der_name, time_step, 'nu_3', row_index
                                         ]
-
+                        # TODO check the np.where indices is correct: [np.where(pd.Index(s1_indices).isin(index_energy_stage_2))[0], :]
                         temp_40a -= (
                                         optimization_problem_dro.u_upper_bound[
                                             np.where(pd.Index(delta_indices_stage2).isin(index_temp_der_disturbance)), 0

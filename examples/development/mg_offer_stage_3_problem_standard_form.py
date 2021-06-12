@@ -11,10 +11,10 @@ import plotly.graph_objects as go
 import fledge
 
 
-def stage_3_problem_standard_form():
+def stage_3_problem_standard_form(scenario_name):
     print('stage 3 problem modelling...')
     # Settings.
-    scenario_name = 'singapore_6node_custom'
+    #scenario_name = 'singapore_6node_custom'
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
     stochastic_scenarios_stage_3 = ['up_reserve_activated', 'down_reserve_activated']
 
@@ -22,10 +22,10 @@ def stage_3_problem_standard_form():
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
-    fledge.data_interface.recreate_database()
+    #fledge.data_interface.recreate_database()
 
     # Obtain price data object.
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    # price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain DER & grid model objects.
     der_model_set = fledge.der_models.DERModelSet(scenario_name)
@@ -34,7 +34,7 @@ def stage_3_problem_standard_form():
     linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
+    # optimization_problem = fledge.utils.OptimizationProblem()
 
     # Instantiate standard form.
     standard_form = fledge.utils.StandardForm()

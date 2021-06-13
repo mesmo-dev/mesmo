@@ -511,7 +511,7 @@ def stage_1_problem_standard_form(scenario_name):
     return standard_form, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set
 
 def main():
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     fledge.data_interface.recreate_database()
 
     price_data = fledge.data_interface.PriceData(scenario_name)

@@ -10,6 +10,9 @@ import plotly.graph_objects as go
 
 import fledge
 
+from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
+from mg_offer_stage_2_problem_standard_form import stage_2_problem_standard_form
+
 
 def stage_3_problem_standard_form(scenario_name):
     print('stage 3 problem modelling...')
@@ -730,7 +733,172 @@ def stage_3_problem_standard_form(scenario_name):
 
 
 def main():
-    print()
+    scenario_name = 'singapore_6node'
+    price_data = fledge.data_interface.PriceData(scenario_name)
+
+    # Get results path.
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+
+    standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set \
+        = stage_1_problem_standard_form(scenario_name)
+    # Instantiate optimization problem.
+    optimization_problem_stage_1 = fledge.utils.OptimizationProblem()
+
+    # Define optimization problem.
+    optimization_problem_stage_1.x_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
+    optimization_problem_stage_1.constraints.append(
+        a_matrix.toarray() @ optimization_problem_stage_1.x_vector <= b_vector
+    )
+    optimization_problem_stage_1.objective += (
+        (
+                f_vector.T
+                @ optimization_problem_stage_1.x_vector
+        )
+    )
+    # Define optimization objective
+
+    # Solve optimization problem.
+    optimization_problem_stage_1.solve()
+
+    # Obtain results.
+    results = standard_form_stage_1.get_results(optimization_problem_stage_1.x_vector)
+
+    energy_offer_stage_1 = pd.Series(results['energy'].values.ravel(), index=der_model_set.timesteps)
+
+    standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
+    delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name)
+
+    # Define stage 2 problem
+    optimization_problem_stage_2 = fledge.utils.OptimizationProblem()
+    # Define optimization problem.
+    optimization_problem_stage_2.s_1 = cp.Variable((len(s1_indices), 1))
+    optimization_problem_stage_2.s_2 = cp.Variable((len(s2_indices_stage2), 1))
+    optimization_problem_stage_2.delta = cp.Variable((len(delta_indices_stage2), 1))
+
+    optimization_problem_stage_2.constraints.append(
+        A2_matrix.toarray() @ optimization_problem_stage_2.s_1 + B2_matrix.toarray() @ optimization_problem_stage_2.s_2
+        + C2_matrix @ optimization_problem_stage_2.delta <= b2_vector
+    )
+
+    optimization_problem_stage_2.constraints.append(
+        optimization_problem_stage_2.delta == 0
+    )
+
+    index_energy_stage_2 = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='energy_s1',
+        timestep=der_model_set.timesteps,
+    )
+
+    optimization_problem_stage_2.constraints.append(
+        optimization_problem_stage_2.s_1[np.where(pd.Index(s1_indices).isin(index_energy_stage_2))[0], 0]
+        == np.transpose(energy_offer_stage_1.to_numpy())
+    )
+
+    optimization_problem_stage_2.constraints.append(
+        optimization_problem_stage_2.s_1[25:-1, 0]
+        == 0
+    )
+
+    optimization_problem_stage_2.objective += (
+        #     (
+        #         optimization_problem_stage_2.s_1.T @ M_Q2_delta @ optimization_problem_stage_2.delta
+        #    ) +
+        (
+                m_Q2_s2.T @ optimization_problem_stage_2.s_2
+        )
+    )
+
+    # Solve optimization problem.
+    optimization_problem_stage_2.solve()
+
+    # Obtain results.
+    index_energy_deviation_stage_2 = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='energy_deviation_s2',
+        timestep=der_model_set.timesteps,
+    )
+
+    result_energy_deviation_stage_2 = \
+        optimization_problem_stage_2.s_2.value[
+            np.where(pd.Index(s2_indices_stage2).isin(index_energy_deviation_stage_2))[0], 0]
+
+    standard_form_stage_3, b3_vector, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, \
+        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form(scenario_name)
+
+    # Define stage 3 problem
+    optimization_problem_stage_3 = fledge.utils.OptimizationProblem()
+    # Define optimization problem.
+    optimization_problem_stage_3.s_1 = cp.Variable((len(s1_indices_stage3), 1))
+    optimization_problem_stage_3.s_2 = cp.Variable((len(s2_indices_stage3), 1))
+    optimization_problem_stage_3.s_3 = cp.Variable((len(s3_indices_stage3), 1))
+    optimization_problem_stage_3.delta = cp.Variable((len(delta_indices_stage3), 1))
+
+    optimization_problem_stage_3.constraints.append(
+        A3_matrix.toarray() @ optimization_problem_stage_3.s_1 + B3_matrix.toarray() @ optimization_problem_stage_3.s_2
+        + C3_matrix @ optimization_problem_stage_3.delta + D3_matrix.toarray() @ optimization_problem_stage_3.s_3
+        <= b3_vector
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.delta == 0
+    )
+
+    index_energy_stage_2 = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='energy_s1',
+        timestep=der_model_set.timesteps,
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_1[np.where(pd.Index(s1_indices).isin(index_energy_stage_2))[0], 0]
+        == np.transpose(energy_offer_stage_1.to_numpy())
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_1[25:-1, 0]
+        == 0
+    )
+
+    index_energy_deviation_stage_2 = fledge.utils.get_index(
+        standard_form_stage_3.variables, name='energy_deviation_s2',
+        timestep=der_model_set.timesteps,
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_2[np.where(pd.Index(s2_indices_stage3).isin(index_energy_deviation_stage_2))[0], 0]
+        == result_energy_deviation_stage_2
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_2[25:-1, 0]
+        == 0
+    )
+
+    # For DER nodal injections, p^j_der, the value is set as zero as they don't affect the optimization results (const)
+    optimization_problem_stage_3.objective += (
+        #     (
+        #         optimization_problem_stage_2.s_1.T @ M_Q2_delta @ optimization_problem_stage_2.delta
+        #    ) +
+        (
+                m_Q3_s2.T @ optimization_problem_stage_3.s_2
+        ) +
+        (
+                m_Q3_s3.T @ optimization_problem_stage_3.s_3
+        )
+    )
+
+    # Solve optimization problem.
+    optimization_problem_stage_3.solve()
+
+    # Obtain results.
+    index_energy_deviation_stage_3_up_reserve_activated = fledge.utils.get_index(
+        standard_form_stage_3.variables, name='energy_deviation_s3',
+        timestep=der_model_set.timesteps, scenario='up_reserve_activated'
+    )
+
+    result_energy_deviation_stage_3_up_reserve_activated = \
+        optimization_problem_stage_3.s_3.value[
+            np.where(pd.Index(s3_indices_stage3).isin(index_energy_deviation_stage_3_up_reserve_activated))[0], 0]
+
+
 
 
 if __name__ == '__main__':

@@ -593,7 +593,7 @@ def stage_2_problem_standard_form(scenario_name):
 
 
 def main():
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Get results path.

@@ -14,8 +14,8 @@ from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
 
 
 def main():
-    #scenario_name = 'singapore_6node_custom'
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
+    # scenario_name = 'singapore_6node'
 
     price_categories = ['energy', 'up_reserve', 'down_reserve']
     ambiguity_set_dual_variables_categories = ['mu_1', 'nu_1', 'mu_2', 'nu_2', 'mu_3', 'nu_3', 'mu_4', 'nu_4']

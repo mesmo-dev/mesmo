@@ -733,7 +733,7 @@ def stage_3_problem_standard_form(scenario_name):
 
 
 def main():
-    scenario_name = 'singapore_6node'
+    scenario_name = 'singapore_6node_custom'
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Get results path.
@@ -764,6 +764,8 @@ def main():
     results = standard_form_stage_1.get_results(optimization_problem_stage_1.x_vector)
 
     energy_offer_stage_1 = pd.Series(results['energy'].values.ravel(), index=der_model_set.timesteps)
+    up_reserve_offer_stage_1 = pd.Series(results['up_reserve'].values.ravel(), index=der_model_set.timesteps)
+    down_reserve_offer_stage_1 = pd.Series(results['down_reserve'].values.ravel(), index=der_model_set.timesteps)
 
     standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
     delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name)
@@ -795,7 +797,7 @@ def main():
     )
 
     optimization_problem_stage_2.constraints.append(
-        optimization_problem_stage_2.s_1[25:-1, 0]
+        optimization_problem_stage_2.s_1[max(index_energy_stage_2)+1:-1, 0]
         == 0
     )
 
@@ -847,13 +849,33 @@ def main():
         timestep=der_model_set.timesteps,
     )
 
+    index_up_reserve_offer = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='up_reserve_s1',
+        timestep=der_model_set.timesteps,
+    )
+
+    index_down_reserve_offer = fledge.utils.get_index(
+        standard_form_stage_2.variables, name='down_reserve_s1',
+        timestep=der_model_set.timesteps,
+    )
+
     optimization_problem_stage_3.constraints.append(
         optimization_problem_stage_3.s_1[np.where(pd.Index(s1_indices).isin(index_energy_stage_2))[0], 0]
         == np.transpose(energy_offer_stage_1.to_numpy())
     )
 
     optimization_problem_stage_3.constraints.append(
-        optimization_problem_stage_3.s_1[25:-1, 0]
+        optimization_problem_stage_3.s_1[np.where(pd.Index(s1_indices).isin(index_up_reserve_offer))[0], 0]
+        == np.transpose(up_reserve_offer_stage_1.to_numpy())
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_1[np.where(pd.Index(s1_indices).isin(index_down_reserve_offer))[0], 0]
+        == np.transpose(down_reserve_offer_stage_1.to_numpy())
+    )
+
+    optimization_problem_stage_3.constraints.append(
+        optimization_problem_stage_3.s_1[max(index_down_reserve_offer)+1:-1, 0]
         == 0
     )
 
@@ -868,7 +890,7 @@ def main():
     )
 
     optimization_problem_stage_3.constraints.append(
-        optimization_problem_stage_3.s_2[25:-1, 0]
+        optimization_problem_stage_3.s_2[max(np.where(pd.Index(s2_indices_stage3).isin(index_energy_deviation_stage_2))[0])+1:-1, 0]
         == 0
     )
 

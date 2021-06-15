@@ -10,6 +10,7 @@ import scipy.sparse.linalg
 
 import fledge.config
 import fledge.data_interface
+import fledge.der_models
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -122,73 +123,22 @@ class ThermalGridModel(object):
             float(thermal_grid_data.thermal_grid['distribution_pump_efficiency'])
         )
 
-        # Obtain cooling plant efficiency.
-        # TODO: Enable consideration for dynamic wet bulb temperature.
-        ambient_air_wet_bulb_temperature = (
-            thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_wet_bulb']
-        )
-        condensation_temperature = (
-            thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_condenser_water']
-            + (
-                thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_slope']
-                * (
-                    ambient_air_wet_bulb_temperature
-                    - thermal_grid_data.thermal_grid.at['cooling_tower_set_reference_temperature_wet_bulb']
-                )
-            )
-            + thermal_grid_data.thermal_grid.at['condenser_water_temperature_difference']
-            + thermal_grid_data.thermal_grid.at['chiller_set_condenser_minimum_temperature_difference']
-            + 273.15
-        )
-        chiller_inverse_coefficient_of_performance = (
-            (
-                (
-                    condensation_temperature
-                    / thermal_grid_data.thermal_grid.at['chiller_set_evaporation_temperature']
-                )
-                - 1.0
-            )
-            * (
-                thermal_grid_data.thermal_grid.at['chiller_set_beta']
-                + 1.0
+        # Obtain DER model source node.
+        # TODO: Use state space model for simulation / optimization.
+        self.source_der_model = (
+            fledge.der_models.make_der_model(
+                thermal_grid_data.thermal_grid.at['source_der_model_name'],
+                thermal_grid_data.der_data,
+                is_standalone=True
             )
         )
-        evaporator_pump_specific_electric_power = (
-            (1.0 / thermal_grid_data.thermal_grid.at['plant_pump_efficiency'])
-            * scipy.constants.value('standard acceleration of gravity')
-            * thermal_grid_data.thermal_grid.at['water_density']
-            * thermal_grid_data.thermal_grid.at['evaporator_pump_head']
-            / (
-                thermal_grid_data.thermal_grid.at['water_density']
-                * thermal_grid_data.thermal_grid.at['enthalpy_difference_distribution_water']
-            )
-        )
-        condenser_specific_thermal_power = (
-            1.0 + chiller_inverse_coefficient_of_performance
-        )
-        condenser_pump_specific_electric_power = (
-            (1.0 / thermal_grid_data.thermal_grid.at['plant_pump_efficiency'])
-            * scipy.constants.value('standard acceleration of gravity')
-            * thermal_grid_data.thermal_grid.at['water_density']
-            * thermal_grid_data.thermal_grid.at['condenser_pump_head']
-            * condenser_specific_thermal_power
-            / (
-                thermal_grid_data.thermal_grid.at['water_density']
-                * thermal_grid_data.thermal_grid.at['condenser_water_enthalpy_difference']
-            )
-        )
-        cooling_tower_ventilation_specific_electric_power = (
-            thermal_grid_data.thermal_grid.at['cooling_tower_set_ventilation_factor']
-            * condenser_specific_thermal_power
-        )
-        self.cooling_plant_efficiency = (
-            1.0 / sum([
-                chiller_inverse_coefficient_of_performance,
-                evaporator_pump_specific_electric_power,
-                condenser_pump_specific_electric_power,
-                cooling_tower_ventilation_specific_electric_power
-            ])
-        )
+        # TODO: Remove temporary workaround: Obtain efficiency factors.
+        if thermal_grid_data.thermal_grid.at['source_der_type'] == 'cooling_plant':
+            self.plant_efficiency = self.source_der_model.cooling_plant_efficiency
+        elif thermal_grid_data.thermal_grid.at['source_der_type'] == 'heat_pump':
+            self.plant_efficiency = self.source_der_model.heat_pump_efficiency
+        else:
+            raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
 
 class ThermalPowerFlowSolution(object):
@@ -373,7 +323,7 @@ class ThermalPowerFlowSolution(object):
             self.source_flow
             * thermal_grid_model.enthalpy_difference_distribution_water
             * fledge.config.water_density
-            / thermal_grid_model.cooling_plant_efficiency
+            / thermal_grid_model.plant_efficiency
         )
 
 
@@ -780,7 +730,7 @@ class LinearThermalGridModel(object):
         for timestep in self.thermal_grid_model.timesteps:
             thermal_grid_energy_dlmp_node_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
-                / self.thermal_grid_model.cooling_plant_efficiency
+                / self.thermal_grid_model.plant_efficiency
             )
             thermal_grid_head_dlmp_node_thermal_power.loc[timestep, :] = (
                 (
@@ -806,7 +756,7 @@ class LinearThermalGridModel(object):
 
             thermal_grid_energy_dlmp_der_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
-                / self.thermal_grid_model.cooling_plant_efficiency
+                / self.thermal_grid_model.plant_efficiency
             )
             thermal_grid_head_dlmp_der_thermal_power.loc[timestep, :] = (
                 (

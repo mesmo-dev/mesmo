@@ -313,277 +313,6 @@ class ScenarioData(object):
         return dataframe
 
 
-class ElectricGridData(object):
-    """Electric grid data object."""
-
-    scenario_data: ScenarioData
-    electric_grid: pd.DataFrame
-    electric_grid_nodes: pd.DataFrame
-    electric_grid_ders: pd.DataFrame
-    electric_grid_lines: pd.DataFrame
-    electric_grid_line_types: pd.DataFrame
-    electric_grid_line_types_overhead: pd.DataFrame
-    electric_grid_line_types_overhead_conductors: pd.DataFrame
-    electric_grid_line_types_matrices: pd.DataFrame
-    electric_grid_transformers: pd.DataFrame
-
-    def __init__(
-            self,
-            scenario_name: str,
-            database_connection=None
-    ):
-
-        # Obtain database connection.
-        if database_connection is None:
-            database_connection=connect_database()
-
-        # Obtain scenario data.
-        self.scenario_data = ScenarioData(scenario_name)
-
-        # Obtain electric grid data.
-        self.electric_grid = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grids
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            )).iloc[0]
-        )
-        self.electric_grid_nodes = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_nodes
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
-        self.electric_grid_nodes = (
-            self.electric_grid_nodes.reindex(index=natsort.natsorted(self.electric_grid_nodes.index))
-        )
-        self.electric_grid_ders = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_ders
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_ders.index = self.electric_grid_ders['der_name']
-        self.electric_grid_ders = (
-            self.electric_grid_ders.reindex(index=natsort.natsorted(self.electric_grid_ders.index))
-        )
-        self.electric_grid_lines = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_lines
-                JOIN electric_grid_line_types USING (line_type)
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_lines.index = self.electric_grid_lines['line_name']
-        self.electric_grid_lines = (
-            self.electric_grid_lines.reindex(index=natsort.natsorted(self.electric_grid_lines.index))
-        )
-        self.electric_grid_line_types = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_line_types
-                WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_lines
-                    WHERE electric_grid_name = (
-                        SELECT electric_grid_name FROM scenarios
-                        WHERE scenario_name = ?
-                    )
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
-        self.electric_grid_line_types_overhead = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_line_types_overhead
-                WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_line_types
-                    WHERE line_type IN (
-                        SELECT line_type FROM electric_grid_lines
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                    )
-                    AND definition_type = 'overhead'
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_line_types_overhead.index = self.electric_grid_line_types_overhead['line_type']
-        self.electric_grid_line_types_overhead_conductors = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_line_types_overhead_conductors
-                """,
-                con=database_connection
-            ))
-        )
-        self.electric_grid_line_types_overhead_conductors.index = self.electric_grid_line_types_overhead_conductors['conductor_id']
-        self.electric_grid_line_types_matrices = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_line_types_matrices
-                WHERE line_type IN (
-                    SELECT line_type FROM electric_grid_line_types
-                    WHERE line_type IN (
-                        SELECT line_type FROM electric_grid_lines
-                        WHERE electric_grid_name = (
-                            SELECT electric_grid_name FROM scenarios
-                            WHERE scenario_name = ?
-                        )
-                    )
-                    AND definition_type = 'matrix'
-                )
-                ORDER BY line_type ASC, row ASC, col ASC
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_transformers = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM electric_grid_transformers
-                LEFT JOIN electric_grid_transformer_types USING (transformer_type)
-                WHERE electric_grid_name = (
-                    SELECT electric_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
-        self.electric_grid_transformers = (
-            self.electric_grid_transformers.reindex(index=natsort.natsorted(self.electric_grid_transformers.index))
-        )
-
-
-class ThermalGridData(object):
-    """Thermal grid data object."""
-
-    scenario_data: ScenarioData
-    thermal_grid: pd.DataFrame
-    thermal_grid_nodes: pd.DataFrame
-    thermal_grid_ders: pd.DataFrame
-    thermal_grid_lines: pd.DataFrame
-
-    def __init__(
-            self,
-            scenario_name: str,
-            database_connection=None
-    ):
-
-        # Obtain database connection.
-        if database_connection is None:
-            database_connection=connect_database()
-
-        # Obtain scenario data.
-        self.scenario_data = ScenarioData(scenario_name)
-
-        self.thermal_grid = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM thermal_grids
-                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.source_der_model_name
-                WHERE thermal_grid_name = (
-                    SELECT thermal_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            )).iloc[0]
-        )
-        self.thermal_grid_nodes = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM thermal_grid_nodes
-                WHERE thermal_grid_name = (
-                    SELECT thermal_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
-        self.thermal_grid_nodes = (
-            self.thermal_grid_nodes.reindex(index=natsort.natsorted(self.thermal_grid_nodes.index))
-        )
-        self.thermal_grid_ders = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM thermal_grid_ders
-                WHERE thermal_grid_name = (
-                    SELECT thermal_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
-        self.thermal_grid_ders = (
-            self.thermal_grid_ders.reindex(index=natsort.natsorted(self.thermal_grid_ders.index))
-        )
-        self.thermal_grid_lines = (
-            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
-                """
-                SELECT * FROM thermal_grid_lines
-                JOIN thermal_grid_line_types USING (line_type)
-                WHERE thermal_grid_name = (
-                    SELECT thermal_grid_name FROM scenarios
-                    WHERE scenario_name = ?
-                )
-                """,
-                con=database_connection,
-                params=[scenario_name]
-            ))
-        )
-        self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
-        self.thermal_grid_lines = (
-            self.thermal_grid_lines.reindex(index=natsort.natsorted(self.thermal_grid_lines.index))
-        )
-
-
 class DERData(object):
     """DER data object."""
 
@@ -1039,6 +768,277 @@ class DERData(object):
                 der_definitions[definition_index] = der_schedule
 
         return der_definitions
+
+
+class ElectricGridData(object):
+    """Electric grid data object."""
+
+    scenario_data: ScenarioData
+    electric_grid: pd.DataFrame
+    electric_grid_nodes: pd.DataFrame
+    electric_grid_ders: pd.DataFrame
+    electric_grid_lines: pd.DataFrame
+    electric_grid_line_types: pd.DataFrame
+    electric_grid_line_types_overhead: pd.DataFrame
+    electric_grid_line_types_overhead_conductors: pd.DataFrame
+    electric_grid_line_types_matrices: pd.DataFrame
+    electric_grid_transformers: pd.DataFrame
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=None
+    ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
+
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
+
+        # Obtain electric grid data.
+        self.electric_grid = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grids
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )).iloc[0]
+        )
+        self.electric_grid_nodes = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_nodes
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_nodes.index = self.electric_grid_nodes['node_name']
+        self.electric_grid_nodes = (
+            self.electric_grid_nodes.reindex(index=natsort.natsorted(self.electric_grid_nodes.index))
+        )
+        self.electric_grid_ders = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_ders
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_ders.index = self.electric_grid_ders['der_name']
+        self.electric_grid_ders = (
+            self.electric_grid_ders.reindex(index=natsort.natsorted(self.electric_grid_ders.index))
+        )
+        self.electric_grid_lines = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_lines
+                JOIN electric_grid_line_types USING (line_type)
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_lines.index = self.electric_grid_lines['line_name']
+        self.electric_grid_lines = (
+            self.electric_grid_lines.reindex(index=natsort.natsorted(self.electric_grid_lines.index))
+        )
+        self.electric_grid_line_types = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_lines
+                    WHERE electric_grid_name = (
+                        SELECT electric_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_line_types.index = self.electric_grid_line_types['line_type']
+        self.electric_grid_line_types_overhead = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_overhead
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                    )
+                    AND definition_type = 'overhead'
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_line_types_overhead.index = self.electric_grid_line_types_overhead['line_type']
+        self.electric_grid_line_types_overhead_conductors = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_overhead_conductors
+                """,
+                con=database_connection
+            ))
+        )
+        self.electric_grid_line_types_overhead_conductors.index = self.electric_grid_line_types_overhead_conductors['conductor_id']
+        self.electric_grid_line_types_matrices = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_line_types_matrices
+                WHERE line_type IN (
+                    SELECT line_type FROM electric_grid_line_types
+                    WHERE line_type IN (
+                        SELECT line_type FROM electric_grid_lines
+                        WHERE electric_grid_name = (
+                            SELECT electric_grid_name FROM scenarios
+                            WHERE scenario_name = ?
+                        )
+                    )
+                    AND definition_type = 'matrix'
+                )
+                ORDER BY line_type ASC, row ASC, col ASC
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_transformers = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM electric_grid_transformers
+                LEFT JOIN electric_grid_transformer_types USING (transformer_type)
+                WHERE electric_grid_name = (
+                    SELECT electric_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.electric_grid_transformers.index = self.electric_grid_transformers['transformer_name']
+        self.electric_grid_transformers = (
+            self.electric_grid_transformers.reindex(index=natsort.natsorted(self.electric_grid_transformers.index))
+        )
+
+
+class ThermalGridData(object):
+    """Thermal grid data object."""
+
+    scenario_data: ScenarioData
+    thermal_grid: pd.DataFrame
+    thermal_grid_nodes: pd.DataFrame
+    thermal_grid_ders: pd.DataFrame
+    thermal_grid_lines: pd.DataFrame
+
+    def __init__(
+            self,
+            scenario_name: str,
+            database_connection=None
+    ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
+
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
+
+        self.thermal_grid = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM thermal_grids
+                JOIN der_cooling_plants ON der_cooling_plants.definition_name = thermal_grids.source_der_model_name
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            )).iloc[0]
+        )
+        self.thermal_grid_nodes = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_nodes
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.thermal_grid_nodes.index = self.thermal_grid_nodes['node_name']
+        self.thermal_grid_nodes = (
+            self.thermal_grid_nodes.reindex(index=natsort.natsorted(self.thermal_grid_nodes.index))
+        )
+        self.thermal_grid_ders = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_ders
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.thermal_grid_ders.index = self.thermal_grid_ders['der_name']
+        self.thermal_grid_ders = (
+            self.thermal_grid_ders.reindex(index=natsort.natsorted(self.thermal_grid_ders.index))
+        )
+        self.thermal_grid_lines = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM thermal_grid_lines
+                JOIN thermal_grid_line_types USING (line_type)
+                WHERE thermal_grid_name = (
+                    SELECT thermal_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name]
+            ))
+        )
+        self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
+        self.thermal_grid_lines = (
+            self.thermal_grid_lines.reindex(index=natsort.natsorted(self.thermal_grid_lines.index))
+        )
 
 
 class PriceData(object):

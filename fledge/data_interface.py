@@ -394,6 +394,82 @@ class DERData(object):
                 ]
             ))
         )
+
+        self.__init__(
+            scenario_name,
+            ders,
+            der_models,
+            database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+            der_type: str,
+            der_model_name: str,
+            database_connection=None
+    ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
+
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
+
+        # Obtain DERs.
+        ders = (
+            pd.DataFrame(
+                {
+                    'electric_grid_name': None,
+                    'thermal_grid_name': None,
+                    'der_name': der_model_name,
+                    'der_type': der_type,
+                    'der_model_name': der_model_name,
+                    'active_power_nominal': None,
+                    'reactive_power_nominal': None,
+                    'thermal_power_nominal': None
+                },
+                index=[0]
+            )
+        )
+        der_models = (
+            self.scenario_data.parse_parameters_dataframe(pd.read_sql(
+                """
+                SELECT * FROM der_models
+                WHERE der_type = ? 
+                AND der_model_name = ?
+                """,
+                con=database_connection,
+                params=[
+                    der_type,
+                    der_model_name
+                ]
+            ))
+        )
+
+        self.__init__(
+            scenario_name,
+            ders,
+            der_models,
+            database_connection
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str,
+            ders: pd.DataFrame,
+            der_models: pd.DataFrame,
+            database_connection=None
+    ):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection=connect_database()
+
+        # Obtain DERs.
         self.ders = (
             pd.merge(
                 ders,
@@ -408,6 +484,7 @@ class DERData(object):
         # Raise error, if any undefined DER models.
         # - That is: `der_model_name` is in `electric_grid_ders` or `thermal_grid_ders`, but not in `der_models`.
         # - Except for `flexible_building` models, which are defined through CoBMo.
+        # TODO: Output DER model names.
         if (
                 ~ders.loc[:, 'der_model_name'].isin(der_models.loc[:, 'der_model_name'])
                 & ~ders.loc[:, 'der_type'].isin(['flexible_building'])  # CoBMo models
@@ -959,6 +1036,7 @@ class ThermalGridData(object):
     thermal_grid_nodes: pd.DataFrame
     thermal_grid_ders: pd.DataFrame
     thermal_grid_lines: pd.DataFrame
+    der_data: DERData
 
     def __init__(
             self,
@@ -1038,6 +1116,16 @@ class ThermalGridData(object):
         self.thermal_grid_lines.index = self.thermal_grid_lines['line_name']
         self.thermal_grid_lines = (
             self.thermal_grid_lines.reindex(index=natsort.natsorted(self.thermal_grid_lines.index))
+        )
+
+        # Obtain DER data.
+        self.der_data = (
+            DERData(
+                scenario_name,
+                self.thermal_grid.at['source_der_type'],
+                self.thermal_grid.at['source_der_model_name'],
+                database_connection
+            )
         )
 
 

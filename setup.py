@@ -45,7 +45,7 @@ setuptools.setup(
         'parameterized',  # For tests.
         'plotly',
         'pyyaml',
-        'ray',
+        'ray[default]',
         'scipy',
     ]
 )

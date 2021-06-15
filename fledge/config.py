@@ -4,11 +4,11 @@ import diskcache
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
+import multiprocessing
 import os
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-import ray.util.multiprocessing
 import yaml
 
 
@@ -104,13 +104,14 @@ def get_logger(
     return logger
 
 
-def get_parallel_pool() -> ray.util.multiprocessing.Pool:
+def get_parallel_pool() -> multiprocessing.Pool:
     """Create multiprocessing / parallel computing pool.
 
     - Number of parallel processes / workers defaults to number of CPU threads as returned by `os.cpu_count()`.
     """
 
     # Obtain multiprocessing pool.
+    import ray.util.multiprocessing
     return ray.util.multiprocessing.Pool()
 
 

@@ -50,7 +50,7 @@ def main():
 
     optimization_problem_dro.delta_upper_bound = 1 * np.ones((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.u_upper_bound = 100 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.u_upper_bound = 1000000 * np.ones((len(delta_indices_stage2), 1))
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
@@ -1006,7 +1006,7 @@ def main():
         )
     print('define constr 40 b')
     # constr 40 b)
-    temp_40b = -C2_matrix + B2_matrix @ optimization_problem_dro.K_delta_s2
+    temp_40b = -C2_matrix - B2_matrix @ optimization_problem_dro.K_delta_s2
 
     for row_index in range(b2_vector.shape[0]):
         for price_category in price_categories:

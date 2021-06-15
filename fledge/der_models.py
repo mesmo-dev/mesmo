@@ -13,7 +13,6 @@ import typing
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
-import fledge.thermal_grid_models
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -24,6 +23,7 @@ class DERModel(object):
 
     der_type: str = None
     der_name: str
+    is_standalone: bool
     is_electric_grid_connected: bool
     is_thermal_grid_connected: bool
     electric_grid_der_index: typing.List[int]
@@ -39,7 +39,8 @@ class DERModel(object):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            is_standalone=False
     ):
 
         # Get shorthand for DER data.
@@ -49,6 +50,7 @@ class DERModel(object):
         self.der_name = der_name
 
         # Obtain grid connection flags.
+        self.is_standalone = is_standalone
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
 
@@ -96,18 +98,18 @@ class DERModel(object):
             )
             if 'per_unit' in der.at['definition_type']:
                 # If per unit definition, multiply nominal active / reactive power.
-                self.active_power_nominal_timeseries *= der.at['active_power_nominal']
-                self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+                self.active_power_nominal_timeseries *= self.active_power_nominal
+                self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['active_power_nominal'])
+                    np.sign(self.active_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(der.at['reactive_power_nominal'])
+                    np.sign(self.reactive_power_nominal)
                     * (
-                        der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                        if der.at['active_power_nominal'] != 0.0
+                        self.reactive_power_nominal / self.active_power_nominal
+                        if self.active_power_nominal != 0.0
                         else 1.0
                     )
                     / der_data.scenario_data.scenario.at['base_apparent_power']
@@ -135,10 +137,10 @@ class DERModel(object):
             )
             if 'per_unit' in der.at['definition_type']:
                 # If per unit definition, multiply nominal thermal power.
-                self.thermal_power_nominal_timeseries *= der.at['thermal_power_nominal']
+                self.thermal_power_nominal_timeseries *= self.thermal_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['thermal_power_nominal'])
+                    np.sign(self.thermal_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
         else:
@@ -313,12 +315,13 @@ class FixedLoadModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # If connected to both electric and thermal grid, raise error.
         if self.is_electric_grid_connected and self.is_thermal_grid_connected:
@@ -335,12 +338,13 @@ class FixedEVChargerModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # If connected to thermal grid, raise error.
         if self.is_electric_grid_connected and self.is_thermal_grid_connected:
@@ -358,11 +362,12 @@ class FixedGeneratorModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -672,12 +677,13 @@ class FlexibleLoadModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -730,8 +736,8 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['active_power', 'active_power'] = 1.0
             self.control_output_matrix.at['reactive_power', 'active_power'] = (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
+                self.reactive_power_nominal / self.active_power_nominal
+                if self.active_power_nominal != 0.0
                 else 0.0
             )
             self.disturbance_output_matrix = (
@@ -869,12 +875,13 @@ class FlexibleEVChargerModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -907,18 +914,18 @@ class FlexibleEVChargerModel(FlexibleDERModel):
             )
             if 'per_unit' in der.at['nominal_charging_definition_type']:
                 # If per unit definition, multiply nominal active / reactive power.
-                self.active_power_nominal_timeseries *= der.at['active_power_nominal']
-                self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+                self.active_power_nominal_timeseries *= self.active_power_nominal
+                self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['active_power_nominal'])
+                    np.sign(self.active_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(der.at['reactive_power_nominal'])
+                    np.sign(self.reactive_power_nominal)
                     * (
-                        der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                        if der.at['active_power_nominal'] != 0.0
+                        self.reactive_power_nominal / self.active_power_nominal
+                        if self.active_power_nominal != 0.0
                         else 1.0
                     )
                     / der_data.scenario_data.scenario.at['base_apparent_power']
@@ -991,13 +998,13 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
-            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            -1.0 * self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.disturbance_output_matrix = (
@@ -1053,11 +1060,12 @@ class FlexibleGeneratorModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1102,8 +1110,8 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['active_power', 'active_power'] = 1.0
             self.control_output_matrix.at['reactive_power', 'active_power'] = (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
+                self.reactive_power_nominal / self.active_power_nominal
+                if self.active_power_nominal != 0.0
                 else 0.0
             )
             self.disturbance_output_matrix = (
@@ -1200,11 +1208,12 @@ class StorageModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1279,13 +1288,13 @@ class StorageModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
-            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            -1.0 * self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.disturbance_output_matrix = (
@@ -1338,12 +1347,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1364,10 +1374,10 @@ class FlexibleBuildingModel(FlexibleDERModel):
         if self.is_electric_grid_connected:
             power_factor_nominal = (
                 np.cos(np.arctan(
-                    der.at['reactive_power_nominal']
-                    / der.at['active_power_nominal']
+                    self.reactive_power_nominal
+                    / self.active_power_nominal
                 ))
-                if ((der.at['active_power_nominal'] != 0.0) and (der.at['reactive_power_nominal'] != 0.0))
+                if ((self.active_power_nominal != 0.0) and (self.reactive_power_nominal != 0.0))
                 else 1.0
             )
 
@@ -1431,19 +1441,20 @@ class CoolingPlantModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :].copy()
         der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
         # Cooling plant must be connected to both thermal grid and electric grid.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise ValueError(f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
 
         # Obtain cooling plant efficiency.
@@ -1557,8 +1568,8 @@ class CoolingPlantModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
@@ -1579,14 +1590,14 @@ class CoolingPlantModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.DataFrame(
-                [[0.0, 0.0, der.at['thermal_power_nominal']]],
+                [[0.0, 0.0, self.thermal_power_nominal]],
                 index=self.timesteps,
                 columns=self.outputs
             )
         )
         self.output_minimum_timeseries = (
             pd.DataFrame(
-                [[der.at['active_power_nominal'], der.at['reactive_power_nominal'], 0.0]],
+                [[self.active_power_nominal, self.reactive_power_nominal, 0.0]],
                 index=self.timesteps,
                 columns=self.outputs
             )
@@ -1602,17 +1613,18 @@ class HeatPumpModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # If not connected to both thermal grid and electric grid, raise error.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise AssertionError(
                 f"Heat pump '{self.der_name}' must be connected to both thermal grid and electric grid."
             )
@@ -1666,8 +1678,8 @@ class HeatPumpModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.heat_pump_efficiency
@@ -1693,7 +1705,7 @@ class HeatPumpModel(FlexibleDERModel):
                     * self.reactive_power_nominal_timeseries
                 ),
                 (
-                    der.at['thermal_power_nominal']
+                    self.thermal_power_nominal
                     * self.thermal_power_nominal_timeseries
                 )
             ], axis ='columns')
@@ -1726,17 +1738,18 @@ class FlexibleCHP(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # If not connected to both thermal grid and electric grid, raise error.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise AssertionError(
                 f"CHP '{self.der_name}' must be connected to both thermal grid and electric grid."
             )
@@ -1795,8 +1808,8 @@ class FlexibleCHP(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
@@ -2159,8 +2172,8 @@ class DERModelSet(DERModelSetBase):
 
 
 def make_der_models(
-    der_names: typing.List[str],
-    der_data: fledge.data_interface.DERData
+        der_names: typing.List[str],
+        der_data: fledge.data_interface.DERData
 ) -> typing.Dict[str, DERModel]:
 
     der_models = dict.fromkeys(der_names)
@@ -2172,8 +2185,9 @@ def make_der_models(
 
 
 def make_der_model(
-    der_name: str,
-    der_data: fledge.data_interface.DERData
+        der_name: str,
+        der_data: fledge.data_interface.DERData,
+        is_standalone=False
 ) -> DERModel:
     """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
 
@@ -2188,7 +2202,7 @@ def make_der_model(
     # Obtain DER model for given `der_type`.
     for der_model_class_name, der_model_class in der_model_classes:
         if der_type == der_model_class.der_type:
-            return der_model_class(der_data, der_name)
+            return der_model_class(der_data, der_name, is_standalone=is_standalone)
 
     # Raise error, if no DER model class found for given `der_type`.
     raise ValueError(

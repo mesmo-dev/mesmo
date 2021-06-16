@@ -483,9 +483,9 @@ def stage_1_problem_standard_form(scenario_name):
     )
 
     f_vector = np.zeros((len(standard_form.variables), 1))
-    f_vector[x_index_energy, 0] = np.array([price_timeseries_energy])
-    f_vector[x_index_up_reserve, 0] = -0.1 * np.array([price_timeseries_energy])
-    f_vector[x_index_down_reserve, 0] = -1.1 * np.array([price_timeseries_energy])
+    f_vector[x_index_energy, 0] = - np.array([price_timeseries_energy])
+    f_vector[x_index_up_reserve, 0] = 0.1 * np.array([price_timeseries_energy])
+    f_vector[x_index_down_reserve, 0] = 1.1 * np.array([price_timeseries_energy])
 
     # optimization_problem.objective += (
     #     (
@@ -530,7 +530,7 @@ def main():
     optimization_problem.constraints.append(
         a_matrix.toarray() @ optimization_problem.x_vector <= b_vector
     )
-    optimization_problem.objective += (
+    optimization_problem.objective -= (
             (
                 f_vector.T
                 @ optimization_problem.x_vector

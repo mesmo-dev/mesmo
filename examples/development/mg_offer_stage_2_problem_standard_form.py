@@ -609,7 +609,7 @@ def main():
     optimization_problem_stage_1.constraints.append(
         a_matrix.toarray() @ optimization_problem_stage_1.x_vector <= b_vector
     )
-    optimization_problem_stage_1.objective += (
+    optimization_problem_stage_1.objective -= (
         (
                 f_vector.T
                 @ optimization_problem_stage_1.x_vector
@@ -659,7 +659,7 @@ def main():
          == 0
     )
 
-    optimization_problem_stage_2.objective += (
+    optimization_problem_stage_2.objective -= (
    #     (
    #         optimization_problem_stage_2.s_1.T @ M_Q2_delta @ optimization_problem_stage_2.delta
    #    ) +

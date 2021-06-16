@@ -44,13 +44,13 @@ def main():
 
     # TODO: we need proper initialization of DRO data
     # constants
-    optimization_problem_dro.gamma = 300*np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.gamma = 30*np.ones((len(delta_indices_stage2), 1))
 
     optimization_problem_dro.delta_lower_bound = - 1 * np.ones((len(delta_indices_stage2), 1))
 
     optimization_problem_dro.delta_upper_bound = 1 * np.ones((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.u_upper_bound = 1000000 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.u_upper_bound = 1000 * np.ones((len(delta_indices_stage2), 1))
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
@@ -124,6 +124,15 @@ def main():
     optimization_problem_dro.constraints.append(
         optimization_problem_dro.beta >= 0
     )
+
+    # optimization_problem_dro.constraints.append(
+    #     optimization_problem_dro.k_0_s2 == 0
+    # )
+    #
+    # optimization_problem_dro.constraints.append(
+    #     optimization_problem_dro.k_0_s3 == 0
+    # )
+
 
     print('define constr 35 (a-d)')
     # constr 35a)
@@ -2073,7 +2082,7 @@ def main():
                                 )
                             )
 
-    optimization_problem_dro.objective += (
+    optimization_problem_dro.objective -= (
         (
             f_vector.T
             @ optimization_problem_dro.s1_vector

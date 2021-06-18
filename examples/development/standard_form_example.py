@@ -119,23 +119,11 @@ def main():
             constant=0.0
         )
 
-    a_matrix = standard_form.get_a_matrix()
-    b_vector = standard_form.get_b_vector()
-    c_vector = standard_form.get_c_vector()
-
-    # Instantiate optimization problem.
-    optimization_problem_1 = fledge.utils.OptimizationProblem()
-    optimization_problem_1.x_vector = cp.Variable((len(standard_form.variables), 1))
-    optimization_problem_1.constraints.append(
-        a_matrix.toarray() @ optimization_problem_1.x_vector <= b_vector
-    )
-    optimization_problem_1.objective += c_vector @ optimization_problem_1.x_vector
-
     # Solve optimization problem.
-    optimization_problem_1.solve()
+    standard_form.solve()
 
     # Obtain results.
-    results_1 = standard_form.get_results(optimization_problem_1.x_vector)
+    results_1 = standard_form.get_results()
 
     # Instantiate optimization problem.
     optimization_problem_2 = fledge.utils.OptimizationProblem()

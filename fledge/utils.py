@@ -230,6 +230,7 @@ class StandardForm(object):
     b_dict: dict
     c_dict: dict
     c_constant: float
+    x_vector: cp.Variable
 
     def __init__(self):
 
@@ -524,10 +525,41 @@ class StandardForm(object):
 
         return c_vector
 
+    def solve(
+            self,
+            keep_problem=False,
+            **kwargs
+    ):
+
+        # Instantiate CVXPY problem.
+        self.x_vector = cp.Variable((len(self.variables), 1))
+        constraints = [self.get_a_matrix().toarray() @ self.x_vector <= self.get_b_vector()]  # TODO: Remove toarray().
+        objective = self.get_c_vector() @ self.x_vector
+        cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
+
+        # Solve optimization problem.
+        cvxpy_problem.solve(
+            solver=(
+                fledge.config.config['optimization']['solver_name'].upper()
+                if fledge.config.config['optimization']['solver_name'] is not None
+                else None
+            ),
+            verbose=fledge.config.config['optimization']['show_solver_output'],
+            **kwargs,
+            **fledge.config.solver_parameters
+        )
+
+        # Assert that solver exited with an optimal solution. If not, raise an error.
+        if not (cvxpy_problem.status == cp.OPTIMAL):
+            raise cp.SolverError(f"Solver termination status: {cvxpy_problem.status}")
+
     def get_results(
         self,
-        x_vector: cp.Variable
+        x_vector: cp.Variable = None
     ) -> dict:
+
+        # Obtain x vector.
+        x_vector = x_vector if x_vector is not None else self.x_vector
 
         # Instantiate results object.
         results = {}

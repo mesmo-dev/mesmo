@@ -230,7 +230,7 @@ class StandardForm(object):
     b_dict: dict
     c_dict: dict
     c_constant: float
-    x_vector: cp.Variable
+    x_vector: np.ndarray
 
     def __init__(self):
 
@@ -525,16 +525,24 @@ class StandardForm(object):
 
         return c_vector
 
-    def solve(
-            self,
-            keep_problem=False,
-            **kwargs
-    ):
+    def solve(self):
+
+        if fledge.config.config['optimization']['solver_name'] == 'gurobi':
+            self.solve_gurobi()
+        else:
+            self.solve_cvxpy()
+
+    def solve_gurobi(self):
+
+        # TODO: Implement gurobi interface.
+        raise NotImplementedError
+
+    def solve_cvxpy(self):
 
         # Instantiate CVXPY problem.
-        self.x_vector = cp.Variable((len(self.variables), 1))
-        constraints = [self.get_a_matrix().toarray() @ self.x_vector <= self.get_b_vector()]  # TODO: Remove toarray().
-        objective = self.get_c_vector() @ self.x_vector
+        x_vector = cp.Variable((len(self.variables), 1))
+        constraints = [self.get_a_matrix().toarray() @ x_vector <= self.get_b_vector()]  # TODO: Remove toarray().
+        objective = self.get_c_vector() @ x_vector
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
 
         # Solve optimization problem.
@@ -545,7 +553,6 @@ class StandardForm(object):
                 else None
             ),
             verbose=fledge.config.config['optimization']['show_solver_output'],
-            **kwargs,
             **fledge.config.solver_parameters
         )
 
@@ -553,13 +560,19 @@ class StandardForm(object):
         if not (cvxpy_problem.status == cp.OPTIMAL):
             raise cp.SolverError(f"Solver termination status: {cvxpy_problem.status}")
 
+        # Store result.
+        self.x_vector = x_vector.value
+
     def get_results(
         self,
-        x_vector: cp.Variable = None
+        x_vector: typing.Union[cp.Variable, np.ndarray] = None
     ) -> dict:
 
         # Obtain x vector.
-        x_vector = x_vector if x_vector is not None else self.x_vector
+        if x_vector is None:
+            x_vector = self.x_vector
+        elif type(x_vector) is cp.Variable:
+            x_vector = x_vector.value
 
         # Instantiate results object.
         results = {}
@@ -582,7 +595,7 @@ class StandardForm(object):
             # Get results.
             for timestep in timesteps:
                 results[name].loc[timestep, :] = (
-                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0].value
+                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0]
                 )
 
         return results

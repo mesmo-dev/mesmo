@@ -222,12 +222,14 @@ class OptimizationProblem(object):
 
 
 class StandardForm(object):
-    """Standard form object for linear program, which is defined as ``A @ x <= b``."""
+    """Standard form object for linear program, with objective ``min(c @ x)`` and constraints ``A @ x <= b``."""
 
     variables: pd.Index
     constraints: pd.Index
     a_dict: dict
     b_dict: dict
+    c_dict: dict
+    c_constant: float
 
     def __init__(self):
 
@@ -237,10 +239,14 @@ class StandardForm(object):
         self.variables = pd.MultiIndex.from_arrays([[], []], names=['name', 'timestep'])
         self.constraints = pd.Index([], name='constraint_id')
 
-        # Instantiate A matrix / b vector dictionaries.
-        # - Final matrix / vector are only created in ``get_a_matrix()`` and ``get_b_vector()``.
+        # Instantiate A matrix / b vector / c vector dictionaries.
+        # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``.
         self.a_dict = dict()
         self.b_dict = dict()
+        self.c_dict = dict()
+
+        # Instantiate c constant base.
+        self.c_constant = 0.0
 
     def define_variable(
             self,
@@ -386,7 +392,7 @@ class StandardForm(object):
             if type(constant) is not float:
                 # Raise error if constant is not a column vector (n, 1) or flat array (n, ).
                 if len(np.shape(constant)) > 1:
-                    if np.shape(constant)[0] < np.shape(constant)[1]:
+                    if np.shape(constant)[1] > 1:
                         raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
                 dimension_constant = len(constant)
             else:
@@ -429,6 +435,59 @@ class StandardForm(object):
         else:
             ValueError(f"Invalid constraint operator: {operator}")
 
+    def define_objective_low_level(
+            self,
+            variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
+            constant: float
+    ):
+
+        # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
+        if type(constant) is not float:
+            if np.shape(constant) not in [(1, ), (1, 1)]:
+                raise ValueError(f"Objective constant must be scalar (1, 1).")
+
+        # Add c constant value.
+        self.c_constant += constant
+
+        # Append c vector entries.
+        for variable in variables:
+
+            # If any variable key values are empty, ignore variable & do not add any c vector entry.
+            for key_value in variable[1].values():
+                if isinstance(key_value, (list, tuple, pd.Index, np.ndarray)):
+                    if len(key_value) == 0:
+                        continue  # Skip variable & go to next iteration.
+
+            # Obtain variable index & raise error if variable or key does not exist.
+            variable_index = (
+                tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))
+            )
+
+            # Obtain c vector entries.
+            # - Scalar values are multiplied with row vector of ones of appropriate size.
+            if len(np.shape(variable[0])) == 0:
+                c_entry = variable[0] * np.ones((1, len(variable_index)))
+            else:
+                c_entry = variable[0]
+
+            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
+            if len(np.shape(constant)) > 1:
+                if np.shape(constant)[0] > 1:
+                    raise ValueError(
+                        f"Objective factor must be row vector (1, n), not column vector (n, 1) nor matrix (m, n)."
+                    )
+
+            # Raise error if variable dimensions are inconsistent.
+            if (
+                    np.shape(c_entry)[1] != len(variable_index)
+                    if len(np.shape(constant)) > 1
+                    else np.shape(c_entry)[0] != len(variable_index)
+            ):
+                raise ValueError(f"Objective factor dimension mismatch at variable: {variable[1]}")
+
+            # Add c vector entries to dictionary.
+            self.c_dict[variable_index] = c_entry
+
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
         # Instantiate sparse matrix.
@@ -453,6 +512,17 @@ class StandardForm(object):
             b_vector[np.ix_(constraint_index), 0] += self.b_dict[constraint_index]
 
         return b_vector
+
+    def get_c_vector(self) -> np.ndarray:
+
+        # Instantiate array.
+        c_vector = np.zeros((1, len(self.variables)))
+
+        # Fill vector entries.
+        for variable_index in self.c_dict:
+            c_vector[0, np.ix_(variable_index)] += self.c_dict[variable_index]
+
+        return c_vector
 
     def get_results(
         self,

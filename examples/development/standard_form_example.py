@@ -95,16 +95,6 @@ def main():
             ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values),
         )
 
-    a_matrix = standard_form.get_a_matrix()
-    b_vector = standard_form.get_b_vector()
-
-    # Instantiate optimization problem.
-    optimization_problem_1 = fledge.utils.OptimizationProblem()
-    optimization_problem_1.x_vector = cp.Variable((len(standard_form.variables), 1))
-    optimization_problem_1.constraints.append(
-        a_matrix.toarray() @ optimization_problem_1.x_vector <= b_vector
-    )
-
     # Obtain timestep interval in hours, for conversion of power to energy.
     timestep_interval_hours = (der_model.timesteps[1] - der_model.timesteps[0]) / pd.Timedelta('1h')
 
@@ -112,25 +102,34 @@ def main():
     # Active power cost / revenue.
     # - Cost for load / demand, revenue for generation / supply.
     for timestep in der_model.timesteps:
-        x_index = fledge.utils.get_index(standard_form.variables, name='output_vector', timestep=timestep)
-        optimization_problem_1.objective += (
-            (
+
+        standard_form.define_objective_low_level(
+            variables=[(
                 price_data.price_timeseries.loc[timestep, ('active_power', slice(None), der_model.der_name)].values
                 * -1.0 * timestep_interval_hours  # In Wh.
-                @ (
-                    der_model.mapping_active_power_by_output.values
-                    @ optimization_problem_1.x_vector[x_index, :]
-                )
-            )
-            + ((
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours  # In Wh.
-                * cp.sum((
-                    der_model.mapping_active_power_by_output.values
-                    @ optimization_problem_1.x_vector[x_index, :]
-                ) ** 2)
-            ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+                @ der_model.mapping_active_power_by_output.values,
+                dict(name='output_vector', timestep=timestep)
+            ),],
+            # variables_quadractic=[(
+            #     price_data.price_sensitivity_coefficient
+            #     * timestep_interval_hours,  # In Wh.
+            #     der_model.mapping_active_power_by_output.values,
+            #     dict(name='output_vector', timestep=timestep)
+            # ),],
+            constant=0.0
         )
+
+    a_matrix = standard_form.get_a_matrix()
+    b_vector = standard_form.get_b_vector()
+    c_vector = standard_form.get_c_vector()
+
+    # Instantiate optimization problem.
+    optimization_problem_1 = fledge.utils.OptimizationProblem()
+    optimization_problem_1.x_vector = cp.Variable((len(standard_form.variables), 1))
+    optimization_problem_1.constraints.append(
+        a_matrix.toarray() @ optimization_problem_1.x_vector <= b_vector
+    )
+    optimization_problem_1.objective += c_vector @ optimization_problem_1.x_vector
 
     # Solve optimization problem.
     optimization_problem_1.solve()
@@ -224,14 +223,14 @@ def main():
                 @ cp.transpose(optimization_problem_2.output_vector[der_model.der_name])
             )
         )
-        + ((
-            price_data.price_sensitivity_coefficient
-            * timestep_interval_hours  # In Wh.
-            * cp.sum((
-                der_model.mapping_active_power_by_output.values
-                @ cp.transpose(optimization_problem_2.output_vector[der_model.der_name])
-            ) ** 2)
-        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+        # + ((
+        #     price_data.price_sensitivity_coefficient
+        #     * timestep_interval_hours  # In Wh.
+        #     * cp.sum((
+        #         der_model.mapping_active_power_by_output.values
+        #         @ cp.transpose(optimization_problem_2.output_vector[der_model.der_name])
+        #     ) ** 2)
+        # ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
     )
 
     # Solve optimization problem.

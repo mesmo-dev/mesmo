@@ -2,6 +2,8 @@
 
 import copy
 import cvxpy as cp
+import gurobipy as gp
+from gurobipy import GRB
 import datetime
 import functools
 import glob
@@ -534,8 +536,33 @@ class StandardForm(object):
 
     def solve_gurobi(self):
 
-        # TODO: Implement gurobi interface.
         raise NotImplementedError
+
+        # TODO: this is not working yet, for some reason it returns an infeasible model
+        # Create a new model
+        # A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
+        # and the associated attributes
+        gurobipy_problem = gp.Model()
+
+        # Add x_vector as matrix variable MVar
+        # you will generally need to slice a multi-dimensional array into 1-D objects to use an MVar to build constraints
+        x_vector = gurobipy_problem.addMVar(shape=(len(self.variables), ), vtype=GRB.CONTINUOUS, name='x_vector')
+
+        # Set the objective
+        expr = self.get_c_vector() @ x_vector
+        gurobipy_problem.setObjective(expr, GRB.MINIMIZE)
+
+        # Get right hand side (RHS) as 1-D array
+        b = self.get_b_vector().ravel()
+
+        # Add a Gurobi matrix constraint object MConstr
+        constraints = self.get_a_matrix() @ x_vector <= b
+        gurobipy_problem.addConstr(constraints, name='constraints')
+
+        # gurobipy_problem.update()
+
+        gurobipy_problem.optimize()
+
 
     def solve_cvxpy(self):
 

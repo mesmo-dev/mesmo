@@ -538,7 +538,7 @@ class StandardForm(object):
 
         # Instantiate Gurobi model.
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
-        # and the associated attributes.
+        #   and the associated attributes.
         gurobipy_problem = gp.Model()
 
         # Define variables.
@@ -590,10 +590,16 @@ class StandardForm(object):
 
     def solve_cvxpy(self):
 
-        # Instantiate CVXPY problem.
+        # Define variables.
         x_vector = cp.Variable((len(self.variables), 1))
-        constraints = [self.get_a_matrix().toarray() @ x_vector <= self.get_b_vector()]  # TODO: Remove toarray().
+
+        # Define constraints.
+        constraints = [self.get_a_matrix() @ x_vector <= self.get_b_vector()]
+
+        # Define objective.
         objective = self.get_c_vector() @ x_vector
+
+        # Instantiate CVXPY problem.
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
 
         # Solve optimization problem.

@@ -492,6 +492,9 @@ class StandardForm(object):
 
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
+        # Log time.
+        log_time('get standard-form A matrix')
+
         # Instantiate sparse matrix.
         a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=float)
 
@@ -502,9 +505,15 @@ class StandardForm(object):
         # Convert to CSR matrix.
         a_matrix = a_matrix.tocsr(copy=True)
 
+        # Log time.
+        log_time('get standard-form A matrix')
+
         return a_matrix
 
     def get_b_vector(self) -> np.ndarray:
+
+        # Log time.
+        log_time('get standard-form b vector')
 
         # Instantiate array.
         b_vector = np.zeros((len(self.constraints), 1))
@@ -513,9 +522,15 @@ class StandardForm(object):
         for constraint_index in self.b_dict:
             b_vector[np.ix_(constraint_index), 0] += self.b_dict[constraint_index]
 
+        # Log time.
+        log_time('get standard-form b vector')
+
         return b_vector
 
     def get_c_vector(self) -> np.ndarray:
+
+        # Log time.
+        log_time('get standard-form c vector')
 
         # Instantiate array.
         c_vector = np.zeros((1, len(self.variables)))
@@ -523,6 +538,9 @@ class StandardForm(object):
         # Fill vector entries.
         for variable_index in self.c_dict:
             c_vector[0, np.ix_(variable_index)] += self.c_dict[variable_index]
+
+        # Log time.
+        log_time('get standard-form c vector')
 
         return c_vector
 

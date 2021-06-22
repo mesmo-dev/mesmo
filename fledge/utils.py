@@ -3,7 +3,6 @@
 import copy
 import cvxpy as cp
 import gurobipy as gp
-from gurobipy import GRB
 import datetime
 import functools
 import glob
@@ -540,6 +539,7 @@ class StandardForm(object):
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
         #   and the associated attributes.
         gurobipy_problem = gp.Model()
+        gurobipy_problem.setParam('OutputFlag', int(fledge.config.config['optimization']['show_solver_output']))
 
         # Define variables.
         # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).

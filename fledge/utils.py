@@ -536,33 +536,57 @@ class StandardForm(object):
 
     def solve_gurobi(self):
 
-        raise NotImplementedError
-
-        # TODO: this is not working yet, for some reason it returns an infeasible model
-        # Create a new model
-        # A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
-        # and the associated attributes
+        # Instantiate Gurobi model.
+        # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
+        # and the associated attributes.
         gurobipy_problem = gp.Model()
 
-        # Add x_vector as matrix variable MVar
-        # you will generally need to slice a multi-dimensional array into 1-D objects to use an MVar to build constraints
-        x_vector = gurobipy_problem.addMVar(shape=(len(self.variables), ), vtype=GRB.CONTINUOUS, name='x_vector')
+        # Define variables.
+        # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).
+        # - Lower bound defaults to 0 and needs to be explicitly overwritten.
+        x_vector = (
+            gurobipy_problem.addMVar(
+                shape=(len(self.variables), ),
+                lb=-np.inf,
+                ub=np.inf,
+                vtype=gp.GRB.CONTINUOUS,
+                name='x_vector'
+            )
+        )
 
-        # Set the objective
-        expr = self.get_c_vector() @ x_vector
-        gurobipy_problem.setObjective(expr, GRB.MINIMIZE)
-
-        # Get right hand side (RHS) as 1-D array
-        b = self.get_b_vector().ravel()
-
-        # Add a Gurobi matrix constraint object MConstr
-        constraints = self.get_a_matrix() @ x_vector <= b
+        # Define constraints.
+        # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
+        constraints = self.get_a_matrix() @ x_vector <= self.get_b_vector().ravel()
         gurobipy_problem.addConstr(constraints, name='constraints')
+        # TODO: Use alternative / explicit expression or not?
+        # gurobipy_problem.addMConstr(
+        #     A=self.get_a_matrix(),
+        #     x=x_vector,
+        #     sense='<=',
+        #     b=b_vector,
+        #     name='constraints'
+        # )
 
-        # gurobipy_problem.update()
+        # Define objective.
+        # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
+        objective = self.get_c_vector().ravel() @ x_vector
+        gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
+        # TODO: Use alternative / explicit expression or not?
+        # gurobipy_problem.setMObjective(
+        #     Q=None,
+        #     c=self.get_c_vector().ravel(),
+        #     constant=0.0,
+        #     xQ_L=None,
+        #     xQ_R=None,
+        #     xc=x_vector,
+        #     sense=gp.GRB.MINIMIZE
+        # )
 
+        # Solve optimization problem.
         gurobipy_problem.optimize()
 
+        # Store result.
+        self.x_vector = np.transpose([x_vector.getAttr('x')])
 
     def solve_cvxpy(self):
 

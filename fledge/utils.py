@@ -832,7 +832,7 @@ def log_time(
 
 
 def get_index(
-        index_set: pd.Index,
+        index_set: typing.Union[pd.Index, pd.DataFrame],
         raise_empty_index_error: bool = True,
         **levels_values
 ):
@@ -852,6 +852,15 @@ def get_index(
             must correspond to a level name of the index set.
     """
 
+    # Define handle for get_level_values() depending on index set type.
+    if issubclass(type(index_set), pd.Index):
+        get_level_values = lambda level: index_set.get_level_values(level)
+    elif issubclass(type(index_set), pd.DataFrame):
+        # get_level_values = lambda level: index_set.get(level, pd.Series(index=index_set.index, name=level))
+        get_level_values = lambda level: index_set.loc[:, level]
+    else:
+        raise TypeError(f"Invalid index set type: {type(index_set)}")
+
     # Obtain mask for each level / values combination keyword arguments.
     mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
@@ -862,7 +871,7 @@ def get_index(
         elif isinstance(values, tuple):
             # If values are passed as tuple, wrap in list, but only if index
             # level values are tuples. Otherwise, convert to list.
-            if isinstance(index_set.get_level_values(level).dropna()[0], tuple):
+            if isinstance(get_level_values(level).dropna()[0], tuple):
                 values = [values]
             else:
                 values = list(values)
@@ -878,7 +887,7 @@ def get_index(
             values = [values]
 
         # Obtain mask.
-        mask &= index_set.get_level_values(level).isin(values)
+        mask &= get_level_values(level).isin(values)
 
     # Obtain integer index array.
     index = np.flatnonzero(mask)

@@ -601,8 +601,8 @@ class DERData(object):
             timestep_frequency = 'h'
 
         # Load DER definitions, for timeseries / schedule definitions, for each `definition_name`.
-        fledge.utils.log_time('load DER timeseries / schedule definitions')
         if len(self.der_definitions) > 0:
+            fledge.utils.log_time('load DER timeseries / schedule definitions')
             der_definitions = (
                 fledge.utils.starmap(
                     self.load_der_timeseries_schedules,

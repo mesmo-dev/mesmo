@@ -226,7 +226,7 @@ class StandardForm(object):
     """Standard form object for linear program, with objective ``min(c @ x)`` and constraints ``A @ x <= b``."""
 
     variables: pd.Index
-    constraints: pd.Index
+    constraints: pd.DataFrame
     a_dict: dict
     b_dict: dict
     c_dict: dict
@@ -238,9 +238,9 @@ class StandardForm(object):
 
         # Instantiate index sets.
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
-        # - Constraints are instantiated with 'constraint_id' keys.
+        # - Constraints are instantiated with 'name' and 'bound' keys, but more may be added in ``define_constraint()``.
         self.variables = pd.MultiIndex.from_arrays([[], []], names=['name', 'timestep'])
-        self.constraints = pd.Index([], name='constraint_id')
+        self.constraints = pd.DataFrame(columns=['name', 'bound'])
 
         # Instantiate A matrix / b vector / c vector dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``.
@@ -281,7 +281,8 @@ class StandardForm(object):
             *elements: typing.Union[str, typing.Union[
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]
-            ]]
+            ]],
+            **kwargs
     ):
 
         # Instantiate constraint element aggregation variables.
@@ -354,15 +355,32 @@ class StandardForm(object):
         self.define_constraint_low_level(
             variables,
             operator,
-            constant
+            constant,
+            **kwargs
         )
 
     def define_constraint_low_level(
             self,
             variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
             operator: str,
-            constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix]
+            constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix],
+            keys: dict = None
     ):
+
+        # Run checks for constraint index keys.
+        if keys is not None:
+
+            # Raise error if ``keys`` is not a dictionary.
+            if type(keys) is not dict:
+                raise TypeError(f"Constraint `keys` parameter must be a dictionary, but instead is: {type(keys)}")
+
+            # Raise error if no 'name' key was defined.
+            if 'name' not in keys.keys():
+                raise ValueError(f"'name' key is required in constraint `keys` dictionary. Only found: {keys.keys()}")
+
+            # Raise warning if using reserved 'bound' key in equality constraint index keys.
+            if ('bound' in keys.keys()) and operator in ['==']:
+                logger.warning("'bound' key is reserved in constraint `keys` dictionary and will be overwritten.")
 
         # For equality constraint, convert to upper / lower inequality.
         if operator in ['==']:
@@ -371,14 +389,16 @@ class StandardForm(object):
             self.define_constraint_low_level(
                 variables,
                 '>=',
-                constant
+                constant,
+                keys.update(dict(bound='upper')) if keys is not None else None
             )
 
             # Define lower inequality.
             self.define_constraint_low_level(
                 variables,
                 '<=',
-                constant
+                constant,
+                keys.update(dict(bound='lower')) if keys is not None else None
             )
 
         # For inequality constraint, add into A matrix / b vector dictionaries.
@@ -390,18 +410,20 @@ class StandardForm(object):
             else:
                 factor = 1.0
 
-            # Obtain constraint index.
-            # - Dimension of constraint is based on dimension of `constant`.
+            # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
             if type(constant) is not float:
-                # Raise error if constant is not a column vector (n, 1) or flat array (n, ).
                 if len(np.shape(constant)) > 1:
                     if np.shape(constant)[1] > 1:
                         raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
+
+            # Obtain constant dimension.
+            if type(constant) is not float:
                 dimension_constant = len(constant)
             else:
                 dimension_constant = 1
+
+            # Obtain constraint integer index based on constant dimension.
             constraint_index = tuple(range(len(self.constraints), len(self.constraints) + dimension_constant))
-            self.constraints = self.constraints.append(pd.Index(constraint_index, name='constraint_id'))
 
             # Append b vector entry.
             self.b_dict[constraint_index] = factor * constant
@@ -415,7 +437,7 @@ class StandardForm(object):
                         if len(key_value) == 0:
                             continue  # Skip variable & go to next iteration.
 
-                # Obtain variable index & raise error if variable or key does not exist.
+                # Obtain variable integer index & raise error if variable or key does not exist.
                 variable_index = (
                     tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))
                 )
@@ -433,6 +455,30 @@ class StandardForm(object):
 
                 # Add A matrix entries to dictionary.
                 self.a_dict[constraint_index, variable_index] = factor * a_entry
+
+            # Append constraints index entries.
+            if keys is not None:
+                # Obtain new constraints based on ``keys``.
+                new_constraints = (
+                    pd.DataFrame(itertools.product(*[
+                        list(value)
+                        if type(value) in [pd.Index, pd.DatetimeIndex, list, tuple]
+                        else [value]
+                        for value in keys.values()
+                    ]), index=constraint_index, columns=keys.keys())
+                )
+                # Raise error if key set dimension does not align with constant dimension.
+                if len(new_constraints) != dimension_constant:
+                    raise ValueError(
+                        f"Constraint key set dimension ({len(new_constraints)})"
+                        f" does not align with constant dimension ({dimension_constant})."
+                    )
+            else:
+                # Obtain empty dataframe of appropriate size, if no ``keys`` defined.
+                new_constraints = pd.DataFrame(index=constraint_index)
+
+            # Add new constraints to index.
+            self.constraints = self.constraints.append(new_constraints)
 
         # Raise error for invalid operator.
         else:

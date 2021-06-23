@@ -92,11 +92,13 @@ def main():
                 ('variable', 1.0, dict(name='output_vector', timestep=timestep, der_name=der_name)),
                 '>=',
                 ('constant', der_model.output_minimum_timeseries.loc[timestep, :].values),
+                keys=dict(name='output_minimum', timestep=timestep, output=der_model.outputs, der_name=der_name)
             )
             standard_form.define_constraint(
                 ('variable', 1.0, dict(name='output_vector', timestep=timestep, der_name=der_name)),
                 '<=',
                 ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values),
+                keys=dict(name='output_maximum', timestep=timestep, output=der_model.outputs, der_name=der_name)
             )
 
         # Obtain timestep interval in hours, for conversion of power to energy.

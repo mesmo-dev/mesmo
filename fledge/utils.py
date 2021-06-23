@@ -225,7 +225,7 @@ class OptimizationProblem(object):
 class StandardForm(object):
     """Standard form object for linear program, with objective ``min(c @ x)`` and constraints ``A @ x <= b``."""
 
-    variables: pd.Index
+    variables: pd.DataFrame
     constraints: pd.DataFrame
     a_dict: dict
     b_dict: dict
@@ -239,7 +239,7 @@ class StandardForm(object):
         # Instantiate index sets.
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
         # - Constraints are instantiated with 'name' and 'bound' keys, but more may be added in ``define_constraint()``.
-        self.variables = pd.MultiIndex.from_arrays([[], []], names=['name', 'timestep'])
+        self.variables = pd.DataFrame(columns=['name', 'timestep'])
         self.constraints = pd.DataFrame(columns=['name', 'bound'])
 
         # Instantiate A matrix / b vector / c vector dictionaries.
@@ -257,24 +257,17 @@ class StandardForm(object):
             **keys
     ):
 
-        # Add new key names to index, if any.
-        for key_name in keys.keys():
-            if key_name not in self.variables.names:
-                names = [*self.variables.names, key_name]
-                self.variables = (
-                    pd.MultiIndex.from_arrays([[] for name in names], names=names).join(self.variables, how='outer')
-                )
-
-        # Add new variable to index.
-        self.variables = (
-            pd.MultiIndex.from_frame(pd.concat([
-                self.variables.to_frame(),
-                pd.MultiIndex.from_product(
-                    [[name], *[list(value) for value in keys.values()]],
-                    names=['name', *keys.keys()]
-                ).to_frame()
-            ], axis='index', ignore_index=True))
+        # Obtain new variables based on ``keys``.
+        new_variables = (
+            pd.DataFrame(itertools.product([name], *[
+                list(value)
+                if type(value) in [pd.Index, pd.DatetimeIndex, list, tuple]
+                else [value]
+                for value in keys.values()
+            ]), columns=['name', *keys.keys()])
         )
+        # Add new variables to index.
+        self.variables = pd.concat([self.variables, new_variables], ignore_index=True)
 
     def define_constraint(
             self,
@@ -465,7 +458,7 @@ class StandardForm(object):
                         if type(value) in [pd.Index, pd.DatetimeIndex, list, tuple]
                         else [value]
                         for value in keys.values()
-                    ]), index=constraint_index, columns=keys.keys())
+                    ]), columns=keys.keys())
                 )
                 # Raise error if key set dimension does not align with constant dimension.
                 if len(new_constraints) != dimension_constant:
@@ -478,7 +471,7 @@ class StandardForm(object):
                 new_constraints = pd.DataFrame(index=constraint_index)
 
             # Add new constraints to index.
-            self.constraints = self.constraints.append(new_constraints)
+            self.constraints = self.constraints.append(new_constraints, ignore_index=True)
 
         # Raise error for invalid operator.
         else:
@@ -702,12 +695,13 @@ class StandardForm(object):
         results = {}
 
         # Obtain results for each variable.
-        for name in self.variables.get_level_values('name').unique():
+        variables = pd.MultiIndex.from_frame(self.variables)
+        for name in variables.get_level_values('name').unique():
 
             # Obtain indexes.
-            variable_index = fledge.utils.get_index(self.variables, name=name)
-            timesteps = self.variables[variable_index].get_level_values('timestep').unique()
-            columns = self.variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
+            variable_index = fledge.utils.get_index(variables, name=name)
+            timesteps = variables[variable_index].get_level_values('timestep').unique()
+            columns = variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
             if len(columns.columns) > 0:
                 columns = pd.MultiIndex.from_frame(columns)
             else:
@@ -719,7 +713,7 @@ class StandardForm(object):
             # Get results.
             for timestep in timesteps:
                 results[name].loc[timestep, :] = (
-                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0]
+                    x_vector[fledge.utils.get_index(variables, name=name, timestep=timestep), 0]
                 )
 
         return results

@@ -232,6 +232,7 @@ class StandardForm(object):
     c_dict: dict
     c_constant: float
     x_vector: np.ndarray
+    dual_vector: np.ndarray
 
     def __init__(self):
 
@@ -575,7 +576,7 @@ class StandardForm(object):
         # Define constraints.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
         constraints = self.get_a_matrix() @ x_vector <= self.get_b_vector().ravel()
-        gurobipy_problem.addConstr(constraints, name='constraints')
+        constraints = gurobipy_problem.addConstr(constraints, name='constraints')
         # TODO: Use alternative / explicit expression or not?
         # gurobipy_problem.addMConstr(
         #     A=self.get_a_matrix(),
@@ -603,8 +604,9 @@ class StandardForm(object):
         # Solve optimization problem.
         gurobipy_problem.optimize()
 
-        # Store result.
+        # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
+        self.dual_vector = np.transpose([constraints.getAttr('Pi')])
 
     def solve_cvxpy(self):
 
@@ -635,8 +637,9 @@ class StandardForm(object):
         if not (cvxpy_problem.status == cp.OPTIMAL):
             raise cp.SolverError(f"Solver termination status: {cvxpy_problem.status}")
 
-        # Store result.
+        # Store results.
         self.x_vector = x_vector.value
+        self.dual_vector = constraints[0].dual_value
 
     def get_results(
         self,

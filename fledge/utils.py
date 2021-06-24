@@ -227,6 +227,7 @@ class StandardForm(object):
 
     variables: pd.DataFrame
     constraints: pd.DataFrame
+    constraints_len: int
     a_dict: dict
     b_dict: dict
     c_dict: dict
@@ -238,9 +239,11 @@ class StandardForm(object):
 
         # Instantiate index sets.
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
-        # - Constraints are instantiated with 'name' and 'bound' keys, but more may be added in ``define_constraint()``.
+        # - Constraints are instantiated with 'name', 'timestep' and 'constraint_type' keys,
+        #   but more may be added in ``define_constraint()``.
         self.variables = pd.DataFrame(columns=['name', 'timestep'])
-        self.constraints = pd.DataFrame(columns=['name', 'bound'])
+        self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
+        self.constraints_len = 0
 
         # Instantiate A matrix / b vector / c vector dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``.
@@ -371,9 +374,7 @@ class StandardForm(object):
             if 'name' not in keys.keys():
                 raise ValueError(f"'name' key is required in constraint `keys` dictionary. Only found: {keys.keys()}")
 
-            # Raise warning if using reserved 'bound' key in equality constraint index keys.
-            if ('bound' in keys.keys()) and operator in ['==']:
-                logger.warning("'bound' key is reserved in constraint `keys` dictionary and will be overwritten.")
+            # TODO: Raise error if using reserved 'constraint_type' key.
 
         # For equality constraint, convert to upper / lower inequality.
         if operator in ['==']:
@@ -383,7 +384,7 @@ class StandardForm(object):
                 variables,
                 '>=',
                 constant,
-                keys.update(dict(bound='upper')) if keys is not None else None
+                keys=dict(keys, constraint_type='==>=') if keys is not None else None
             )
 
             # Define lower inequality.
@@ -391,7 +392,7 @@ class StandardForm(object):
                 variables,
                 '<=',
                 constant,
-                keys.update(dict(bound='lower')) if keys is not None else None
+                keys=dict(keys, constraint_type='==<=') if keys is not None else None
             )
 
         # For inequality constraint, add into A matrix / b vector dictionaries.
@@ -416,7 +417,7 @@ class StandardForm(object):
                 dimension_constant = 1
 
             # Obtain constraint integer index based on constant dimension.
-            constraint_index = tuple(range(len(self.constraints), len(self.constraints) + dimension_constant))
+            constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
 
             # Append b vector entry.
             self.b_dict[constraint_index] = factor * constant
@@ -451,6 +452,12 @@ class StandardForm(object):
 
             # Append constraints index entries.
             if keys is not None:
+                # Set constraint type:
+                if 'constraint_type' in keys.keys():
+                    if keys['constraint_type'] not in ('==>=', '==<='):
+                        keys['constraint_type'] = operator
+                else:
+                    keys['constraint_type'] = operator
                 # Obtain new constraints based on ``keys``.
                 new_constraints = (
                     pd.DataFrame(itertools.product(*[
@@ -466,12 +473,13 @@ class StandardForm(object):
                         f"Constraint key set dimension ({len(new_constraints)})"
                         f" does not align with constant dimension ({dimension_constant})."
                     )
+                # Add new constraints to index.
+                new_constraints.index = constraint_index
+                self.constraints = self.constraints.append(new_constraints)
+                self.constraints_len += len(constraint_index)
             else:
-                # Obtain empty dataframe of appropriate size, if no ``keys`` defined.
-                new_constraints = pd.DataFrame(index=constraint_index)
-
-            # Add new constraints to index.
-            self.constraints = self.constraints.append(new_constraints, ignore_index=True)
+                # Only change constraints size, if no ``keys`` defined.
+                self.constraints_len += len(constraint_index)
 
         # Raise error for invalid operator.
         else:
@@ -536,7 +544,7 @@ class StandardForm(object):
         log_time('get standard-form A matrix')
 
         # Instantiate sparse matrix.
-        a_matrix = scipy.sparse.dok_matrix((len(self.constraints), len(self.variables)), dtype=float)
+        a_matrix = scipy.sparse.dok_matrix((self.constraints_len, len(self.variables)), dtype=float)
 
         # Fill matrix entries.
         for constraint_index, variable_index in self.a_dict:
@@ -556,7 +564,7 @@ class StandardForm(object):
         log_time('get standard-form b vector')
 
         # Instantiate array.
-        b_vector = np.zeros((len(self.constraints), 1))
+        b_vector = np.zeros((self.constraints_len, 1))
 
         # Fill vector entries.
         for constraint_index in self.b_dict:
@@ -695,13 +703,16 @@ class StandardForm(object):
         results = {}
 
         # Obtain results for each variable.
-        variables = pd.MultiIndex.from_frame(self.variables)
-        for name in variables.get_level_values('name').unique():
+        for name in self.variables.loc[:, 'name'].unique():
 
             # Obtain indexes.
-            variable_index = fledge.utils.get_index(variables, name=name)
-            timesteps = variables[variable_index].get_level_values('timestep').unique()
-            columns = variables[variable_index].droplevel(['name', 'timestep']).unique().to_frame().dropna(axis=1)
+            variable_index = fledge.utils.get_index(self.variables, name=name)
+            timesteps = self.variables.loc[variable_index, 'timestep'].unique()
+            columns = (
+                self.variables.loc[variable_index, :].drop([
+                    'name', 'timestep'
+                ], axis=1).drop_duplicates().dropna(axis=1)
+            )
             if len(columns.columns) > 0:
                 columns = pd.MultiIndex.from_frame(columns)
             else:
@@ -713,8 +724,62 @@ class StandardForm(object):
             # Get results.
             for timestep in timesteps:
                 results[name].loc[timestep, :] = (
-                    x_vector[fledge.utils.get_index(variables, name=name, timestep=timestep), 0]
+                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0]
                 )
+
+        return results
+
+    def get_duals(self) -> dict:
+
+        # Instantiate results object.
+        results = {}
+
+        # Obtain results for each variable.
+        for name in self.constraints.loc[:, 'name'].unique():
+
+            # Obtain indexes.
+            constraint_index = self.constraints.index[fledge.utils.get_index(self.constraints, name=name)]
+            timesteps = self.constraints.loc[constraint_index, 'timestep'].unique()
+            columns = (
+                self.constraints.loc[constraint_index, :].drop([
+                    'name', 'timestep', 'constraint_type'
+                ], axis=1).drop_duplicates().dropna(axis=1)
+            )
+            if len(columns.columns) > 0:
+                columns = pd.MultiIndex.from_frame(columns)
+            else:
+                columns = pd.Index(['total'])
+
+            # Instantiate results dataframe.
+            results[name] = pd.DataFrame(index=timesteps, columns=columns)
+
+            # Get results.
+            # TODO: Validate dual value signs.
+            for timestep in timesteps:
+                if self.constraints.loc[constraint_index, 'constraint_type'].str.contains('==').any():
+                    results[name].loc[timestep, :] = (
+                        0.0
+                        - self.dual_vector[fledge.utils.get_index(
+                            self.constraints, name=name, timestep=timestep, constraint_type='==>='
+                        ), 0]
+                        + self.dual_vector[fledge.utils.get_index(
+                            self.constraints, name=name, timestep=timestep, constraint_type='==<='
+                        ), 0]
+                    )
+                elif self.constraints.loc[constraint_index, 'constraint_type'].str.contains('>=').any():
+                    results[name].loc[timestep, :] = (
+                        0.0
+                        - self.dual_vector[fledge.utils.get_index(
+                            self.constraints, name=name, timestep=timestep, constraint_type='>='
+                        ), 0]
+                    )
+                elif self.constraints.loc[constraint_index, 'constraint_type'].str.contains('<=').any():
+                    results[name].loc[timestep, :] = (
+                        0.0
+                        + self.dual_vector[fledge.utils.get_index(
+                            self.constraints, name=name, timestep=timestep, constraint_type='<='
+                        ), 0]
+                    )
 
         return results
 

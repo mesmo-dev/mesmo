@@ -73,7 +73,8 @@ def main():
                 '==',
                 ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=timestep_previous, der_name=der_name)),
                 ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=timestep_previous, der_name=der_name)),
-                ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep_previous, :].values)
+                ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep_previous, :].values),
+                keys=dict(name='state_equation', timestep=timestep, state=der_model.states, der_name=der_name)
             )
 
         # Output equation.
@@ -134,6 +135,7 @@ def main():
 
     # Obtain results.
     results_1 = standard_form.get_results()
+    duals_1 = standard_form.get_duals()
     fledge.utils.log_time('standard-form interface')
 
     # Instantiate optimization problem.

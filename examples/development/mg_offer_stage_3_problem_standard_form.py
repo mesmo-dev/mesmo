@@ -14,7 +14,7 @@ from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 from mg_offer_stage_2_problem_standard_form import stage_2_problem_standard_form
 
 
-def stage_3_problem_standard_form(scenario_name):
+def stage_3_problem_standard_form(scenario_name, dro_data_set):
     print('stage 3 problem modelling...')
     # Settings.
     #scenario_name = 'singapore_6node_custom'
@@ -681,9 +681,9 @@ def stage_3_problem_standard_form(scenario_name):
     # objective matrices
     # m_Q3_s2
     der_cost_factor = 0.01
-    penalty_factor = 0.1
-    up_reserve_activated_probability = 0.3
-    down_reserve_activated_probability = 0.25
+    penalty_factor = dro_data_set.dro_base_data['panelty_energy_deviation ($/kWh)'].values
+    up_reserve_activated_probability = dro_data_set.dro_base_data['prob_up_reserve_activated'].values
+    down_reserve_activated_probability = dro_data_set.dro_base_data['prob_down_reserve_activated'].values
     m_Q3_s2 = np.zeros((s2_indices.shape[0], 1))
 
     der_active_power_vector_s2_indices = fledge.utils.get_index(

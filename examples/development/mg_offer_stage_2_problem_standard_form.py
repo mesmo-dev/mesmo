@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import fledge
 from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 
-def stage_2_problem_standard_form(scenario_name):
+def stage_2_problem_standard_form(scenario_name, dro_data_set):
     print('stage 2 problem modelling...')
 
     # Settings.
@@ -562,17 +562,19 @@ def stage_2_problem_standard_form(scenario_name):
     )
 
     M_Q2_delta[np.where(pd.Index(s1_indices).isin(up_reserve_s1_indices)),
-               np.where(pd.Index(delta_indices).isin(up_reserve_price_deviation_s2_indices))] = 0.4
+               np.where(pd.Index(delta_indices).isin(up_reserve_price_deviation_s2_indices))] = \
+        dro_data_set.dro_base_data['prob_up_reserve_bidded'].values
 
     M_Q2_delta[np.where(pd.Index(s1_indices).isin(down_reserve_s1_indices)),
-               np.where(pd.Index(delta_indices).isin(down_reserve_price_deviation_s2_indices))] = 0.6
+               np.where(pd.Index(delta_indices).isin(down_reserve_price_deviation_s2_indices))] = \
+        dro_data_set.dro_base_data['prob_down_reserve_bidded'].values
 
     M_Q2_delta[np.where(pd.Index(s1_indices).isin(energy_s1_indices)),
                np.where(pd.Index(delta_indices).isin(energy_price_deviation_s2_indices))] = -1
 
     # m_Q2_s2 vector
     m_Q2_s2 = np.zeros((s2_indices.shape[0], 1))
-    penalty_factor = 0.1
+    penalty_factor = dro_data_set.dro_base_data['panelty_energy_deviation ($/kWh)'].values
     der_cost_factor = 0.01
 
     energy_deviation_s2_indices = fledge.utils.get_index(

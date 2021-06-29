@@ -11,7 +11,7 @@ import fledge
 from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 from mg_offer_stage_2_problem_standard_form import stage_2_problem_standard_form
 from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
-
+from dro_data_input import DRO_data
 
 def main():
     scenario_name = 'singapore_6node_custom'
@@ -27,15 +27,18 @@ def main():
 
     price_data = fledge.data_interface.PriceData(scenario_name)
 
+    dro_data_set = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+
     # initialize all three stage problem
     standard_form_stage_1, A1_matrix, b1_vector, f_vector, stochastic_scenarios, der_model_set \
-        = stage_1_problem_standard_form(scenario_name)
+        = stage_1_problem_standard_form(scenario_name, dro_data_set)
 
     standard_form_stage_2, b2_vector, A2_matrix, B2_matrix, C2_matrix, M_Q2_delta, m_Q2_s2, s2_indices_stage2, \
-        delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name)
+        delta_indices_stage2, s1_indices = stage_2_problem_standard_form(scenario_name, dro_data_set)
 
     standard_form_stage_3, b3_vector, A3_matrix, B3_matrix, C3_matrix, D3_matrix, m_Q3_s2, m_Q3_s3, \
-        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = stage_3_problem_standard_form(scenario_name)
+        delta_indices_stage3, s1_indices_stage3, s2_indices_stage3, s3_indices_stage3 = \
+        stage_3_problem_standard_form(scenario_name, dro_data_set)
 
     # Instantiate optimization problem.
     optimization_problem_dro = fledge.utils.OptimizationProblem()

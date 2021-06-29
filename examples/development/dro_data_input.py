@@ -10,6 +10,48 @@ import plotly.graph_objects as go
 import fledge
 import statistics
 
+
+class DRO_data(object):
+    """DRO data object."""
+    energy_price: pd.DataFrame
+    contingency_reserve_price: pd.DataFrame
+
+    @multimethod
+    def __init__(
+            self,
+            data_path: str,
+    ):
+
+
+def dro_data_init(scenario_name):
+    scenario_name = 'singapore_6node_custom'
+
+    # Get results path.
+    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+
+    # Recreate / overwrite database, to incorporate changes in the CSV definition files.
+    fledge.data_interface.recreate_database()
+
+    # Q: cannot put after recreate database
+    forecast_data_price = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
+    # os.path.join('..', 'bla', 'dro')
+
+    energy_price = forecast_data_price['USEP($/MWh)']
+
+    contingency_price = forecast_data_price['Contingency($/MWh)']
+
+    mean_energy_price = statistics.mean(energy_price)
+
+    variance_energy_price = statistics.variance(energy_price, mean_energy_price)
+
+    mean_contingency_price = statistics.mean(contingency_price)
+
+    variance_contingency_price = statistics.variance(contingency_price, mean_contingency_price)
+
+
+    return
+
 def main():
     # Settings.
     scenario_name = 'singapore_6node_custom'
@@ -22,7 +64,7 @@ def main():
 
     # Q: cannot put after recreate database
     forecast_data_price = pd.read_csv("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
-    os.path.join('..', 'bla', 'dro')
+    #os.path.join('..', 'bla', 'dro')
 
     energy_price = forecast_data_price['USEP($/MWh)']
 

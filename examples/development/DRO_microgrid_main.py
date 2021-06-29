@@ -46,11 +46,11 @@ def main():
     # constants
     optimization_problem_dro.gamma = 30*np.zeros((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.delta_lower_bound = - 1 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.delta_lower_bound = - 10 * np.ones((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.delta_upper_bound = 1 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.delta_upper_bound = 10 * np.ones((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.u_upper_bound = 100 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.u_upper_bound = 1000 * np.ones((len(delta_indices_stage2), 1))
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))

@@ -680,6 +680,19 @@ def main():
     result_energy_deviation_stage_2 = \
         optimization_problem_stage_2.s_2.value[np.where(pd.Index(s2_indices_stage2).isin(index_energy_deviation_stage_2))[0], 0]
 
+    # Plot some results.
+    figure = go.Figure()
+    figure.add_scatter(
+        x=der_model_set.timesteps,
+        y=result_energy_deviation_stage_2,
+        name='no_reserve',
+        line=go.scatter.Line(shape='hv', width=5, dash='dot')
+    )
 
+    # figure.show()
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
+
+    fledge.utils.launch(results_path)
+    print(f"Results are stored in: {results_path}")
 if __name__ == '__main__':
     main()

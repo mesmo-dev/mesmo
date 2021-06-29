@@ -44,13 +44,13 @@ def main():
 
     # TODO: we need proper initialization of DRO data
     # constants
-    optimization_problem_dro.gamma = 30*np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.gamma = 30*np.zeros((len(delta_indices_stage2), 1))
 
     optimization_problem_dro.delta_lower_bound = - 1 * np.ones((len(delta_indices_stage2), 1))
 
     optimization_problem_dro.delta_upper_bound = 1 * np.ones((len(delta_indices_stage2), 1))
 
-    optimization_problem_dro.u_upper_bound = 1000 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.u_upper_bound = 100 * np.ones((len(delta_indices_stage2), 1))
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
@@ -2102,12 +2102,16 @@ def main():
     optimization_problem_dro.solve()
 
     # Obtain results.
-    results = standard_form_stage_1.get_results(optimization_problem_dro.s1_vector)
+    results_dro = standard_form_stage_1.get_results(optimization_problem_dro.s1_vector)
+
+    # obtain results for dual variables
+    beta_res = pd.Series(optimization_problem_dro.beta.value.ravel())
+    sigma_res = pd.Series(optimization_problem_dro.sigma.value.ravel())
 
     # Obtain reserve results.
-    no_reserve = pd.Series(results['energy'].values.ravel(), index=der_model_set.timesteps)
-    up_reserve = pd.Series(results['up_reserve'].values.ravel(), index=der_model_set.timesteps)
-    down_reserve = pd.Series(results['down_reserve'].values.ravel(), index=der_model_set.timesteps)
+    no_reserve = pd.Series(results_dro['energy'].values.ravel(), index=der_model_set.timesteps)
+    up_reserve = pd.Series(results_dro['up_reserve'].values.ravel(), index=der_model_set.timesteps)
+    down_reserve = pd.Series(results_dro['down_reserve'].values.ravel(), index=der_model_set.timesteps)
 
     # Instantiate DER results variables.
     state_vector = {
@@ -2143,18 +2147,18 @@ def main():
     for stochastic_scenario in stochastic_scenarios:
         for der_name in der_model_set.flexible_der_names:
             state_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                results['state_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
+                results_dro['state_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
             )
             control_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                results['control_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
+                results_dro['control_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
             )
             output_vector[stochastic_scenario].loc[:, (der_name, slice(None))] = (
-                results['output_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
+                results_dro['output_vector'].loc[:, (stochastic_scenario, der_name, slice(None))].values
             )
         for der_name, der_model in der_model_set.der_models.items():
             if der_model.is_electric_grid_connected:
                 der_active_power_vector_per_unit[stochastic_scenario].loc[:, (der_model.der_type, der_name)] = (
-                    results['der_active_power_vector'].loc[:,
+                    results_dro['der_active_power_vector'].loc[:,
                     [(stochastic_scenario, (der_model.der_type, der_name))]].values
                 )
                 der_active_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
@@ -2162,13 +2166,40 @@ def main():
                         * der_model.active_power_nominal
                 )
                 der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)] = (
-                    results['der_reactive_power_vector'].loc[:,
+                    results_dro['der_reactive_power_vector'].loc[:,
                     [(stochastic_scenario, (der_model.der_type, der_name))]].values
                 )
                 der_reactive_power_vector[stochastic_scenario].loc[:, (slice(None), der_name)] = (
                         der_reactive_power_vector_per_unit[stochastic_scenario].loc[:, (slice(None), der_name)].values
                         * der_model.reactive_power_nominal
                 )
+
+    # Instantiate optimization problem.
+    optimization_problem_deterministic = fledge.utils.OptimizationProblem()
+
+    # Define optimization problem.
+    optimization_problem_deterministic.x_vector = cp.Variable((len(standard_form_stage_1.variables), 1))
+    optimization_problem_deterministic.constraints.append(
+        A1_matrix.toarray() @ optimization_problem_deterministic.x_vector <= b1_vector
+    )
+    optimization_problem_deterministic.objective -= (
+            (
+                f_vector.T
+                @ optimization_problem_deterministic.x_vector
+            )
+    )
+    # Define optimization objective
+
+    # Solve optimization problem.
+    optimization_problem_deterministic.solve()
+    # Obtain results.
+    results_determinstic = standard_form_stage_1.get_results(optimization_problem_deterministic.x_vector)
+
+    # Obtain reserve results.
+    no_reserve_det = pd.Series(results_determinstic['energy'].values.ravel(), index=der_model_set.timesteps)
+    up_reserve_det = pd.Series(results_determinstic['up_reserve'].values.ravel(), index=der_model_set.timesteps)
+    down_reserve_det = pd.Series(results_determinstic['down_reserve'].values.ravel(), index=der_model_set.timesteps)
+
 
     # Plot some results.
     figure = go.Figure()

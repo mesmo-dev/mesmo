@@ -3,6 +3,7 @@
 # - In the path settings, `./` denotes the repository base directory and is replaced upon loading.
 paths:
   additional_data: []
+  ignore_data_folders: []
   data: ./data
   database: ./data/database.sqlite
   results: ./results

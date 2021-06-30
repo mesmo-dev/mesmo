@@ -29,15 +29,19 @@ def main():
     # Obtain building models.
     building_fixed = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
     outputs_temperature = building_fixed.outputs.str.contains('temperature')
+    outputs_heat = building_fixed.outputs.str.contains('_heat_')
     building_fixed.output_minimum_timeseries.loc[:, outputs_temperature] = (
         building_fixed.output_maximum_timeseries.loc[:, outputs_temperature].values - 0.01
     )
+    building_fixed.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     building_smart = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
     timesteps_nonsmart = building_smart.timesteps.hour > 13
     building_smart.output_minimum_timeseries.loc[timesteps_nonsmart, outputs_temperature] = (
         building_smart.output_maximum_timeseries.loc[timesteps_nonsmart, outputs_temperature].values - 0.01
     )
+    building_smart.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     building_flexi = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    building_flexi.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
 
     # Obtain EV charger models.
     ev_fixed = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')

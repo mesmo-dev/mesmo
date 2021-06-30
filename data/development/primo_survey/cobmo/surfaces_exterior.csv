@@ -3,9 +3,7 @@ primo_survey_survey_1zone_no_mass,zone_1,south,surface_exterior_1,primo_survey_w
 primo_survey_1zone_no_mass,zone_1,east,surface_exterior_2,primo_survey_wall_no_mass,20,5*4
 primo_survey_1zone_no_mass,zone_1,north,surface_exterior_3,primo_survey_wall_no_mass,20,5*4
 primo_survey_1zone_no_mass,zone_1,west,surface_exterior_4,primo_survey_wall_no_mass,20,5*4
-primo_survey_1zone_no_mass,zone_1,horizontal,surface_roof,primo_survey_roof_no_mass,25,5*5
 primo_survey_1zone,zone_1,south,surface_exterior_1,primo_survey_wall,20,5*4
 primo_survey_1zone,zone_1,east,surface_exterior_2,primo_survey_wall,20,5*4
 primo_survey_1zone,zone_1,north,surface_exterior_3,primo_survey_wall,20,5*4
 primo_survey_1zone,zone_1,west,surface_exterior_4,primo_survey_wall,20,5*4
-primo_survey_1zone,zone_1,horizontal,surface_roof,primo_survey_roof,25,5*5

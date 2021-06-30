@@ -1,2 +1,2 @@
-scenario_name,electric_grid_name,price_type,parameter_set,timestep_start,timestep_end,timestep_interval
-primo_survey,primo_survey,singapore_wholesale,,2017-01-01T00:00:00,2017-01-02T00:00:00,01:00:00
+scenario_name,electric_grid_name,price_type,price_sensitivity_coefficient,parameter_set,timestep_start,timestep_end,timestep_interval
+primo_survey,primo_survey,singapore_wholesale,1e-9,,2017-01-01T00:00:00,2017-02-01T00:00:00,00:30:00

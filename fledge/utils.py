@@ -33,8 +33,8 @@ class ObjectBase(object):
     """FLEDGE object base class, which extends the Python object base class.
 
     - Requires all attributes, i.e. parameters or object variables, to be defined with type declaration at the
-      beginning of the class definition. Setting a value to an attribute which has not been defined will raise an error.
-      This is to ensure consistent definition structure of FLEDGE classes.
+      beginning of the class definition. Setting a value to an attribute which has not been defined will raise
+      a warning. This is to ensure consistent definition structure of FLEDGE classes.
     - String representation of the object is the concatenation of the string representation of all its attributes.
       Thus, printing the object will print all its attributes.
 
@@ -59,9 +59,9 @@ class ObjectBase(object):
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
         if not (attribute_name in typing.get_type_hints(type(self))):
-            raise AttributeError(
-                f"Cannot set invalid attribute '{attribute_name}'. "
-                f"Please ensure that the attribute has been defined with type declaration in the class definition."
+            logger.warning(
+                f"Setting undefined attribute '{attribute_name}'. "
+                f"Please ensure that the attribute has been defined by a type declaration in the class definition."
             )
 
         # Set attribute value.

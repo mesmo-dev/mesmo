@@ -63,7 +63,18 @@ def main():
         'ev_flexi': solve_problem(ev_flexi, price_data)
     }
 
+    # Obtain cost distribution.
+    costs = pd.DataFrame()
+    for label, result in results.items():
+        results[label].cost_timeseries_daily = result.cost_timeseries.groupby(result.cost_timeseries.index.strftime('%Y-%m-%d')).sum().iloc[:-1]
+        results[label].cost_mean = results[label].cost_timeseries_daily.mean()
+        results[label].cost_var = results[label].cost_timeseries_daily.var()
+        costs.loc[label, 'mean'] = results[label].cost_mean.values
+        costs.loc[label, 'var'] = results[label].cost_var.values
+    print(f"costs = \n{costs}")
+
     # Save / plot results.
+    costs.to_csv(os.path.join(results_path, 'costs.csv'))
     save_results(results, results_path)
     plot_results(results, results_path)
 

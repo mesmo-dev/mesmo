@@ -59,7 +59,8 @@ def main():
         'ev_flexi': solve_problem(ev_flexi, price_data)
     }
 
-    # Plot results.
+    # Save / plot results.
+    save_results(results, results_path)
     plot_results(results, results_path)
 
     # Plot prices.
@@ -103,8 +104,29 @@ def solve_problem(
 
     # Obtain results.
     results = flexible_der_model.get_optimization_results(optimization_problem)
+    results.objective = optimization_problem.objective.value
+    results.cost_timeseries = (
+        -1.0 * (flexible_der_model.mapping_active_power_by_output @ results.output_vector.T).T
+        * price_data.price_timeseries.loc[:, [('active_power', 'source', 'source')]].values
+    )
 
     return results
+
+
+def save_results(
+        results: dict,
+        results_path: str
+):
+
+    for label, result in results.items():
+
+        # Create folder.
+        try:
+            os.mkdir(os.path.join(results_path, label))
+        except Exception:
+            pass
+
+        result.save(os.path.join(results_path, label))
 
 
 @multimethod
@@ -125,7 +147,10 @@ def plot_results(
 ):
 
     # Create folder.
-    os.mkdir(os.path.join(results_path, label))
+    try:
+        os.mkdir(os.path.join(results_path, label))
+    except Exception:
+        pass
 
     # Plot outputs.
     for output in results.der_model.outputs:

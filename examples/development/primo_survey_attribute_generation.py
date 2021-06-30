@@ -23,11 +23,17 @@ def main():
     # Obtain data.
     der_data = fledge.data_interface.DERData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
-    # price_data_constant = price_data.copy()
-    # price_data_constant.price_timeseries.loc[:, :] = price_data_constant.price_timeseries.mean().values[None, :]
+    timesteps_off_peak = (der_data.scenario_data.timesteps.hour <= 7) | (der_data.scenario_data.timesteps.hour >= 23)
+    price_data.price_timeseries.loc[timesteps_off_peak, ('active_power', slice(None), slice(None))] += (
+        0.0476 / 1e3 * der_data.scenario_data.scenario.at['base_apparent_power']
+    )
+    price_data.price_timeseries.loc[~timesteps_off_peak, ('active_power', slice(None), slice(None))] += (
+        0.0617 / 1e3 * der_data.scenario_data.scenario.at['base_apparent_power']
+    )
 
     # Obtain building models.
     building_fixed = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    building_fixed.disturbance_output_matrix *= 0.0
     outputs_temperature = building_fixed.outputs.str.contains('temperature')
     outputs_heat = building_fixed.outputs.str.contains('_heat_')
     building_fixed.output_minimum_timeseries.loc[:, outputs_temperature] = (
@@ -35,17 +41,21 @@ def main():
     )
     building_fixed.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     building_smart = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
-    timesteps_nonsmart = building_smart.timesteps.hour > 13
+    building_smart.disturbance_output_matrix *= 0.0
+    timesteps_nonsmart = (
+        np.convolve(np.random.rand(len(building_smart.timesteps) + 3), np.ones(4)/4, mode='valid') > 0.5
+    )
     building_smart.output_minimum_timeseries.loc[timesteps_nonsmart, outputs_temperature] = (
         building_smart.output_maximum_timeseries.loc[timesteps_nonsmart, outputs_temperature].values - 0.01
     )
     building_smart.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     building_flexi = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    building_flexi.disturbance_output_matrix *= 0.0
     building_flexi.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
 
     # Obtain EV charger models.
     ev_fixed = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    timesteps_urgent_depart = ev_fixed.timesteps.hour > 10
+    timesteps_urgent_depart = (ev_fixed.timesteps.hour > 21) | (ev_fixed.timesteps.hour < 19)
     ev_fixed.output_maximum_timeseries.loc[timesteps_urgent_depart, 'active_power_charge'] = 0.0
     ev_smart = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
     ev_flexi = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
@@ -71,10 +81,16 @@ def main():
         results[label].cost_var = results[label].cost_timeseries_daily.var()
         costs.loc[label, 'mean'] = results[label].cost_mean.values
         costs.loc[label, 'var'] = results[label].cost_var.values
+    costs_cents_per_hour = costs * 100 / 24
+    costs_per_month = costs * 30
     print(f"costs = \n{costs}")
+    print(f"costs_cents_per_hour = \n{costs_cents_per_hour}")
+    print(f"costs_per_month = \n{costs_per_month}")
 
     # Save / plot results.
     costs.to_csv(os.path.join(results_path, 'costs.csv'))
+    costs_cents_per_hour.to_csv(os.path.join(results_path, 'costs_cents_per_hour.csv'))
+    costs_per_month.to_csv(os.path.join(results_path, 'costs_per_month.csv'))
     save_results(results, results_path)
     plot_results(results, results_path)
 

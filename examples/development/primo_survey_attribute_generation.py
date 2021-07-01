@@ -109,8 +109,8 @@ def main():
         | (costs_daily.loc[:, ('ev', '3h', 'no')] < costs_daily.loc[:, ('ev', '8h', 'yes')])
         | (costs_daily.loc[:, ('ev', '8h', 'no')] < costs_daily.loc[:, ('ev', '8h', 'yes')])
     )
-    costs_daily.loc[ac_invalid, ('ac', slice(None), slice(None))] = ''
-    costs_daily.loc[ev_invalid, ('ev', slice(None), slice(None))] = ''
+    costs_daily.loc[ac_invalid, ('ac', slice(None), slice(None))] = np.nan
+    costs_daily.loc[ev_invalid, ('ev', slice(None), slice(None))] = np.nan
     # Generate cost overview.
     costs_overview = pd.DataFrame(columns=costs_daily.columns)
     costs_overview.loc['Daily mean [$/d]', costs_daily.columns] = round(costs_daily.mean(), 2)

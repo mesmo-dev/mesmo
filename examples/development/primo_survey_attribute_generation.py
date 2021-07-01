@@ -55,7 +55,8 @@ def main():
 
     # Obtain EV charger models.
     ev_fixed = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    timesteps_urgent_depart = (ev_fixed.timesteps.hour > 21) | (ev_fixed.timesteps.hour < 19)
+    # timesteps_urgent_depart = (ev_fixed.timesteps.hour > 20) | (ev_fixed.timesteps.hour < 17)
+    timesteps_urgent_depart = ev_fixed.timesteps.hour > 11
     ev_fixed.output_maximum_timeseries.loc[timesteps_urgent_depart, 'active_power_charge'] = 0.0
     ev_smart = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
     ev_flexi = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')

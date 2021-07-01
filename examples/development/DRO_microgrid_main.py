@@ -11,7 +11,8 @@ import fledge
 from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 from mg_offer_stage_2_problem_standard_form import stage_2_problem_standard_form
 from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
-from dro_data_input import DRO_data
+from dro_data_input import DRO_data, DRO_ambiguity_set
+
 
 def main():
     scenario_name = 'singapore_6node_custom'
@@ -43,17 +44,20 @@ def main():
     # Instantiate optimization problem.
     optimization_problem_dro = fledge.utils.OptimizationProblem()
 
-    print('define DRO variable')
+    print('define DRO variable/constants')
 
     # TODO: we need proper initialization of DRO data
     # constants
-    optimization_problem_dro.gamma = 30*np.zeros((len(delta_indices_stage2), 1))
+    dro_ambiguity_set = DRO_ambiguity_set(scenario_name, standard_form_stage_2, delta_indices_stage2, dro_data_set)
 
-    optimization_problem_dro.delta_lower_bound = - 10 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.gamma = dro_ambiguity_set.gamma
 
-    optimization_problem_dro.delta_upper_bound = 10 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.delta_lower_bound = dro_ambiguity_set.delta_lower_bound
 
-    optimization_problem_dro.u_upper_bound = 1000 * np.ones((len(delta_indices_stage2), 1))
+    optimization_problem_dro.delta_upper_bound = dro_ambiguity_set.delta_upper_bound
+
+    optimization_problem_dro.u_upper_bound = dro_ambiguity_set.u_upper_bound
+
 
     # Define optimization problem variables
     optimization_problem_dro.s1_vector = cp.Variable((len(standard_form_stage_1.variables), 1))

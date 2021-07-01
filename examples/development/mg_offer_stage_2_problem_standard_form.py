@@ -575,7 +575,7 @@ def stage_2_problem_standard_form(scenario_name, dro_data_set):
     # m_Q2_s2 vector
     m_Q2_s2 = np.zeros((s2_indices.shape[0], 1))
     penalty_factor = dro_data_set.dro_base_data['panelty_energy_deviation ($/kWh)'].values
-    der_cost_factor = 0.01
+    der_cost_factor = 0.04
 
     energy_deviation_s2_indices = fledge.utils.get_index(
         standard_form.variables, name='energy_deviation_s2',

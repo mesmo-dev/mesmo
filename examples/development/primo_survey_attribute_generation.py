@@ -75,23 +75,23 @@ def main():
     }
 
     # Obtain cost distribution.
-    costs = pd.DataFrame()
+    costs_daily = pd.DataFrame(index=price_data.price_timeseries.index.strftime('%Y-%m-%d').unique()[:-1])
     for label, result in results.items():
-        results[label].cost_timeseries_daily = result.cost_timeseries.groupby(result.cost_timeseries.index.strftime('%Y-%m-%d')).sum().iloc[:-1]
-        results[label].cost_mean = results[label].cost_timeseries_daily.mean()
-        results[label].cost_var = results[label].cost_timeseries_daily.var()
-        costs.loc[label, 'mean'] = results[label].cost_mean.values
-        costs.loc[label, 'var'] = results[label].cost_var.values
-    costs_cents_per_hour = costs * 100 / 24
-    costs_per_month = costs * 30
-    print(f"costs = \n{costs}")
-    print(f"costs_cents_per_hour = \n{costs_cents_per_hour}")
-    print(f"costs_per_month = \n{costs_per_month}")
+        results[label].cost_daily = (
+            result.cost_timeseries.groupby(result.cost_timeseries.index.strftime('%Y-%m-%d')).sum().iloc[:-1]
+        )
+        results[label].cost_mean = results[label].cost_daily.mean()
+        results[label].cost_var = results[label].cost_daily.var()
+        costs_daily.loc[results[label].cost_daily.index, label] = results[label].cost_daily.values.ravel()
+    costs_overview = pd.DataFrame(columns=costs_daily.columns)
+    costs_overview.loc['Daily mean [$/d]', costs_daily.columns] = round(costs_daily.mean(), 2)
+    costs_overview.loc['Monthly mean [$/m]', costs_daily.columns] = round(costs_daily.mean() * 30, 2)
+    costs_overview.loc['Hourly mean [¢/h]', costs_daily.columns] = round(costs_daily.mean() * 100 / 24, 2)
+    print(f"costs_overview = \n{costs_overview}")
 
     # Save / plot results.
-    costs.to_csv(os.path.join(results_path, 'costs.csv'))
-    costs_cents_per_hour.to_csv(os.path.join(results_path, 'costs_cents_per_hour.csv'))
-    costs_per_month.to_csv(os.path.join(results_path, 'costs_per_month.csv'))
+    costs_daily.to_csv(os.path.join(results_path, 'costs_daily.csv'))
+    costs_overview.to_csv(os.path.join(results_path, 'costs_overview.csv'))
     save_results(results, results_path)
     plot_results(results, results_path)
 

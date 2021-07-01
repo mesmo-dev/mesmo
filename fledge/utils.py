@@ -727,7 +727,7 @@ def get_alphanumeric_string(
 ):
     """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
 
-    return re.sub(r'\W-+', '_', string).strip('_').lower()
+    return re.sub(r'[^0-9a-zA-Z_]+', '_', string).strip('_').lower()
 
 
 def launch(path):

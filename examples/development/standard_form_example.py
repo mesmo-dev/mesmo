@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import scipy.sparse as sp
 
 import fledge
 
@@ -67,40 +68,37 @@ def main():
             )
 
         # State equation.
-        for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
-            standard_form.define_constraint(
-                ('variable', 1.0, dict(name='state_vector', timestep=timestep, der_name=der_name)),
-                '==',
-                ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=timestep_previous, der_name=der_name)),
-                ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=timestep_previous, der_name=der_name)),
-                ('constant', der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[timestep_previous, :].values),
-                keys=dict(name='state_equation', timestep=timestep, state=der_model.states, der_name=der_name)
-            )
+        standard_form.define_constraint(
+            ('variable', 1.0, dict(name='state_vector', timestep=der_model.timesteps[1:], der_name=der_name)),
+            '==',
+            ('variable', sp.block_diag([der_model.state_matrix.values] * len(der_model.timesteps[:-1])), dict(name='state_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
+            ('variable', sp.block_diag([der_model.control_matrix.values] * len(der_model.timesteps[:-1])), dict(name='control_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
+            ('constant', (der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[der_model.timesteps[:-1], :].T.values).T.ravel()),
+            keys=dict(name='state_equation', timestep=der_model.timesteps[1:], state=der_model.states, der_name=der_name)
+        )
 
         # Output equation.
-        for timestep in der_model.timesteps:
-            standard_form.define_constraint(
-                ('variable', 1.0, dict(name='output_vector', timestep=timestep, der_name=der_name)),
-                '==',
-                ('variable', der_model.state_output_matrix.values, dict(name='state_vector', timestep=timestep, der_name=der_name)),
-                ('variable', der_model.control_output_matrix.values, dict(name='control_vector', timestep=timestep, der_name=der_name)),
-                ('constant', der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[timestep, :].values)
-            )
+        standard_form.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
+            '==',
+            ('variable', sp.block_diag([der_model.state_output_matrix.values] * len(der_model.timesteps)), dict(name='state_vector', timestep=der_model.timesteps, der_name=der_name)),
+            ('variable', sp.block_diag([der_model.control_output_matrix.values] * len(der_model.timesteps)), dict(name='control_vector', timestep=der_model.timesteps, der_name=der_name)),
+            ('constant', (der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[der_model.timesteps, :].T.values).T.ravel())
+        )
 
         # Output limits.
-        for timestep in der_model.timesteps:
-            standard_form.define_constraint(
-                ('variable', 1.0, dict(name='output_vector', timestep=timestep, der_name=der_name)),
-                '>=',
-                ('constant', der_model.output_minimum_timeseries.loc[timestep, :].values),
-                keys=dict(name='output_minimum', timestep=timestep, output=der_model.outputs, der_name=der_name)
-            )
-            standard_form.define_constraint(
-                ('variable', 1.0, dict(name='output_vector', timestep=timestep, der_name=der_name)),
-                '<=',
-                ('constant', der_model.output_maximum_timeseries.loc[timestep, :].values),
-                keys=dict(name='output_maximum', timestep=timestep, output=der_model.outputs, der_name=der_name)
-            )
+        standard_form.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
+            '>=',
+            ('constant', der_model.output_minimum_timeseries.loc[der_model.timesteps, :].values.ravel()),
+            keys=dict(name='output_minimum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name)
+        )
+        standard_form.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
+            '<=',
+            ('constant', der_model.output_maximum_timeseries.loc[der_model.timesteps, :].values.ravel()),
+            keys=dict(name='output_maximum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name)
+        )
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (der_model.timesteps[1] - der_model.timesteps[0]) / pd.Timedelta('1h')
@@ -108,23 +106,21 @@ def main():
         # Define objective.
         # Active power cost / revenue.
         # - Cost for load / demand, revenue for generation / supply.
-        for timestep in der_model.timesteps:
-
-            standard_form.define_objective_low_level(
-                variables=[(
-                    price_data.price_timeseries.loc[timestep, ('active_power', slice(None), der_model.der_name)].values
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ der_model.mapping_active_power_by_output.values,
-                    dict(name='output_vector', timestep=timestep, der_name=der_name)
-                ),],
-                # variables_quadractic=[(
-                #     price_data.price_sensitivity_coefficient
-                #     * timestep_interval_hours,  # In Wh.
-                #     der_model.mapping_active_power_by_output.values,
-                #     dict(name='output_vector', timestep=timestep)
-                # ),],
-                constant=0.0
-            )
+        standard_form.define_objective_low_level(
+            variables=[(
+                price_data.price_timeseries.loc[der_model.timesteps, ('active_power', slice(None), der_model.der_name)].T.values
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([der_model.mapping_active_power_by_output.values] * len(der_model.timesteps)),
+                dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)
+            ),],
+            # variables_quadractic=[(
+            #     price_data.price_sensitivity_coefficient
+            #     * timestep_interval_hours,  # In Wh.
+            #     der_model.mapping_active_power_by_output.values,
+            #     dict(name='output_vector', timestep=der_model.timesteps)
+            # ),],
+            constant=0.0
+        )
 
     fledge.utils.log_time('standard-form problem')
 

@@ -31,58 +31,87 @@ def main():
         0.0617 / 1e3 * der_data.scenario_data.scenario.at['base_apparent_power']
     )
 
-    # Obtain building models.
-    building_fixed = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
-    building_fixed.disturbance_output_matrix *= 0.0
-    outputs_temperature = building_fixed.outputs.str.contains('temperature')
-    outputs_heat = building_fixed.outputs.str.contains('_heat_')
-    building_fixed.output_minimum_timeseries.loc[:, outputs_temperature] = (
-        building_fixed.output_maximum_timeseries.loc[:, outputs_temperature].values - 0.01
+    # Obtain air-conditioning models.
+    ac_1 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_1.disturbance_output_matrix *= 0.0
+    outputs_temperature = ac_1.outputs.str.contains('temperature')
+    outputs_heat = ac_1.outputs.str.contains('_heat_')
+    timestep_reset = ac_1.timesteps.hour == 00
+    ac_1.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
+    ac_1.output_minimum_timeseries.loc[timestep_reset, outputs_temperature] = (
+        ac_1.output_maximum_timeseries.loc[timestep_reset, outputs_temperature].values - 0.01
     )
-    building_fixed.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
-    building_smart = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
-    building_smart.disturbance_output_matrix *= 0.0
+    ac_1.output_minimum_timeseries.loc[:, outputs_temperature] = (
+        ac_1.output_maximum_timeseries.loc[:, outputs_temperature].values - 0.01
+    )
+    ac_2 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_2.disturbance_output_matrix *= 0.0
+    ac_2.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
+    ac_2.output_minimum_timeseries.loc[timestep_reset, outputs_temperature] = (
+        ac_2.output_maximum_timeseries.loc[timestep_reset, outputs_temperature].values - 0.01
+    )
     timesteps_nonsmart = (
-        np.convolve(np.random.rand(len(building_smart.timesteps) + 3), np.ones(4)/4, mode='valid') > 0.5
+        np.convolve(np.random.rand(len(ac_2.timesteps) + 3), np.ones(4)/4, mode='valid') > 0.5
     )
-    building_smart.output_minimum_timeseries.loc[timesteps_nonsmart, outputs_temperature] = (
-        building_smart.output_maximum_timeseries.loc[timesteps_nonsmart, outputs_temperature].values - 0.01
+    ac_2.output_minimum_timeseries.loc[timesteps_nonsmart, outputs_temperature] = (
+        ac_2.output_maximum_timeseries.loc[timesteps_nonsmart, outputs_temperature].values - 0.01
     )
-    building_smart.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
-    building_flexi = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
-    building_flexi.disturbance_output_matrix *= 0.0
-    building_flexi.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
+    ac_3 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_3.disturbance_output_matrix *= 0.0
+    ac_3.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
+    ac_3.output_minimum_timeseries.loc[timestep_reset, outputs_temperature] = (
+        ac_3.output_maximum_timeseries.loc[timestep_reset, outputs_temperature].values - 0.01
+    )
 
     # Obtain EV charger models.
-    ev_fixed = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    # timesteps_urgent_depart = (ev_fixed.timesteps.hour > 20) | (ev_fixed.timesteps.hour < 17)
-    timesteps_urgent_depart = ev_fixed.timesteps.hour > 11
-    ev_fixed.output_maximum_timeseries.loc[timesteps_urgent_depart, 'active_power_charge'] = 0.0
-    ev_smart = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    ev_flexi = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    ev_flexi.output_maximum_timeseries.loc[:, 'active_power_discharge'] = (
-        ev_flexi.output_maximum_timeseries.loc[:, 'active_power_charge'].values
+    ev_1 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    # timesteps_urgent_depart = (ev_1.timesteps.hour > 20) | (ev_1.timesteps.hour < 17)
+    timesteps_urgent_depart = ev_1.timesteps.hour > 11
+    ev_1.output_maximum_timeseries.loc[timesteps_urgent_depart, 'active_power_charge'] = 0.0
+    ev_2 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    ev_3 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    ev_3.output_maximum_timeseries.loc[:, 'active_power_discharge'] = (
+        ev_3.output_maximum_timeseries.loc[:, 'active_power_charge'].values
     )
 
     # Obtain solutions.
     results = {
-        'building_fixed': solve_problem(building_fixed, price_data),
-        'building_smart': solve_problem(building_smart, price_data),
-        'building_flexi': solve_problem(building_flexi, price_data),
-        'ev_fixed': solve_problem(ev_fixed, price_data),
-        'ev_smart': solve_problem(ev_smart, price_data),
-        'ev_flexi': solve_problem(ev_flexi, price_data)
+        ('ac', 'fixed', 'yes'): solve_problem(ac_1, price_data),
+        ('ac', 'upper/lower', 'yes'): solve_problem(ac_2, price_data),
+        ('ac', 'upper/lower', 'no'): solve_problem(ac_3, price_data),
+        ('ev', '3h', 'no'): solve_problem(ev_1, price_data),
+        ('ev', '8h', 'no'): solve_problem(ev_2, price_data),
+        ('ev', '8h', 'yes'): solve_problem(ev_3, price_data)
     }
 
     # Obtain cost distribution.
-    costs_daily = pd.DataFrame(index=price_data.price_timeseries.index.strftime('%Y-%m-%d').unique()[:-1])
+    costs_daily = (
+        pd.DataFrame(
+            index=price_data.price_timeseries.index.strftime('%Y-%m-%d').unique()[:-1].rename(None),
+            columns=pd.MultiIndex.from_tuples(results.keys(), names=['type', 'attribute_1', 'attribute_2'])
+        )
+    )
     for label, result in results.items():
         results[label].cost_daily = (
             result.cost_timeseries.groupby(result.cost_timeseries.index.strftime('%Y-%m-%d')).sum().iloc[:-1]
         )
         results[label].cost_mean = results[label].cost_daily.mean()
         results[label].cost_var = results[label].cost_daily.var()
-        costs_daily.loc[results[label].cost_daily.index, label] = results[label].cost_daily.values.ravel()
+        costs_daily.loc[results[label].cost_daily.index, [label]] = results[label].cost_daily.values
+    # Filter valid cost values.
+    ac_invalid = (
+        (costs_daily.loc[:, ('ac', 'fixed', 'yes')] < costs_daily.loc[:, ('ac', 'upper/lower', 'yes')])
+        | (costs_daily.loc[:, ('ac', 'fixed', 'yes')] < costs_daily.loc[:, ('ac', 'upper/lower', 'no')])
+        | (costs_daily.loc[:, ('ac', 'upper/lower', 'yes')] < costs_daily.loc[:, ('ac', 'upper/lower', 'no')])
+    )
+    ev_invalid = (
+        (costs_daily.loc[:, ('ev', '3h', 'no')] < costs_daily.loc[:, ('ev', '8h', 'no')])
+        | (costs_daily.loc[:, ('ev', '3h', 'no')] < costs_daily.loc[:, ('ev', '8h', 'yes')])
+        | (costs_daily.loc[:, ('ev', '8h', 'no')] < costs_daily.loc[:, ('ev', '8h', 'yes')])
+    )
+    costs_daily.loc[ac_invalid, ('ac', slice(None), slice(None))] = ''
+    costs_daily.loc[ev_invalid, ('ev', slice(None), slice(None))] = ''
+    # Generate cost overview.
     costs_overview = pd.DataFrame(columns=costs_daily.columns)
     costs_overview.loc['Daily mean [$/d]', costs_daily.columns] = round(costs_daily.mean(), 2)
     costs_overview.loc['Monthly mean [$/m]', costs_daily.columns] = round(costs_daily.mean() * 30, 2)
@@ -137,9 +166,12 @@ def solve_problem(
     # Obtain results.
     results = flexible_der_model.get_optimization_results(optimization_problem)
     results.objective = optimization_problem.objective.value
+    # Obtain timestep interval in hours, for conversion of power to energy.
+    timestep_interval_hours = (flexible_der_model.timesteps[1] - flexible_der_model.timesteps[0]) / pd.Timedelta('1h')
     results.cost_timeseries = (
         -1.0 * (flexible_der_model.mapping_active_power_by_output @ results.output_vector.T).T
         * price_data.price_timeseries.loc[:, [('active_power', 'source', 'source')]].values
+        * timestep_interval_hours
     )
 
     return results
@@ -151,6 +183,9 @@ def save_results(
 ):
 
     for label, result in results.items():
+
+        # Parse label.
+        label = fledge.utils.get_alphanumeric_string(str(label))
 
         # Create folder.
         try:
@@ -175,8 +210,11 @@ def plot_results(
 def plot_results(
         results: fledge.der_models.DERModelOperationResults,
         results_path: str,
-        label: str
+        label: tuple
 ):
+
+    # Parse label.
+    label = fledge.utils.get_alphanumeric_string(str(label))
 
     # Create folder.
     try:
@@ -208,7 +246,7 @@ def plot_results(
         ))
         figure.update_layout(
             title=f'Output: {output}',
-            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            # xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
         # figure.show()
@@ -225,7 +263,7 @@ def plot_results(
         ))
         figure.update_layout(
             title=f'Disturbance: {disturbance}',
-            xaxis=go.layout.XAxis(tickformat='%H:%M'),
+            # xaxis=go.layout.XAxis(tickformat='%H:%M'),
             showlegend=False
         )
         # figure.show()

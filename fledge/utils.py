@@ -360,7 +360,8 @@ class StandardForm(object):
             variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
             operator: str,
             constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix],
-            keys: dict = None
+            keys: dict = None,
+            broadcast: str = None
     ):
 
         # Run checks for constraint index keys.
@@ -384,7 +385,8 @@ class StandardForm(object):
                 variables,
                 '>=',
                 constant,
-                keys=dict(keys, constraint_type='==>=') if keys is not None else None
+                keys=dict(keys, constraint_type='==>=') if keys is not None else None,
+                broadcast=broadcast
             )
 
             # Define lower inequality.
@@ -392,7 +394,8 @@ class StandardForm(object):
                 variables,
                 '<=',
                 constant,
-                keys=dict(keys, constraint_type='==<=') if keys is not None else None
+                keys=dict(keys, constraint_type='==<=') if keys is not None else None,
+                broadcast=broadcast
             )
 
         # For inequality constraint, add into A matrix / b vector dictionaries.
@@ -438,10 +441,18 @@ class StandardForm(object):
 
                 # Obtain A matrix entries.
                 # - Scalar values are multiplied with identity matrix of appropriate size.
+                # - If broadcasting, value is repeated in block-diagonal matrix.
                 if len(np.shape(variable[0])) == 0:
                     a_entry = variable[0] * scipy.sparse.eye(len(variable_index))
                 else:
                     a_entry = variable[0]
+                    # If broadcasting, value is repeated in block-diagonal matrix.
+                    if broadcast is not None:
+                        if broadcast not in variable[1].keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                        else:
+                            # TODO: Need check for order of values / index entries?
+                            a_entry = scipy.sparse.block_diag([a_entry] * len(variable[1][broadcast]))
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(a_entry) != (len(constraint_index), len(variable_index)):

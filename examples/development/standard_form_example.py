@@ -71,33 +71,37 @@ def main():
         standard_form.define_constraint(
             ('variable', 1.0, dict(name='state_vector', timestep=der_model.timesteps[1:], der_name=der_name)),
             '==',
-            ('variable', sp.block_diag([der_model.state_matrix.values] * len(der_model.timesteps[:-1])), dict(name='state_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
-            ('variable', sp.block_diag([der_model.control_matrix.values] * len(der_model.timesteps[:-1])), dict(name='control_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
-            ('constant', (der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.loc[der_model.timesteps[:-1], :].T.values).T.ravel()),
-            keys=dict(name='state_equation', timestep=der_model.timesteps[1:], state=der_model.states, der_name=der_name)
+            ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
+            ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
+            ('constant', (der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.iloc[:-1, :].T.values).T.ravel()),
+            keys=dict(name='state_equation', timestep=der_model.timesteps[1:], state=der_model.states, der_name=der_name),
+            broadcast='timestep'
         )
 
         # Output equation.
         standard_form.define_constraint(
             ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
             '==',
-            ('variable', sp.block_diag([der_model.state_output_matrix.values] * len(der_model.timesteps)), dict(name='state_vector', timestep=der_model.timesteps, der_name=der_name)),
-            ('variable', sp.block_diag([der_model.control_output_matrix.values] * len(der_model.timesteps)), dict(name='control_vector', timestep=der_model.timesteps, der_name=der_name)),
-            ('constant', (der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.loc[der_model.timesteps, :].T.values).T.ravel())
+            ('variable', der_model.state_output_matrix.values, dict(name='state_vector', timestep=der_model.timesteps, der_name=der_name)),
+            ('variable', der_model.control_output_matrix.values, dict(name='control_vector', timestep=der_model.timesteps, der_name=der_name)),
+            ('constant', (der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.T.values).T.ravel()),
+            broadcast='timestep'
         )
 
         # Output limits.
         standard_form.define_constraint(
             ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
             '>=',
-            ('constant', der_model.output_minimum_timeseries.loc[der_model.timesteps, :].values.ravel()),
-            keys=dict(name='output_minimum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name)
+            ('constant', der_model.output_minimum_timeseries.values.ravel()),
+            keys=dict(name='output_minimum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name),
+            broadcast='timestep'
         )
         standard_form.define_constraint(
             ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
             '<=',
-            ('constant', der_model.output_maximum_timeseries.loc[der_model.timesteps, :].values.ravel()),
-            keys=dict(name='output_maximum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name)
+            ('constant', der_model.output_maximum_timeseries.values.ravel()),
+            keys=dict(name='output_maximum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name),
+            broadcast='timestep'
         )
 
         # Obtain timestep interval in hours, for conversion of power to energy.

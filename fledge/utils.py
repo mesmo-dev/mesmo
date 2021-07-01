@@ -529,14 +529,14 @@ class StandardForm(object):
 
             # Raise error if variable dimensions are inconsistent.
             if (
-                    np.shape(c_entry)[1] != len(variable_index)
-                    if len(np.shape(constant)) > 1
+                    (np.shape(c_entry)[1] != len(variable_index)) or (np.shape(c_entry)[0] != 1)
+                    if len(np.shape(c_entry)) > 1
                     else np.shape(c_entry)[0] != len(variable_index)
             ):
                 raise ValueError(f"Objective factor dimension mismatch at variable: {variable[1]}")
 
             # Add c vector entries to dictionary.
-            self.c_dict[variable_index] = c_entry
+            self.c_dict[variable_index] = c_entry.ravel()
 
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 

@@ -544,7 +544,7 @@ class StandardForm(object):
         log_time('get standard-form A matrix')
 
         # Instantiate sparse matrix.
-        a_matrix = scipy.sparse.dok_matrix((self.constraints_len, len(self.variables)), dtype=float)
+        a_matrix = scipy.sparse.lil_matrix((self.constraints_len, len(self.variables)), dtype=float)
 
         # Fill matrix entries.
         for constraint_index, variable_index in self.a_dict:

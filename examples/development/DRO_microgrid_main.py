@@ -11,7 +11,7 @@ import fledge
 from mg_offer_stage_1_problem_standard_form import stage_1_problem_standard_form
 from mg_offer_stage_2_problem_standard_form import stage_2_problem_standard_form
 from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
-from dro_data_input import DRO_data, DRO_ambiguity_set
+from dro_data_interface import DRO_data, DRO_ambiguity_set
 
 
 def main():
@@ -2111,6 +2111,13 @@ def main():
     # Obtain results.
     results_dro = standard_form_stage_1.get_results(optimization_problem_dro.s1_vector)
 
+    for variable_name in results_dro:
+        results_dro[variable_name].to_csv(os.path.join(results_path, f'{variable_name}_dro.csv'))
+
+    objective_dro = pd.DataFrame(optimization_problem_dro.objective.value, columns = ['objective_value_dro'])
+
+    objective_dro.to_csv(os.path.join(results_path, f'objective_dro.csv'))
+
     # obtain results for dual variables
     beta_res = pd.Series(optimization_problem_dro.beta.value.ravel())
     sigma_res = pd.Series(optimization_problem_dro.sigma.value.ravel())
@@ -2207,38 +2214,64 @@ def main():
     up_reserve_det = pd.Series(results_determinstic['up_reserve'].values.ravel(), index=der_model_set.timesteps)
     down_reserve_det = pd.Series(results_determinstic['down_reserve'].values.ravel(), index=der_model_set.timesteps)
 
+    for variable_name in results_determinstic:
+        results_determinstic[variable_name].to_csv(os.path.join(results_path, f'{variable_name}_det.csv'))
+
+    objective_det = pd.DataFrame(optimization_problem_deterministic.objective.value, columns = ['objective_value_det'])
+
+    objective_det.to_csv(os.path.join(results_path, f'objective_det.csv'))
 
     # Plot some results.
     figure = go.Figure()
     figure.add_scatter(
         x=no_reserve.index,
         y=no_reserve.values,
-        name='no_reserve',
-        line=go.scatter.Line(shape='hv', width=5, dash='dot')
+        name='energy_offer_dro',
+        line=go.scatter.Line(shape='hv', width=9, dash='dot')
     )
     figure.add_scatter(
         x=up_reserve.index,
         y=up_reserve.values,
-        name='up_reserve',
-        line=go.scatter.Line(shape='hv', width=4, dash='dot')
+        name='up_reserve_offer_dro',
+        line=go.scatter.Line(shape='hv', width=8, dash='dot')
     )
     figure.add_scatter(
         x=down_reserve.index,
         y=down_reserve.values,
-        name='down_reserve',
-        line=go.scatter.Line(shape='hv', width=3, dash='dot')
+        name='down_reserve_offer_dro',
+        line=go.scatter.Line(shape='hv', width=7, dash='dot')
     )
+
+    figure.add_scatter(
+        x=no_reserve_det.index,
+        y=no_reserve_det.values,
+        name='energy_offer_determinstic',
+        line=go.scatter.Line(shape='hv', width=6, dash='dot')
+    )
+    figure.add_scatter(
+        x=up_reserve_det.index,
+        y=up_reserve_det.values,
+        name='up_reserve_offer_determinstic',
+        line=go.scatter.Line(shape='hv', width=5, dash='dot')
+    )
+    figure.add_scatter(
+        x=down_reserve_det.index,
+        y=down_reserve_det.values,
+        name='down_reserve_offer_determinstic',
+        line=go.scatter.Line(shape='hv', width=4, dash='dot')
+    )
+
     figure.add_scatter(
         x=up_reserve.index,
         y=(no_reserve + up_reserve).values,
         name='no_reserve + up_reserve',
-        line=go.scatter.Line(shape='hv', width=2, dash='dot')
+        line=go.scatter.Line(shape='hv', width=3, dash='dot')
     )
     figure.add_scatter(
         x=up_reserve.index,
         y=(no_reserve - down_reserve).values,
         name='no_reserve - down_reserve',
-        line=go.scatter.Line(shape='hv', width=1, dash='dot')
+        line=go.scatter.Line(shape='hv', width=2, dash='dot')
     )
     figure.update_layout(
         title=f'Power balance',

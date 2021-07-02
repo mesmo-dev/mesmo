@@ -459,9 +459,15 @@ def stage_1_problem_standard_form(scenario_name, dro_data_set):
     timestep_interval_hours = (der_model_set.timesteps[1] - der_model_set.timesteps[0]) / pd.Timedelta('1h')
 
     # Obtain energy price timeseries.
-    price_timeseries_energy = (
-        price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T * timestep_interval_hours
-    )
+    # price_timeseries_energy = (
+    #     price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.T * timestep_interval_hours
+    # )
+
+    # TODO proper price input we need
+    number_of_price = price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].shape
+
+    price_timeseries_energy = dro_data_set.energy_price[0:number_of_price[0]].to_numpy() * timestep_interval_hours
+    price_timeseries_reserve = dro_data_set.contingency_reserve_price[0:number_of_price[0]].to_numpy() * timestep_interval_hours
 
     # Define objective.
     # Active power cost / revenue.
@@ -484,8 +490,8 @@ def stage_1_problem_standard_form(scenario_name, dro_data_set):
 
     f_vector = np.zeros((len(standard_form.variables), 1))
     f_vector[x_index_energy, 0] = - np.array([price_timeseries_energy])
-    f_vector[x_index_up_reserve, 0] = 0.1 * dro_data_set.dro_base_data['prob_up_reserve_bidded'].values * np.array([price_timeseries_energy])
-    f_vector[x_index_down_reserve, 0] = 0.1 * dro_data_set.dro_base_data['prob_down_reserve_bidded'].values * np.array([price_timeseries_energy])
+    f_vector[x_index_up_reserve, 0] = dro_data_set.dro_base_data['prob_up_reserve_bidded'].values * np.array([price_timeseries_energy])
+    f_vector[x_index_down_reserve, 0] = dro_data_set.dro_base_data['prob_down_reserve_bidded'].values * np.array([price_timeseries_reserve])
 
     # optimization_problem.objective += (
     #     (

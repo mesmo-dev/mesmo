@@ -6,170 +6,84 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 import fledge
 import statistics
-
-
-class DRO_data(object):
-    """DRO data object."""
-    energy_price: pd.DataFrame
-    contingency_reserve_price: pd.DataFrame
-    forecast_price_raw: pd.DataFrame
-    dro_base_data: pd.DataFrame
-    energy_price_deviation: pd.DataFrame
-    contingency_reserve_price_deviation: pd.DataFrame
-
-    mean_energy_price: float
-    variance_energy_price: float
-    mean_contingency_price: float
-    variance_contingency_price: float
-
-    def __init__(
-            self,
-            data_path: str,
-    ):
-        self.forecast_price_raw = \
-            pd.read_csv(data_path + "price_forecast_2021_26_07.csv")
-        # forecast_price_raw = pd.read_csv(
-        #     "C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
-        self.energy_price = self.forecast_price_raw['USEP($/MWh)'] / 100
-
-        self.contingency_reserve_price = self.forecast_price_raw['Contingency($/MWh)'] / 100
-
-        self.dro_base_data = \
-            pd.read_csv(data_path + "dro_base_data.csv" )
-
-        self.mean_energy_price = statistics.mean(self.energy_price)
-
-        self.variance_energy_price = statistics.variance(self.energy_price-self.mean_energy_price, 0)
-
-        self.mean_contingency_price = statistics.mean(self.contingency_reserve_price)
-
-        self.variance_contingency_price = statistics.variance(
-            self.contingency_reserve_price - self.mean_contingency_price, 0
-        )
-
-        self.energy_price_deviation = self.energy_price - self.mean_energy_price
-
-        self.contingency_reserve_price_deviation = self.contingency_reserve_price - self.mean_contingency_price
-
-class DRO_ambiguity_set(object):
-    gamma: np.array
-    delta_lower_bound: np.array
-    delta_upper_bound: np.array
-    u_upper_bound: np.array
-
-    def __init__(
-            self,
-            scenario_name: str,
-            standard_form_stage_2: fledge.utils.StandardForm,
-            delta_indices_stage2: float,
-            dro_data_set: DRO_data
-    ):
-
-        number_of_uncertainties = len(delta_indices_stage2)
-
-        self.gamma = np.zeros((number_of_uncertainties, 1))
-
-        self.delta_lower_bound = np.zeros((number_of_uncertainties, 1))
-
-        self.delta_upper_bound = np.zeros((number_of_uncertainties, 1))
-
-        self.u_upper_bound = np.zeros((number_of_uncertainties, 1))
-
-        der_model_set = fledge.der_models.DERModelSet(scenario_name)
-
-        linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
-
-        temp_indices = fledge.utils.get_index(
-            standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2',
-            timestep=linear_electric_grid_model.electric_grid_model.timesteps
-        )
-
-        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 10*dro_data_set.variance_energy_price
-
-        self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.energy_price_deviation.min()
-
-        self.delta_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.energy_price_deviation.max()
-
-        self.u_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            max(dro_data_set.energy_price_deviation.min()**2, dro_data_set.energy_price_deviation.max()**2)
-
-        temp_indices = fledge.utils.get_index(
-            standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
-            timestep=linear_electric_grid_model.electric_grid_model.timesteps
-        )
-
-        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = dro_data_set.variance_contingency_price
-
-        self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.contingency_reserve_price_deviation.min()
-
-        self.delta_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.contingency_reserve_price_deviation.max()
-
-        self.u_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            max(
-                    dro_data_set.contingency_reserve_price_deviation.min()**2,
-                    dro_data_set.contingency_reserve_price_deviation.max()**2
-                )
-
-        temp_indices = fledge.utils.get_index(
-            standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
-            timestep=linear_electric_grid_model.electric_grid_model.timesteps
-        )
-
-        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = dro_data_set.variance_contingency_price
-
-        self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.contingency_reserve_price_deviation.min()
-
-        self.delta_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.contingency_reserve_price_deviation.max()
-
-        self.u_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            max(
-                    dro_data_set.contingency_reserve_price_deviation.min()**2,
-                    dro_data_set.contingency_reserve_price_deviation.max()**2
-                )
-
-
-        for der_name, der_model in der_model_set.flexible_der_models.items():
-            if not der_model.disturbances.empty:
-                temp_indices = fledge.utils.get_index(
-                    standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
-                    timestep=der_model.timesteps, der_name=[der_model.der_name],
-                    disturbance=der_model.disturbances,
-                )
-
-                self.gamma[np.where(
-                    pd.Index(delta_indices_stage2).isin(temp_indices))] = 20
-
-                self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = -5
-
-                self.delta_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 5
-
-                self.u_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 100
 
 
 
 def main():
     scenario_name = 'singapore_6node_custom'
 
-    # Get results path.
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    energy_dro = pd.read_csv(
+             "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\energy_dro.csv")
 
-    # Recreate / overwrite database, to incorporate changes in the CSV definition files.
-    fledge.data_interface.recreate_database()
+    energy_det = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\energy_det.csv")
 
-    dro_data_test = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+    up_reserve_det = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\up_reserve_det.csv")
 
-    dro_price_deviation = dro_data_test.energy_price - dro_data_test.mean_energy_price
+    up_reserve_dro = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\up_reserve_dro.csv")
+
+    down_reserve_det = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\down_reserve_det.csv")
+
+    down_reserve_dro = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\down_reserve_dro.csv")
 
     print()
+
+    number_of_time_steps = len(energy_dro['timestep'])
+    X = np.arange(number_of_time_steps)
+
+    fig = plt.figure()
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+    ax.bar(X + 0.00, energy_dro['total'], color='blue', width=0.25)
+    ax.bar(X + 0.00, up_reserve_dro['total'], bottom=energy_dro['total'], color='r', width=0.25)
+    ax.bar(X + 0.00, down_reserve_dro['total'], bottom=up_reserve_dro['total'], color='y', width=0.25)
+
+    ax.bar(X + 0.25, energy_det['total'], color='royalblue', width=0.25)
+    ax.bar(X + 0.25, up_reserve_det['total'], bottom=energy_det['total'], color='indianred', width=0.25)
+    ax.bar(X + 0.25, down_reserve_det['total'], bottom=up_reserve_det['total'], color='gold', width=0.25)
+
+    ax.legend(labels=['Energy - DRO', 'Up reserve - DRO', 'Down reserve - DRO', 'Energy - det.', 'Up reserve - det.', 'Down reserve - det.'])
+
+    ax.set_ylabel('Offers kWh')
+    ax.set_xlabel('time step')
+    ax.set_title('Comparison of DRO solution and deterministic solution')
+    ax.set_xticks(X)
+    ax.set_xticklabels(energy_dro['timestep'].values.tolist())
+    fig.savefig('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\final_plots\\offer_result.pdf')
+    plt.show()
+
+
+    energy_dro['timestep'].values.tolist()
+
+    fig = plt.figure()
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.bar(ind, menMeans, width, color='r')
+    ax.bar(ind, womenMeans, width, bottom=menMeans, color='b')
+    ax.set_ylabel('Scores')
+    ax.set_title('Scores by group and gender')
+    ax.set_xticks(ind, ('G1', 'G2', 'G3', 'G4', 'G5'))
+    ax.set_yticks(np.arange(0, 81, 10))
+    ax.legend(labels=['Men', 'Women'])
+    plt.show()
+
+    plt.show()
+    # # Get results path.
+    # results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    #
+    # # Recreate / overwrite database, to incorporate changes in the CSV definition files.
+    # fledge.data_interface.recreate_database()
+    #
+    # dro_data_test = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+    #
+    # dro_price_deviation = dro_data_test.energy_price - dro_data_test.mean_energy_price
+
     # forecast_data_price = pd.read_csv(
     #     "C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
     # # os.path.join('..', 'bla', 'dro')

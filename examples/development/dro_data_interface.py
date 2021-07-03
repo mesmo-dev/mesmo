@@ -87,7 +87,7 @@ class DRO_ambiguity_set(object):
             timestep=linear_electric_grid_model.electric_grid_model.timesteps
         )
 
-        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = dro_data_set.variance_energy_price
+        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 10*dro_data_set.variance_energy_price
 
         self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
             dro_data_set.energy_price_deviation.min()

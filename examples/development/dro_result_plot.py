@@ -60,20 +60,6 @@ def main():
     plt.show()
 
 
-    energy_dro['timestep'].values.tolist()
-
-    fig = plt.figure()
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.bar(ind, menMeans, width, color='r')
-    ax.bar(ind, womenMeans, width, bottom=menMeans, color='b')
-    ax.set_ylabel('Scores')
-    ax.set_title('Scores by group and gender')
-    ax.set_xticks(ind, ('G1', 'G2', 'G3', 'G4', 'G5'))
-    ax.set_yticks(np.arange(0, 81, 10))
-    ax.legend(labels=['Men', 'Women'])
-    plt.show()
-
-    plt.show()
     # # Get results path.
     # results_path = fledge.utils.get_results_path(__file__, scenario_name)
     #

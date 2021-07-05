@@ -264,7 +264,7 @@ class StandardForm(object):
         new_variables = (
             pd.DataFrame(itertools.product([name], *[
                 list(value)
-                if type(value) in [pd.Index, pd.DatetimeIndex, list, tuple]
+                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple]
                 else [value]
                 for value in keys.values()
             ]), columns=['name', *keys.keys()])
@@ -430,7 +430,7 @@ class StandardForm(object):
 
                 # If any variable key values are empty, ignore variable & do not add any A matrix entry.
                 for key_value in variable[1].values():
-                    if isinstance(key_value, (list, tuple, pd.Index, np.ndarray)):
+                    if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
                         if len(key_value) == 0:
                             continue  # Skip variable & go to next iteration.
 
@@ -452,7 +452,7 @@ class StandardForm(object):
                             raise ValueError(f"Invalid broadcast dimension: {broadcast}")
                         else:
                             # TODO: Need check for order of values / index entries?
-                            a_entry = scipy.sparse.block_diag([a_entry] * len(variable[1][broadcast]))
+                            a_entry = scipy.sparse.block_diag([np.array(a_entry)] * len(variable[1][broadcast]))
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(a_entry) != (len(constraint_index), len(variable_index)):
@@ -473,7 +473,7 @@ class StandardForm(object):
                 new_constraints = (
                     pd.DataFrame(itertools.product(*[
                         list(value)
-                        if type(value) in [pd.Index, pd.DatetimeIndex, list, tuple]
+                        if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple]
                         else [value]
                         for value in keys.values()
                     ]), columns=keys.keys())

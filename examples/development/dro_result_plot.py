@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-
+from dro_data_interface import DRO_data, DRO_ambiguity_set
 import fledge
 import statistics
 
@@ -17,28 +17,29 @@ def main():
     scenario_name = 'singapore_6node_custom'
 
     energy_dro = pd.read_csv(
-             "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\energy_dro.csv")
+             "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\energy_dro.csv")
 
     energy_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\energy_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\energy_det.csv")
 
     up_reserve_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\up_reserve_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\up_reserve_det.csv")
 
     up_reserve_dro = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\up_reserve_dro.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\up_reserve_dro.csv")
 
     down_reserve_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\down_reserve_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\down_reserve_det.csv")
 
     down_reserve_dro = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\1-var-energy-price-DRO_microgrid_main_singapore_6node_custom_2021-07-02_23-13-22\\down_reserve_dro.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\down_reserve_dro.csv")
 
     print()
 
     number_of_time_steps = len(energy_dro['timestep'])
     X = np.arange(number_of_time_steps)
 
+    # offer figure
     fig = plt.figure()
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
     ax.bar(X + 0.00, energy_dro['total'], color='blue', width=0.25)
@@ -49,16 +50,62 @@ def main():
     ax.bar(X + 0.25, up_reserve_det['total'], bottom=energy_det['total'], color='indianred', width=0.25)
     ax.bar(X + 0.25, down_reserve_det['total'], bottom=up_reserve_det['total'], color='gold', width=0.25)
 
-    ax.legend(labels=['Energy - DRO', 'Up reserve - DRO', 'Down reserve - DRO', 'Energy - det.', 'Up reserve - det.', 'Down reserve - det.'])
+    ax.legend(labels=['Energy - DRO', 'Up reserve - DRO', 'Down reserve - DRO', 'Energy - det.', 'Up reserve - det.', 'Down reserve - det.'], loc='right')
 
     ax.set_ylabel('Offers kWh')
     ax.set_xlabel('time step')
     ax.set_title('Comparison of DRO solution and deterministic solution')
     ax.set_xticks(X)
     ax.set_xticklabels(energy_dro['timestep'].values.tolist())
+    plt.grid()
     fig.savefig('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\final_plots\\offer_result.pdf')
     plt.show()
 
+
+    dro_data_set = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+
+    price_timeseries_energy = dro_data_set.energy_price[0:4].to_numpy()
+    price_timeseries_reserve = dro_data_set.contingency_reserve_price[0:4].to_numpy()
+
+    # price figure
+    fig = plt.figure()
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+    ax.bar(X + 0.00, price_timeseries_energy, color='blue', width=0.25)
+
+    ax.bar(X + 0.25, price_timeseries_reserve, color='gold', width=0.25)
+
+    ax.legend(labels=['Energy price forecast', 'Contingency reserve price forecast'], loc='right')
+    plt.grid()
+    ax.set_ylabel('price $/kWh')
+    ax.set_xlabel('time step')
+    ax.set_title('Price')
+    ax.set_xticks(X)
+    ax.set_xticklabels(energy_dro['timestep'].values.tolist())
+    fig.savefig('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\final_plots\\price.pdf')
+    plt.show()
+
+
+    fig, ax = plt.subplots()
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+    ax.bar(X + 0.00, 100*price_timeseries_energy, color='blue', width=0.25)
+    ax.set_xlabel("time step")
+    ax.set_ylabel("energy price $/MWh")
+    ax.set_xticks(X)
+    ax.set_xticklabels(energy_dro['timestep'].values.tolist())
+    plt.grid()
+    ax.legend(labels=['Energy price forecast'], loc='right')
+
+    ax2 = ax.twinx()
+    ax2.bar(X + 0.25, 100*price_timeseries_reserve, color='gold', width=0.25)
+    ax2.set_ylabel("contingency reserve price $/MWh")
+    ax2.set_xticks(X)
+    ax2.set_xticklabels(energy_dro['timestep'].values.tolist())
+    fig.savefig('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\final_plots\\price.pdf')
+    ax2.legend(labels=['Energy price forecast', 'Contingency reserve price forecast'], loc='lower right')
+    plt.show()
+    plt.show()
+
+    # create figure and axis objects with subplots()
 
     # # Get results path.
     # results_path = fledge.utils.get_results_path(__file__, scenario_name)

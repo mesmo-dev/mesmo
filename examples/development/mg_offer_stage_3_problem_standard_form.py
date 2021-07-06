@@ -22,7 +22,7 @@ def stage_3_problem_standard_form(scenario_name, dro_data_set):
     stochastic_scenarios_stage_3 = ['up_reserve_activated', 'down_reserve_activated']
 
     # Get results path.
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    # results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
     #fledge.data_interface.recreate_database()
@@ -680,7 +680,7 @@ def stage_3_problem_standard_form(scenario_name, dro_data_set):
 
     # objective matrices
     # m_Q3_s2
-    der_cost_factor = 0.01
+    der_cost_factor = 0.001
     penalty_factor = dro_data_set.dro_base_data['panelty_energy_deviation ($/kWh)'].values
     up_reserve_activated_probability = dro_data_set.dro_base_data['prob_up_reserve_activated'].values
     down_reserve_activated_probability = dro_data_set.dro_base_data['prob_down_reserve_activated'].values

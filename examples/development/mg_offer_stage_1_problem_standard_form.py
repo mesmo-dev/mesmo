@@ -9,6 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse
 import fledge
+from dro_data_interface import DRO_data, DRO_ambiguity_set
 
 
 def stage_1_problem_standard_form(scenario_name, dro_data_set):
@@ -295,6 +296,23 @@ def stage_1_problem_standard_form(scenario_name, dro_data_set):
                         )
                     )
 
+                    standard_form.define_constraint(
+                        (
+                            'variable',
+                            1.0,
+                            dict(
+                                name='state_vector', der_name=[der_model.der_name], timestep=der_model.timesteps[0],
+                                state=der_model.states[der_model.states.isin(der_model.storage_states)],
+                                scenario=[stochastic_scenario]
+                            )
+                        ),
+                        '==',
+                        (
+                            'constant',
+                            der_model.state_vector_initial.values[der_model.states.isin(der_model.storage_states)]
+                        )
+                    )
+
                 # State equation.
                 for timestep, timestep_previous in zip(der_model.timesteps[1:], der_model.timesteps[:-1]):
                     standard_form.define_constraint(
@@ -522,11 +540,13 @@ def main():
 
     price_data = fledge.data_interface.PriceData(scenario_name)
 
+    dro_data_set = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+
     # Get results path.
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     standard_form_stage_1, a_matrix, b_vector, f_vector, stochastic_scenarios, der_model_set\
-        = stage_1_problem_standard_form(scenario_name)
+        = stage_1_problem_standard_form(scenario_name, dro_data_set)
 
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
@@ -661,22 +681,37 @@ def main():
             figure.add_scatter(
                 x=der_model.output_maximum_timeseries.index,
                 y=der_model.output_maximum_timeseries.loc[:, output].values,
-                name='Maximum',
+                name='Maximum bound',
                 line=go.scatter.Line(shape='hv')
             )
             figure.add_scatter(
                 x=der_model.output_minimum_timeseries.index,
                 y=der_model.output_minimum_timeseries.loc[:, output].values,
-                name='Minimum',
+                name='Minimum bound',
                 line=go.scatter.Line(shape='hv')
             )
             for number, stochastic_scenario in enumerate(stochastic_scenarios):
-                figure.add_scatter(
-                    x=output_vector[stochastic_scenario].index,
-                    y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
-                    name=f'Optimal: {stochastic_scenario}',
-                    line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
-                )
+                if number == 0:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 5)
+                    )
+                elif number == 1:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 4, dash='dashdot')
+                    )
+                else:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
+                    )
             figure.update_layout(
                 title=f'DER: ({der_model.der_type}, {der_name}) / Output: {output}',
                 xaxis=go.layout.XAxis(tickformat='%H:%M'),

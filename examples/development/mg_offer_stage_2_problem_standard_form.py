@@ -17,7 +17,7 @@ def stage_2_problem_standard_form(scenario_name, dro_data_set):
     stochastic_scenarios = ['no_reserve', 'up_reserve', 'down_reserve']
 
     # Get results path.
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    # results_path = fledge.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV definition files.
     #fledge.data_interface.recreate_database()
@@ -575,7 +575,7 @@ def stage_2_problem_standard_form(scenario_name, dro_data_set):
     # m_Q2_s2 vector
     m_Q2_s2 = np.zeros((s2_indices.shape[0], 1))
     penalty_factor = dro_data_set.dro_base_data['panelty_energy_deviation ($/kWh)'].values
-    der_cost_factor = 0.04
+    der_cost_factor = 0.001
 
     energy_deviation_s2_indices = fledge.utils.get_index(
         standard_form.variables, name='energy_deviation_s2',

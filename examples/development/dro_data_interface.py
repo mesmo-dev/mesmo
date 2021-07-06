@@ -87,16 +87,16 @@ class DRO_ambiguity_set(object):
             timestep=linear_electric_grid_model.electric_grid_model.timesteps
         )
 
-        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 10*dro_data_set.variance_energy_price
+        self.gamma[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = 1*dro_data_set.variance_energy_price
 
         self.delta_lower_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.energy_price_deviation.min()
+            10*dro_data_set.energy_price_deviation.min()
 
         self.delta_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            dro_data_set.energy_price_deviation.max()
+            10*dro_data_set.energy_price_deviation.max()
 
         self.u_upper_bound[np.where(pd.Index(delta_indices_stage2).isin(temp_indices))] = \
-            max(dro_data_set.energy_price_deviation.min()**2, dro_data_set.energy_price_deviation.max()**2)
+            100*max(dro_data_set.energy_price_deviation.min()**2, dro_data_set.energy_price_deviation.max()**2)
 
         temp_indices = fledge.utils.get_index(
             standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',

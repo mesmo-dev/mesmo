@@ -2288,22 +2288,37 @@ def main():
             figure.add_scatter(
                 x=der_model.output_maximum_timeseries.index,
                 y=der_model.output_maximum_timeseries.loc[:, output].values,
-                name='Maximum',
+                name='Maximum bound',
                 line=go.scatter.Line(shape='hv')
             )
             figure.add_scatter(
                 x=der_model.output_minimum_timeseries.index,
                 y=der_model.output_minimum_timeseries.loc[:, output].values,
-                name='Minimum',
+                name='Minimum bound',
                 line=go.scatter.Line(shape='hv')
             )
             for number, stochastic_scenario in enumerate(stochastic_scenarios):
-                figure.add_scatter(
-                    x=output_vector[stochastic_scenario].index,
-                    y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
-                    name=f'Optimal: {stochastic_scenario}',
-                    line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
-                )
+                if number == 0:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 5)
+                    )
+                elif number == 1:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 4, dash='dashdot')
+                    )
+                else:
+                    figure.add_scatter(
+                        x=output_vector[stochastic_scenario].index,
+                        y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+                        name=f'optimal value in {stochastic_scenario} scenario',
+                        line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
+                    )
             figure.update_layout(
                 title=f'DER: ({der_model.der_type}, {der_name}) / Output: {output}',
                 xaxis=go.layout.XAxis(tickformat='%H:%M'),
@@ -2313,6 +2328,40 @@ def main():
             fledge.utils.write_figure_plotly(figure, os.path.join(
                 results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
             ))
+
+    #
+    # for der_name, der_model in der_model_set.flexible_der_models.items():
+    #
+    #     for output in der_model.outputs:
+    #         figure = go.Figure()
+    #         figure.add_scatter(
+    #             x=der_model.output_maximum_timeseries.index,
+    #             y=der_model.output_maximum_timeseries.loc[:, output].values,
+    #             name='Maximum',
+    #             line=go.scatter.Line(shape='hv')
+    #         )
+    #         figure.add_scatter(
+    #             x=der_model.output_minimum_timeseries.index,
+    #             y=der_model.output_minimum_timeseries.loc[:, output].values,
+    #             name='Minimum',
+    #             line=go.scatter.Line(shape='hv')
+    #         )
+    #         for number, stochastic_scenario in enumerate(stochastic_scenarios):
+    #             figure.add_scatter(
+    #                 x=output_vector[stochastic_scenario].index,
+    #                 y=output_vector[stochastic_scenario].loc[:, (der_name, output)].values,
+    #                 name=f'Optimal: {stochastic_scenario}',
+    #                 line=go.scatter.Line(shape='hv', width=number + 3, dash='dot')
+    #             )
+    #         figure.update_layout(
+    #             title=f'DER: ({der_model.der_type}, {der_name}) / Output: {output}',
+    #             xaxis=go.layout.XAxis(tickformat='%H:%M'),
+    #             legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
+    #         )
+    #         # figure.show()
+    #         fledge.utils.write_figure_plotly(figure, os.path.join(
+    #             results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
+    #         ))
 
         # for control in der_model.controls:
         #     figure = go.Figure()

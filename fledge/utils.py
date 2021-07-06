@@ -554,15 +554,27 @@ class StandardForm(object):
         # Log time.
         log_time('get standard-form A matrix')
 
-        # Instantiate sparse matrix.
-        a_matrix = scipy.sparse.lil_matrix((self.constraints_len, len(self.variables)), dtype=float)
+        # Instantiate collections.
+        values_list = []
+        rows_list = []
+        columns_list = []
 
-        # Fill matrix entries.
+        # Collect matrix entries.
         for constraint_index, variable_index in self.a_dict:
-            a_matrix[np.ix_(constraint_index, variable_index)] += self.a_dict[constraint_index, variable_index]
+            rows, columns, values = scipy.sparse.find(self.a_dict[constraint_index, variable_index])
+            rows = np.array(constraint_index)[rows]
+            columns = np.array(variable_index)[columns]
+            values_list.append(values)
+            rows_list.append(rows)
+            columns_list.append(columns)
 
-        # Convert to CSR matrix.
-        a_matrix = a_matrix.tocsr(copy=True)
+        # Instantiate sparse matrix.
+        a_matrix = (
+            scipy.sparse.coo_matrix(
+                (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
+                shape=(self.constraints_len, len(self.variables))
+            ).tocsr(copy=True)  # TODO: Is copy really needed here?
+        )
 
         # Log time.
         log_time('get standard-form A matrix')

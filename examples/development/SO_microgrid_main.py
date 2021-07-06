@@ -14,6 +14,68 @@ from mg_offer_stage_3_problem_standard_form import stage_3_problem_standard_form
 from dro_data_interface import DRO_data, DRO_ambiguity_set
 
 
+class scenario_generation(object):
+    delta: np.array
+    probability: np.array
+
+
+    def __init__(
+            self,
+            scenario_number: int,
+            scenario_name: str,
+            standard_form_stage_2: fledge.utils.StandardForm,
+            delta_indices_stage2: float,
+            dro_data_set: DRO_data
+    ):
+
+        number_of_uncertainties = len(delta_indices_stage2)
+
+        self.delta = np.zeros((number_of_uncertainties, scenario_number))
+
+        self.probability = np.zeros((number_of_uncertainties, scenario_number))
+
+        der_model_set = fledge.der_models.DERModelSet(scenario_name)
+
+        linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
+
+
+        temp_indices = fledge.utils.get_index(
+            standard_form_stage_2.variables, name='uncertainty_energy_price_deviation_s2',
+            timestep=linear_electric_grid_model.electric_grid_model.timesteps
+        )
+
+        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] \
+            = np.random.normal(0, dro_data_set.variance_energy_price, scenario_number)
+
+        temp_indices = fledge.utils.get_index(
+            standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
+            timestep=linear_electric_grid_model.electric_grid_model.timesteps
+        )
+
+        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] = \
+            np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
+
+        temp_indices = fledge.utils.get_index(
+            standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
+            timestep=linear_electric_grid_model.electric_grid_model.timesteps
+        )
+
+        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)), :] = \
+            np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
+
+
+        for der_name, der_model in der_model_set.flexible_der_models.items():
+            if not der_model.disturbances.empty:
+                temp_indices = fledge.utils.get_index(
+                    standard_form_stage_2.variables, name='uncertainty_disturbances_vector_s2',
+                    timestep=der_model.timesteps, der_name=[der_model.der_name],
+                    disturbance=der_model.disturbances,
+                )
+
+                self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] = \
+                    np.random.normal(0, 20, scenario_number)
+
+
 def main():
     scenario_name = 'singapore_6node_custom'
     # scenario_name = 'singapore_6node'
@@ -46,9 +108,7 @@ def main():
 
     print('SO form')
 
-    # TODO: we need proper initialization of DRO data
 
-    # Define stage 3 problem
     optimization_problem_SO = fledge.utils.OptimizationProblem()
     # Define optimization problem.
     optimization_problem_SO.s_1 = cp.Variable((len(s1_indices_stage3), 1))
@@ -56,9 +116,11 @@ def main():
     optimization_problem_SO.s_3 = cp.Variable((len(s3_indices_stage3), 1))
     optimization_problem_SO.delta = cp.Variable((len(delta_indices_stage3), 1))
 
+    scenario_uncertainty = scenario_generation(1000, scenario_name, standard_form_stage_2, delta_indices_stage2, dro_data_set)
+
     # TODO scenario generation for delta assignment
     optimization_problem_SO.constraints.append(
-        optimization_problem_SO.delta == 0
+        optimization_problem_SO.delta == scenario_uncertainty.delta
     )
 
     optimization_problem_SO.constraints.append(

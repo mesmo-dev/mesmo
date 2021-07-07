@@ -32,7 +32,7 @@ class scenario_generation(object):
 
         self.delta = np.zeros((number_of_uncertainties, scenario_number))
 
-        self.probability = np.zeros((number_of_uncertainties, scenario_number))
+        self.probability = np.zeros((1, scenario_number))
 
         der_model_set = fledge.der_models.DERModelSet(scenario_name)
 
@@ -44,24 +44,27 @@ class scenario_generation(object):
             timestep=linear_electric_grid_model.electric_grid_model.timesteps
         )
 
-        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] \
-            = np.random.normal(0, dro_data_set.variance_energy_price, scenario_number)
+        for index_time in temp_indices:
+            self.delta[np.where(pd.Index(delta_indices_stage2).isin([index_time])),:] \
+                = np.random.normal(0, dro_data_set.variance_energy_price, scenario_number)
 
         temp_indices = fledge.utils.get_index(
             standard_form_stage_2.variables, name='uncertainty_up_reserve_price_deviation_s2',
             timestep=linear_electric_grid_model.electric_grid_model.timesteps
         )
 
-        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] = \
-            np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
+        for index_time in temp_indices:
+            self.delta[np.where(pd.Index(delta_indices_stage2).isin([index_time])),:] = \
+                np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
 
         temp_indices = fledge.utils.get_index(
             standard_form_stage_2.variables, name='uncertainty_down_reserve_price_deviation_s2',
             timestep=linear_electric_grid_model.electric_grid_model.timesteps
         )
 
-        self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)), :] = \
-            np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
+        for index_time in temp_indices:
+            self.delta[np.where(pd.Index(delta_indices_stage2).isin([index_time])), :] = \
+                np.random.normal(0, dro_data_set.variance_contingency_price, scenario_number)
 
 
         for der_name, der_model in der_model_set.flexible_der_models.items():
@@ -72,9 +75,11 @@ class scenario_generation(object):
                     disturbance=der_model.disturbances,
                 )
 
-                self.delta[np.where(pd.Index(delta_indices_stage2).isin(temp_indices)),:] = \
-                    np.random.normal(0, 20, scenario_number)
+                for index_time in temp_indices:
+                    self.delta[np.where(pd.Index(delta_indices_stage2).isin([index_time])),:] = \
+                        np.random.normal(0, 20, scenario_number)
 
+        self.probability[:,:] = 1/scenario_number
 
 def main():
     scenario_name = 'singapore_6node_custom'
@@ -108,34 +113,24 @@ def main():
 
     print('SO form')
 
-
+    scenario_number = 1000
     optimization_problem_SO = fledge.utils.OptimizationProblem()
     # Define optimization problem.
     optimization_problem_SO.s_1 = cp.Variable((len(s1_indices_stage3), 1))
-    optimization_problem_SO.s_2 = cp.Variable((len(s2_indices_stage3), 1))
-    optimization_problem_SO.s_3 = cp.Variable((len(s3_indices_stage3), 1))
-    optimization_problem_SO.delta = cp.Variable((len(delta_indices_stage3), 1))
+    optimization_problem_SO.s_2 = cp.Variable((len(s2_indices_stage3), scenario_number))
+    optimization_problem_SO.s_3 = cp.Variable((len(s3_indices_stage3), scenario_number))
+    optimization_problem_SO.delta = cp.Variable((len(delta_indices_stage3), scenario_number))
 
-    scenario_uncertainty = scenario_generation(1000, scenario_name, standard_form_stage_2, delta_indices_stage2, dro_data_set)
+    scenario_uncertainty = scenario_generation(scenario_number, scenario_name, standard_form_stage_2, delta_indices_stage2, dro_data_set)
 
-    # TODO scenario generation for delta assignment
-    optimization_problem_SO.constraints.append(
-        optimization_problem_SO.delta == scenario_uncertainty.delta
-    )
+
+    # optimization_problem_SO.constraints.append(
+    #     optimization_problem_SO.delta == scenario_uncertainty.delta
+    # )
+    optimization_problem_SO.delta = scenario_uncertainty.delta
 
     optimization_problem_SO.constraints.append(
         A1_matrix.toarray() @ optimization_problem_SO.s_1 <= b1_vector
-    )
-
-    optimization_problem_SO.constraints.append(
-        A2_matrix.toarray() @ optimization_problem_SO.s_1 + B2_matrix.toarray() @ optimization_problem_SO.s_2
-        + C2_matrix @ optimization_problem_SO.delta <= b2_vector
-    )
-
-    optimization_problem_SO.constraints.append(
-        A3_matrix.toarray() @ optimization_problem_SO.s_1 + B3_matrix.toarray() @ optimization_problem_SO.s_2
-        + C3_matrix @ optimization_problem_SO.delta + D3_matrix.toarray() @ optimization_problem_SO.s_3
-        <= b3_vector
     )
 
     optimization_problem_SO.objective -= (
@@ -145,23 +140,37 @@ def main():
         )
     )
 
-    optimization_problem_SO.objective -= (
-        #     (
-        #         optimization_problem_stage_2.s_1.T @ M_Q2_delta @ optimization_problem_stage_2.delta
-        #    ) +
-        (
-                m_Q2_s2.T @ optimization_problem_SO.s_2
+    for scenario_index in range(scenario_number):
+        optimization_problem_SO.constraints.append(
+            A2_matrix.toarray() @ optimization_problem_SO.s_1 + B2_matrix.toarray() @ optimization_problem_SO.s_2[:,[scenario_index]]
+            + C2_matrix @ optimization_problem_SO.delta[:,[scenario_index]] <= b2_vector
         )
-    )
 
-    optimization_problem_SO.objective -= (
-        (
-                m_Q3_s2.T @ optimization_problem_SO.s_2
-        ) +
-        (
-                m_Q3_s3.T @ optimization_problem_SO.s_3
+        optimization_problem_SO.constraints.append(
+            A3_matrix.toarray() @ optimization_problem_SO.s_1 + B3_matrix.toarray() @ optimization_problem_SO.s_2[:,[scenario_index]]
+            + C3_matrix @ optimization_problem_SO.delta[:,[scenario_index]] + D3_matrix.toarray() @ optimization_problem_SO.s_3[:,[scenario_index]]
+            <= b3_vector
         )
-    )
+
+        optimization_problem_SO.objective -= scenario_uncertainty.probability[:, scenario_index]*(
+            (
+                optimization_problem_SO.s_1.T @ M_Q2_delta @ optimization_problem_SO.delta[:,[scenario_index]]
+            ) +
+            (
+                    m_Q2_s2.T @ optimization_problem_SO.s_2[:,[scenario_index]]
+            )
+        )
+
+        optimization_problem_SO.objective -= scenario_uncertainty.probability[:, scenario_index]*(
+            (
+                    m_Q3_s2.T @ optimization_problem_SO.s_2[:,[scenario_index]]
+            ) +
+            (
+                    m_Q3_s3.T @ optimization_problem_SO.s_3[:,[scenario_index]]
+            )
+        )
+
+
 
     optimization_problem_SO.solve()
 

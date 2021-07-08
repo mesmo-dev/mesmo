@@ -452,7 +452,9 @@ class StandardForm(object):
                             raise ValueError(f"Invalid broadcast dimension: {broadcast}")
                         else:
                             # TODO: Need check for order of values / index entries?
-                            a_entry = scipy.sparse.block_diag([np.array(a_entry)] * len(variable[1][broadcast]))
+                            if type(a_entry) is np.matrix:
+                                a_entry = np.array(a_entry)
+                            a_entry = scipy.sparse.block_diag([a_entry] * len(variable[1][broadcast]))
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(a_entry) != (len(constraint_index), len(variable_index)):

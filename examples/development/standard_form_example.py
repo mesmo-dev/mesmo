@@ -641,10 +641,8 @@ def main():
     fledge.utils.log_time('standard-form solve')
 
     # Obtain results.
-    fledge.utils.log_time('standard-form get results')
     results_1 = standard_form.get_results()
     duals_1 = standard_form.get_duals()
-    fledge.utils.log_time('standard-form get results')
     fledge.utils.log_time('standard-form interface')
 
     # Instantiate optimization problem.
@@ -1096,7 +1094,7 @@ def main():
             ))
             figure.add_trace(go.Scatter(
                 x=results_1['output_vector'].index,
-                y=results_1['output_vector'].loc[:, ([(der_name, output)],)].values.ravel(),
+                y=results_1['output_vector'].loc[:, [(der_name, output)]].values.ravel(),
                 name='Optimal (standard form)',
                 line=go.scatter.Line(shape='hv', width=4)
             ))

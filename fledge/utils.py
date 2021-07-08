@@ -718,6 +718,9 @@ class StandardForm(object):
         x_vector: typing.Union[cp.Variable, np.ndarray] = None
     ) -> dict:
 
+        # Log time.
+        log_time('get standard-form results')
+
         # Obtain x vector.
         if x_vector is None:
             x_vector = self.x_vector
@@ -725,86 +728,104 @@ class StandardForm(object):
             x_vector = x_vector.value
 
         # Instantiate results object.
-        results = {}
+        results = dict.fromkeys(self.variables.loc[:, 'name'].unique())
 
         # Obtain results for each variable.
-        for name in self.variables.loc[:, 'name'].unique():
+        for name in results:
 
-            # Obtain indexes.
-            variable_index = fledge.utils.get_index(self.variables, name=name)
-            timesteps = self.variables.loc[variable_index, 'timestep'].unique()
-            columns = (
-                self.variables.loc[variable_index, :].drop([
-                    'name', 'timestep'
-                ], axis=1).drop_duplicates().dropna(axis=1)
-            )
-            if len(columns.columns) > 0:
-                columns = pd.MultiIndex.from_frame(columns)
-            else:
-                columns = pd.Index(['total'])
-
-            # Instantiate results dataframe.
-            results[name] = pd.DataFrame(index=timesteps, columns=columns)
-
-            # Get results.
-            for timestep in timesteps:
-                results[name].loc[timestep, :] = (
-                    x_vector[fledge.utils.get_index(self.variables, name=name, timestep=timestep), 0]
+            # Get variable dimensions.
+            # TODO: Check if this works for scalar variables without timesteps.
+            variable_dimensions = (
+                pd.MultiIndex.from_frame(
+                    self.variables.iloc[fledge.utils.get_index(self.variables, name=name), :]
+                    .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
                 )
+            )
+
+            # Get results from x vector as pandas series.
+            results[name] = (
+                pd.Series(
+                    x_vector[fledge.utils.get_index(self.variables, name=name), 0],
+                    index=variable_dimensions
+                )
+            )
+
+            # Reshape to dataframe with timesteps as index and other variable dimensions as columns.
+            results[name] = (
+                results[name].unstack(level=[key for key in variable_dimensions.names if key != 'timestep'])
+            )
+            # If no other dimensions, e.g. for scalar variables, convert to dataframe with variable name as column.
+            if type(results[name]) is pd.Series:
+                results[name] = pd.DataFrame(results[name], columns=[name])
+
+        # Log time.
+        log_time('get standard-form results')
 
         return results
 
     def get_duals(self) -> dict:
 
+        # Log time.
+        log_time('get standard-form duals')
+
+        # Obtain dual vector.
+        dual_vector = self.dual_vector
+
         # Instantiate results object.
-        results = {}
+        results = dict.fromkeys(self.constraints.loc[:, 'name'].unique())
 
-        # Obtain results for each variable.
-        for name in self.constraints.loc[:, 'name'].unique():
+        # Obtain results for each constraint.
+        for name in results:
 
-            # Obtain indexes.
-            constraint_index = self.constraints.index[fledge.utils.get_index(self.constraints, name=name)]
-            timesteps = self.constraints.loc[constraint_index, 'timestep'].unique()
-            columns = (
-                self.constraints.loc[constraint_index, :].drop([
-                    'name', 'timestep', 'constraint_type'
-                ], axis=1).drop_duplicates().dropna(axis=1)
+            # Get constraint dimensions & constraint type.
+            # TODO: Check if this works for scalar constraints without timesteps.
+            constraint_dimensions = (
+                pd.MultiIndex.from_frame(
+                    self.constraints.iloc[fledge.utils.get_index(self.constraints, name=name), :]
+                    .drop(['name', 'constraint_type'], axis=1).drop_duplicates().dropna(axis=1)
+                )
             )
-            if len(columns.columns) > 0:
-                columns = pd.MultiIndex.from_frame(columns)
-            else:
-                columns = pd.Index(['total'])
+            constraint_type = (
+                pd.Series(self.constraints.loc[self.constraints.loc[:, 'name'] == name, 'constraint_type'].unique())
+            )
 
-            # Instantiate results dataframe.
-            results[name] = pd.DataFrame(index=timesteps, columns=columns)
+            # Get results from x vector as pandas series.
+            if constraint_type.str.contains('==').any():
+                results[name] = (
+                    pd.Series(
+                        0.0
+                        - dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='==>='), 0]
+                        + dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='==<='), 0],
+                        index=constraint_dimensions
+                    )
+                )
+            elif constraint_type.str.contains('>=').any():
+                results[name] = (
+                    pd.Series(
+                        0.0
+                        - dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='>='), 0],
+                        index=constraint_dimensions
+                    )
+                )
+            elif constraint_type.str.contains('<=').any():
+                results[name] = (
+                    pd.Series(
+                        0.0
+                        + dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='<='), 0],
+                        index=constraint_dimensions
+                    )
+                )
 
-            # Get results.
-            # TODO: Validate dual value signs.
-            for timestep in timesteps:
-                if self.constraints.loc[constraint_index, 'constraint_type'].str.contains('==').any():
-                    results[name].loc[timestep, :] = (
-                        0.0
-                        - self.dual_vector[fledge.utils.get_index(
-                            self.constraints, name=name, timestep=timestep, constraint_type='==>='
-                        ), 0]
-                        + self.dual_vector[fledge.utils.get_index(
-                            self.constraints, name=name, timestep=timestep, constraint_type='==<='
-                        ), 0]
-                    )
-                elif self.constraints.loc[constraint_index, 'constraint_type'].str.contains('>=').any():
-                    results[name].loc[timestep, :] = (
-                        0.0
-                        - self.dual_vector[fledge.utils.get_index(
-                            self.constraints, name=name, timestep=timestep, constraint_type='>='
-                        ), 0]
-                    )
-                elif self.constraints.loc[constraint_index, 'constraint_type'].str.contains('<=').any():
-                    results[name].loc[timestep, :] = (
-                        0.0
-                        + self.dual_vector[fledge.utils.get_index(
-                            self.constraints, name=name, timestep=timestep, constraint_type='<='
-                        ), 0]
-                    )
+            # Reshape to dataframe with timesteps as index and other constraint dimensions as columns.
+            results[name] = (
+                results[name].unstack(level=[key for key in constraint_dimensions.names if key != 'timestep'])
+            )
+            # If no other dimensions, e.g. for scalar constraints, convert to dataframe with constraint name as column.
+            if type(results[name]) is pd.Series:
+                results[name] = pd.DataFrame(results[name], columns=[name])
+
+        # Log time.
+        log_time('get standard-form duals')
 
         return results
 

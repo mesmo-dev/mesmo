@@ -90,36 +90,27 @@ def main():
     # Define electric grid model constraints.
     # Define voltage variable terms.
     voltage_active_term = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active.T
-                / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-            ).T,
-            np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+        @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+        @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     voltage_reactive_term = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive.T
-                / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-            ).T,
-            np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+        @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+        @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     # Define voltage constant term.
     voltage_constant = (
-        (
-            (
-                - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                @ np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-                - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                @ np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-            ).T
-            + np.array([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])
-        ) / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
+        sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+        @ (
+            np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+            - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+            @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+            - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+            @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+        )
     )
 
     # Define voltage equation.
@@ -128,41 +119,33 @@ def main():
         '==',
         ('variable', voltage_active_term, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
         ('variable', voltage_reactive_term, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', voltage_constant.repeat(len(scenario_data.timesteps))),
+        ('constant', voltage_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
 
     # Define branch flow (direction 1) variable terms.
     branch_power_1_active_variable = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active.T
-                / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-            ).T,
-            np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+        @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
     
     branch_power_1_reactive_variable = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive.T
-                / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-            ).T,
-            np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+        @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     # Define branch flow (direction 1) constant terms.
     branch_power_1_constant = (
-        (
-            (
-                - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                @ np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-                - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                @ np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-            ).T + np.array([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1.ravel())])
-        ) / np.array([np.abs(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference)])
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ (
+            np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+            - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+            @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+            - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+            @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+        )
     )
 
     # Define branch flow (direction 1) equation.
@@ -171,41 +154,33 @@ def main():
         '==',
         ('variable', branch_power_1_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
         ('variable', branch_power_1_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', branch_power_1_constant.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_1_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
 
     # Define branch flow (direction 2) variable terms.
     branch_power_2_active_variable = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active.T
-                / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-            ).T,
-            np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+        @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     branch_power_2_reactive_variable = (
-        np.multiply(
-            (
-                linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive.T
-                / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-            ).T,
-            np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+        @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     # Define branch flow (direction 2) constant terms.
     branch_power_2_constant = (
-        (
-            (
-                - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                @ np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-                - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                @ np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-            ).T + np.array([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2.ravel())])
-        ) / np.array([np.abs(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference)])
+        sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+        @ (
+            np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+            - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+            @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+            - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+            @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+        )
     )
 
     # Define branch flow (direction 2) equation.
@@ -214,34 +189,28 @@ def main():
         '==',
         ('variable', branch_power_2_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
         ('variable', branch_power_2_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', branch_power_2_constant.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_2_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
     
     # Define active loss variable terms.
     loss_active_active_variable = (
-        np.multiply(
-            linear_electric_grid_model.sensitivity_loss_active_by_der_power_active.toarray(),
-            np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+        @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     loss_active_reactive_variable = (
-        np.multiply(
-            linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive.toarray(),
-            np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+        @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     # Define active loss constant term.
     loss_active_constant = (
-        (
-            - linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
-            @ np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-            - linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
-            @ np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-        ).T
-        + np.real(linear_electric_grid_model.power_flow_solution.loss)
+        np.real(linear_electric_grid_model.power_flow_solution.loss)
+        - linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+        - linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
     )
 
     # Define active loss equation.
@@ -250,34 +219,28 @@ def main():
         '==',
         ('variable', loss_active_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
         ('variable', loss_active_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', loss_active_constant.repeat(len(scenario_data.timesteps))),
+        ('constant', loss_active_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
     
     # Define reactive loss variable terms.
     loss_reactive_active_variable = (
-        np.multiply(
-            linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active.toarray(),
-            np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+        @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
 
     loss_reactive_reactive_variable = (
-        np.multiply(
-            linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive.toarray(),
-            np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        )
+        linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+        @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
     
     # Define active loss constant term.
     loss_reactive_constant = (
-        (
-            - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
-            @ np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-            - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
-            @ np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]).T
-        ).T
-        + np.imag(linear_electric_grid_model.power_flow_solution.loss)
+        np.imag(linear_electric_grid_model.power_flow_solution.loss)
+        - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+        - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
     )
 
     # Define reactive loss equation.
@@ -286,31 +249,31 @@ def main():
         '==',
         ('variable', loss_reactive_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
         ('variable', loss_reactive_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', loss_reactive_constant.repeat(len(scenario_data.timesteps))),
+        ('constant', loss_reactive_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
 
     # Define voltage limits.
     # Add dedicated keys to enable retrieving dual variables.
     voltage_limit_minimum = (
-        np.array([node_voltage_magnitude_vector_minimum.ravel()])
-        / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-    ).ravel()
+        node_voltage_magnitude_vector_minimum.ravel()
+        / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+    )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes)),
         '>=',
-        ('constant', voltage_limit_minimum.repeat(len(scenario_data.timesteps))),
+        ('constant', voltage_limit_minimum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='voltage_magnitude_vector_minimum_constraint', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes),
         broadcast='timestep'
     )
     voltage_limit_maximum = (
-        np.array([node_voltage_magnitude_vector_maximum.ravel()])
-        / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-    ).ravel()
+        node_voltage_magnitude_vector_maximum.ravel()
+        / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+    )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes)),
         '<=',
-        ('constant', voltage_limit_maximum.repeat(len(scenario_data.timesteps))),
+        ('constant', voltage_limit_maximum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='voltage_magnitude_vector_maximum_constraint', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes),
         broadcast='timestep'
     )
@@ -318,38 +281,38 @@ def main():
     # Define branch flow limits.
     # Add dedicated keys to enable retrieving dual variables.
     branch_power_minimum = (
-        - np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
+        - branch_power_magnitude_vector_maximum.ravel()
+        / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
     )
     branch_power_maximum = (
-        np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
+        branch_power_magnitude_vector_maximum.ravel()
+        / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
     )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '>=',
-        ('constant', branch_power_minimum.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_minimum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='branch_power_magnitude_vector_1_minimum_constraint', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches),
         broadcast='timestep'
     )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '<=',
-        ('constant', branch_power_maximum.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_maximum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='branch_power_magnitude_vector_1_maximum_constraint', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches),
         broadcast='timestep'
     )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '>=',
-        ('constant', branch_power_minimum.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_minimum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='branch_power_magnitude_vector_2_minimum_constraint', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches),
         broadcast='timestep'
     )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '<=',
-        ('constant', branch_power_maximum.repeat(len(scenario_data.timesteps))),
+        ('constant', branch_power_maximum, dict(timestep=scenario_data.timesteps)),
         keys=dict(name='branch_power_magnitude_vector_2_maximum_constraint', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches),
         broadcast='timestep'
     )
@@ -526,14 +489,12 @@ def main():
         ('variable', 1.0, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
         '==',
         ('variable', der_model_set.mapping_active_power_by_output, dict(name='output_vector', timestep=der_model_set.timesteps)),
-        ('constant', np.zeros(len(der_model_set.timesteps) * len(der_model_set.electric_grid_der_index))),
         broadcast='timestep'
     )
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
         '==',
         ('variable', der_model_set.mapping_reactive_power_by_output, dict(name='output_vector', timestep=der_model_set.timesteps)),
-        ('constant', np.zeros(len(der_model_set.timesteps) * len(der_model_set.electric_grid_der_index))),
         broadcast='timestep'
     )
 

@@ -89,20 +89,32 @@ def main():
 
     # Define electric grid model constraints.
     # Define voltage variable terms.
-    voltage_active_term = (
+    standard_form.define_parameter(
+        'voltage_active_term',
         sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
         @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
         @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
-
-    voltage_reactive_term = (
+    # voltage_active_term = (
+    #     sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+    #     @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+    #     @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+    # )
+    standard_form.define_parameter(
+        'voltage_reactive_term',
         sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
         @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
         @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
     )
+    # voltage_reactive_term = (
+    #     sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+    #     @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+    #     @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+    # )
 
     # Define voltage constant term.
-    voltage_constant = (
+    standard_form.define_parameter(
+        'voltage_constant',
         sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
         @ (
             np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
@@ -112,14 +124,24 @@ def main():
             @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
         )
     )
+    # voltage_constant = (
+    #     sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+    #     @ (
+    #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+    #         - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+    #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+    #         - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+    #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+    #     )
+    # )
 
     # Define voltage equation.
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes)),
         '==',
-        ('variable', voltage_active_term, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', voltage_reactive_term, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('constant', voltage_constant, dict(timestep=scenario_data.timesteps)),
+        ('variable', 'voltage_active_term', dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', 'voltage_reactive_term', dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('constant', 'voltage_constant', dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
 

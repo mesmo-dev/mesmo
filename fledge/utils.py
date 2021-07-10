@@ -228,6 +228,7 @@ class StandardForm(object):
     variables: pd.DataFrame
     constraints: pd.DataFrame
     constraints_len: int
+    parameters: dict
     a_dict: dict
     b_dict: dict
     c_dict: dict
@@ -245,6 +246,9 @@ class StandardForm(object):
         self.variables = pd.DataFrame(columns=['name', 'timestep'])
         self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
         self.constraints_len = 0
+
+        # Instantiate parameters dictionary.
+        self.parameters = dict()
 
         # Instantiate A matrix / b vector / c vector / Q matrix dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``
@@ -276,19 +280,33 @@ class StandardForm(object):
         # Add new variables to index.
         self.variables = pd.concat([self.variables, new_variables], ignore_index=True)
 
+    def define_parameter(
+            self,
+            name: str,
+            value: typing.Union[float, np.ndarray, scipy.sparse.spmatrix]
+    ):
+
+        # Validate dimensions, if parameter already defined.
+        if name in self.parameters.keys():
+            if np.shape(value) != np.shape(self.parameters[name]):
+                ValueError(f"Mismatch of redefined parameter: {name}")
+
+        # Set parameter value.
+        self.parameters[name] = value
+
     def define_constraint(
             self,
             *elements: typing.Union[
                 str,
-                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
-                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix]],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
             ],
             **kwargs
     ):
 
         # Instantiate constraint element aggregation variables.
-        variables = []
-        constant = 0.0
+        variables = list()
+        constants = list()
         constant_keys = None
         operator = None
 
@@ -311,7 +329,7 @@ class StandardForm(object):
                         factor = 1.0
 
                     # Append element to variables.
-                    variables.append((factor * element[1], element[2]))
+                    variables.append((factor, element[1], element[2]))
 
                 # Identify constants.
                 elif element[0] in ('constant', 'con', 'c'):
@@ -323,7 +341,7 @@ class StandardForm(object):
                         factor = 1.0
 
                     # Add element to constant.
-                    constant += factor * element[1]
+                    constants.append((factor, element[1], element[2] if len(element) > 2 else None))
 
                     # Append constant keys, if any.
                     # - This operation may overwrite constant keys, if multiple defined.
@@ -364,17 +382,19 @@ class StandardForm(object):
         self.define_constraint_low_level(
             variables,
             operator,
-            constant,
-            constant_keys=constant_keys,
+            constants,
             **kwargs
         )
 
     def define_constraint_low_level(
             self,
-            variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
+            variables: typing.List[
+                typing.Tuple[float, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+            ],
             operator: str,
-            constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix],
-            constant_keys: dict = None,
+            constants: typing.List[
+                typing.Tuple[float, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+            ],
             keys: dict = None,
             broadcast: str = None
     ):
@@ -403,8 +423,7 @@ class StandardForm(object):
             self.define_constraint_low_level(
                 variables,
                 '>=',
-                constant,
-                constant_keys=constant_keys,
+                constants,
                 keys=dict(keys, constraint_type='==>=') if keys is not None else None,
                 broadcast=broadcast
             )
@@ -413,8 +432,7 @@ class StandardForm(object):
             self.define_constraint_low_level(
                 variables,
                 '<=',
-                constant,
-                constant_keys=constant_keys,
+                constants,
                 keys=dict(keys, constraint_type='==<=') if keys is not None else None,
                 broadcast=broadcast
             )
@@ -424,77 +442,129 @@ class StandardForm(object):
 
             # If greater-than-equal, invert signs.
             if operator == '>=':
-                factor = -1.0
+                operator_factor = -1.0
             else:
-                factor = 1.0
+                operator_factor = 1.0
 
-            # If constant is scalar, cast into vector of appropriate size, based on dimension of first variable.
-            if len(np.shape(constant)) == 0:
-                # Obtain variable integer index & raise error if variable or key does not exist.
-                variable_index = (
-                    tuple(fledge.utils.get_index(self.variables, **variables[0][1], raise_empty_index_error=True))
-                )
-                constant = constant * np.ones(len(variable_index))
-            else:
-                # If broadcasting, constant vector is repeated along broadcast dimension.
+            # Instantiate constant dimension / constraint index.
+            dimension_constant = None
+            constraint_index = None
+
+            # If no constants defined, set zero as default constant.
+            if len(constants) == 0:
+                constants = [(1.0, 0.0, None)]
+
+            # Process constants.
+            for constant_factor, constant_value, constant_keys in constants:
+
+                # If constant is tuple, it is interpreted as parameter.
+                if type(constant_value) is str:
+                    parameter_name = constant_value
+                    constant_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+
+                # Obtain broadcast dimension length for constant.
                 if (broadcast is not None) and (constant_keys is not None):
                     if broadcast not in constant_keys.keys():
                         raise ValueError(f"Invalid broadcast dimension: {broadcast}")
                     else:
-                        # TODO: Need check for order of values / index entries?
-                        constant = np.concatenate([constant] * len(constant_keys[broadcast]), axis=0)
+                        broadcast_len = len(constant_keys[broadcast])
+                else:
+                    broadcast_len = 1
 
-            # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
-            if len(np.shape(constant)) > 1:
-                if np.shape(constant)[1] > 1:
-                    raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
+                # If constant is scalar, cast into vector of appropriate size, based on dimension of first variable.
+                if len(np.shape(constant_value)) == 0:
+                    # Obtain variable integer index & raise error if variable or key does not exist.
+                    variable_index = (
+                        tuple(fledge.utils.get_index(self.variables, **variables[0][2], raise_empty_index_error=True))
+                    )
+                    constant_value = constant_value * np.ones(len(variable_index))
+                # If broadcasting, constant vector is repeated along broadcast dimension.
+                elif broadcast_len > 0:
+                    constant_value = np.concatenate([constant_value] * broadcast_len, axis=0)
 
-            # Obtain constant dimension.
-            dimension_constant = len(constant)
+                # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
+                if len(np.shape(constant_value)) > 1:
+                    if np.shape(constant_value)[1] > 1:
+                        raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
 
-            # Obtain constraint index based on constant dimension.
-            constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
+                # Obtain constant dimension.
+                # - Raise error if constant dimensions are inconsistent.
+                if dimension_constant is None:
+                    dimension_constant = len(constant_value)
+                elif len(constant_value) != dimension_constant:
+                    raise ValueError(f"Dimension mismatch at constant: \n{constant_keys}")
 
-            # Append b vector entry.
-            self.b_dict[constraint_index] = factor * constant.ravel()
+                # Obtain constraint index based on dimension of first constant.
+                if constraint_index is None:
+                    constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
+                    # Instantiate b vector entry.
+                    self.b_dict[constraint_index] = list()
 
-            # Append A matrix entries.
-            for variable in variables:
+                # Append b vector entry.
+                if parameter_name is None:
+                    self.b_dict[constraint_index].append(
+                        operator_factor * constant_factor * constant_value
+                    )
+                else:
+                    self.b_dict[constraint_index].append(
+                        (operator_factor * constant_factor, parameter_name, broadcast_len)
+                    )
+
+            # Process variables.
+            for variable_factor, variable_value, variable_keys in variables:
 
                 # If any variable key values are empty, ignore variable & do not add any A matrix entry.
-                for key_value in variable[1].values():
+                for key_value in variable_keys.values():
                     if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
                         if len(key_value) == 0:
                             continue  # Skip variable & go to next iteration.
 
                 # Obtain variable integer index & raise error if variable or key does not exist.
                 variable_index = (
-                    tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))
+                    tuple(fledge.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
                 )
 
+                # Obtain broadcast dimension length for variable.
+                if broadcast is not None:
+                    if broadcast not in variable_keys.keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                    else:
+                        broadcast_len = len(variable_keys[broadcast])
+                else:
+                    broadcast_len = 1
+
                 # Obtain A matrix entries.
+                # - String values interpreted as parameter name.
                 # - Scalar values are multiplied with identity matrix of appropriate size.
                 # - If broadcasting, value is repeated in block-diagonal matrix.
-                if len(np.shape(variable[0])) == 0:
-                    a_entry = variable[0] * scipy.sparse.eye(len(variable_index))
+                if type(variable_value) is str:
+                    parameter_name = variable_value
+                    variable_value = self.parameters[parameter_name]
                 else:
-                    a_entry = variable[0]
-                    # If broadcasting, value is repeated in block-diagonal matrix.
-                    if broadcast is not None:
-                        if broadcast not in variable[1].keys():
-                            raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                        else:
-                            # TODO: Need check for order of values / index entries?
-                            if type(a_entry) is np.matrix:
-                                a_entry = np.array(a_entry)
-                            a_entry = scipy.sparse.block_diag([a_entry] * len(variable[1][broadcast]))
+                    parameter_name = None
+                if len(np.shape(variable_value)) == 0:
+                    variable_value = variable_value * scipy.sparse.eye(len(variable_index))
+                elif broadcast is not None:
+                    if type(variable_value) is np.matrix:
+                        variable_value = np.array(variable_value)
+                    variable_value = scipy.sparse.block_diag([variable_value] * broadcast_len)
 
                 # Raise error if variable dimensions are inconsistent.
-                if np.shape(a_entry) != (len(constraint_index), len(variable_index)):
-                    raise ValueError(f"Dimension mismatch at variable: \n{variable[1]}")
+                if np.shape(variable_value) != (len(constraint_index), len(variable_index)):
+                    raise ValueError(f"Dimension mismatch at variable: \n{variable_keys}")
 
                 # Add A matrix entries to dictionary.
-                self.a_dict[constraint_index, variable_index] = factor * a_entry
+                # - If parameter, pass tuple of factor, parameter name and broadcasting dimension length.
+                if parameter_name is None:
+                    self.a_dict[constraint_index, variable_index] = (
+                        operator_factor * variable_factor * variable_value
+                    )
+                else:
+                    self.a_dict[constraint_index, variable_index] = (
+                        (operator_factor * variable_factor, parameter_name, broadcast_len)
+                    )
 
             # Append constraints index entries.
             if keys is not None:
@@ -628,7 +698,6 @@ class StandardForm(object):
                     if broadcast not in variable[1].keys():
                         raise ValueError(f"Invalid broadcast dimension: {broadcast}")
                     else:
-                        # TODO: Need check for order of values / index entries?
                         # TODO: This has not been tested.
                         c_entry = np.concatenate([c_entry] * len(variable[1][broadcast]), axis=1)
 
@@ -678,7 +747,6 @@ class StandardForm(object):
                     if broadcast not in variable[1].keys():
                         raise ValueError(f"Invalid broadcast dimension: {broadcast}")
                     else:
-                        # TODO: Need check for order of values / index entries?
                         # TODO: This has not been tested.
                         q_entry = np.concatenate([q_entry] * len(variable[1][broadcast]), axis=1)
 
@@ -714,7 +782,22 @@ class StandardForm(object):
 
         # Collect matrix entries.
         for constraint_index, variable_index in self.a_dict:
-            rows, columns, values = scipy.sparse.find(self.a_dict[constraint_index, variable_index])
+            # If tuple, treat as parameter.
+            if type(self.a_dict[constraint_index, variable_index]) is tuple:
+                factor, parameter_name, broadcast_len = self.a_dict[constraint_index, variable_index]
+                values = self.parameters[parameter_name]
+                if len(np.shape(values)) == 0:
+                    values = values * scipy.sparse.eye(len(variable_index))
+                elif broadcast_len > 1:
+                    if type(values) is np.matrix:
+                        values = np.array(values)
+                    values = scipy.sparse.block_diag([values] * broadcast_len)
+                values *= factor
+            # Otherwise, treat as numeric value.
+            else:
+                values = self.a_dict[constraint_index, variable_index]
+            # Obtain row index, column index and values for entry in A matrix.
+            rows, columns, values = scipy.sparse.find(values)
             rows = np.array(constraint_index)[rows]
             columns = np.array(variable_index)[columns]
             values_list.append(values)
@@ -744,7 +827,21 @@ class StandardForm(object):
 
         # Fill vector entries.
         for constraint_index in self.b_dict:
-            b_vector[np.ix_(constraint_index), 0] += self.b_dict[constraint_index]
+            for b_entry in self.b_dict[constraint_index]:
+                # If tuple, treat as parameter.
+                if type(b_entry) is tuple:
+                    factor, parameter_name, broadcast_len = b_entry
+                    values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 0:
+                        values = values * np.ones(len(constraint_index))
+                    elif broadcast_len > 0:
+                        values = np.concatenate([values] * broadcast_len, axis=0)
+                    values *= factor
+                # Otherwise, treat as numeric value.
+                else:
+                    values = b_entry
+                # Insert entry in b vector.
+                b_vector[constraint_index, 0] += values.ravel()
 
         # Log time.
         log_time('get standard-form b vector')
@@ -761,7 +858,7 @@ class StandardForm(object):
 
         # Fill vector entries.
         for variable_index in self.c_dict:
-            c_vector[0, np.ix_(variable_index)] += self.c_dict[variable_index]
+            c_vector[0, variable_index] += self.c_dict[variable_index].ravel()
 
         # Log time.
         log_time('get standard-form c vector')

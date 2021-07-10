@@ -278,16 +278,18 @@ class StandardForm(object):
 
     def define_constraint(
             self,
-            *elements: typing.Union[str, typing.Union[
+            *elements: typing.Union[
+                str,
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]
-            ]],
+            ],
             **kwargs
     ):
 
         # Instantiate constraint element aggregation variables.
         variables = []
         constant = 0.0
+        constant_keys = None
         operator = None
 
         # Instantiate left-hand / right-hand side indicator. Starting from left-hand side.
@@ -323,6 +325,13 @@ class StandardForm(object):
                     # Add element to constant.
                     constant += factor * element[1]
 
+                    # Append constant keys, if any.
+                    # - This operation may overwrite constant keys, if multiple defined.
+                    if len(element) > 2:
+                        if constant_keys is None:
+                            constant_keys = dict()
+                        constant_keys.update(element[2])
+
                 # Raise error if element type cannot be identified.
                 else:
                     raise ValueError(f"Invalid constraint element type: {element[0]}")
@@ -356,6 +365,7 @@ class StandardForm(object):
             variables,
             operator,
             constant,
+            constant_keys=constant_keys,
             **kwargs
         )
 
@@ -364,6 +374,7 @@ class StandardForm(object):
             variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
             operator: str,
             constant: typing.Union[float, np.ndarray, scipy.sparse.spmatrix],
+            constant_keys: dict = None,
             keys: dict = None,
             broadcast: str = None
     ):
@@ -393,6 +404,7 @@ class StandardForm(object):
                 variables,
                 '>=',
                 constant,
+                constant_keys=constant_keys,
                 keys=dict(keys, constraint_type='==>=') if keys is not None else None,
                 broadcast=broadcast
             )
@@ -402,6 +414,7 @@ class StandardForm(object):
                 variables,
                 '<=',
                 constant,
+                constant_keys=constant_keys,
                 keys=dict(keys, constraint_type='==<=') if keys is not None else None,
                 broadcast=broadcast
             )
@@ -416,13 +429,20 @@ class StandardForm(object):
                 factor = 1.0
 
             # If constant is scalar, cast into vector of appropriate size, based on dimension of first variable.
-            # TODO: Enable broadcasting for constants?
             if len(np.shape(constant)) == 0:
                 # Obtain variable integer index & raise error if variable or key does not exist.
                 variable_index = (
                     tuple(fledge.utils.get_index(self.variables, **variables[0][1], raise_empty_index_error=True))
                 )
                 constant = constant * np.ones(len(variable_index))
+            else:
+                # If broadcasting, constant vector is repeated along broadcast dimension.
+                if (broadcast is not None) and (constant_keys is not None):
+                    if broadcast not in constant_keys.keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                    else:
+                        # TODO: Need check for order of values / index entries?
+                        constant = np.concatenate([constant] * len(constant_keys[broadcast]), axis=0)
 
             # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
             if len(np.shape(constant)) > 1:
@@ -430,17 +450,13 @@ class StandardForm(object):
                     raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
 
             # Obtain constant dimension.
-            if type(constant) is not float:
-                dimension_constant = len(constant)
-            else:
-                dimension_constant = 1
+            dimension_constant = len(constant)
 
             # Obtain constraint index based on constant dimension.
-            # TODO: What if no constant is defined?
             constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
 
             # Append b vector entry.
-            self.b_dict[constraint_index] = factor * constant
+            self.b_dict[constraint_index] = factor * constant.ravel()
 
             # Append A matrix entries.
             for variable in variables:
@@ -519,11 +535,12 @@ class StandardForm(object):
 
     def define_objective(
             self,
-            *elements: typing.Union[str, typing.Union[
+            *elements: typing.Union[
+                str,
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict],
                 typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict, dict]
-            ]],
+            ],
             **kwargs
     ):
 
@@ -606,7 +623,7 @@ class StandardForm(object):
                 c_entry = variable[0] * np.ones((1, len(variable_index)))
             else:
                 c_entry = variable[0]
-                # If broadcasting, value is repeated in column direction.
+                # If broadcasting, c vector is repeated along broadcast dimension.
                 if broadcast is not None:
                     if broadcast not in variable[1].keys():
                         raise ValueError(f"Invalid broadcast dimension: {broadcast}")
@@ -656,7 +673,7 @@ class StandardForm(object):
                 q_entry = variable[0] * np.ones((1, len(variable_1_index)))
             else:
                 q_entry = variable[0]
-                # If broadcasting, value is repeated in column direction.
+                # If broadcasting, Q entries are repeated along broadcast dimension.
                 if broadcast is not None:
                     if broadcast not in variable[1].keys():
                         raise ValueError(f"Invalid broadcast dimension: {broadcast}")
@@ -826,6 +843,7 @@ class StandardForm(object):
         gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
 
         # Solve optimization problem.
+        # TODO: Raise error if no solution.
         gurobipy_problem.optimize()
 
         # Store results.

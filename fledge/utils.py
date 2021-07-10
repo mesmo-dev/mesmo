@@ -368,6 +368,10 @@ class StandardForm(object):
             broadcast: str = None
     ):
 
+        # Raise error if no variables in constraint.
+        if len(variables) == 0:
+            raise ValueError(f"Cannot define constraint without variables.")
+
         # Run checks for constraint index keys.
         if keys is not None:
 
@@ -411,11 +415,19 @@ class StandardForm(object):
             else:
                 factor = 1.0
 
+            # If constant is scalar, cast into vector of appropriate size, based on dimension of first variable.
+            # TODO: Enable broadcasting for constants?
+            if len(np.shape(constant)) == 0:
+                # Obtain variable integer index & raise error if variable or key does not exist.
+                variable_index = (
+                    tuple(fledge.utils.get_index(self.variables, **variables[0][1], raise_empty_index_error=True))
+                )
+                constant = constant * np.ones(len(variable_index))
+
             # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
-            if type(constant) is not float:
-                if len(np.shape(constant)) > 1:
-                    if np.shape(constant)[1] > 1:
-                        raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
+            if len(np.shape(constant)) > 1:
+                if np.shape(constant)[1] > 1:
+                    raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
 
             # Obtain constant dimension.
             if type(constant) is not float:

@@ -317,17 +317,27 @@ def main():
             * -1.0 * timestep_interval_hours  # In Wh.
             @ sp.block_diag([np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])] * len(scenario_data.timesteps)),
             dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
-        # ), (
-        #     price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
-        #     * timestep_interval_hours,  # In Wh.
-        #     ('variable', 1.0, dict(name='loss_active', timestep=scenario_data.timesteps)),
+        ), (
+            price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
+            * timestep_interval_hours,  # In Wh.
+            dict(name='loss_active', timestep=scenario_data.timesteps),
         ), ],
-        # variables_quadractic=[(
-        #     price_data.price_sensitivity_coefficient
-        #     * timestep_interval_hours,  # In Wh.
-        #     der_model.mapping_active_power_by_output.values,
-        #     dict(name='output_vector', timestep=der_model.timesteps)
-        # ),],
+        variables_quadractic=[(
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours,  # In Wh.
+            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
+            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+        ), (
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours,  # In Wh.
+            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
+            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+        ), (
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours,  # In Wh.
+            dict(name='loss_active', timestep=scenario_data.timesteps),
+            dict(name='loss_active', timestep=scenario_data.timesteps)
+        ), ],
         constant=0.0
     )
 
@@ -980,16 +990,16 @@ def main():
                 )
             ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
         )
-        # + ((
-        #     price_data.price_sensitivity_coefficient
-        #     * timestep_interval_hours  # In Wh.
-        #     * cp.sum((
-        #         cp.multiply(
-        #             optimization_problem.der_active_power_vector[timestep_index, :],
-        #             np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        #         )
-        #     ) ** 2)
-        # ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+        + ((
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours  # In Wh.
+            * cp.sum((
+                cp.multiply(
+                    optimization_problem.der_active_power_vector[timestep_index, :],
+                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                )
+            ) ** 2)
+        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
     )
 
     # Reactive power cost / revenue.
@@ -1007,39 +1017,39 @@ def main():
                 )
             ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
         )
-        # + ((
-        #     price_data.price_sensitivity_coefficient
-        #     * timestep_interval_hours  # In Wh.
-        #     * cp.sum((
-        #         cp.multiply(
-        #             optimization_problem.der_reactive_power_vector[timestep_index, :],
-        #             np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-        #         )
-        #     ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
-        # ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+        + ((
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours  # In Wh.
+            * cp.sum((
+                cp.multiply(
+                    optimization_problem.der_reactive_power_vector[timestep_index, :],
+                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
+                )
+            ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
+        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
     )
 
     # Define active loss cost.
-    # optimization_problem.objective += (
-    #     (
-    #         np.array([
-    #             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
-    #         ])
-    #         * timestep_interval_hours  # In Wh.
-    #         @ (
-    #             optimization_problem.loss_active[timestep_index, :]
-    #         )
-    #     )
-    #     + ((
-    #         price_data.price_sensitivity_coefficient
-    #         * timestep_interval_hours  # In Wh.
-    #         * cp.sum((
-    #             optimization_problem.loss_active[timestep_index, :]
-    #         ) ** 2)
-    #     ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-    # )
+    optimization_problem.objective += (
+        (
+            np.array([
+                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
+            ])
+            * timestep_interval_hours  # In Wh.
+            @ (
+                optimization_problem.loss_active[timestep_index, :]
+            )
+        )
+        + ((
+            price_data.price_sensitivity_coefficient
+            * timestep_interval_hours  # In Wh.
+            * cp.sum((
+                optimization_problem.loss_active[timestep_index, :]
+            ) ** 2)
+        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
+    )
     fledge.utils.log_time('cvxpy problem')
-    
+
     # Solve optimization problem.
     fledge.utils.log_time('cvxpy solve')
     optimization_problem.solve()

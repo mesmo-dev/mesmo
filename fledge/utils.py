@@ -231,6 +231,7 @@ class StandardForm(object):
     a_dict: dict
     b_dict: dict
     c_dict: dict
+    q_dict: dict
     c_constant: float
     x_vector: np.ndarray
     dual_vector: np.ndarray
@@ -245,13 +246,15 @@ class StandardForm(object):
         self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
         self.constraints_len = 0
 
-        # Instantiate A matrix / b vector / c vector dictionaries.
-        # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``.
+        # Instantiate A matrix / b vector / c vector / Q matrix dictionaries.
+        # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``
+        #   and ``get_q_matrix()``.
         self.a_dict = dict()
         self.b_dict = dict()
         self.c_dict = dict()
+        self.q_dict = dict()
 
-        # Instantiate c constant base.
+        # Instantiate c constant.
         self.c_constant = 0.0
 
     def define_variable(
@@ -261,6 +264,7 @@ class StandardForm(object):
     ):
 
         # Obtain new variables based on ``keys``.
+        # - Variable dimensions are constructed based by taking the product of the given key sets.
         new_variables = (
             pd.DataFrame(itertools.product([name], *[
                 list(value)
@@ -377,7 +381,7 @@ class StandardForm(object):
 
             # TODO: Raise error if using reserved 'constraint_type' key.
 
-        # For equality constraint, convert to upper / lower inequality.
+        # For equality constraint, define separate upper / lower inequality.
         if operator in ['==']:
 
             # Define upper inequality.
@@ -419,7 +423,8 @@ class StandardForm(object):
             else:
                 dimension_constant = 1
 
-            # Obtain constraint integer index based on constant dimension.
+            # Obtain constraint index based on constant dimension.
+            # TODO: What if no constant is defined?
             constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
 
             # Append b vector entry.
@@ -458,7 +463,7 @@ class StandardForm(object):
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(a_entry) != (len(constraint_index), len(variable_index)):
-                    raise ValueError(f"Dimension mismatch at variable: {variable[1]}")
+                    raise ValueError(f"Dimension mismatch at variable: \n{variable[1]}")
 
                 # Add A matrix entries to dictionary.
                 self.a_dict[constraint_index, variable_index] = factor * a_entry
@@ -472,6 +477,7 @@ class StandardForm(object):
                 else:
                     keys['constraint_type'] = operator
                 # Obtain new constraints based on ``keys``.
+                # - Constraint dimensions are constructed based by taking the product of the given key sets.
                 new_constraints = (
                     pd.DataFrame(itertools.product(*[
                         list(value)
@@ -492,6 +498,7 @@ class StandardForm(object):
                 self.constraints_len += len(constraint_index)
             else:
                 # Only change constraints size, if no ``keys`` defined.
+                # - This is for speedup, as updating the constraints index set with above operation is slow.
                 self.constraints_len += len(constraint_index)
 
         # Raise error for invalid operator.
@@ -501,13 +508,14 @@ class StandardForm(object):
     def define_objective_low_level(
             self,
             variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
+            variables_quadractic: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict, dict]],
             constant: float
     ):
 
         # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
         if type(constant) is not float:
             if np.shape(constant) not in [(1, ), (1, 1)]:
-                raise ValueError(f"Objective constant must be scalar (1, 1).")
+                raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
 
         # Add c constant value.
         self.c_constant += constant
@@ -517,7 +525,7 @@ class StandardForm(object):
 
             # If any variable key values are empty, ignore variable & do not add any c vector entry.
             for key_value in variable[1].values():
-                if isinstance(key_value, (list, tuple, pd.Index, np.ndarray)):
+                if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
                     if len(key_value) == 0:
                         continue  # Skip variable & go to next iteration.
 
@@ -534,8 +542,8 @@ class StandardForm(object):
                 c_entry = variable[0]
 
             # Raise error if vector is not a row vector (1, n) or flat array (n, ).
-            if len(np.shape(constant)) > 1:
-                if np.shape(constant)[0] > 1:
+            if len(np.shape(c_entry)) > 1:
+                if np.shape(c_entry)[0] > 1:
                     raise ValueError(
                         f"Objective factor must be row vector (1, n), not column vector (n, 1) nor matrix (m, n)."
                     )
@@ -546,10 +554,54 @@ class StandardForm(object):
                     if len(np.shape(c_entry)) > 1
                     else np.shape(c_entry)[0] != len(variable_index)
             ):
-                raise ValueError(f"Objective factor dimension mismatch at variable: {variable[1]}")
+                raise ValueError(f"Objective factor dimension mismatch at variable: \n{variable[1]}")
 
             # Add c vector entries to dictionary.
             self.c_dict[variable_index] = c_entry.ravel()
+
+        # Append Q matrix entries.
+        for variable in variables_quadractic:
+
+            # If any variable key values are empty, ignore variable & do not add any c vector entry.
+            for key_value in list(variable[1].values()) + list(variable[2].values()):
+                if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
+                    if len(key_value) == 0:
+                        continue  # Skip variable & go to next iteration.
+
+            # Obtain variable index & raise error if variable or key does not exist.
+            variable_1_index = (
+                tuple(fledge.utils.get_index(self.variables, **variable[1], raise_empty_index_error=True))
+            )
+            variable_2_index = (
+                tuple(fledge.utils.get_index(self.variables, **variable[2], raise_empty_index_error=True))
+            )
+
+            # Obtain Q matrix entries.
+            # - Scalar values are multiplied with row vector of ones of appropriate size.
+            if len(np.shape(variable[0])) == 0:
+                q_entry = variable[0] * np.ones((1, len(variable_1_index)))
+            else:
+                q_entry = variable[0]
+
+            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
+            if len(np.shape(q_entry)) > 1:
+                if np.shape(q_entry)[0] > 1:
+                    raise ValueError(
+                        f"Quadratic objective factor must be row vector (1, n), not column vector (n, 1) nor matrix (m, n)."
+                    )
+
+            # Raise error if variable dimensions are inconsistent.
+            if len(variable_1_index) != len(variable_2_index):
+                raise ValueError(f"Quadratic variable dimension mismatch at variables: \n{variable[1]}\n{variable[2]}")
+            if (
+                    (np.shape(q_entry)[1] != len(variable_1_index)) or (np.shape(q_entry)[0] != 1)
+                    if len(np.shape(q_entry)) > 1
+                    else np.shape(q_entry)[0] != len(variable_1_index)
+            ):
+                raise ValueError(f"Quadratic objective factor dimension mismatch at variables: \n{variable[1]}\n{variable[2]}")
+
+            # Add Q matrix entries to dictionary.
+            self.q_dict[variable_1_index, variable_2_index] = q_entry.ravel()
 
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
@@ -617,6 +669,38 @@ class StandardForm(object):
 
         return c_vector
 
+    def get_q_matrix(self) -> scipy.sparse.spmatrix:
+
+        # Log time.
+        log_time('get standard-form Q matrix')
+
+        # Instantiate collections.
+        values_list = []
+        rows_list = []
+        columns_list = []
+
+        # Collect matrix entries.
+        for variable_1_index, variable_2_index in self.q_dict:
+            rows, columns, values = scipy.sparse.find(self.q_dict[variable_1_index, variable_2_index])
+            rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
+            columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
+            values_list.append(np.concatenate([values, values]))
+            rows_list.append(rows)
+            columns_list.append(columns)
+
+        # Instantiate sparse matrix.
+        q_matrix = (
+            scipy.sparse.coo_matrix(
+                (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
+                shape=(len(self.variables), len(self.variables))
+            ).tocsr(copy=True)  # TODO: Is copy really needed here?
+        )
+
+        # Log time.
+        log_time('get standard-form Q matrix')
+
+        return q_matrix
+
     def solve(self):
 
         if fledge.config.config['optimization']['solver_name'] == 'gurobi':
@@ -649,29 +733,15 @@ class StandardForm(object):
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
         constraints = self.get_a_matrix() @ x_vector <= self.get_b_vector().ravel()
         constraints = gurobipy_problem.addConstr(constraints, name='constraints')
-        # TODO: Use alternative / explicit expression or not?
-        # gurobipy_problem.addMConstr(
-        #     A=self.get_a_matrix(),
-        #     x=x_vector,
-        #     sense='<=',
-        #     b=b_vector,
-        #     name='constraints'
-        # )
 
         # Define objective.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
-        objective = self.get_c_vector().ravel() @ x_vector
+        objective = (
+            self.c_constant
+            + self.get_c_vector().ravel() @ x_vector
+            + x_vector @ (0.5 * self.get_q_matrix()) @ x_vector
+        )
         gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
-        # TODO: Use alternative / explicit expression or not?
-        # gurobipy_problem.setMObjective(
-        #     Q=None,
-        #     c=self.get_c_vector().ravel(),
-        #     constant=0.0,
-        #     xQ_L=None,
-        #     xQ_R=None,
-        #     xc=x_vector,
-        #     sense=gp.GRB.MINIMIZE
-        # )
 
         # Solve optimization problem.
         gurobipy_problem.optimize()
@@ -683,13 +753,17 @@ class StandardForm(object):
     def solve_cvxpy(self):
 
         # Define variables.
-        x_vector = cp.Variable((len(self.variables), 1))
+        x_vector = cp.Variable((len(self.variables), 1), name='x_vector')
 
         # Define constraints.
         constraints = [self.get_a_matrix() @ x_vector <= self.get_b_vector()]
 
         # Define objective.
-        objective = self.get_c_vector() @ x_vector
+        objective = (
+            self.c_constant
+            + self.get_c_vector() @ x_vector
+            + x_vector.T @ (0.5 * self.get_q_matrix()) @ x_vector
+        )
 
         # Instantiate CVXPY problem.
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)

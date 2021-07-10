@@ -306,39 +306,43 @@ def main():
     # Define objective.
     # Active power cost / revenue.
     # - Cost for load / demand, revenue for generation / supply.
-    standard_form.define_objective_low_level(
-        variables=[(
+    standard_form.define_objective(
+        (
+            'variable',
             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(scenario_data.timesteps))
             * -1.0 * timestep_interval_hours  # In Wh.
             @ sp.block_diag([np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])] * len(scenario_data.timesteps)),
             dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
         ), (
+            'variable',
             price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(scenario_data.timesteps))
             * -1.0 * timestep_interval_hours  # In Wh.
             @ sp.block_diag([np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])] * len(scenario_data.timesteps)),
             dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
         ), (
+            'variable',
             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
             * timestep_interval_hours,  # In Wh.
             dict(name='loss_active', timestep=scenario_data.timesteps),
-        ), ],
-        variables_quadractic=[(
+        ), (
+            'variable',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours,  # In Wh.
             dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
             dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
         ), (
+            'variable',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours,  # In Wh.
             dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
             dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
         ), (
+            'variable',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours,  # In Wh.
             dict(name='loss_active', timestep=scenario_data.timesteps),
             dict(name='loss_active', timestep=scenario_data.timesteps)
-        ), ],
-        constant=0.0
+        )
     )
 
     # Aggregate DER models.
@@ -524,124 +528,6 @@ def main():
         ('constant', np.zeros(len(der_model_set.timesteps) * len(der_model_set.electric_grid_der_index))),
         broadcast='timestep'
     )
-
-    # # Define problem for DER models.
-    # for der_name, der_model in der_model_set.flexible_der_models.items():
-    #
-    #     # Define variables.
-    #     standard_form.define_variable('state_vector', timestep=der_model.timesteps, state=der_model.states, der_name=[der_name])
-    #     standard_form.define_variable('control_vector', timestep=der_model.timesteps, control=der_model.controls, der_name=[der_name])
-    #     standard_form.define_variable('output_vector', timestep=der_model.timesteps, output=der_model.outputs, der_name=[der_name])
-    #
-    #     # Define constraints.
-    #
-    #     # Initial state.
-    #     # - For states which represent storage state of charge, initial state of charge is final state of charge.
-    #     if any(~der_model.states.isin(der_model.storage_states)):
-    #         standard_form.define_constraint(
-    #             ('constant', der_model.state_vector_initial.values[~der_model.states.isin(der_model.storage_states)]),
-    #             '==',
-    #             ('variable', 1.0, dict(
-    #                 name='state_vector', timestep=der_model.timesteps[0],
-    #                 state=der_model.states[~der_model.states.isin(der_model.storage_states)], der_name=der_name
-    #             ))
-    #         )
-    #     # - For other states, set initial state according to the initial state vector.
-    #     if any(der_model.states.isin(der_model.storage_states)):
-    #         standard_form.define_constraint(
-    #             ('variable', 1.0, dict(
-    #                 name='state_vector', timestep=der_model.timesteps[0],
-    #                 state=der_model.states[der_model.states.isin(der_model.storage_states)], der_name=der_name
-    #             )),
-    #             '==',
-    #             ('variable', 1.0, dict(
-    #                 name='state_vector', timestep=der_model.timesteps[-1],
-    #                 state=der_model.states[der_model.states.isin(der_model.storage_states)], der_name=der_name
-    #             ))
-    #         )
-    #
-    #     # State equation.
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='state_vector', timestep=der_model.timesteps[1:], der_name=der_name)),
-    #         '==',
-    #         ('variable', der_model.state_matrix.values, dict(name='state_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
-    #         ('variable', der_model.control_matrix.values, dict(name='control_vector', timestep=der_model.timesteps[:-1], der_name=der_name)),
-    #         ('constant', (der_model.disturbance_matrix.values @ der_model.disturbance_timeseries.iloc[:-1, :].T.values).T.ravel()),
-    #         keys=dict(name='state_equation', timestep=der_model.timesteps[1:], state=der_model.states, der_name=der_name),
-    #         broadcast='timestep'
-    #     )
-    #
-    #     # Output equation.
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #         '==',
-    #         ('variable', der_model.state_output_matrix.values, dict(name='state_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #         ('variable', der_model.control_output_matrix.values, dict(name='control_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #         ('constant', (der_model.disturbance_output_matrix.values @ der_model.disturbance_timeseries.T.values).T.ravel()),
-    #         broadcast='timestep'
-    #     )
-    #
-    #     # Output limits.
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #         '>=',
-    #         ('constant', der_model.output_minimum_timeseries.values.ravel()),
-    #         keys=dict(name='output_minimum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name),
-    #         broadcast='timestep'
-    #     )
-    #     standard_form.define_constraint(
-    #         ('variable', 1.0, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #         '<=',
-    #         ('constant', der_model.output_maximum_timeseries.values.ravel()),
-    #         keys=dict(name='output_maximum', timestep=der_model.timesteps, output=der_model.outputs, der_name=der_name),
-    #         broadcast='timestep'
-    #     )
-    #
-    #     # Define connection constraints.
-    #     # TODO: Define grid connection constraints!
-    #     if der_model.is_electric_grid_connected:
-    #         connection_constraint_active = (
-    #             (der_model.mapping_active_power_by_output.values / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0))
-    #         )
-    #         standard_form.define_constraint(
-    #             ('variable', 1.0, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model.electric_grid_der_index])),
-    #             ('variable', (-1) * connection_constraint_active, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #             '==',
-    #             ('constant', np.zeros(len(scenario_data.timesteps))),
-    #             broadcast='timestep'
-    #         )
-    #         connection_constraint_reactive = (
-    #             (der_model.mapping_reactive_power_by_output.values / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0))
-    #         )
-    #         standard_form.define_constraint(
-    #             ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model.electric_grid_der_index])),
-    #             ('variable', (-1) * connection_constraint_reactive, dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)),
-    #             '==',
-    #             ('constant', np.zeros(len(scenario_data.timesteps))),
-    #             broadcast='timestep'
-    #         )
-    #
-    #     # # Obtain timestep interval in hours, for conversion of power to energy.
-    #     # timestep_interval_hours = (der_model.timesteps[1] - der_model.timesteps[0]) / pd.Timedelta('1h')
-    #     #
-    #     # # Define objective.
-    #     # # Active power cost / revenue.
-    #     # # - Cost for load / demand, revenue for generation / supply.
-    #     # standard_form.define_objective_low_level(
-    #     #     variables=[(
-    #     #         price_data.price_timeseries.loc[der_model.timesteps, ('active_power', slice(None), der_model.der_name)].T.values
-    #     #         * -1.0 * timestep_interval_hours  # In Wh.
-    #     #         @ sp.block_diag([der_model.mapping_active_power_by_output.values] * len(der_model.timesteps)),
-    #     #         dict(name='output_vector', timestep=der_model.timesteps, der_name=der_name)
-    #     #     ),],
-    #     #     # variables_quadractic=[(
-    #     #     #     price_data.price_sensitivity_coefficient
-    #     #     #     * timestep_interval_hours,  # In Wh.
-    #     #     #     der_model.mapping_active_power_by_output.values,
-    #     #     #     dict(name='output_vector', timestep=der_model.timesteps)
-    #     #     # ),],
-    #     #     constant=0.0
-    #     # )
 
     fledge.utils.log_time('standard-form problem')
 
@@ -954,28 +840,6 @@ def main():
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (der_model.timesteps[1] - der_model.timesteps[0]) / pd.Timedelta('1h')
 
-        # Define objective.
-        # Active power cost / revenue.
-        # - Cost for load / demand, revenue for generation / supply.
-        # optimization_problem.objective += (
-        #     (
-        #         price_data.price_timeseries.loc[:, ('active_power', slice(None), der_model.der_name)].values.T
-        #         * -1.0 * timestep_interval_hours  # In Wh.
-        #         @ cp.transpose(
-        #             der_model.mapping_active_power_by_output.values
-        #             @ cp.transpose(optimization_problem.output_vector[der_model.der_name])
-        #         )
-        #     )
-        #     # + ((
-        #     #     price_data.price_sensitivity_coefficient
-        #     #     * timestep_interval_hours  # In Wh.
-        #     #     * cp.sum((
-        #     #         der_model.mapping_active_power_by_output.values
-        #     #         @ cp.transpose(optimization_problem.output_vector[der_model.der_name])
-        #     #     ) ** 2)
-        #     # ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-        # )
-    
     # Define objective. 
     optimization_problem.objective += (
         (

@@ -505,11 +505,65 @@ class StandardForm(object):
         else:
             ValueError(f"Invalid constraint operator: {operator}")
 
+    def define_objective(
+            self,
+            *elements: typing.Union[str, typing.Union[
+                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix]],
+                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict],
+                typing.Tuple[str, typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict, dict]
+            ]],
+            **kwargs
+    ):
+
+        # Instantiate objective element aggregation variables.
+        variables = []
+        variables_quadractic = []
+        constant = 0.0
+
+        # Aggregate objective elements.
+        for element in elements:
+
+            # Tuples are variables / constants.
+            if issubclass(type(element), tuple):
+
+                # Identify variables.
+                if element[0] in ('variable', 'var', 'v'):
+
+                    # Append element to variables / quadratic variables, depending on tuple length.
+                    if len(element) == 3:
+                        variables.append((element[1], element[2]))
+                    elif len(element) == 4:
+                        variables_quadractic.append((element[1], element[2], element[3]))
+                    else:
+                        raise ValueError(f"Invalid objective element: \n{element}")
+
+                # Identify constants.
+                elif element[0] in ('constant', 'con', 'c'):
+
+                    # Add element to constant.
+                    constant += element[1]
+
+                # Raise error if element type cannot be identified.
+                else:
+                    raise ValueError(f"Invalid objective element type: {element[0]}")
+
+            # Raise error if element type cannot be identified.
+            else:
+                raise ValueError(f"Invalid objective element: \n{element}")
+
+        self.define_objective_low_level(
+            variables,
+            variables_quadractic,
+            constant,
+            **kwargs
+        )
+
     def define_objective_low_level(
             self,
             variables: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict]],
             variables_quadractic: typing.List[typing.Tuple[typing.Union[float, np.ndarray, scipy.sparse.spmatrix], dict, dict]],
-            constant: float
+            constant: float,
+            broadcast: str = None
     ):
 
         # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
@@ -540,6 +594,14 @@ class StandardForm(object):
                 c_entry = variable[0] * np.ones((1, len(variable_index)))
             else:
                 c_entry = variable[0]
+                # If broadcasting, value is repeated in column direction.
+                if broadcast is not None:
+                    if broadcast not in variable[1].keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                    else:
+                        # TODO: Need check for order of values / index entries?
+                        # TODO: This has not been tested.
+                        c_entry = np.concatenate([c_entry] * len(variable[1][broadcast]), axis=1)
 
             # Raise error if vector is not a row vector (1, n) or flat array (n, ).
             if len(np.shape(c_entry)) > 1:
@@ -582,6 +644,14 @@ class StandardForm(object):
                 q_entry = variable[0] * np.ones((1, len(variable_1_index)))
             else:
                 q_entry = variable[0]
+                # If broadcasting, value is repeated in column direction.
+                if broadcast is not None:
+                    if broadcast not in variable[1].keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                    else:
+                        # TODO: Need check for order of values / index entries?
+                        # TODO: This has not been tested.
+                        q_entry = np.concatenate([q_entry] * len(variable[1][broadcast]), axis=1)
 
             # Raise error if vector is not a row vector (1, n) or flat array (n, ).
             if len(np.shape(q_entry)) > 1:

@@ -940,20 +940,20 @@ class StandardForm(object):
 
         # Fill vector entries.
         for variable_index in self.c_dict:
-            for c_entry in self.c_dict[variable_index]:
-                # If tuple, treat as parameter.
-                if type(c_entry) is tuple:
-                    parameter_name, broadcast_len = c_entry
-                    values = self.parameters[parameter_name]
-                    if len(np.shape(values)) == 0:
-                        values = values * np.ones(len(variable_index))
-                    elif broadcast_len > 1:
-                        values = np.concatenate([values] * broadcast_len, axis=1)
-                # Otherwise, treat as numeric value.
-                else:
-                    values = c_entry
-                # Insert entry in b vector.
-                c_vector[0, variable_index] += values.ravel()
+            c_entry = self.c_dict[variable_index]
+            # If tuple, treat as parameter.
+            if type(c_entry) is tuple:
+                parameter_name, broadcast_len = c_entry
+                values = self.parameters[parameter_name]
+                if len(np.shape(values)) == 0:
+                    values = values * np.ones(len(variable_index))
+                elif broadcast_len > 1:
+                    values = np.concatenate([values] * broadcast_len, axis=1)
+            # Otherwise, treat as numeric value.
+            else:
+                values = c_entry
+            # Insert entry in b vector.
+            c_vector[0, variable_index] += values.ravel()
 
         # Log time.
         log_time('get standard-form c vector')

@@ -236,6 +236,8 @@ class StandardForm(object):
     d_dict: dict
     x_vector: np.ndarray
     dual_vector: np.ndarray
+    results: dict
+    duals: dict
 
     def __init__(self):
 
@@ -1033,18 +1035,49 @@ class StandardForm(object):
 
     def solve(self):
 
-        if fledge.config.config['optimization']['solver_name'] == 'gurobi':
-            self.solve_gurobi()
-        else:
-            self.solve_cvxpy()
+        # Log time.
+        log_time(f'solve standard-form problem')
+        logger.debug(
+            f"Solver name: {fledge.config.config['optimization']['solver_name']};"
+            f" Solver interface: {fledge.config.config['optimization']['solver_interface']};"
+            f" Problem statistics: {len(self.variables)} variables, {self.constraints_len} constraints"
+        )
 
-    def solve_gurobi(self):
+        # Use CVXPY solver interface, if selected.
+        if fledge.config.config['optimization']['solver_interface'] == 'cvxpy':
+            self.solve_cvxpy(*self.get_cvxpy_problem())
+        # Use direct solver interfaces, if selected.
+        elif fledge.config.config['optimization']['solver_interface'] == 'direct':
+            if fledge.config.config['optimization']['solver_name'] == 'gurobi':
+                self.solve_gurobi(*self.get_gurobi_problem())
+            # If no direct solver interface found, fall back to CVXPY interface.
+            else:
+                logger.debug(
+                    f"No direct solver interface implemented for"
+                    f" '{fledge.config.config['optimization']['solver_name']}'. Falling back to CVXPY."
+                )
+                self.solve_cvxpy(*self.get_cvxpy_problem())
+        # Raise error, if invalid solver interface selected.
+        else:
+            raise ValueError(f"Invalid solver interface: '{fledge.config.config['optimization']['solver_interface']}'")
+
+        # Get results / duals.
+        self.results = self.get_results()
+        self.duals = self.get_duals()
+
+        # Log time.
+        log_time(f'solve standard-form problem')
+
+    def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
 
         # Instantiate Gurobi model.
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
         #   and the associated attributes.
         gurobipy_problem = gp.Model()
+        # Set solver parameters.
         gurobipy_problem.setParam('OutputFlag', int(fledge.config.config['optimization']['show_solver_output']))
+        for key, value in fledge.config.solver_parameters.items():
+            gurobipy_problem.setParam(key, value)
 
         # Define variables.
         # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).
@@ -1073,18 +1106,44 @@ class StandardForm(object):
         )
         gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
 
+        return (
+            gurobipy_problem,
+            x_vector,
+            constraints,
+            objective
+        )
+
+    def solve_gurobi(
+            self,
+            gurobipy_problem: gp.Model,
+            x_vector: gp.MVar,
+            constraints: gp.MConstr,
+            objective: gp.MQuadExpr
+    ):
+
         # Solve optimization problem.
-        # TODO: Raise error if no solution.
         gurobipy_problem.optimize()
+
+        # Raise error if no optimal solution.
+        status_labels = {
+            gp.GRB.INFEASIBLE: "Infeasible",
+            gp.GRB.INF_OR_UNBD: "Infeasible or Unbounded",
+            gp.GRB.UNBOUNDED: "Unbounded"
+        }
+        status = gurobipy_problem.getAttr('Status')
+        if status != gp.GRB.OPTIMAL:
+            status = status_labels[status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
+            raise RuntimeError(f"Gurobi exited with non-optimal solution status: {status}")
 
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
         self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+        self.objective = float(objective.getValue())
 
-    def solve_cvxpy(self):
+    def get_cvxpy_problem(self) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
 
         # Define variables.
-        x_vector = cp.Variable((len(self.variables), 1), name='x_vector')
+        x_vector = cp.Variable(shape=(len(self.variables), 1), name='x_vector')
 
         # Define constraints.
         constraints = [self.get_a_matrix() @ x_vector <= self.get_b_vector()]
@@ -1092,9 +1151,22 @@ class StandardForm(object):
         # Define objective.
         objective = (
             self.get_c_vector() @ x_vector
-            + x_vector.T @ (0.5 * self.get_q_matrix()) @ x_vector
+            + cp.quad_form(x_vector, 0.5 * self.get_q_matrix())
             + self.get_d_constant()
         )
+
+        return (
+            x_vector,
+            constraints,
+            objective
+        )
+
+    def solve_cvxpy(
+            self,
+            x_vector: cp.Variable,
+            constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
+            objective: cp.Expression
+    ):
 
         # Instantiate CVXPY problem.
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
@@ -1112,7 +1184,7 @@ class StandardForm(object):
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
         if not (cvxpy_problem.status == cp.OPTIMAL):
-            raise cp.SolverError(f"Solver termination status: {cvxpy_problem.status}")
+            raise RuntimeError(f"CVXPY exited with non-optimal solution status: {cvxpy_problem.status}")
 
         # Store results.
         self.x_vector = x_vector.value

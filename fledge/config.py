@@ -185,6 +185,8 @@ pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots'
 pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']
 
 # Modify optimization solver settings.
+if config['optimization']['solver_interface'] is None:
+    config['optimization']['solver_interface'] = 'direct'
 if config['optimization']['solver_name'] == 'cplex':
     solver_parameters = dict(cplex_params=dict())
     if config['optimization']['time_limit'] is not None:

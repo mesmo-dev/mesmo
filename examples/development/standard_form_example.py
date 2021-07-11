@@ -565,13 +565,11 @@ def main():
     fledge.utils.log_time('standard-form problem')
 
     # Solve optimization problem.
-    fledge.utils.log_time('standard-form solve')
     standard_form.solve()
-    fledge.utils.log_time('standard-form solve')
 
     # Obtain results.
-    results_1 = standard_form.get_results()
-    duals_1 = standard_form.get_duals()
+    results_1 = standard_form.results
+    duals_1 = standard_form.duals
     fledge.utils.log_time('standard-form interface')
 
     # Instantiate optimization problem.

@@ -513,7 +513,7 @@ class DERData(object):
 
         # Append `definition_index` column to DERs, for more convenient indexing into DER definitions.
         self.ders.loc[:, 'definition_index'] = (
-            pd.MultiIndex.from_frame(self.ders.loc[:, ['definition_type', 'definition_name']])
+            pd.MultiIndex.from_frame(self.ders.loc[:, ['definition_type', 'definition_name']]).to_numpy()
         )
 
         # Instantiate dict for additional DER definitions, e.g. from `flexible_ev_charger`.

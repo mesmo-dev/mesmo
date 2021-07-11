@@ -1,5 +1,6 @@
 """Utility functions module."""
 
+import collections
 import copy
 import cvxpy as cp
 import gurobipy as gp
@@ -255,11 +256,13 @@ class StandardForm(object):
         # Instantiate A matrix / b vector / c vector / Q matrix / d constant dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``,
         #   ``get_q_matrix()`` and ``get_d_constant()``.
-        self.a_dict = dict()
-        self.b_dict = dict()
-        self.c_dict = dict()
-        self.q_dict = dict()
-        self.d_dict = dict()
+        # - Uses `defaultdict(list)` to enable more convenient collecting of elements into lists. This avoids
+        #   accidental overwriting of dictionary entries.
+        self.a_dict = collections.defaultdict(list)
+        self.b_dict = collections.defaultdict(list)
+        self.c_dict = collections.defaultdict(list)
+        self.q_dict = collections.defaultdict(list)
+        self.d_dict = collections.defaultdict(list)
 
     def define_variable(
             self,
@@ -504,8 +507,6 @@ class StandardForm(object):
                 # Obtain constraint index based on dimension of first constant.
                 if constraint_index is None:
                     constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
-                    # Instantiate b vector entry.
-                    self.b_dict[constraint_index] = list()
 
                 # Append b vector entry.
                 if parameter_name is None:
@@ -562,11 +563,11 @@ class StandardForm(object):
                 # Append A matrix entry.
                 # - If parameter, pass tuple of factor, parameter name and broadcasting dimension length.
                 if parameter_name is None:
-                    self.a_dict[constraint_index, variable_index] = (
+                    self.a_dict[constraint_index, variable_index].append(
                         operator_factor * variable_factor * variable_value
                     )
                 else:
-                    self.a_dict[constraint_index, variable_index] = (
+                    self.a_dict[constraint_index, variable_index].append(
                         (operator_factor * variable_factor, parameter_name, broadcast_len)
                     )
 
@@ -709,9 +710,9 @@ class StandardForm(object):
 
             # Append d constant entry.
             if parameter_name is None:
-                self.d_dict[len(self.d_dict)] = constant_value
+                self.d_dict[0].append(constant_value)
             else:
-                self.d_dict[len(self.d_dict)] = (parameter_name, broadcast_len)
+                self.d_dict[0].append((parameter_name, broadcast_len))
 
         # Process variables.
         for variable_value, variable_keys in variables:
@@ -773,9 +774,9 @@ class StandardForm(object):
             # Add c vector entry.
             # - If parameter, pass tuple of parameter name and broadcasting dimension length.
             if parameter_name is None:
-                self.c_dict[variable_index] = variable_value
+                self.c_dict[variable_index].append(variable_value)
             else:
-                self.c_dict[variable_index] = (parameter_name, broadcast_len)
+                self.c_dict[variable_index].append((parameter_name, broadcast_len))
 
         # Process quadratic variables.
         for variable_value, variable_keys_1, variable_keys_2 in variables_quadratic:
@@ -848,9 +849,9 @@ class StandardForm(object):
             # Add Q matrix entry.
             # - If parameter, pass tuple of parameter name and broadcasting dimension length.
             if parameter_name is None:
-                self.q_dict[variable_1_index, variable_2_index] = variable_value
+                self.q_dict[variable_1_index, variable_2_index].append(variable_value)
             else:
-                self.q_dict[variable_1_index, variable_2_index] = (parameter_name, broadcast_len)
+                self.q_dict[variable_1_index, variable_2_index].append((parameter_name, broadcast_len))
 
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
@@ -864,29 +865,28 @@ class StandardForm(object):
 
         # Collect matrix entries.
         for constraint_index, variable_index in self.a_dict:
-            # If tuple, treat as parameter.
-            if type(self.a_dict[constraint_index, variable_index]) is tuple:
-                factor, parameter_name, broadcast_len = self.a_dict[constraint_index, variable_index]
-                values = self.parameters[parameter_name]
-                if len(np.shape(values)) == 0:
-                    values = values * scipy.sparse.eye(len(variable_index))
-                elif broadcast_len > 1:
-                    if type(values) is np.matrix:
-                        values = np.array(values)
-                    values = scipy.sparse.block_diag([values] * broadcast_len)
-                values *= factor
-            # Otherwise, treat as numeric value.
-            else:
-                values = self.a_dict[constraint_index, variable_index]
-            # Obtain row index, column index and values for entry in A matrix.
-            rows, columns, values = scipy.sparse.find(values)
-            rows = np.array(constraint_index)[rows]
-            columns = np.array(variable_index)[columns]
-            values_list.append(values)
-            rows_list.append(rows)
-            columns_list.append(columns)
+            for values in self.a_dict[constraint_index, variable_index]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    factor, parameter_name, broadcast_len = values
+                    values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 0:
+                        values = values * scipy.sparse.eye(len(variable_index))
+                    elif broadcast_len > 1:
+                        if type(values) is np.matrix:
+                            values = np.array(values)
+                        values = scipy.sparse.block_diag([values] * broadcast_len)
+                    values *= factor
+                # Obtain row index, column index and values for entry in A matrix.
+                rows, columns, values = scipy.sparse.find(values)
+                rows = np.array(constraint_index)[rows]
+                columns = np.array(variable_index)[columns]
+                # Insert entry in collections.
+                values_list.append(values)
+                rows_list.append(rows)
+                columns_list.append(columns)
 
-        # Instantiate sparse matrix.
+        # Instantiate A matrix.
         a_matrix = (
             scipy.sparse.coo_matrix(
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
@@ -909,19 +909,16 @@ class StandardForm(object):
 
         # Fill vector entries.
         for constraint_index in self.b_dict:
-            for b_entry in self.b_dict[constraint_index]:
-                # If tuple, treat as parameter.
-                if type(b_entry) is tuple:
-                    factor, parameter_name, broadcast_len = b_entry
+            for values in self.b_dict[constraint_index]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    factor, parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
                     if len(np.shape(values)) == 0:
                         values = values * np.ones(len(constraint_index))
                     elif broadcast_len > 1:
                         values = np.concatenate([values] * broadcast_len, axis=0)
                     values *= factor
-                # Otherwise, treat as numeric value.
-                else:
-                    values = b_entry
                 # Insert entry in b vector.
                 b_vector[constraint_index, 0] += values.ravel()
 
@@ -940,20 +937,17 @@ class StandardForm(object):
 
         # Fill vector entries.
         for variable_index in self.c_dict:
-            c_entry = self.c_dict[variable_index]
-            # If tuple, treat as parameter.
-            if type(c_entry) is tuple:
-                parameter_name, broadcast_len = c_entry
-                values = self.parameters[parameter_name]
-                if len(np.shape(values)) == 0:
-                    values = values * np.ones(len(variable_index))
-                elif broadcast_len > 1:
-                    values = np.concatenate([values] * broadcast_len, axis=1)
-            # Otherwise, treat as numeric value.
-            else:
-                values = c_entry
-            # Insert entry in b vector.
-            c_vector[0, variable_index] += values.ravel()
+            for values in self.c_dict[variable_index]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    parameter_name, broadcast_len = values
+                    values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 0:
+                        values = values * np.ones(len(variable_index))
+                    elif broadcast_len > 1:
+                        values = np.concatenate([values] * broadcast_len, axis=1)
+                # Insert entry in c vector.
+                c_vector[0, variable_index] += values.ravel()
 
         # Log time.
         log_time('get standard-form c vector')
@@ -972,28 +966,28 @@ class StandardForm(object):
 
         # Collect matrix entries.
         for variable_1_index, variable_2_index in self.q_dict:
-            # If tuple, treat as parameter.
-            if type(self.q_dict[variable_1_index, variable_2_index]) is tuple:
-                parameter_name, broadcast_len = self.q_dict[variable_1_index, variable_2_index]
-                values = self.parameters[parameter_name]
-                if len(np.shape(values)) == 0:
-                    values = values * np.ones(len(variable_1_index))
-                elif broadcast_len > 1:
-                    if type(values) is np.matrix:
-                        values = np.array(values)
-                    values = np.concatenate([values] * broadcast_len, axis=1)
-            # Otherwise, treat as numeric value.
-            else:
-                values = self.q_dict[variable_1_index, variable_2_index]
-            # Obtain row index, column index and values for entry in Q matrix.
-            rows, columns, values = scipy.sparse.find(values.ravel())
-            rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
-            columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
-            values_list.append(np.concatenate([values, values]))
-            rows_list.append(rows)
-            columns_list.append(columns)
+            for values in self.q_dict[variable_1_index, variable_2_index]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    parameter_name, broadcast_len = values
+                    values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 0:
+                        values = values * np.ones(len(variable_1_index))
+                    elif broadcast_len > 1:
+                        if type(values) is np.matrix:
+                            values = np.array(values)
+                        values = np.concatenate([values] * broadcast_len, axis=1)
+                # Obtain row index, column index and values for entry in Q matrix.
+                rows, columns, values = scipy.sparse.find(values.ravel())
+                rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
+                columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
+                values = np.concatenate([values, values])
+                # Insert entry in collections.
+                values_list.append(values)
+                rows_list.append(rows)
+                columns_list.append(columns)
 
-        # Instantiate sparse matrix.
+        # Instantiate Q matrix.
         q_matrix = (
             scipy.sparse.coo_matrix(
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
@@ -1015,17 +1009,14 @@ class StandardForm(object):
         d_constant = 0.0
 
         # Fill vector entries.
-        for d_entry in self.d_dict.values():
-            # If tuple, treat as parameter.
-            if type(d_entry) is tuple:
-                parameter_name, broadcast_len = d_entry
+        for values in self.d_dict[0]:
+            # If value is tuple, treat as parameter.
+            if type(values) is tuple:
+                parameter_name, broadcast_len = values
                 values = self.parameters[parameter_name]
                 if broadcast_len > 1:
                     values = values * broadcast_len
-            # Otherwise, treat as numeric value.
-            else:
-                values = d_entry
-            # Insert entry in b vector.
+            # Insert entry to d constant.
             d_constant += float(values)
 
         # Log time.

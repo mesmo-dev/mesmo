@@ -53,12 +53,12 @@ def main():
     standard_form.define_variable(
         'der_active_power_vector',
         timestep=scenario_data.timesteps,
-        der_index=linear_electric_grid_model.electric_grid_model.ders
+        der=linear_electric_grid_model.electric_grid_model.ders
     )
     standard_form.define_variable(
         'der_reactive_power_vector',
         timestep=scenario_data.timesteps,
-        der_index=linear_electric_grid_model.electric_grid_model.ders
+        der=linear_electric_grid_model.electric_grid_model.ders
     )
     # Define node voltage variable.
     standard_form.define_variable(
@@ -139,8 +139,8 @@ def main():
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=scenario_data.timesteps, node=linear_electric_grid_model.electric_grid_model.nodes)),
         '==',
-        ('variable', 'voltage_active_term', dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', 'voltage_reactive_term', dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', 'voltage_active_term', dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', 'voltage_reactive_term', dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
         ('constant', 'voltage_constant', dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
@@ -174,8 +174,8 @@ def main():
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '==',
-        ('variable', branch_power_1_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', branch_power_1_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', branch_power_1_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', branch_power_1_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
         ('constant', branch_power_1_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
@@ -209,8 +209,8 @@ def main():
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=scenario_data.timesteps, branch=linear_electric_grid_model.electric_grid_model.branches)),
         '==',
-        ('variable', branch_power_2_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', branch_power_2_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', branch_power_2_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', branch_power_2_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
         ('constant', branch_power_2_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
@@ -239,8 +239,8 @@ def main():
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='loss_active', timestep=scenario_data.timesteps)),
         '==',
-        ('variable', loss_active_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', loss_active_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', loss_active_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', loss_active_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
         ('constant', loss_active_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
@@ -269,8 +269,8 @@ def main():
     standard_form.define_constraint(
         ('variable', 1.0, dict(name='loss_reactive', timestep=scenario_data.timesteps)),
         '==',
-        ('variable', loss_reactive_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
-        ('variable', loss_reactive_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', loss_reactive_active_variable, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
+        ('variable', loss_reactive_reactive_variable, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)),
         ('constant', loss_reactive_constant, dict(timestep=scenario_data.timesteps)),
         broadcast='timestep'
     )
@@ -508,13 +508,13 @@ def main():
 
     # Define connection constraints.
     standard_form.define_constraint(
-        ('variable', 1.0, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
+        ('variable', 1.0, dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
         '==',
         ('variable', der_model_set.mapping_active_power_by_output, dict(name='output_vector', timestep=der_model_set.timesteps)),
         broadcast='timestep'
     )
     standard_form.define_constraint(
-        ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
+        ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=electric_grid_model.ders[der_model_set.electric_grid_der_index])),
         '==',
         ('variable', der_model_set.mapping_reactive_power_by_output, dict(name='output_vector', timestep=der_model_set.timesteps)),
         broadcast='timestep'
@@ -530,13 +530,13 @@ def main():
             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(scenario_data.timesteps))
             * -1.0 * timestep_interval_hours  # In Wh.
             @ sp.block_diag([np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])] * len(scenario_data.timesteps)),
-            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)
         ), (
             'variable',
             price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(scenario_data.timesteps))
             * -1.0 * timestep_interval_hours  # In Wh.
             @ sp.block_diag([np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])] * len(scenario_data.timesteps)),
-            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)
         ), (
             'variable',
             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
@@ -546,14 +546,14 @@ def main():
             'variable',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours,  # In Wh.
-            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
-            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders),
+            dict(name='der_active_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)
         ), (
             'variable',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours,  # In Wh.
-            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders),
-            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der_index=linear_electric_grid_model.electric_grid_model.ders)
+            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders),
+            dict(name='der_reactive_power_vector', timestep=scenario_data.timesteps, der=linear_electric_grid_model.electric_grid_model.ders)
         ), (
             'variable',
             price_data.price_sensitivity_coefficient

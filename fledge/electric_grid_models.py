@@ -5363,33 +5363,51 @@ class LinearElectricGridModelSet(object):
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
 
-        # Instantiate optimization variables as parameters using results values.
-        optimization_problem.der_active_power_vector = (
-            cp.Parameter(
-                results.der_active_power_vector_per_unit.shape,
-                value=results.der_active_power_vector_per_unit.fillna(0.0).values
-            )
-        )
-        optimization_problem.der_reactive_power_vector = (
-            cp.Parameter(
-                results.der_reactive_power_vector_per_unit.shape,
-                value=results.der_reactive_power_vector_per_unit.fillna(0.0).values
-            )
-        )
-        optimization_problem.loss_active = (
-            cp.Parameter(
-                results.loss_active.shape,
-                value=results.loss_active.values
-            )
-        )
+        # Define variables.
+        self.define_optimization_variables(optimization_problem)
 
         # Define objective.
-        self.define_optimization_objective(
-            optimization_problem,
-            price_data
+        self.define_optimization_objective(optimization_problem, price_data)
+
+        # Define variable vector of zeros.
+        x_vector = np.zeros((len(optimization_problem.variables), 1))
+
+        # Set values on DER active power variable.
+        der_active_power_vector_index = optimization_problem.variables.name == 'der_active_power_vector'
+        der_active_power_vector = (
+            results['der_active_power_vector'] / np.real(results.electric_grid_model.der_power_vector_reference)
+        )
+        x_vector[der_active_power_vector_index] = (
+            der_active_power_vector.fillna(0.0).values.ravel().reshape(len(x_vector[der_active_power_vector_index]), 1)
         )
 
-        return float(optimization_problem.objective.value)
+        # Set values on DER reactive power variable.
+        der_reactive_power_vector_index = optimization_problem.variables.name == 'der_reactive_power_vector'
+        der_reactive_power_vector = (
+            results['der_reactive_power_vector'] / np.imag(results.electric_grid_model.der_power_vector_reference)
+        )
+        x_vector[der_reactive_power_vector_index] = (
+            der_reactive_power_vector.fillna(0.0).values.ravel().reshape(len(x_vector[der_reactive_power_vector_index]), 1)
+        )
+
+        # Set values on active power losses variable.
+        loss_active_index = optimization_problem.variables.name == 'loss_active'
+        x_vector[loss_active_index] = (
+            results['loss_active'].fillna(0.0).values.ravel().reshape(len(x_vector[loss_active_index]), 1)
+        )
+
+        # TODO: evaluation does not yield the exact same result as when using the when using the x_vector from the
+        #  optimization solution. However, using the result dict from the OptimizationProblem class has the same issue
+        # obj_vars = [
+        #     'der_active_power_vector',
+        #     'der_reactive_power_vector',
+        #     'loss_active'
+        # ]
+        # for obj_var_name in obj_vars:
+        #     index = optimization_problem.variables.name == obj_var_name
+        #     x_vector[index] = results[obj_var_name].fillna(0.0).values.ravel().reshape((len(x_vector[index]), 1))
+
+        return optimization_problem.evaluate_objective(x_vector)
 
     def get_optimization_dlmps(
             self,

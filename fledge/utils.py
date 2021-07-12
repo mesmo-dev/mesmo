@@ -18,7 +18,7 @@ import plotly.io as pio
 import re
 import time
 import typing
-import scipy.sparse
+import scipy.sparse as sp
 import subprocess
 import sys
 
@@ -244,7 +244,7 @@ class OptimizationProblem(object):
     def define_parameter(
             self,
             name: str,
-            value: typing.Union[float, np.ndarray, scipy.sparse.spmatrix]
+            value: typing.Union[float, np.ndarray, sp.spmatrix]
     ):
 
         # Validate dimensions, if parameter already defined.
@@ -259,8 +259,8 @@ class OptimizationProblem(object):
             self,
             *elements: typing.Union[
                 str,
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix]],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             **kwargs
     ):
@@ -355,11 +355,11 @@ class OptimizationProblem(object):
     def define_constraint_low_level(
             self,
             variables: typing.List[
-                typing.Tuple[float, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             operator: str,
             constants: typing.List[
-                typing.Tuple[float, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             keys: dict = None,
             broadcast: str = None
@@ -507,12 +507,12 @@ class OptimizationProblem(object):
                     parameter_name = None
                 # Scalar values are multiplied with identity matrix of appropriate size.
                 if len(np.shape(variable_value)) == 0:
-                    variable_value = variable_value * scipy.sparse.eye(len(variable_index))
+                    variable_value = variable_value * sp.eye(len(variable_index))
                 # If broadcasting, value is repeated in block-diagonal matrix.
                 elif broadcast_len > 1:
                     if type(variable_value) is np.matrix:
                         variable_value = np.array(variable_value)
-                    variable_value = scipy.sparse.block_diag([variable_value] * broadcast_len)
+                    variable_value = sp.block_diag([variable_value] * broadcast_len)
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(variable_value) != (len(constraint_index), len(variable_index)):
@@ -570,9 +570,9 @@ class OptimizationProblem(object):
             self,
             *elements: typing.Union[
                 str,
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix]],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict, dict]
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]
             ],
             **kwargs
     ):
@@ -627,13 +627,13 @@ class OptimizationProblem(object):
     def define_objective_low_level(
             self,
             variables: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             variables_quadratic: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict, dict]
+                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]
             ],
             constants: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, scipy.sparse.spmatrix], dict]
+                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             broadcast: str = None
     ):
@@ -811,7 +811,7 @@ class OptimizationProblem(object):
             else:
                 self.q_dict[variable_1_index, variable_2_index].append((parameter_name, broadcast_len))
 
-    def get_a_matrix(self) -> scipy.sparse.spmatrix:
+    def get_a_matrix(self) -> sp.spmatrix:
 
         # Log time.
         log_time('get optimization problem A matrix')
@@ -829,14 +829,14 @@ class OptimizationProblem(object):
                     factor, parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
                     if len(np.shape(values)) == 0:
-                        values = values * scipy.sparse.eye(len(variable_index))
+                        values = values * sp.eye(len(variable_index))
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        values = scipy.sparse.block_diag([values] * broadcast_len)
+                        values = sp.block_diag([values] * broadcast_len)
                     values *= factor
                 # Obtain row index, column index and values for entry in A matrix.
-                rows, columns, values = scipy.sparse.find(values)
+                rows, columns, values = sp.find(values)
                 rows = np.array(constraint_index)[rows]
                 columns = np.array(variable_index)[columns]
                 # Insert entry in collections.
@@ -846,7 +846,7 @@ class OptimizationProblem(object):
 
         # Instantiate A matrix.
         a_matrix = (
-            scipy.sparse.coo_matrix(
+            sp.coo_matrix(
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
                 shape=(self.constraints_len, len(self.variables))
             ).tocsr()
@@ -912,7 +912,7 @@ class OptimizationProblem(object):
 
         return c_vector
 
-    def get_q_matrix(self) -> scipy.sparse.spmatrix:
+    def get_q_matrix(self) -> sp.spmatrix:
 
         # Log time.
         log_time('get optimization problem Q matrix')
@@ -936,7 +936,7 @@ class OptimizationProblem(object):
                             values = np.array(values)
                         values = np.concatenate([values] * broadcast_len, axis=1)
                 # Obtain row index, column index and values for entry in Q matrix.
-                rows, columns, values = scipy.sparse.find(values.ravel())
+                rows, columns, values = sp.find(values.ravel())
                 rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
                 columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
                 values = np.concatenate([values, values])
@@ -947,7 +947,7 @@ class OptimizationProblem(object):
 
         # Instantiate Q matrix.
         q_matrix = (
-            scipy.sparse.coo_matrix(
+            sp.coo_matrix(
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
                 shape=(len(self.variables), len(self.variables))
             ).tocsr()

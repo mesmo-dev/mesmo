@@ -5,7 +5,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import scipy.constants
-import scipy.sparse
+import scipy.sparse as sp
 import scipy.sparse.linalg
 
 import fledge.config
@@ -27,8 +27,8 @@ class ThermalGridModel(object):
     nodes: pd.Index
     branches: pd.Index
     ders = pd.Index
-    branch_node_incidence_matrix: scipy.sparse.spmatrix
-    der_node_incidence_matrix: scipy.sparse.spmatrix
+    branch_node_incidence_matrix: sp.spmatrix
+    der_node_incidence_matrix: sp.spmatrix
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
@@ -69,7 +69,7 @@ class ThermalGridModel(object):
 
         # Define branch to node incidence matrix.
         self.branch_node_incidence_matrix = (
-            scipy.sparse.dok_matrix((len(self.nodes), len(self.branches)), dtype=int)
+            sp.dok_matrix((len(self.nodes), len(self.branches)), dtype=int)
         )
         for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for branch_index, branch in enumerate(self.branches):
@@ -81,7 +81,7 @@ class ThermalGridModel(object):
 
         # Define DER to node incidence matrix.
         self.der_node_incidence_matrix = (
-            scipy.sparse.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
+            sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
         )
         for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
             for der_index, der_name in enumerate(self.der_names):
@@ -359,8 +359,8 @@ class LinearThermalGridModel(object):
 
     thermal_grid_model: ThermalGridModel
     thermal_power_flow_solution: ThermalPowerFlowSolution
-    sensitivity_branch_flow_by_der_power: scipy.sparse.spmatrix
-    sensitivity_node_head_by_der_power: scipy.sparse.spmatrix
+    sensitivity_branch_flow_by_der_power: sp.spmatrix
+    sensitivity_node_head_by_der_power: sp.spmatrix
     sensitivity_pump_power_by_der_power: np.array
 
     def __init__(
@@ -380,7 +380,7 @@ class LinearThermalGridModel(object):
             fledge.utils.get_index(self.thermal_grid_model.nodes, node_type='no_source')  # Define shorthand.
         )
         branch_node_incidence_matrix_inverse = (
-            scipy.sparse.dok_matrix(
+            sp.dok_matrix(
                 (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)),
                 dtype=float
             )
@@ -395,7 +395,7 @@ class LinearThermalGridModel(object):
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
         branch_node_incidence_matrix_transpose_inverse = (
-            scipy.sparse.dok_matrix(
+            sp.dok_matrix(
                 (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)),
                 dtype=float
             )
@@ -426,7 +426,7 @@ class LinearThermalGridModel(object):
         )
         self.sensitivity_node_head_by_node_power = (
             branch_node_incidence_matrix_transpose_inverse
-            @ scipy.sparse.diags(
+            @ sp.diags(
                 np.abs(thermal_power_flow_solution.branch_flow_vector)
                 * thermal_power_flow_solution.branch_friction_factor_vector
                 * 8.0 * self.thermal_grid_model.line_length_vector

@@ -1261,6 +1261,19 @@ class OptimizationProblem(ObjectBase):
 
         return results
 
+    def evaluate_objective(
+            self,
+            x_vector: np.ndarray
+    ) -> float:
+
+        objective = float(
+            self.get_c_vector() @ x_vector
+            + x_vector.T @ (0.5 * self.get_q_matrix()) @ x_vector
+            + self.get_d_constant()
+        )
+
+        return objective
+
 
 def starmap(
         function: typing.Callable,

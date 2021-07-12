@@ -82,6 +82,7 @@ def main():
     # Obtain results.
     results_1 = optimization_problem.results
     duals_1 = optimization_problem.duals
+    objective_1 = optimization_problem.evaluate_objective(optimization_problem.x_vector)
     fledge.utils.log_time('standard-form interface')
 
     # Instantiate optimization problem.

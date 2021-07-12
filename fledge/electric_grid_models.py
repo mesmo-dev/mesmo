@@ -4915,8 +4915,6 @@ class LinearElectricGridModelSet(object):
             linear_electric_grid_model_method=LinearElectricGridModelLocal
     ):
 
-        # TODO: do we still need this?  if not hasattr(optimization_problem, 'der_active_power_vector'): ...
-
         # Store attributes.
         self.electric_grid_model = electric_grid_model
         self.power_flow_solution_set = power_flow_solution_set
@@ -4954,43 +4952,249 @@ class LinearElectricGridModelSet(object):
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define electric grid model variables.
         # Define DER power vector variables.
+        # - Only if these have not yet been defined within `DERModelSet`.
+        if 'der_active_power_vector' not in optimization_problem.variables.loc[:, 'name'].values:
+            optimization_problem.define_variable(
+                'der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders
+            )
+        if 'der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values:
+            optimization_problem.define_variable(
+                'der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders
+            )
+
+        # Define node voltage magnitude variable.
         optimization_problem.define_variable(
-            'der_active_power_vector',
-            timestep=self.timesteps,
-            der=self.electric_grid_model.ders
+            'node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes
         )
-        optimization_problem.define_variable(
-            'der_reactive_power_vector',
-            timestep=self.timesteps,
-            der=self.electric_grid_model.ders
-        )
-        # Define node voltage variable.
-        optimization_problem.define_variable(
-            'node_voltage_magnitude_vector',
-            timestep=self.timesteps,
-            node=self.electric_grid_model.nodes
-        )
+
         # Define branch power magnitude variables.
         optimization_problem.define_variable(
-            'branch_power_magnitude_vector_1',
-            timestep=self.timesteps,
-            branch=self.electric_grid_model.branches
+            'branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches
         )
         optimization_problem.define_variable(
-            'branch_power_magnitude_vector_2',
-            timestep=self.timesteps,
-            branch=self.electric_grid_model.branches
+            'branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches
         )
+
         # Define loss variables.
         optimization_problem.define_variable(
-            'loss_active',
-            timestep=self.timesteps
+            'loss_active', timestep=self.timesteps
         )
         optimization_problem.define_variable(
-            'loss_reactive',
-            timestep=self.timesteps
+            'loss_reactive', timestep=self.timesteps
+        )
+
+    def define_optimization_parameters(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            node_voltage_magnitude_vector_minimum: np.ndarray = None,
+            node_voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_magnitude_vector_maximum: np.ndarray = None,
+    ):
+
+        # TODO: Handling of undefined limits.
+
+        # Define voltage variable terms.
+        optimization_problem.define_parameter(
+            'voltage_active_term',
+            sp.block_diag([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'voltage_reactive_term',
+            sp.block_diag([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define voltage constant term.
+        optimization_problem.define_parameter(
+            'voltage_constant',
+            np.concatenate([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ (
+                    np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+                    - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                    @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                    - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                    @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 1) variable terms.
+        optimization_problem.define_parameter(
+            'branch_power_1_active_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'branch_power_1_reactive_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 1) constant terms.
+        optimization_problem.define_parameter(
+            'branch_power_1_constant',
+            np.concatenate([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ (
+                    np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                    - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                    @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                    - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                    @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 2) variable terms.
+        optimization_problem.define_parameter(
+            'branch_power_2_active_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'branch_power_2_reactive_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 2) constant term.
+        optimization_problem.define_parameter(
+            'branch_power_2_constant',
+            np.concatenate([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ (
+                    np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                    - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                    @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                    - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                    @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss variable terms.
+        optimization_problem.define_parameter(
+            'loss_active_active_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'loss_active_reactive_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss constant term.
+        optimization_problem.define_parameter(
+            'loss_active_constant',
+            np.concatenate([
+                np.real(linear_electric_grid_model.power_flow_solution.loss)
+                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define reactive loss variable terms.
+        optimization_problem.define_parameter(
+            'loss_reactive_active_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'loss_reactive_reactive_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss constant term.
+        optimization_problem.define_parameter(
+            'loss_reactive_constant',
+            np.concatenate([
+                np.imag(linear_electric_grid_model.power_flow_solution.loss)
+                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define voltage limits.
+        optimization_problem.define_parameter(
+            'voltage_limit_minimum',
+            np.concatenate([
+                node_voltage_magnitude_vector_minimum.ravel()
+                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'voltage_limit_maximum',
+            np.concatenate([
+                node_voltage_magnitude_vector_maximum.ravel()
+                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow limits.
+        optimization_problem.define_parameter(
+            'branch_power_minimum',
+            np.concatenate([
+                - branch_power_magnitude_vector_maximum.ravel()
+                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'branch_power_maximum',
+            np.concatenate([
+                branch_power_magnitude_vector_maximum.ravel()
+                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
         )
 
     def define_optimization_constraints(
@@ -5083,223 +5287,6 @@ class LinearElectricGridModelSet(object):
             '<=',
             ('constant', 'branch_power_maximum', dict(timestep=self.timesteps)),
             keys=dict(name='branch_power_magnitude_vector_2_maximum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
-        )
-
-    def define_optimization_parameters(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            node_voltage_magnitude_vector_minimum: np.ndarray = None,
-            node_voltage_magnitude_vector_maximum: np.ndarray = None,
-            branch_power_magnitude_vector_maximum: np.ndarray = None,
-    ):
-        # TODO: Do I need to check if parameter is already defined?
-        # optimization_problem.parameters.keys()
-
-        # Define electric grid model constraints.
-        # Define voltage variable terms.
-        optimization_problem.define_parameter(
-            'voltage_active_term',
-            sp.block_diag([
-                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
-                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-        optimization_problem.define_parameter(
-            'voltage_reactive_term',
-            sp.block_diag([
-                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
-                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define voltage constant term.
-        optimization_problem.define_parameter(
-            'voltage_constant',
-            np.concatenate([
-                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define branch flow (direction 1) variable terms.
-        optimization_problem.define_parameter(
-            'branch_power_1_active_term',
-            sp.block_diag([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-        optimization_problem.define_parameter(
-            'branch_power_1_reactive_term',
-            sp.block_diag([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define branch flow (direction 1) constant terms.
-        optimization_problem.define_parameter(
-            'branch_power_1_constant',
-            np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define branch flow (direction 2) variable terms.
-        optimization_problem.define_parameter(
-            'branch_power_2_active_term',
-            sp.block_diag([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        optimization_problem.define_parameter(
-            'branch_power_2_reactive_term',
-            sp.block_diag([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define branch flow (direction 2) constant term.
-        optimization_problem.define_parameter(
-            'branch_power_2_constant',
-            np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define active loss variable terms.
-        optimization_problem.define_parameter(
-            'loss_active_active_term',
-            sp.block_diag([
-                linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
-                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        optimization_problem.define_parameter(
-            'loss_active_reactive_term',
-            sp.block_diag([
-                linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
-                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define active loss constant term.
-        optimization_problem.define_parameter(
-            'loss_active_constant',
-            np.concatenate([
-                np.real(linear_electric_grid_model.power_flow_solution.loss)
-                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
-                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
-                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define reactive loss variable terms.
-        optimization_problem.define_parameter(
-            'loss_reactive_active_term',
-            sp.block_diag([
-                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
-                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        optimization_problem.define_parameter(
-            'loss_reactive_reactive_term',
-            sp.block_diag([
-                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
-                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define active loss constant term.
-        optimization_problem.define_parameter(
-            'loss_reactive_constant',
-            np.concatenate([
-                np.imag(linear_electric_grid_model.power_flow_solution.loss)
-                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
-                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
-                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        # Define voltage limits.
-        optimization_problem.define_parameter(
-            'voltage_limit_minimum',
-            np.concatenate([
-                node_voltage_magnitude_vector_minimum.ravel()
-                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        optimization_problem.define_parameter(
-            'voltage_limit_maximum',
-            np.concatenate([
-                node_voltage_magnitude_vector_maximum.ravel()
-                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-
-        optimization_problem.define_parameter(
-            'branch_power_minimum',
-            np.concatenate([
-                - branch_power_magnitude_vector_maximum.ravel()
-                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
-        )
-        optimization_problem.define_parameter(
-            'branch_power_maximum',
-            np.concatenate([
-                branch_power_magnitude_vector_maximum.ravel()
-                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
-                for linear_electric_grid_model in self.linear_electric_grid_models.values()
-            ])
         )
 
     def define_optimization_objective(

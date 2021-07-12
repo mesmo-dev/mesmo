@@ -240,6 +240,7 @@ class OptimizationProblem(ObjectBase):
         )
         # Add new variables to index.
         self.variables = pd.concat([self.variables, new_variables], ignore_index=True)
+        # TODO: Raise error if defining duplicate variables.
 
     def define_parameter(
             self,
@@ -834,7 +835,7 @@ class OptimizationProblem(ObjectBase):
                         if type(values) is np.matrix:
                             values = np.array(values)
                         values = sp.block_diag([values] * broadcast_len)
-                    values *= factor
+                    values = values * factor
                 # Obtain row index, column index and values for entry in A matrix.
                 rows, columns, values = sp.find(values)
                 rows = np.array(constraint_index)[rows]
@@ -876,7 +877,7 @@ class OptimizationProblem(ObjectBase):
                         values = values * np.ones(len(constraint_index))
                     elif broadcast_len > 1:
                         values = np.concatenate([values] * broadcast_len, axis=0)
-                    values *= factor
+                    values = values * factor
                 # Insert entry in b vector.
                 b_vector[constraint_index, 0] += values.ravel()
 

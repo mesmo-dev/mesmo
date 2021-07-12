@@ -4915,48 +4915,392 @@ class LinearElectricGridModelSet(object):
             linear_electric_grid_model_method=LinearElectricGridModelLocal
     ):
 
+        # TODO: do we still need this?  if not hasattr(optimization_problem, 'der_active_power_vector'): ...
+
         # Store attributes.
         self.electric_grid_model = electric_grid_model
         self.power_flow_solution_set = power_flow_solution_set
         self.timesteps = self.electric_grid_model.timesteps
 
-        # Obtain linear electric grid models.
-        linear_electric_grid_models = (
-            fledge.utils.starmap(
-                linear_electric_grid_model_method,
-                zip(
-                    itertools.repeat(self.electric_grid_model),
-                    self.power_flow_solution_set.power_flow_solutions.values()
+        if linear_electric_grid_model_method is LinearElectricGridModelLocal:
+            # Obtain linear electric grid models.
+            linear_electric_grid_models = (
+                fledge.utils.starmap(
+                    linear_electric_grid_model_method,
+                    zip(
+                        itertools.repeat(self.electric_grid_model),
+                        self.power_flow_solution_set.power_flow_solutions.values()
+                    )
                 )
             )
-        )
-        self.linear_electric_grid_models = dict(zip(self.timesteps, linear_electric_grid_models))
+            self.linear_electric_grid_models = dict(zip(self.timesteps, linear_electric_grid_models))
+
+        elif linear_electric_grid_model_method is LinearElectricGridModelGlobal:
+            # TODO: if we have method LinearElectricGridModelGlobal, we approximate everything based on one timestep?
+            #  Is this correct? Or does the case exist where Global is used on every timestep?
+            # TODO: what to do with power flow solution set (there should only be one in this case)
+            linear_electric_grid_model = LinearElectricGridModelGlobal(
+                electric_grid_model,
+                power_flow_solution_set.power_flow_solutions[self.timesteps[0]]
+            )
+            self.linear_electric_grid_models = dict(zip(self.timesteps, itertools.repeat(linear_electric_grid_model)))
+
+        else:
+            print(f'Unknown linearization method: "{linear_electric_grid_model_method}"')
+            raise ValueError
 
     def define_optimization_variables(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define optimization variables through linear model of first time step.
-        self.linear_electric_grid_models[self.timesteps[0]].define_optimization_variables(optimization_problem)
+        # Define electric grid model variables.
+        # Define DER power vector variables.
+        optimization_problem.define_variable(
+            'der_active_power_vector',
+            timestep=self.timesteps,
+            der=self.electric_grid_model.ders
+        )
+        optimization_problem.define_variable(
+            'der_reactive_power_vector',
+            timestep=self.timesteps,
+            der=self.electric_grid_model.ders
+        )
+        # Define node voltage variable.
+        optimization_problem.define_variable(
+            'node_voltage_magnitude_vector',
+            timestep=self.timesteps,
+            node=self.electric_grid_model.nodes
+        )
+        # Define branch power magnitude variables.
+        optimization_problem.define_variable(
+            'branch_power_magnitude_vector_1',
+            timestep=self.timesteps,
+            branch=self.electric_grid_model.branches
+        )
+        optimization_problem.define_variable(
+            'branch_power_magnitude_vector_2',
+            timestep=self.timesteps,
+            branch=self.electric_grid_model.branches
+        )
+        # Define loss variables.
+        optimization_problem.define_variable(
+            'loss_active',
+            timestep=self.timesteps
+        )
+        optimization_problem.define_variable(
+            'loss_reactive',
+            timestep=self.timesteps
+        )
 
     def define_optimization_constraints(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+    ):
+
+        # Define voltage equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            '==',
+            ('variable', 'voltage_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'voltage_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('constant', 'voltage_constant', dict(timestep=self.timesteps)),
+        )
+
+        # Define branch flow (direction 1) equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '==',
+            ('variable', 'branch_power_1_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'branch_power_1_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('constant', 'branch_power_1_constant', dict(timestep=self.timesteps)),
+        )
+
+        # Define branch flow (direction 2) equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '==',
+            ('variable', 'branch_power_2_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'branch_power_2_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('constant', 'branch_power_2_constant', dict(timestep=self.timesteps)),
+        )
+
+        # Define active loss equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='loss_active', timestep=self.timesteps)),
+            '==',
+            ('variable', 'loss_active_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'loss_active_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('constant', 'loss_active_constant', dict(timestep=self.timesteps)),
+        )
+
+        # Define reactive loss equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='loss_reactive', timestep=self.timesteps)),
+            '==',
+            ('variable', 'loss_reactive_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'loss_reactive_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('constant', 'loss_reactive_constant', dict(timestep=self.timesteps))
+        )
+
+        # Define voltage limits.
+        # Add dedicated keys to enable retrieving dual variables.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            '>=',
+            ('constant', 'voltage_limit_minimum', dict(timestep=self.timesteps)),
+            keys=dict(name='voltage_magnitude_vector_minimum_constraint', timestep=self.timesteps, node=self.electric_grid_model.nodes),
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            '<=',
+            ('constant', 'voltage_limit_maximum', dict(timestep=self.timesteps)),
+            keys=dict(name='voltage_magnitude_vector_maximum_constraint', timestep=self.timesteps, node=self.electric_grid_model.nodes),
+        )
+
+        # Define branch flow limits.
+        # Add dedicated keys to enable retrieving dual variables.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '>=',
+            ('constant', 'branch_power_minimum', dict(timestep=self.timesteps)),
+            keys=dict(name='branch_power_magnitude_vector_1_minimum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '<=',
+            ('constant', 'branch_power_maximum', dict(timestep=self.timesteps)),
+            keys=dict(name='branch_power_magnitude_vector_1_maximum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '>=',
+            ('constant', 'branch_power_minimum', dict(timestep=self.timesteps)),
+            keys=dict(name='branch_power_magnitude_vector_2_minimum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            '<=',
+            ('constant', 'branch_power_maximum', dict(timestep=self.timesteps)),
+            keys=dict(name='branch_power_magnitude_vector_2_maximum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+        )
+
+    def define_optimization_parameters(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None,
     ):
+        # TODO: Do I need to check if parameter is already defined?
+        # optimization_problem.parameters.keys()
 
-        # Define optimization constraints through linear model for each time step.
-        for timestep in self.timesteps:
-            self.linear_electric_grid_models[timestep].define_optimization_constraints(
-                optimization_problem,
-                timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep),
-                node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
-                node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
-                branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
-            )
+        # Define electric grid model constraints.
+        # Define voltage variable terms.
+        optimization_problem.define_parameter(
+            'voltage_active_term',
+            sp.block_diag([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'voltage_reactive_term',
+            sp.block_diag([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define voltage constant term.
+        optimization_problem.define_parameter(
+            'voltage_constant',
+            np.concatenate([
+                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                @ (
+                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 1) variable terms.
+        optimization_problem.define_parameter(
+            'branch_power_1_active_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'branch_power_1_reactive_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 1) constant terms.
+        optimization_problem.define_parameter(
+            'branch_power_1_constant',
+            np.concatenate([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ (
+                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 2) variable terms.
+        optimization_problem.define_parameter(
+            'branch_power_2_active_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        optimization_problem.define_parameter(
+            'branch_power_2_reactive_term',
+            sp.block_diag([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define branch flow (direction 2) constant term.
+        optimization_problem.define_parameter(
+            'branch_power_2_constant',
+            np.concatenate([
+                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                @ (
+                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                ) for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss variable terms.
+        optimization_problem.define_parameter(
+            'loss_active_active_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        optimization_problem.define_parameter(
+            'loss_active_reactive_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss constant term.
+        optimization_problem.define_parameter(
+            'loss_active_constant',
+            np.concatenate([
+                np.real(linear_electric_grid_model.power_flow_solution.loss)
+                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
+                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                - linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
+                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define reactive loss variable terms.
+        optimization_problem.define_parameter(
+            'loss_reactive_active_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+                @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        optimization_problem.define_parameter(
+            'loss_reactive_reactive_term',
+            sp.block_diag([
+                linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+                @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define active loss constant term.
+        optimization_problem.define_parameter(
+            'loss_reactive_constant',
+            np.concatenate([
+                np.imag(linear_electric_grid_model.power_flow_solution.loss)
+                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
+                @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                - linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
+                @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        # Define voltage limits.
+        optimization_problem.define_parameter(
+            'voltage_limit_minimum',
+            np.concatenate([
+                node_voltage_magnitude_vector_minimum.ravel()
+                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        optimization_problem.define_parameter(
+            'voltage_limit_maximum',
+            np.concatenate([
+                node_voltage_magnitude_vector_maximum.ravel()
+                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+
+        optimization_problem.define_parameter(
+            'branch_power_minimum',
+            np.concatenate([
+                - branch_power_magnitude_vector_maximum.ravel()
+                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
+        optimization_problem.define_parameter(
+            'branch_power_maximum',
+            np.concatenate([
+                branch_power_magnitude_vector_maximum.ravel()
+                / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
+                for linear_electric_grid_model in self.linear_electric_grid_models.values()
+            ])
+        )
 
     def define_optimization_objective(
             self,
@@ -4967,12 +5311,61 @@ class LinearElectricGridModelSet(object):
         # Set objective flag.
         optimization_problem.has_electric_grid_objective = True
 
-        for timestep in self.timesteps:
-            self.linear_electric_grid_models[timestep].define_optimization_objective(
-                optimization_problem,
-                price_data,
-                timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep)
+        # for timestep in self.timesteps:
+        #     self.linear_electric_grid_models[timestep].define_optimization_objective(
+        #         optimization_problem,
+        #         price_data,
+        #         timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep)
+        #     )
+
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        if len(price_data.price_timeseries.index) > 1:
+            timestep_interval_hours = (
+                    (price_data.price_timeseries.index[1] - price_data.price_timeseries.index[0])
+                    / pd.Timedelta('1h')
             )
+        else:
+            timestep_interval_hours = 1.0
+
+        # Define objective.
+        optimization_problem.define_objective(
+            (
+                'variable',
+                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+            ), (
+                'variable',
+                price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+            ), (
+                'variable',
+                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
+                * timestep_interval_hours,  # In Wh.
+                dict(name='loss_active', timestep=self.timesteps),
+            ), (
+                'variable',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours,  # In Wh.
+                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
+                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+            ), (
+                'variable',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours,  # In Wh.
+                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
+                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+            ), (
+                'variable',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours,  # In Wh.
+                dict(name='loss_active', timestep=self.timesteps),
+                dict(name='loss_active', timestep=self.timesteps)
+            )
+        )
 
     def evaluate_optimization_objective(
             self,

@@ -10,29 +10,46 @@ import matplotlib.pyplot as plt
 from dro_data_interface import DRO_data, DRO_ambiguity_set
 import fledge
 import statistics
+import glob
 
+def adjacent_values(vals, q1, q3):
+    upper_adjacent_value = q3 + (q3 - q1) * 1.5
+    upper_adjacent_value = np.clip(upper_adjacent_value, q3, vals[-1])
+
+    lower_adjacent_value = q1 - (q3 - q1) * 1.5
+    lower_adjacent_value = np.clip(lower_adjacent_value, vals[0], q1)
+    return lower_adjacent_value, upper_adjacent_value
+
+
+def set_axis_style(ax, labels):
+    ax.xaxis.set_tick_params(direction='out')
+    ax.xaxis.set_ticks_position('bottom')
+    ax.set_xticks(np.arange(1, len(labels) + 1))
+    ax.set_xticklabels(labels)
+    ax.set_xlim(0.25, len(labels) + 0.75)
+    ax.set_xlabel('Sample name')
 
 
 def main():
     scenario_name = 'singapore_6node_custom'
 
     energy_dro = pd.read_csv(
-             "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\energy_dro.csv")
+             "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\energy_dro.csv")
 
     energy_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\energy_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\energy_det.csv")
 
     up_reserve_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\up_reserve_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\up_reserve_det.csv")
 
     up_reserve_dro = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\up_reserve_dro.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\up_reserve_dro.csv")
 
     down_reserve_det = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\down_reserve_det.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\down_reserve_det.csv")
 
     down_reserve_dro = pd.read_csv(
-        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\cpmp-det-dro-DRO_microgrid_main_singapore_6node_custom_2021-07-04_23-41-10\\down_reserve_dro.csv")
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\down_reserve_dro.csv")
 
     print()
 
@@ -103,156 +120,70 @@ def main():
     fig.savefig('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\final_plots\\price.pdf')
     ax2.legend(labels=['Energy price forecast', 'Contingency reserve price forecast'], loc='lower right')
     plt.show()
+
+
+    so_normal = pd.DataFrame()
+    for file_name in glob.glob('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\SO_normal_distribution\\' + '*.csv'):
+        x = pd.read_csv(file_name, low_memory=False)
+        so_normal = pd.concat([so_normal, x], axis=0)
+
+    so_gamma = pd.DataFrame()
+    for file_name in glob.glob('C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\SO_gamma_distribution\\' + '*.csv'):
+        x = pd.read_csv(file_name, low_memory=False)
+        so_gamma = pd.concat([so_gamma, x], axis=0)
+
+    dro = pd.read_csv(
+        "C:\\Users\\kai.zhang\\Desktop\\fledge\\results\\dro_std\\objective_dro.csv")
+
+
+    fig = plt.figure()
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+
+    ax.set_title('Default violin plot')
+    ax.set_ylabel('Observed values')
+    ax.violinplot([so_normal['objective_value_so'], so_gamma['objective_value_so'], dro['objective_value_dro']])
+
+
     plt.show()
 
-    # create figure and axis objects with subplots()
-
-    # # Get results path.
-    # results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    # # create test data
+    # np.random.seed(19680801)
+    # data = [sorted(np.random.normal(0, std, 100)) for std in range(1, 5)]
     #
-    # # Recreate / overwrite database, to incorporate changes in the CSV definition files.
-    # fledge.data_interface.recreate_database()
+    # fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(9, 4), sharey=True)
     #
-    # dro_data_test = DRO_data("C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\")
+    # ax1.set_title('Default violin plot')
+    # ax1.set_ylabel('Observed values')
+    # ax1.violinplot(data)
     #
-    # dro_price_deviation = dro_data_test.energy_price - dro_data_test.mean_energy_price
-
-    # forecast_data_price = pd.read_csv(
-    #     "C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
-    # # os.path.join('..', 'bla', 'dro')
+    # ax2.set_title('Customized violin plot')
+    # parts = ax2.violinplot(
+    #         data, showmeans=False, showmedians=False,
+    #         showextrema=False)
     #
-    # energy_price = forecast_data_price['USEP($/MWh)']
+    # for pc in parts['bodies']:
+    #     pc.set_facecolor('#D43F3A')
+    #     pc.set_edgecolor('black')
+    #     pc.set_alpha(1)
     #
-    # contingency_price = forecast_data_price['Contingency($/MWh)']
+    # quartile1, medians, quartile3 = np.percentile(data, [25, 50, 75], axis=1)
+    # whiskers = np.array([
+    #     adjacent_values(sorted_array, q1, q3)
+    #     for sorted_array, q1, q3 in zip(data, quartile1, quartile3)])
+    # whiskers_min, whiskers_max = whiskers[:, 0], whiskers[:, 1]
     #
-    # mean_energy_price = statistics.mean(energy_price)
+    # inds = np.arange(1, len(medians) + 1)
+    # ax2.scatter(inds, medians, marker='o', color='white', s=30, zorder=3)
+    # ax2.vlines(inds, quartile1, quartile3, color='k', linestyle='-', lw=5)
+    # ax2.vlines(inds, whiskers_min, whiskers_max, color='k', linestyle='-', lw=1)
     #
-    # variance_energy_price = statistics.variance(energy_price, mean_energy_price)
+    # # set style for the axes
+    # labels = ['A', 'B', 'C', 'D']
+    # for ax in [ax1, ax2]:
+    #     set_axis_style(ax, labels)
     #
-    # mean_contingency_price = statistics.mean(contingency_price)
-
-    # variance_contingency_price = statistics.variance(contingency_price, mean_contingency_price)
-
-
-    #
-    # # Obtain price data object.
-    # price_data = fledge.data_interface.PriceData(scenario_name)
-    #
-    # # Obtain DER & grid model objects.
-    # der_model_set = fledge.der_models.DERModelSet(scenario_name)
-    # # Getting linear electric grid model using "global approximation" method.
-    # linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
-    #
-    # # Instantiate optimization problem.
-    # optimization_problem = fledge.utils.OptimizationProblem()
-    #
-    # # Define model variables.
-    # der_model_set.define_optimization_variables(optimization_problem)
-    # linear_electric_grid_model.define_optimization_variables(optimization_problem)
-    # # Define custom variable.
-    # optimization_problem.electric_power_peak = cp.Variable(shape=(1, 1))
-    #
-    # # Define model constraints.
-    # der_model_set.define_optimization_constraints(optimization_problem)
-    # linear_electric_grid_model.define_optimization_constraints(optimization_problem)
-    # # Define custom constraints.
-    # for der_model in der_model_set.flexible_der_models.values():
-    #     optimization_problem.constraints.append(
-    #         optimization_problem.electric_power_peak[0, 0]
-    #         >=
-    #         optimization_problem.der_active_power_vector[:, der_model.electric_grid_der_index]
-    #         * der_model.active_power_nominal  # Multiplying to convert power from per-unit to Watt values.
-    #         * -1.0  # Multiplying to convert power from negative to positive value (loads are negative by default).
-    #     )
-    #
-    # # Define model objective.
-    # der_model_set.define_optimization_objective(optimization_problem, price_data)
-    # linear_electric_grid_model.define_optimization_objective(optimization_problem, price_data)
-    # # Define custom objective.
-    # optimization_problem.objective += 1e2 * cp.sum(optimization_problem.electric_power_peak)
-    #
-    # # Solve optimization problem.
-    # optimization_problem.solve()
-    #
-    # # Get model results.
-    # results = fledge.problems.Results()
-    # results.update(der_model_set.get_optimization_results(optimization_problem))
-    # results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
-    # # Get custom results.
-    # electric_power_peak = optimization_problem.electric_power_peak.value
-    # print(f"electric_power_peak = {electric_power_peak}")
-    #
-    # # Store results to CSV.
-    # results.save(results_path)
-    #
-    # # Plot some results.
-    # for der_model in der_model_set.flexible_der_models.values():
-    #
-    #     for output in der_model.outputs:
-    #
-    #         figure = go.Figure()
-    #         figure.add_scatter(
-    #             x=der_model.output_maximum_timeseries.index,
-    #             y=der_model.output_maximum_timeseries.loc[:, output].values,
-    #             name='Maximum',
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.add_scatter(
-    #             x=der_model.output_minimum_timeseries.index,
-    #             y=der_model.output_minimum_timeseries.loc[:, output].values,
-    #             name='Minimum',
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.add_scatter(
-    #             x=results.output_vector.index,
-    #             y=results.output_vector.loc[:, (der_model.der_name, output)].values,
-    #             name='Optimal',
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.update_layout(
-    #             title=f'DER: {der_model.der_name} / Output: {output}',
-    #             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-    #             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
-    #         )
-    #         # figure.show()
-    #         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'der_{der_model.der_name}_out_{output}'))
-    #
-    #     for disturbance in der_model.disturbances:
-    #
-    #         figure = go.Figure()
-    #         figure.add_scatter(
-    #             x=der_model.disturbance_timeseries.index,
-    #             y=der_model.disturbance_timeseries.loc[:, disturbance].values,
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.update_layout(
-    #             title=f'DER: {der_model.der_name} / Disturbance: {disturbance}',
-    #             xaxis=go.layout.XAxis(tickformat='%H:%M'),
-    #             showlegend=False
-    #         )
-    #         # figure.show()
-    #         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'der_{der_model.der_name}_dis_{disturbance}'))
-    #
-    # for commodity_type in ['active_power', 'reactive_power']:
-    #
-    #     if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):
-    #         figure = go.Figure()
-    #         figure.add_scatter(
-    #             x=price_data.price_timeseries.index,
-    #             y=price_data.price_timeseries.loc[:, (commodity_type, 'source', 'source')].values,
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.update_layout(
-    #             title=f'Price: {commodity_type}',
-    #             xaxis=go.layout.XAxis(tickformat='%H:%M')
-    #         )
-    #         # figure.show()
-    #         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
-    #
-    # # Print results path.
-    # fledge.utils.launch(results_path)
-    # print(f"Results are stored in: {results_path}")
-
+    # plt.subplots_adjust(bottom=0.15, wspace=0.05)
+    # plt.show()
 
 if __name__ == '__main__':
     main()

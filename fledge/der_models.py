@@ -2078,60 +2078,62 @@ class DERModelSet(DERModelSetBase):
                 ], axis='columns').T.values
             ).T.ravel()
         )
-        optimization_problem.define_parameter(
-            'mapping_active_power_by_output',
-            sp.block_diag([
-                (
-                    self.flexible_der_models[der_name].mapping_active_power_by_output.values
-                    / (
-                        self.flexible_der_models[der_name].active_power_nominal
-                        if self.flexible_der_models[der_name].active_power_nominal != 0.0
-                        else 1.0
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'mapping_active_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].active_power_nominal
+                            if self.flexible_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.flexible_der_models[der_name].mapping_active_power_by_output.values
                     )
-                    if self.flexible_der_models[der_name].is_electric_grid_connected
-                    else 0.0 * self.flexible_der_models[der_name].mapping_active_power_by_output.values
-                )
-                if der_name in self.flexible_der_names
-                else np.zeros((1, 0))
-                for der_type, der_name in self.electric_ders
-            ])
-        )
-        optimization_problem.define_parameter(
-            'mapping_reactive_power_by_output',
-            sp.block_diag([
-                (
-                    self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
-                    / (
-                        self.flexible_der_models[der_name].reactive_power_nominal
-                        if self.flexible_der_models[der_name].reactive_power_nominal != 0.0
-                        else 1.0
+                    if der_name in self.flexible_der_names
+                    else np.zeros((1, 0))
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+            optimization_problem.define_parameter(
+                'mapping_reactive_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].reactive_power_nominal
+                            if self.flexible_der_models[der_name].reactive_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
                     )
-                    if self.flexible_der_models[der_name].is_electric_grid_connected
-                    else 0.0 * self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
-                )
-                if der_name in self.flexible_der_names
-                else np.zeros((1, 0))
-                for der_type, der_name in self.electric_ders
-            ])
-        )
-        optimization_problem.define_parameter(
-            'mapping_thermal_power_by_output',
-            sp.block_diag([
-                (
-                    self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
-                    / (
-                        self.flexible_der_models[der_name].thermal_power_nominal
-                        if self.flexible_der_models[der_name].thermal_power_nominal != 0.0
-                        else 1.0
+                    if der_name in self.flexible_der_names
+                    else np.zeros((1, 0))
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'mapping_thermal_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].thermal_power_nominal
+                            if self.flexible_der_models[der_name].thermal_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_thermal_grid_connected
+                        else 0.0 * self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
                     )
-                    if self.flexible_der_models[der_name].is_thermal_grid_connected
-                    else 0.0 * self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
-                )
-                if der_name in self.flexible_der_names
-                else np.zeros((1, 0))
-                for der_type, der_name in self.thermal_ders
-            ])
-        )
+                    if der_name in self.flexible_der_names
+                    else np.zeros((1, 0))
+                    for der_type, der_name in self.thermal_ders
+                ])
+            )
         optimization_problem.define_parameter(
             'output_minimum_timeseries',
             pd.concat([

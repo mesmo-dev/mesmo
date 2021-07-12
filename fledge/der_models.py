@@ -7,6 +7,7 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import scipy.constants
+import scipy.sparse as sp
 import sys
 import typing
 
@@ -1857,6 +1858,7 @@ class DERModelSetBase:
     states: pd.Index
     controls: pd.Index
     outputs: pd.Index
+    storage_states: pd.Index
 
 
 class DERModelSetOperationResults(fledge.electric_grid_models.ElectricGridDEROperationResults):
@@ -1967,59 +1969,271 @@ class DERModelSet(DERModelSetBase):
             ])
             if len(self.flexible_der_names) > 0 else pd.Index([])
         )
+        self.storage_states = (
+            pd.MultiIndex.from_tuples([
+                (der_name, state)
+                for der_name in self.flexible_der_names
+                for state in self.flexible_der_models[der_name].storage_states
+            ], names=['der_name', 'state'])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
+        )
 
     def define_optimization_variables(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define flexible DER state space variables.
-        optimization_problem.state_vector = dict.fromkeys(self.flexible_der_names)
-        optimization_problem.control_vector = dict.fromkeys(self.flexible_der_names)
-        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
-        for der_name in self.flexible_der_names:
-            optimization_problem.state_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].states)
-                ))
-            )
-            optimization_problem.control_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].controls)
-                ))
-            )
-            optimization_problem.output_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].outputs)
-                ))
-            )
+        # Define state space variables.
+        optimization_problem.define_variable('state_vector', timestep=self.timesteps, state=self.states)
+        optimization_problem.define_variable('control_vector', timestep=self.timesteps, control=self.controls)
+        optimization_problem.define_variable('output_vector', timestep=self.timesteps, output=self.outputs)
 
         # Define DER power vector variables.
         # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
-        if (not hasattr(optimization_problem, 'der_active_power_vector')) and (len(self.electric_ders) > 0):
-            optimization_problem.der_active_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+        if (
+                ('der_active_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.electric_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_active_power_vector', timestep=self.timesteps, der=self.electric_ders
             )
-        if (not hasattr(optimization_problem, 'der_reactive_power_vector')) and (len(self.electric_ders) > 0):
-            optimization_problem.der_reactive_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+        if (
+                ('der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.electric_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders
             )
-        if (not hasattr(optimization_problem, 'der_thermal_power_vector')) and (len(self.thermal_ders) > 0):
-            optimization_problem.der_thermal_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.thermal_ders)))
+        if (
+                ('der_thermal_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.thermal_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders
             )
+
+    def define_optimization_parameters(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem
+    ):
+
+        optimization_problem.define_parameter(
+            'state_vector_initial',
+            np.concatenate([
+                self.flexible_der_models[der_name].state_vector_initial.values
+                for der_name in self.flexible_der_names
+            ])[~self.states.isin(self.storage_states)]
+        )
+        optimization_problem.define_parameter(
+            'state_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].state_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'control_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].control_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'disturbance_state_equation',
+            (
+                sp.block_diag([
+                    self.flexible_der_models[der_name].disturbance_matrix.values
+                    for der_name in self.flexible_der_names
+                ])
+                @ pd.concat([
+                    self.flexible_der_models[der_name].disturbance_timeseries
+                    for der_name in self.flexible_der_names
+                ], axis='columns').iloc[:-1, :].T.values
+            ).T.ravel()
+        )
+        optimization_problem.define_parameter(
+            'state_output_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].state_output_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'control_output_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].control_output_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'disturbance_output_equation',
+            (
+                sp.block_diag([
+                    self.flexible_der_models[der_name].disturbance_output_matrix.values
+                    for der_name in self.flexible_der_names
+                ])
+                @ pd.concat([
+                    self.flexible_der_models[der_name].disturbance_timeseries
+                    for der_name in self.flexible_der_names
+                ], axis='columns').T.values
+            ).T.ravel()
+        )
+        optimization_problem.define_parameter(
+            'mapping_active_power_by_output',
+            sp.block_diag([
+                (
+                    self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                    / (
+                        self.flexible_der_models[der_name].active_power_nominal
+                        if self.flexible_der_models[der_name].active_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if self.flexible_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                )
+                if der_name in self.flexible_der_names
+                else np.zeros((1, 0))
+                for der_type, der_name in self.electric_ders
+            ])
+        )
+        optimization_problem.define_parameter(
+            'mapping_reactive_power_by_output',
+            sp.block_diag([
+                (
+                    self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                    / (
+                        self.flexible_der_models[der_name].reactive_power_nominal
+                        if self.flexible_der_models[der_name].reactive_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if self.flexible_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                )
+                if der_name in self.flexible_der_names
+                else np.zeros((1, 0))
+                for der_type, der_name in self.electric_ders
+            ])
+        )
+        optimization_problem.define_parameter(
+            'mapping_thermal_power_by_output',
+            sp.block_diag([
+                (
+                    self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
+                    / (
+                        self.flexible_der_models[der_name].thermal_power_nominal
+                        if self.flexible_der_models[der_name].thermal_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if self.flexible_der_models[der_name].is_thermal_grid_connected
+                    else 0.0 * self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
+                )
+                if der_name in self.flexible_der_names
+                else np.zeros((1, 0))
+                for der_type, der_name in self.thermal_ders
+            ])
+        )
+        optimization_problem.define_parameter(
+            'output_minimum_timeseries',
+            pd.concat([
+                self.flexible_der_models[der_name].output_minimum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel()
+        )
+        optimization_problem.define_parameter(
+            'output_maximum_timeseries',
+            pd.concat([
+                self.flexible_der_models[der_name].output_maximum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel()
+        )
 
     def define_optimization_constraints(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define DER constraints for each DER.
-        for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_constraints(optimization_problem)
+        # Define DER model constraints.
+        # Initial state.
+        # - For states which represent storage state of charge, initial state of charge is final state of charge.
+        if any(~self.states.isin(self.storage_states)):
+            optimization_problem.define_constraint(
+                ('constant', 'state_vector_initial'),
+                '==',
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[0],
+                    state=self.states[~self.states.isin(self.storage_states)]
+                ))
+            )
+        # - For other states, set initial state according to the initial state vector.
+        if any(self.states.isin(self.storage_states)):
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[0],
+                    state=self.states[self.states.isin(self.storage_states)]
+                )),
+                '==',
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[-1],
+                    state=self.states[self.states.isin(self.storage_states)]
+                ))
+            )
+
+        # State equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='state_vector', timestep=self.timesteps[1:])),
+            '==',
+            ('variable', 'state_matrix', dict(name='state_vector', timestep=self.timesteps[:-1])),
+            ('variable', 'control_matrix', dict(name='control_vector', timestep=self.timesteps[:-1])),
+            ('constant', 'disturbance_state_equation'),
+            broadcast='timestep'
+        )
+
+        # Output equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '==',
+            ('variable', 'state_output_matrix', dict(name='state_vector', timestep=self.timesteps)),
+            ('variable', 'control_output_matrix', dict(name='control_vector', timestep=self.timesteps)),
+            ('constant', 'disturbance_output_equation'),
+            broadcast='timestep'
+        )
+
+        # Output limits.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '>=',
+            ('constant', 'output_minimum_timeseries'),
+            broadcast='timestep'
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '<=',
+            ('constant', 'output_maximum_timeseries'),
+            broadcast='timestep'
+        )
+
+        # Define connection constraints.
+        # TODO: Include fixed DERs.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                '==',
+                ('variable', 'mapping_active_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                '==',
+                ('variable', 'mapping_reactive_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)),
+                '==',
+                ('variable', 'mapping_thermal_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
 
     def define_optimization_objective(
             self,

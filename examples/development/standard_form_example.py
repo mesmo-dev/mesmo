@@ -83,6 +83,10 @@ def main():
     results_grid = linear_electric_grid_model_set.get_optimization_results(optimization_problem)
     results_1 = optimization_problem.results
     duals_1 = optimization_problem.duals
+    dlmps = linear_electric_grid_model_set.get_optimization_dlmps(
+        optimization_problem,
+        price_data
+    )
     objective_1 = optimization_problem.evaluate_objective(optimization_problem.x_vector)
     objective_1_new = linear_electric_grid_model_set.evaluate_optimization_objective(results_grid, price_data)
     fledge.utils.log_time('standard-form interface')

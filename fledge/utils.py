@@ -180,51 +180,8 @@ class ResultsBase(ObjectBase):
 
 
 class OptimizationProblem(object):
-    """Optimization problem object for use with CVXPY."""
-
-    constraints: list
-    objective: cp.Expression
-    has_der_objective: bool = False
-    has_electric_grid_objective: bool = False
-    has_thermal_grid_objective: bool = False
-    cvxpy_problem: cp.Problem
-
-    def __init__(self):
-
-        self.constraints = []
-        self.objective = cp.Constant(value=0.0)
-
-    def solve(
-            self,
-            keep_problem=False,
-            **kwargs
-    ):
-
-        # Instantiate CVXPY problem object.
-        if hasattr(self, 'cvxpy_problem') and keep_problem:
-            pass
-        else:
-            self.cvxpy_problem = cp.Problem(cp.Minimize(self.objective), self.constraints)
-
-        # Solve optimization problem.
-        self.cvxpy_problem.solve(
-            solver=(
-                fledge.config.config['optimization']['solver_name'].upper()
-                if fledge.config.config['optimization']['solver_name'] is not None
-                else None
-            ),
-            verbose=fledge.config.config['optimization']['show_solver_output'],
-            **kwargs,
-            **fledge.config.solver_parameters
-        )
-
-        # Assert that solver exited with an optimal solution. If not, raise an error.
-        if not (self.cvxpy_problem.status == cp.OPTIMAL):
-            raise cp.SolverError(f"Solver termination status: {self.cvxpy_problem.status}")
-
-
-class StandardForm(object):
-    """Standard form object for linear program, with objective ``min(c @ x)`` and constraints ``A @ x <= b``."""
+    """Optimization problem object."""
+    # TODO: Documentation.
 
     variables: pd.DataFrame
     constraints: pd.DataFrame
@@ -239,6 +196,7 @@ class StandardForm(object):
     dual_vector: np.ndarray
     results: dict
     duals: dict
+    objective: float
 
     def __init__(self):
 
@@ -856,7 +814,7 @@ class StandardForm(object):
     def get_a_matrix(self) -> scipy.sparse.spmatrix:
 
         # Log time.
-        log_time('get standard-form A matrix')
+        log_time('get optimization problem A matrix')
 
         # Instantiate collections.
         values_list = list()
@@ -895,14 +853,14 @@ class StandardForm(object):
         )
 
         # Log time.
-        log_time('get standard-form A matrix')
+        log_time('get optimization problem A matrix')
 
         return a_matrix
 
     def get_b_vector(self) -> np.ndarray:
 
         # Log time.
-        log_time('get standard-form b vector')
+        log_time('get optimization problem b vector')
 
         # Instantiate array.
         b_vector = np.zeros((self.constraints_len, 1))
@@ -923,14 +881,14 @@ class StandardForm(object):
                 b_vector[constraint_index, 0] += values.ravel()
 
         # Log time.
-        log_time('get standard-form b vector')
+        log_time('get optimization problem b vector')
 
         return b_vector
 
     def get_c_vector(self) -> np.ndarray:
 
         # Log time.
-        log_time('get standard-form c vector')
+        log_time('get optimization problem c vector')
 
         # Instantiate array.
         c_vector = np.zeros((1, len(self.variables)))
@@ -950,14 +908,14 @@ class StandardForm(object):
                 c_vector[0, variable_index] += values.ravel()
 
         # Log time.
-        log_time('get standard-form c vector')
+        log_time('get optimization problem c vector')
 
         return c_vector
 
     def get_q_matrix(self) -> scipy.sparse.spmatrix:
 
         # Log time.
-        log_time('get standard-form Q matrix')
+        log_time('get optimization problem Q matrix')
 
         # Instantiate collections.
         values_list = list()
@@ -996,14 +954,14 @@ class StandardForm(object):
         )
 
         # Log time.
-        log_time('get standard-form Q matrix')
+        log_time('get optimization problem Q matrix')
 
         return q_matrix
 
     def get_d_constant(self) -> float:
 
         # Log time.
-        log_time('get standard-form d constant')
+        log_time('get optimization problem d constant')
 
         # Instantiate array.
         d_constant = 0.0
@@ -1020,14 +978,14 @@ class StandardForm(object):
             d_constant += float(values)
 
         # Log time.
-        log_time('get standard-form d constant')
+        log_time('get optimization problem d constant')
 
         return d_constant
 
     def solve(self):
 
         # Log time.
-        log_time(f'solve standard-form problem')
+        log_time(f'solve optimization problem problem')
         logger.debug(
             f"Solver name: {fledge.config.config['optimization']['solver_name']};"
             f" Solver interface: {fledge.config.config['optimization']['solver_interface']};"
@@ -1057,7 +1015,7 @@ class StandardForm(object):
         self.duals = self.get_duals()
 
         # Log time.
-        log_time(f'solve standard-form problem')
+        log_time(f'solve optimization problem problem')
 
     def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
 
@@ -1110,7 +1068,7 @@ class StandardForm(object):
             x_vector: gp.MVar,
             constraints: gp.MConstr,
             objective: gp.MQuadExpr
-    ):
+    ) -> gp.Model:
 
         # Solve optimization problem.
         gurobipy_problem.optimize()
@@ -1130,6 +1088,8 @@ class StandardForm(object):
         self.x_vector = np.transpose([x_vector.getAttr('x')])
         self.dual_vector = np.transpose([constraints.getAttr('Pi')])
         self.objective = float(objective.getValue())
+
+        return gurobipy_problem
 
     def get_cvxpy_problem(self) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
 
@@ -1157,7 +1117,7 @@ class StandardForm(object):
             x_vector: cp.Variable,
             constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
             objective: cp.Expression
-    ):
+    ) -> cp.Problem:
 
         # Instantiate CVXPY problem.
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
@@ -1180,6 +1140,9 @@ class StandardForm(object):
         # Store results.
         self.x_vector = x_vector.value
         self.dual_vector = constraints[0].dual_value
+        self.objective = float(cvxpy_problem.objective.value)
+
+        return cvxpy_problem
 
     def get_results(
         self,
@@ -1187,7 +1150,7 @@ class StandardForm(object):
     ) -> dict:
 
         # Log time.
-        log_time('get standard-form results')
+        log_time('get optimization problem results')
 
         # Obtain x vector.
         if x_vector is None:
@@ -1227,14 +1190,14 @@ class StandardForm(object):
                 results[name] = pd.DataFrame(results[name], columns=[name])
 
         # Log time.
-        log_time('get standard-form results')
+        log_time('get optimization problem results')
 
         return results
 
     def get_duals(self) -> dict:
 
         # Log time.
-        log_time('get standard-form duals')
+        log_time('get optimization problem duals')
 
         # Obtain dual vector.
         dual_vector = self.dual_vector
@@ -1293,7 +1256,7 @@ class StandardForm(object):
                 results[name] = pd.DataFrame(results[name], columns=[name])
 
         # Log time.
-        log_time('get standard-form duals')
+        log_time('get optimization problem duals')
 
         return results
 

@@ -179,7 +179,7 @@ class ResultsBase(ObjectBase):
         return self
 
 
-class OptimizationProblem(object):
+class OptimizationProblem(ObjectBase):
     """Optimization problem object."""
     # TODO: Documentation.
 

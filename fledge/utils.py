@@ -954,6 +954,7 @@ class OptimizationProblem(ObjectBase):
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
                 shape=(len(self.variables), len(self.variables))
             ).tocsr()
+            if len(self.q_dict) > 0 else sp.csr_matrix((len(self.variables), len(self.variables)))
         )
 
         # Log time.

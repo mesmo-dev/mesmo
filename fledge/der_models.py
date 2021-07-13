@@ -24,7 +24,7 @@ class DERModel(object):
 
     der_type: str = None
     # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
-    marginal_cost: float = 0.0
+    marginal_cost: float
     der_name: str
     is_standalone: bool
     is_electric_grid_connected: bool
@@ -150,6 +150,9 @@ class DERModel(object):
             self.thermal_power_nominal_timeseries = (
                 pd.Series(0.0, index=self.timesteps, name='thermal_power')
             )
+
+        # Obtain marginal cost.
+        self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
 
     def define_optimization_variables(
             self,
@@ -380,9 +383,6 @@ class FixedGeneratorModel(FixedDERModel):
             raise AssertionError(
                 f"Fixed generator '{self.der_name}' can only be connected to either electric grid or thermal grid."
             )
-
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
 
 
 class FlexibleDERModel(DERModel):
@@ -1079,9 +1079,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
                 f"Flexible load '{self.der_name}' can only be connected to either electric grid or thermal grid."
             )
 
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
-
         if self.is_electric_grid_connected:
 
             # Instantiate indexes.
@@ -1760,9 +1757,6 @@ class FlexibleCHP(FlexibleDERModel):
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
-
         # Obtain thermal and electrical efficiency
         self.thermal_efficiency = der.at['thermal_efficiency']
         self.electric_efficiency = der.at['electric_efficiency']
@@ -2407,14 +2401,14 @@ class DERModelSet(DERModelSetBase):
                 (
                     'variable',
                     'der_active_power_marginal_cost',
-                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
                 )
             )
             optimization_problem.define_objective(
                 (
                     'variable',
                     'der_reactive_power_marginal_cost',
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
                 )
             )
 
@@ -2477,33 +2471,42 @@ class DERModelSet(DERModelSetBase):
         # Obtain results.
         state_vector = (
             optimization_problem.results['state_vector'].loc[self.timesteps, self.states]
+            if len(self.states) > 0 else None
         )
         control_vector = (
             optimization_problem.results['control_vector'].loc[self.timesteps, self.controls]
+            if len(self.controls) > 0 else None
         )
         output_vector = (
             optimization_problem.results['output_vector'].loc[self.timesteps, self.outputs]
+            if len(self.outputs) > 0 else None
         )
         der_active_power_vector_per_unit = (
             optimization_problem.results['der_active_power_vector'].loc[self.timesteps, self.electric_ders]
+            if len(self.electric_ders) > 0 else None
         )
         der_active_power_vector = (
             der_active_power_vector_per_unit
             * self.der_active_power_vector_reference
+            if len(self.electric_ders) > 0 else None
         )
         der_reactive_power_vector_per_unit = (
             optimization_problem.results['der_reactive_power_vector'].loc[self.timesteps, self.electric_ders]
+            if len(self.electric_ders) > 0 else None
         )
         der_reactive_power_vector = (
             der_reactive_power_vector_per_unit
             * self.der_reactive_power_vector_reference
+            if len(self.electric_ders) > 0 else None
         )
         der_thermal_power_vector_per_unit = (
             optimization_problem.results['der_thermal_power_vector'].loc[self.timesteps, self.thermal_ders]
+            if len(self.thermal_ders) > 0 else None
         )
         der_thermal_power_vector = (
             der_thermal_power_vector_per_unit
             * self.der_thermal_power_vector_reference
+            if len(self.thermal_ders) > 0 else None
         )
 
         return DERModelSetOperationResults(

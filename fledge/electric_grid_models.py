@@ -3411,7 +3411,7 @@ class LinearElectricGridModel(object):
         der_active_power_vector = (
             pd.DataFrame(
                 (
-                    optimization_problem.results['der_active_power_vector'].values
+                    optimization_problem.der_active_power_vector.value
                     * np.array([np.real(self.electric_grid_model.der_power_vector_reference)])
                 ),
                 columns=self.electric_grid_model.ders,
@@ -3421,7 +3421,7 @@ class LinearElectricGridModel(object):
         der_reactive_power_vector = (
             pd.DataFrame(
                 (
-                    optimization_problem.results['der_reactive_power_vector'].values
+                    optimization_problem.der_reactive_power_vector.value
                     * np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])
                 ),
                 columns=self.electric_grid_model.ders,
@@ -3431,7 +3431,7 @@ class LinearElectricGridModel(object):
         node_voltage_magnitude_vector = (
             pd.DataFrame(
                 (
-                    optimization_problem.results['node_voltage_magnitude_vector'].values
+                    optimization_problem.node_voltage_magnitude_vector.value
                     * np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
                 ),
                 columns=self.electric_grid_model.nodes,
@@ -3441,7 +3441,7 @@ class LinearElectricGridModel(object):
         branch_power_magnitude_vector_1 = (
             pd.DataFrame(
                 (
-                    optimization_problem.results['branch_power_magnitude_vector_1'].values
+                    optimization_problem.branch_power_magnitude_vector_1.value
                     * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                 ),
                 columns=self.electric_grid_model.branches,
@@ -3451,7 +3451,7 @@ class LinearElectricGridModel(object):
         branch_power_magnitude_vector_2 = (
             pd.DataFrame(
                 (
-                    optimization_problem.results['branch_power_magnitude_vector_2'].values
+                    optimization_problem.branch_power_magnitude_vector_2.value
                     * np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
                 ),
                 columns=self.electric_grid_model.branches,
@@ -3460,14 +3460,14 @@ class LinearElectricGridModel(object):
         )
         loss_active = (
             pd.DataFrame(
-                optimization_problem.results['loss_active'].values,
+                optimization_problem.loss_active.value,
                 columns=['total'],
                 index=self.electric_grid_model.timesteps
             )
         )
         loss_reactive = (
             pd.DataFrame(
-                optimization_problem.results['loss_reactive'].values,
+                optimization_problem.loss_reactive.value,
                 columns=['total'],
                 index=self.electric_grid_model.timesteps
             )
@@ -5776,5 +5776,71 @@ class LinearElectricGridModelSet(object):
             optimization_problem: fledge.utils.OptimizationProblem
     ) -> ElectricGridOperationResults:
 
-        # Obtain results through linear model of first time step.
-        return self.linear_electric_grid_models[self.timesteps[0]].get_optimization_results(optimization_problem)
+        # Obtain results.
+        der_active_power_vector_per_unit = (
+            optimization_problem.results['der_active_power_vector'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.ders
+            ]
+        )
+        der_active_power_vector = (
+                der_active_power_vector_per_unit
+                * np.real(self.electric_grid_model.der_power_vector_reference)
+        )
+        der_reactive_power_vector_per_unit = (
+            optimization_problem.results['der_reactive_power_vector'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.ders
+            ]
+        )
+        der_reactive_power_vector = (
+                der_reactive_power_vector_per_unit
+                * np.imag(self.electric_grid_model.der_power_vector_reference)
+        )
+        node_voltage_magnitude_vector_per_unit = (
+            optimization_problem.results['node_voltage_magnitude_vector'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.nodes
+            ]
+        )
+        node_voltage_magnitude_vector = (
+                node_voltage_magnitude_vector_per_unit
+                * np.abs(self.electric_grid_model.node_voltage_vector_reference)
+        )
+        branch_power_magnitude_vector_1_per_unit = (
+            optimization_problem.results['branch_power_magnitude_vector_1'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+        )
+        branch_power_magnitude_vector_1 = (
+                branch_power_magnitude_vector_1_per_unit
+                * self.electric_grid_model.branch_power_vector_magnitude_reference
+        )
+        branch_power_magnitude_vector_2_per_unit = (
+            optimization_problem.results['branch_power_magnitude_vector_2'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+        )
+        branch_power_magnitude_vector_2 = (
+                branch_power_magnitude_vector_2_per_unit
+                * self.electric_grid_model.branch_power_vector_magnitude_reference
+        )
+        loss_active = (
+            optimization_problem.results['loss_active'].loc[self.electric_grid_model.timesteps, ['loss_active']]
+        )
+        loss_reactive = (
+            optimization_problem.results['loss_reactive'].loc[self.electric_grid_model.timesteps, ['loss_reactive']]
+        )
+
+        return ElectricGridOperationResults(
+            electric_grid_model=self.electric_grid_model,
+            der_active_power_vector=der_active_power_vector,
+            der_active_power_vector_per_unit=der_active_power_vector_per_unit,
+            der_reactive_power_vector=der_reactive_power_vector,
+            der_reactive_power_vector_per_unit=der_reactive_power_vector_per_unit,
+            node_voltage_magnitude_vector=node_voltage_magnitude_vector,
+            node_voltage_magnitude_vector_per_unit=node_voltage_magnitude_vector_per_unit,
+            branch_power_magnitude_vector_1=branch_power_magnitude_vector_1,
+            branch_power_magnitude_vector_1_per_unit=branch_power_magnitude_vector_1_per_unit,
+            branch_power_magnitude_vector_2=branch_power_magnitude_vector_2,
+            branch_power_magnitude_vector_2_per_unit=branch_power_magnitude_vector_2_per_unit,
+            loss_active=loss_active,
+            loss_reactive=loss_reactive
+        )

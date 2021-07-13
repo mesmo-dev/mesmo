@@ -5092,7 +5092,7 @@ class LinearElectricGridModelSet(object):
             np.concatenate([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ (
-                    np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                    np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
                     - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
                     @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
                     - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive

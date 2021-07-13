@@ -5429,76 +5429,40 @@ class LinearElectricGridModelSet(object):
 
         # Obtain individual duals.
         voltage_magnitude_vector_minimum_dual = (
-            pd.DataFrame(
-                (
-                    optimization_problem.duals['voltage_magnitude_vector_minimum_constraint']
-                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
-                    if 'voltage_magnitude_vector_minimum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.nodes,
-                index=self.electric_grid_model.timesteps
-            )
+            optimization_problem.duals['voltage_magnitude_vector_minimum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.nodes
+            ]
+            / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
         )
         voltage_magnitude_vector_maximum_dual = (
-            pd.DataFrame(
-                (
-                    -1.0 * optimization_problem.duals['voltage_magnitude_vector_maximum_constraint']
-                    / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
-                    if 'voltage_magnitude_vector_maximum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.nodes,
-                index=self.electric_grid_model.timesteps
-            )
+            -1.0 * optimization_problem.duals['voltage_magnitude_vector_maximum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.nodes
+            ]
+            / np.array([np.abs(self.electric_grid_model.node_voltage_vector_reference)])
         )
         branch_power_magnitude_vector_1_minimum_dual = (
-            pd.DataFrame(
-                (
-                    optimization_problem.duals['branch_power_magnitude_vector_1_minimum_constraint']
-                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
-                    if 'branch_power_magnitude_vector_1_minimum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.branches,
-                index=self.electric_grid_model.timesteps
-            )
+            optimization_problem.duals['branch_power_magnitude_vector_1_minimum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+            / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
         )
         branch_power_magnitude_vector_1_maximum_dual = (
-            pd.DataFrame(
-                (
-                    -1.0 * optimization_problem.duals['branch_power_magnitude_vector_1_maximum_constraint']
-                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
-                    if 'branch_power_magnitude_vector_1_maximum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.branches,
-                index=self.electric_grid_model.timesteps
-            )
+            -1.0 * optimization_problem.duals['branch_power_magnitude_vector_1_maximum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+            / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
         )
         branch_power_magnitude_vector_2_minimum_dual = (
-            pd.DataFrame(
-                (
-                    optimization_problem.duals['branch_power_magnitude_vector_2_minimum_constraint']
-                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
-                    if 'branch_power_magnitude_vector_2_minimum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.branches,
-                index=self.electric_grid_model.timesteps
-            )
+            optimization_problem.duals['branch_power_magnitude_vector_2_minimum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+            / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
         )
         branch_power_magnitude_vector_2_maximum_dual = (
-            pd.DataFrame(
-                (
-                    -1.0 * optimization_problem.duals['branch_power_magnitude_vector_2_maximum_constraint']
-                    / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
-                    if 'branch_power_magnitude_vector_2_maximum_constraint' in optimization_problem.duals.keys()
-                    else 0.0
-                ),
-                columns=self.electric_grid_model.branches,
-                index=self.electric_grid_model.timesteps
-            )
+            -1.0 * optimization_problem.duals['branch_power_magnitude_vector_2_maximum_constraint'].loc[
+                self.electric_grid_model.timesteps, self.electric_grid_model.branches
+            ]
+            / np.array([self.electric_grid_model.branch_power_vector_magnitude_reference])
         )
 
         # Instantiate DLMP variables.

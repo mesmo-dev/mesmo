@@ -23,6 +23,8 @@ class DERModel(object):
     """DER model object."""
 
     der_type: str = None
+    # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
+    marginal_cost: float = 0.0
     der_name: str
     is_standalone: bool
     is_electric_grid_connected: bool
@@ -2040,6 +2042,10 @@ class DERModelSet(DERModelSetBase):
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
+
+        # Define parameters.
         optimization_problem.define_parameter(
             'state_vector_initial',
             np.concatenate([
@@ -2171,6 +2177,37 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ], axis='columns').values.ravel()
         )
+        # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
+        # TODO: Related: Cost for CHP defined twice.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'marginal_cost_active_power',
+                np.concatenate([
+                    np.ones((1, len(self.timesteps)))
+                    * self.der_models[der_name].marginal_cost
+                    * timestep_interval_hours  # In Wh.
+                    for der_type, der_name in self.electric_ders
+                ], axis=1)
+            )
+            optimization_problem.define_parameter(
+                'marginal_cost_reactive_power',
+                np.concatenate([
+                    np.zeros((1, len(self.timesteps)))
+                    # * self.der_models[der_name].marginal_cost
+                    # * timestep_interval_hours  # In Wh.
+                    for der_type, der_name in self.electric_ders
+                ], axis=1)
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'marginal_cost_thermal_power',
+                np.concatenate([
+                    np.ones((1, len(self.timesteps)))
+                    * self.der_models[der_name].marginal_cost
+                    * timestep_interval_hours  # In Wh.
+                    for der_type, der_name in self.thermal_ders
+                ], axis=1)
+            )
 
     def define_optimization_constraints(
             self,
@@ -2267,13 +2304,95 @@ class DERModelSet(DERModelSetBase):
     ):
 
         # Set objective flag.
-        optimization_problem.has_der_objective = True
+        optimization_problem.flags['has_der_objective'] = True
 
-        # Define objective for each DER.
-        for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_objective(
-                optimization_problem,
-                price_data
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
+
+        # Define objective for electric loads.
+        # - Defined as cost of electric power supply at the DER node.
+        # - Cost for load / demand, revenue for generation / supply.
+        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
+        #   in `fledge.electric_grid_models.LinearElectricGridModelSet.define_optimization_objective`.
+        if (len(self.electric_ders) > 0) and not optimization_problem.flags.get('has_electric_grid_objective'):
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag([np.array([self.der_reactive_power_vector_reference])] * len(self.timesteps)),
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                    * timestep_interval_hours,  # In Wh.
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders),
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                    * timestep_interval_hours,  # In Wh.
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders),
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                )
+            )
+
+        # Define objective for thermal loads.
+        # - Defined as cost of thermal power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
+        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        if (len(self.thermal_ders) > 0) and not optimization_problem.flags.get('has_thermal_grid_objective'):
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                ), (
+                    'variable',
+                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                    * timestep_interval_hours,  # In Wh.
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders),
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
+            )
+
+        # Define objective for electric generators.
+        # - That is: Active power generation cost.
+        # - Always defined here as the cost of electric power generation at the DER node.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'marginal_cost_active_power',
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
+            )
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'marginal_cost_reactive_power',
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
+            )
+
+        # Define objective for thermal generators.
+        # - That is: Thermal power generation cost.
+        # - Always defined here as the cost of thermal power generation at the DER node.
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'marginal_cost_thermal_power',
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
             )
 
     def evaluate_optimization_objective(

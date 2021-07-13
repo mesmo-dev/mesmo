@@ -74,6 +74,7 @@ def main():
     der_model_set.define_optimization_variables(optimization_problem)
     der_model_set.define_optimization_parameters(optimization_problem)
     der_model_set.define_optimization_constraints(optimization_problem)
+    der_model_set.define_optimization_objective(optimization_problem, price_data)
     fledge.utils.log_time('standard-form problem')
 
     # Solve optimization problem.

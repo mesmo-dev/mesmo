@@ -5296,55 +5296,60 @@ class LinearElectricGridModelSet(object):
     ):
 
         # Set objective flag.
-        optimization_problem.has_electric_grid_objective = True
-
-        # for timestep in self.timesteps:
-        #     self.linear_electric_grid_models[timestep].define_optimization_objective(
-        #         optimization_problem,
-        #         price_data,
-        #         timestep_index=fledge.utils.get_index(self.timesteps, timestep=timestep)
-        #     )
+        optimization_problem.flags['has_electric_grid_objective'] = True
 
         # Obtain timestep interval in hours, for conversion of power to energy.
-        if len(price_data.price_timeseries.index) > 1:
-            timestep_interval_hours = (
-                    (price_data.price_timeseries.index[1] - price_data.price_timeseries.index[0])
-                    / pd.Timedelta('1h')
-            )
-        else:
-            timestep_interval_hours = 1.0
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
-        # Define objective.
+        # Define objective for electric loads.
+        # - Defined as cost of electric supply at electric grid source node.
+        # - Only defined here, if not yet defined as cost of electric power supply at the DER node
+        #   in `fledge.der_models.DERModel.define_optimization_objective`.
+        if not optimization_problem.flags.get('has_der_objective'):
+
+            # Active power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+                ), (
+                    'variable',
+                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                    * timestep_interval_hours,  # In Wh.
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+                )
+            )
+
+            # Reactive power cost / revenue.
+            # - Cost for load / demand, revenue for generation / supply.
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag([np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+                ), (
+                    'variable',
+                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                    * timestep_interval_hours,  # In Wh.
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
+                )
+            )
+
+        # Define active loss cost.
         optimization_problem.define_objective(
             (
-                'variable',
-                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
-                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
-            ), (
-                'variable',
-                price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
-                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
-            ), (
                 'variable',
                 price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
                 * timestep_interval_hours,  # In Wh.
                 dict(name='loss_active', timestep=self.timesteps),
-            ), (
-                'variable',
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours,  # In Wh.
-                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
-                dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
-            ), (
-                'variable',
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours,  # In Wh.
-                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
-                dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
             ), (
                 'variable',
                 price_data.price_sensitivity_coefficient

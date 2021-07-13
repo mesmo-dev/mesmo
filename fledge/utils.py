@@ -187,6 +187,7 @@ class OptimizationProblem(ObjectBase):
     constraints: pd.DataFrame
     constraints_len: int
     parameters: dict
+    flags: dict
     a_dict: dict
     b_dict: dict
     c_dict: dict
@@ -208,8 +209,9 @@ class OptimizationProblem(ObjectBase):
         self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
         self.constraints_len = 0
 
-        # Instantiate parameters dictionary.
+        # Instantiate parameters / flags dictionary.
         self.parameters = dict()
+        self.flags = dict()
 
         # Instantiate A matrix / b vector / c vector / Q matrix / d constant dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``,

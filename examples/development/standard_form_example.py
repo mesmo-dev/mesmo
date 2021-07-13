@@ -24,17 +24,12 @@ def main():
     der_data = fledge.data_interface.DERData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name, der_data)
     scenario_data = fledge.data_interface.ScenarioData(scenario_name)
+    has_thermal_grid = pd.notnull(scenario_data.scenario.at['thermal_grid_name'])
 
     # Obtain model.
     der_model_set = fledge.der_models.DERModelSet(der_data)
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
-    linear_electric_grid_model = (
-        fledge.electric_grid_models.LinearElectricGridModelGlobal(
-            electric_grid_model,
-            power_flow_solution
-        )
-    )
+    linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
     der_power_vector = pd.DataFrame(
         data=np.array([electric_grid_model.der_power_vector_reference for timestep in der_model_set.timesteps]),
         index=der_model_set.timesteps,
@@ -48,6 +43,22 @@ def main():
             linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
         )
     )
+    if has_thermal_grid:
+        thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+        linear_thermal_grid_model = fledge.thermal_grid_models.LinearThermalGridModelGlobal(scenario_name)
+        der_thermal_power_vector = pd.DataFrame(
+            data=np.array([thermal_grid_model.der_thermal_power_vector_reference for timestep in der_model_set.timesteps]),
+            index=der_model_set.timesteps,
+            columns=der_model_set.thermal_ders
+        )
+        thermal_power_flow_solution_set = fledge.thermal_grid_models.ThermalPowerFlowSolutionSet(thermal_grid_model, der_thermal_power_vector)
+        linear_thermal_grid_model_set = (
+            fledge.thermal_grid_models.LinearThermalGridModelSet(
+                thermal_grid_model,
+                thermal_power_flow_solution_set,
+                linear_thermal_grid_model_method=fledge.thermal_grid_models.LinearThermalGridModelGlobal
+            )
+        )
 
     # Define grid limits.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
@@ -71,6 +82,16 @@ def main():
     linear_electric_grid_model_set.define_optimization_constraints(optimization_problem)
     linear_electric_grid_model_set.define_optimization_objective(optimization_problem)
 
+    # Define linear thermal grid model set problem.
+    if has_thermal_grid:
+        linear_thermal_grid_model_set.define_optimization_variables(optimization_problem)
+        linear_thermal_grid_model_set.define_optimization_parameters(
+            optimization_problem,
+            price_data
+        )
+        linear_thermal_grid_model_set.define_optimization_constraints(optimization_problem)
+        linear_thermal_grid_model_set.define_optimization_objective(optimization_problem)
+
     # Define DER model set problem.
     der_model_set.define_optimization_variables(optimization_problem)
     der_model_set.define_optimization_parameters(optimization_problem, price_data)
@@ -84,11 +105,15 @@ def main():
 
     # Obtain results.
     results_1 = fledge.problems.Results()
+    objective_1 = optimization_problem.evaluate_objective(optimization_problem.x_vector)
     results_1.update(linear_electric_grid_model_set.get_optimization_results(optimization_problem))
     results_1.update(linear_electric_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
-    results_1.update(der_model_set.get_optimization_results(optimization_problem))
-    objective_1 = optimization_problem.evaluate_objective(optimization_problem.x_vector)
     objective_1_electric_grid = linear_electric_grid_model_set.evaluate_optimization_objective(results_1, price_data)
+    if has_thermal_grid:
+        results_1.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
+        results_1.update(linear_thermal_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
+        objective_1_thermal_grid = linear_thermal_grid_model_set.evaluate_optimization_objective(results_1, price_data)
+    results_1.update(der_model_set.get_optimization_results(optimization_problem))
     objective_1_der = der_model_set.evaluate_optimization_objective(results_1, price_data, has_electric_grid_objective=True)
     der_model_set.pre_solve(price_data)
     fledge.utils.log_time('standard-form interface')
@@ -98,390 +123,49 @@ def main():
     fledge.utils.log_time('cvxpy problem')
     optimization_problem_cvxpy = OptimizationProblemCVXPY()
 
-    # Define electric grid model variables.
-    optimization_problem_cvxpy.der_active_power_vector = (
-        cp.Variable((
-            len(linear_electric_grid_model.electric_grid_model.timesteps),
-            len(linear_electric_grid_model.electric_grid_model.ders)
-        ))
-    )
-    optimization_problem_cvxpy.der_reactive_power_vector = (
-        cp.Variable((
-            len(linear_electric_grid_model.electric_grid_model.timesteps),
-            len(linear_electric_grid_model.electric_grid_model.ders)
-        ))
-    )
-    optimization_problem_cvxpy.node_voltage_magnitude_vector = (
-        cp.Variable((
-            len(linear_electric_grid_model.electric_grid_model.timesteps),
-            len(linear_electric_grid_model.electric_grid_model.nodes)
-        ))
-    )
-    optimization_problem_cvxpy.branch_power_magnitude_vector_1 = (
-        cp.Variable((
-            len(linear_electric_grid_model.electric_grid_model.timesteps),
-            len(linear_electric_grid_model.electric_grid_model.branches)
-        ))
-    )
-    optimization_problem_cvxpy.branch_power_magnitude_vector_2 = (
-        cp.Variable((
-            len(linear_electric_grid_model.electric_grid_model.timesteps),
-            len(linear_electric_grid_model.electric_grid_model.branches)
-        ))
-    )
-    optimization_problem_cvxpy.loss_active = cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
-    optimization_problem_cvxpy.loss_reactive = cp.Variable((len(linear_electric_grid_model.electric_grid_model.timesteps), 1))
+    # Define electric grid problem.
+    linear_electric_grid_model.define_optimization_variables(optimization_problem_cvxpy)
+    linear_electric_grid_model.define_optimization_constraints(optimization_problem_cvxpy)
+    linear_electric_grid_model.define_optimization_objective(optimization_problem_cvxpy, price_data)
 
-    # Define DER model variables.
-    optimization_problem_cvxpy.state_vector = {
-        der_model.der_name: cp.Variable((len(der_model.timesteps), len(der_model.states)))
-        for der_name, der_model in der_model_set.flexible_der_models.items()
-    }
-    optimization_problem_cvxpy.control_vector = {
-        der_model.der_name: cp.Variable((len(der_model.timesteps), len(der_model.controls)))
-        for der_name, der_model in der_model_set.flexible_der_models.items()
-    }
-    optimization_problem_cvxpy.output_vector = {
-        der_model.der_name: cp.Variable((len(der_model.timesteps), len(der_model.outputs)))
-        for der_name, der_model in der_model_set.flexible_der_models.items()
-    }
+    # Define thermal grid problem.
+    if has_thermal_grid:
+        linear_thermal_grid_model.define_optimization_variables(optimization_problem_cvxpy)
+        linear_thermal_grid_model.define_optimization_constraints(optimization_problem_cvxpy)
+        linear_thermal_grid_model.define_optimization_objective(optimization_problem_cvxpy, price_data)
 
-    # Define electric grid model constraints.
-    timestep_index = slice(None)
-    # Define voltage equation.
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.node_voltage_magnitude_vector[timestep_index, :]
-        ==
-        (
-            cp.transpose(
-                linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-                + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-            )
-            + np.array([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector.ravel())])
+    # Define flexible DER state space variables.
+    optimization_problem_cvxpy.state_vector = dict.fromkeys(der_model_set.flexible_der_names)
+    optimization_problem_cvxpy.control_vector = dict.fromkeys(der_model_set.flexible_der_names)
+    optimization_problem_cvxpy.output_vector = dict.fromkeys(der_model_set.flexible_der_names)
+    for der_name in der_model_set.flexible_der_names:
+        optimization_problem_cvxpy.state_vector[der_name] = (
+            cp.Variable((
+                len(der_model_set.flexible_der_models[der_name].timesteps),
+                len(der_model_set.flexible_der_models[der_name].states)
+            ))
         )
-        / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-    )
-    # Define branch flow equation.
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_1[timestep_index, :]
-        ==
-        (
-            cp.transpose(
-                linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-                + linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-            )
-            + np.array([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1.ravel())])
+        optimization_problem_cvxpy.control_vector[der_name] = (
+            cp.Variable((
+                len(der_model_set.flexible_der_models[der_name].timesteps),
+                len(der_model_set.flexible_der_models[der_name].controls)
+            ))
         )
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_2[timestep_index, :]
-        ==
-        (
-            cp.transpose(
-                linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-                + linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                @ cp.transpose(cp.multiply(
-                    optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                ) - np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-            )
-            + np.array([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2.ravel())])
-        )
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-    )
-
-    # Define loss equation.
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.loss_active[timestep_index, :]
-        ==
-        cp.transpose(
-            linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
-            @ cp.transpose(cp.multiply(
-                optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-            ) - np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-            + linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
-            @ cp.transpose(cp.multiply(
-                optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-            ) - np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-        )
-        + np.real(linear_electric_grid_model.power_flow_solution.loss)
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.loss_reactive[timestep_index, :]
-        ==
-        cp.transpose(
-            linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
-            @ cp.transpose(cp.multiply(
-                optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-            ) - np.array([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-            + linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
-            @ cp.transpose(cp.multiply(
-                optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-            ) - np.array([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector.ravel())]))
-        )
-        + np.imag(linear_electric_grid_model.power_flow_solution.loss)
-    )
-
-    # Define voltage limits.
-    optimization_problem_cvxpy.voltage_magnitude_vector_minimum_constraint = (
-        optimization_problem_cvxpy.node_voltage_magnitude_vector
-        - np.array([node_voltage_magnitude_vector_minimum.ravel()])
-        / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-        >=
-        0.0
-    )
-    optimization_problem_cvxpy.voltage_magnitude_vector_maximum_constraint = (
-        optimization_problem_cvxpy.node_voltage_magnitude_vector
-        - np.array([node_voltage_magnitude_vector_maximum.ravel()])
-        / np.array([np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)])
-        <=
-        0.0
-    )
-    optimization_problem_cvxpy.constraints.append(optimization_problem_cvxpy.voltage_magnitude_vector_maximum_constraint)
-
-    # Define branch flow limits.
-    optimization_problem_cvxpy.branch_power_magnitude_vector_1_minimum_constraint = (
-        optimization_problem_cvxpy.branch_power_magnitude_vector_1
-        + np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-        >=
-        0.0
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_1_minimum_constraint
-    )
-    optimization_problem_cvxpy.branch_power_magnitude_vector_1_maximum_constraint = (
-        optimization_problem_cvxpy.branch_power_magnitude_vector_1
-        - np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-        <=
-        0.0
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_1_maximum_constraint
-    )
-    optimization_problem_cvxpy.branch_power_magnitude_vector_2_minimum_constraint = (
-        optimization_problem_cvxpy.branch_power_magnitude_vector_2
-        + np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-        >=
-        0.0
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_2_minimum_constraint
-    )
-    optimization_problem_cvxpy.branch_power_magnitude_vector_2_maximum_constraint = (
-        optimization_problem_cvxpy.branch_power_magnitude_vector_2
-        - np.array([branch_power_magnitude_vector_maximum.ravel()])
-        / np.array([linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference])
-        <=
-        0.0
-    )
-    optimization_problem_cvxpy.constraints.append(
-        optimization_problem_cvxpy.branch_power_magnitude_vector_2_maximum_constraint
-    )
-
-    # Define DER model constraints.
-    for der_name, der_model in der_model_set.fixed_der_models.items():
-
-        # Define connection constraints.
-        if der_model.is_electric_grid_connected:
-            if hasattr(optimization_problem, 'der_active_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, der_model.electric_grid_der_index]
-                    ==
-                    np.transpose([der_model.active_power_nominal_timeseries.values])
-                    / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
-                )
-            if hasattr(optimization_problem, 'der_reactive_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, der_model.electric_grid_der_index]
-                    ==
-                    np.transpose([der_model.reactive_power_nominal_timeseries.values])
-                    / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
-                )
-
-    # Define DER model constraints.
-    for der_name, der_model in der_model_set.flexible_der_models.items():
-
-        # Define constraints.
-        # Initial state.
-        # - For states which represent storage state of charge, initial state of charge is final state of charge.
-        if any(der_model.states.isin(der_model.storage_states)):
-            optimization_problem_cvxpy.constraints.append(
-                optimization_problem_cvxpy.state_vector[der_model.der_name][0, der_model.states.isin(der_model.storage_states)]
-                ==
-                optimization_problem_cvxpy.state_vector[der_model.der_name][-1, der_model.states.isin(der_model.storage_states)]
-            )
-        # - For other states, set initial state according to the initial state vector.
-        if any(~der_model.states.isin(der_model.storage_states)):
-            optimization_problem_cvxpy.constraints.append(
-                optimization_problem_cvxpy.state_vector[der_model.der_name][0, ~der_model.states.isin(der_model.storage_states)]
-                ==
-                der_model.state_vector_initial.loc[~der_model.states.isin(der_model.storage_states)].values
-            )
-
-        # State equation.
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.state_vector[der_model.der_name][1:, :]
-            ==
-            cp.transpose(
-                der_model.state_matrix.values
-                @ cp.transpose(optimization_problem_cvxpy.state_vector[der_model.der_name][:-1, :])
-                + der_model.control_matrix.values
-                @ cp.transpose(optimization_problem_cvxpy.control_vector[der_model.der_name][:-1, :])
-                + der_model.disturbance_matrix.values
-                @ np.transpose(der_model.disturbance_timeseries.iloc[:-1, :].values)
-            )
+        optimization_problem_cvxpy.output_vector[der_name] = (
+            cp.Variable((
+                len(der_model_set.flexible_der_models[der_name].timesteps),
+                len(der_model_set.flexible_der_models[der_name].outputs)
+            ))
         )
 
-        # Output equation.
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.output_vector[der_model.der_name]
-            ==
-            cp.transpose(
-                der_model.state_output_matrix.values
-                @ cp.transpose(optimization_problem_cvxpy.state_vector[der_model.der_name])
-                + der_model.control_output_matrix.values
-                @ cp.transpose(optimization_problem_cvxpy.control_vector[der_model.der_name])
-                + der_model.disturbance_output_matrix.values
-                @ np.transpose(der_model.disturbance_timeseries.values)
-            )
-        )
+    # Define DER constraints for each DER.
+    for der_name in der_model_set.der_names:
+        der_model_set.der_models[der_name].define_optimization_constraints(optimization_problem_cvxpy)
 
-        # Output limits.
-        outputs_minimum_infinite = (
-            (der_model.output_minimum_timeseries == -np.inf).all()
-        )
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.output_vector[der_model.der_name][:, ~outputs_minimum_infinite]
-            >=
-            der_model.output_minimum_timeseries.loc[:, ~outputs_minimum_infinite].values
-        )
-        outputs_maximum_infinite = (
-            (der_model.output_maximum_timeseries == np.inf).all()
-        )
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.output_vector[der_model.der_name][:, ~outputs_maximum_infinite]
-            <=
-            der_model.output_maximum_timeseries.loc[:, ~outputs_maximum_infinite].values
-        )
+    # Define objective for each DER.
+    for der_name in der_model_set.der_names:
+        der_model_set.der_models[der_name].define_optimization_objective(optimization_problem_cvxpy, price_data)
 
-        # Define connection constraints.
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.der_active_power_vector[:, der_model.electric_grid_der_index]
-            ==
-            cp.transpose(
-                der_model.mapping_active_power_by_output.values
-                @ cp.transpose(optimization_problem_cvxpy.output_vector[der_model.der_name])
-            )
-            / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
-        )
-        optimization_problem_cvxpy.constraints.append(
-            optimization_problem_cvxpy.der_reactive_power_vector[:, der_model.electric_grid_der_index]
-            ==
-            cp.transpose(
-                der_model.mapping_reactive_power_by_output.values
-                @ cp.transpose(optimization_problem_cvxpy.output_vector[der_model.der_name])
-            )
-            / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
-        )
-
-    # Obtain timestep interval in hours, for conversion of power to energy.
-    timestep_interval_hours = (scenario_data.timesteps[1] - scenario_data.timesteps[0]) / pd.Timedelta('1h')
-
-    # Define objective. 
-    optimization_problem_cvxpy.objective += (
-        (
-            np.array([
-                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
-            ])
-            * timestep_interval_hours  # In Wh.
-            @ cp.sum(-1.0 * (
-                cp.multiply(
-                    optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                )
-            ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
-        )
-        + ((
-            price_data.price_sensitivity_coefficient
-            * timestep_interval_hours  # In Wh.
-            * cp.sum((
-                cp.multiply(
-                    optimization_problem_cvxpy.der_active_power_vector[timestep_index, :],
-                    np.array([np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                )
-            ) ** 2)
-        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-    )
-    optimization_problem_cvxpy.objective += (
-        (
-            np.array([
-                price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values[timestep_index]
-            ])
-            * timestep_interval_hours  # In Wh.
-            @ cp.sum(-1.0 * (
-                cp.multiply(
-                    optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                )
-            ), axis=1, keepdims=True)  # Sum along DERs, i.e. sum for each timestep.
-        )
-        + ((
-            price_data.price_sensitivity_coefficient
-            * timestep_interval_hours  # In Wh.
-            * cp.sum((
-                cp.multiply(
-                    optimization_problem_cvxpy.der_reactive_power_vector[timestep_index, :],
-                    np.array([np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference)])
-                )
-            ) ** 2)  # Sum along DERs, i.e. sum for each timestep.
-        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-    )
-    optimization_problem_cvxpy.objective += (
-        (
-            np.array([
-                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values[timestep_index]
-            ])
-            * timestep_interval_hours  # In Wh.
-            @ (
-                optimization_problem_cvxpy.loss_active[timestep_index, :]
-            )
-        )
-        + ((
-            price_data.price_sensitivity_coefficient
-            * timestep_interval_hours  # In Wh.
-            * cp.sum((
-                optimization_problem_cvxpy.loss_active[timestep_index, :]
-            ) ** 2)
-        ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-    )
     fledge.utils.log_time('cvxpy problem')
 
     # Solve optimization problem.
@@ -489,12 +173,12 @@ def main():
     optimization_problem_cvxpy.solve()
     fledge.utils.log_time('cvxpy solve')
 
-    # Instantiate results variables.
+    # Obtain results.
     fledge.utils.log_time('cvxpy get results')
+    # Instantiate results variables.
     state_vector = pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.states)
     control_vector = pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.controls)
     output_vector = pd.DataFrame(0.0, index=der_model_set.timesteps, columns=der_model_set.outputs)
-
     # Obtain results.
     for der_name in der_model_set.flexible_der_names:
         state_vector.loc[:, (der_name, slice(None))] = (
@@ -506,14 +190,16 @@ def main():
         output_vector.loc[:, (der_name, slice(None))] = (
             optimization_problem_cvxpy.output_vector[der_name].value
         )
-    results_2 = (
-        fledge.problems.Results(
-            state_vector=state_vector,
-            control_vector=control_vector,
-            output_vector=output_vector
-        )
+    results_2 = fledge.problems.Results(
+        state_vector=state_vector,
+        control_vector=control_vector,
+        output_vector=output_vector,
     )
     results_2.update(linear_electric_grid_model.get_optimization_results(optimization_problem_cvxpy))
+    results_2.update(linear_electric_grid_model.get_optimization_dlmps(optimization_problem_cvxpy, price_data))
+    if has_thermal_grid:
+        results_2.update(linear_thermal_grid_model.get_optimization_results(optimization_problem_cvxpy))
+        results_2.update(linear_thermal_grid_model.get_optimization_dlmps(optimization_problem_cvxpy, price_data))
     fledge.utils.log_time('cvxpy get results')
     fledge.utils.log_time('cvxpy interface')
 

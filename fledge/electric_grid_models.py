@@ -4987,12 +4987,14 @@ class LinearElectricGridModelSet(object):
     def define_optimization_parameters(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData,
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None,
     ):
 
-        # TODO: Handling of undefined limits.
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
         # Define voltage variable terms.
         optimization_problem.define_parameter(
@@ -5169,6 +5171,8 @@ class LinearElectricGridModelSet(object):
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in self.linear_electric_grid_models.values()
             ])
+            if node_voltage_magnitude_vector_minimum is not None
+            else -np.inf * np.ones((len(self.electric_grid_model.nodes) * len(self.timesteps), ))
         )
         optimization_problem.define_parameter(
             'voltage_limit_maximum',
@@ -5177,6 +5181,8 @@ class LinearElectricGridModelSet(object):
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in self.linear_electric_grid_models.values()
             ])
+            if node_voltage_magnitude_vector_maximum is not None
+            else +np.inf * np.ones((len(self.electric_grid_model.nodes) * len(self.timesteps), ))
         )
 
         # Define branch flow limits.
@@ -5187,6 +5193,8 @@ class LinearElectricGridModelSet(object):
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in self.linear_electric_grid_models.values()
             ])
+            if branch_power_magnitude_vector_maximum is not None
+            else -np.inf * np.ones((len(self.electric_grid_model.branches) * len(self.timesteps), ))
         )
         optimization_problem.define_parameter(
             'branch_power_maximum',
@@ -5195,6 +5203,42 @@ class LinearElectricGridModelSet(object):
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in self.linear_electric_grid_models.values()
             ])
+            if branch_power_magnitude_vector_maximum is not None
+            else +np.inf * np.ones((len(self.electric_grid_model.branches) * len(self.timesteps), ))
+        )
+
+        # Define objective parameters.
+        optimization_problem.define_parameter(
+            'electric_grid_active_power_cost',
+            price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+            * -1.0 * timestep_interval_hours  # In Wh.
+            @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps))
+        )
+        optimization_problem.define_parameter(
+            'electric_grid_active_power_cost_sensitivity',
+            price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+            * timestep_interval_hours,  # In Wh.
+        )
+        optimization_problem.define_parameter(
+            'electric_grid_reactive_power_cost',
+            price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
+            * -1.0 * timestep_interval_hours  # In Wh.
+            @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps))
+        )
+        optimization_problem.define_parameter(
+            'electric_grid_reactive_power_cost_sensitivity',
+            price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+            * timestep_interval_hours,  # In Wh.
+        )
+        optimization_problem.define_parameter(
+            'electric_grid_loss_active_cost',
+            price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
+            * timestep_interval_hours,  # In Wh.
+        )
+        optimization_problem.define_parameter(
+            'electric_grid_loss_active_cost_sensitivity',
+            price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+            * timestep_interval_hours,  # In Wh.
         )
 
     def define_optimization_constraints(
@@ -5291,15 +5335,11 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Set objective flag.
         optimization_problem.flags['has_electric_grid_objective'] = True
-
-        # Obtain timestep interval in hours, for conversion of power to energy.
-        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
 
         # Define objective for electric loads.
         # - Defined as cost of electric supply at electric grid source node.
@@ -5312,14 +5352,11 @@ class LinearElectricGridModelSet(object):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag([np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                    'electric_grid_active_power_cost',
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
                 ), (
                     'variable',
-                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
-                    * timestep_interval_hours,  # In Wh.
+                    'electric_grid_active_power_cost_sensitivity',
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
                 )
@@ -5330,14 +5367,11 @@ class LinearElectricGridModelSet(object):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values.reshape(1, len(self.timesteps))
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag([np.array([np.imag(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)),
+                    'electric_grid_reactive_power_cost',
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
                 ), (
                     'variable',
-                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
-                    * timestep_interval_hours,  # In Wh.
+                    'electric_grid_reactive_power_cost_sensitivity',
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders),
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)
                 )
@@ -5347,13 +5381,11 @@ class LinearElectricGridModelSet(object):
         optimization_problem.define_objective(
             (
                 'variable',
-                price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
-                * timestep_interval_hours,  # In Wh.
+                'electric_grid_loss_active_cost',
                 dict(name='loss_active', timestep=self.timesteps),
             ), (
                 'variable',
-                price_data.price_sensitivity_coefficient
-                * timestep_interval_hours,  # In Wh.
+                'electric_grid_loss_active_cost_sensitivity',
                 dict(name='loss_active', timestep=self.timesteps),
                 dict(name='loss_active', timestep=self.timesteps)
             )
@@ -5367,8 +5399,9 @@ class LinearElectricGridModelSet(object):
 
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
+        self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_variables(optimization_problem)
-        self.define_optimization_objective(optimization_problem, price_data)
+        self.define_optimization_objective(optimization_problem)
 
         # Instantiate variable vector.
         x_vector = np.zeros((len(optimization_problem.variables), 1))

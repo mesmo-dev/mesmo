@@ -1984,24 +1984,26 @@ class DERModelSet(DERModelSetBase):
         )
 
         # Obtain nominal power vectors.
-        self.der_active_power_vector_reference = (
-            np.array([
-                self.der_models[der_name].active_power_nominal
-                for der_type, der_name in self.electric_ders
-            ])
-        )
-        self.der_reactive_power_vector_reference = (
-            np.array([
-                self.der_models[der_name].reactive_power_nominal
-                for der_type, der_name in self.electric_ders
-            ])
-        )
-        self.der_thermal_power_vector_reference = (
-            np.array([
-                self.der_models[der_name].thermal_power_nominal
-                for der_type, der_name in self.electric_ders
-            ])
-        )
+        if len(self.electric_ders) > 0:
+            self.der_active_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].active_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+            self.der_reactive_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].reactive_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+        if len(self.thermal_ders) > 0:
+            self.der_thermal_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].thermal_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
 
     def define_optimization_variables(
             self,
@@ -2039,7 +2041,8 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_parameters(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData
     ):
 
         # Obtain timestep interval in hours, for conversion of power to energy.
@@ -2177,11 +2180,48 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ], axis='columns').values.ravel()
         )
+
+        # Define objective parameters.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_active_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_active_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                * timestep_interval_hours  # In Wh.
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_reactive_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                * timestep_interval_hours  # In Wh.
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_thermal_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_thermal_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                * timestep_interval_hours  # In Wh.
+            )
         # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
         # TODO: Related: Cost for CHP defined twice.
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
-                'marginal_cost_active_power',
+                'der_active_power_marginal_cost',
                 np.concatenate([
                     np.ones((1, len(self.timesteps)))
                     * self.der_models[der_name].marginal_cost
@@ -2190,7 +2230,7 @@ class DERModelSet(DERModelSetBase):
                 ], axis=1)
             )
             optimization_problem.define_parameter(
-                'marginal_cost_reactive_power',
+                'der_reactive_power_marginal_cost',
                 np.concatenate([
                     np.zeros((1, len(self.timesteps)))
                     # * self.der_models[der_name].marginal_cost
@@ -2200,7 +2240,7 @@ class DERModelSet(DERModelSetBase):
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
-                'marginal_cost_thermal_power',
+                'der_thermal_power_marginal_cost',
                 np.concatenate([
                     np.ones((1, len(self.timesteps)))
                     * self.der_models[der_name].marginal_cost
@@ -2299,8 +2339,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Set objective flag.
@@ -2318,26 +2357,20 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                    'der_active_power_cost',
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
                 ), (
                     'variable',
-                    np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag([np.array([self.der_reactive_power_vector_reference])] * len(self.timesteps)),
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                ), (
-                    'variable',
-                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
-                    * timestep_interval_hours,  # In Wh.
+                    'der_active_power_cost_sensitivity',
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders),
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
                 ), (
                     'variable',
-                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
-                    * timestep_interval_hours,  # In Wh.
+                    'der_reactive_power_cost',
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    'der_reactive_power_cost_sensitivity',
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders),
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
                 )
@@ -2351,14 +2384,11 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                    'der_thermal_power_cost',
                     dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
                 ), (
                     'variable',
-                    price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
-                    * timestep_interval_hours,  # In Wh.
+                    'der_thermal_power_cost_sensitivity',
                     dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders),
                     dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
                 )
@@ -2371,14 +2401,14 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    'marginal_cost_active_power',
+                    'der_active_power_marginal_cost',
                     dict(name='der_active_power_vector', timestep=self.timesteps, der=self.thermal_ders)
                 )
             )
             optimization_problem.define_objective(
                 (
                     'variable',
-                    'marginal_cost_reactive_power',
+                    'der_reactive_power_marginal_cost',
                     dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.thermal_ders)
                 )
             )
@@ -2390,7 +2420,7 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_objective(
                 (
                     'variable',
-                    'marginal_cost_thermal_power',
+                    'der_thermal_power_marginal_cost',
                     dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
                 )
             )

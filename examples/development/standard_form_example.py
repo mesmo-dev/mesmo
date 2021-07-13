@@ -63,18 +63,19 @@ def main():
     linear_electric_grid_model_set.define_optimization_variables(optimization_problem)
     linear_electric_grid_model_set.define_optimization_parameters(
         optimization_problem,
+        price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
     linear_electric_grid_model_set.define_optimization_constraints(optimization_problem)
-    linear_electric_grid_model_set.define_optimization_objective(optimization_problem, price_data)
+    linear_electric_grid_model_set.define_optimization_objective(optimization_problem)
 
     # Define DER model set problem.
     der_model_set.define_optimization_variables(optimization_problem)
-    der_model_set.define_optimization_parameters(optimization_problem)
+    der_model_set.define_optimization_parameters(optimization_problem, price_data)
     der_model_set.define_optimization_constraints(optimization_problem)
-    der_model_set.define_optimization_objective(optimization_problem, price_data)
+    der_model_set.define_optimization_objective(optimization_problem)
     fledge.utils.log_time('standard-form problem')
 
     # Solve optimization problem.

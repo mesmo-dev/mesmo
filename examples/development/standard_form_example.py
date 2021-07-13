@@ -16,6 +16,8 @@ def main():
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
     results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    os.mkdir(os.path.join(results_path, 'standard_form'))
+    os.mkdir(os.path.join(results_path, 'traditional_form'))
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     # fledge.data_interface.recreate_database()
@@ -115,8 +117,9 @@ def main():
         objective_1_thermal_grid = linear_thermal_grid_model_set.evaluate_optimization_objective(results_1, price_data)
     results_1.update(der_model_set.get_optimization_results(optimization_problem))
     objective_1_der = der_model_set.evaluate_optimization_objective(results_1, price_data, has_electric_grid_objective=True)
-    der_model_set.pre_solve(price_data)
+    results_1.save(os.path.join(results_path, 'standard_form'))
     fledge.utils.log_time('standard-form interface')
+    der_model_set.pre_solve(price_data)
 
     # Instantiate optimization problem.
     fledge.utils.log_time('cvxpy interface')
@@ -200,11 +203,9 @@ def main():
     if has_thermal_grid:
         results_2.update(linear_thermal_grid_model.get_optimization_results(optimization_problem_cvxpy))
         results_2.update(linear_thermal_grid_model.get_optimization_dlmps(optimization_problem_cvxpy, price_data))
+    results_2.save(os.path.join(results_path, 'traditional_form'))
     fledge.utils.log_time('cvxpy get results')
     fledge.utils.log_time('cvxpy interface')
-
-    # Store results to CSV.
-    results_2.save(results_path)
 
     # Plot results.
     for der_name, der_model in der_model_set.flexible_der_models.items():

@@ -1949,6 +1949,11 @@ class DERModelSet(DERModelSetBase):
         self.fixed_der_names = pd.Index(self.fixed_der_names)
         self.flexible_der_names = pd.Index(self.flexible_der_names)
 
+        # Update model data, i.e. parameters which are aggregated from individual DER models.
+        self.update_data()
+
+    def update_data(self):
+
         # Obtain flexible DER state space indexes.
         self.states = (
             pd.MultiIndex.from_tuples([
@@ -2435,26 +2440,34 @@ class DERModelSet(DERModelSetBase):
 
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
-        optimization_problem.has_electric_grid_objective = has_electric_grid_objective
-        optimization_problem.has_thermal_grid_objective = has_thermal_grid_objective
+        optimization_problem.flags['has_electric_grid_objective'] = has_electric_grid_objective
+        optimization_problem.flags['has_thermal_grid_objective'] = has_thermal_grid_objective
+        self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(optimization_problem, price_data)
+        self.define_optimization_objective(optimization_problem)
 
-        # Instantiate optimization variables as parameters using results values.
-        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
-        for der_name in self.flexible_der_names:
-            optimization_problem.output_vector[der_name] = (
-                cp.Parameter(
-                    results.output_vector.loc[:, (der_name, slice(None))].shape,
-                    value=results.output_vector.loc[:, (der_name, slice(None))].values
-                )
-            )
+        # Instantiate variable vector.
+        x_vector = np.zeros((len(optimization_problem.variables), 1))
 
-        # Define objective.
-        self.define_optimization_objective(
-            optimization_problem,
-            price_data
-        )
+        # Set variable vector values.
+        objective_variable_names = list()
+        if len(self.electric_ders) > 0:
+            objective_variable_names.extend([
+                'der_active_power_vector_per_unit',
+                'der_reactive_power_vector_per_unit'
+            ])
+        if len(self.thermal_ders) > 0:
+            objective_variable_names.extend([
+                'der_thermal_power_vector_per_unit'
+            ])
+        for variable_name in objective_variable_names:
+            index = fledge.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
+            x_vector[index, 0] = results[variable_name].values.ravel()
 
-        return float(optimization_problem.objective.value)
+        # Obtain objective value.
+        objective = optimization_problem.evaluate_objective(x_vector)
+
+        return objective
 
     def get_optimization_results(
             self,
@@ -2514,8 +2527,9 @@ class DERModelSet(DERModelSetBase):
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_constraints(optimization_problem)
-        self.define_optimization_objective(optimization_problem, price_data)
+        self.define_optimization_objective(optimization_problem)
 
         # Solve optimization problem and obtain results.
         optimization_problem.solve()
@@ -2534,6 +2548,7 @@ class DERModelSet(DERModelSetBase):
                 self.der_models[der_name].thermal_power_nominal_timeseries.loc[:] = (
                     results.der_thermal_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
                 )
+        self.update_data()
 
         return results
 

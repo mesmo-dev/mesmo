@@ -4905,47 +4905,75 @@ class LinearElectricGridModelSet(object):
 
     linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
     electric_grid_model: ElectricGridModelDefault
-    power_flow_solution_set: PowerFlowSolutionSet
     timesteps: pd.Index
 
+    @multimethod
     def __init__(
             self,
             electric_grid_model: ElectricGridModelDefault,
             power_flow_solution_set: PowerFlowSolutionSet,
-            linear_electric_grid_model_method=LinearElectricGridModelLocal
+            linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelLocal
+    ):
+
+        self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
+
+        # Obtain linear electric grid models.
+        linear_electric_grid_models = (
+            fledge.utils.starmap(
+                linear_electric_grid_model_method,
+                zip(
+                    itertools.repeat(electric_grid_model),
+                    power_flow_solution_set.power_flow_solutions.values()
+                )
+            )
+        )
+        linear_electric_grid_models = (
+            dict(zip(electric_grid_model.timesteps, linear_electric_grid_models))
+        )
+
+        self.__init__(
+            electric_grid_model,
+            linear_electric_grid_models
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            power_flow_solution: PowerFlowSolution,
+            linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelLocal
+    ):
+
+        self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
+
+        # Obtain linear electric grid models.
+        linear_electric_grid_model = LinearElectricGridModelGlobal(electric_grid_model, power_flow_solution)
+        linear_electric_grid_models = (
+            dict(zip(electric_grid_model.timesteps, itertools.repeat(linear_electric_grid_model)))
+        )
+
+        self.__init__(
+            electric_grid_model,
+            linear_electric_grid_models
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            electric_grid_model: ElectricGridModelDefault,
+            linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
     ):
 
         # Store attributes.
         self.electric_grid_model = electric_grid_model
-        self.power_flow_solution_set = power_flow_solution_set
         self.timesteps = self.electric_grid_model.timesteps
+        self.linear_electric_grid_models = linear_electric_grid_models
 
-        if linear_electric_grid_model_method is LinearElectricGridModelLocal:
-            # Obtain linear electric grid models.
-            linear_electric_grid_models = (
-                fledge.utils.starmap(
-                    linear_electric_grid_model_method,
-                    zip(
-                        itertools.repeat(self.electric_grid_model),
-                        self.power_flow_solution_set.power_flow_solutions.values()
-                    )
-                )
-            )
-            self.linear_electric_grid_models = dict(zip(self.timesteps, linear_electric_grid_models))
+    @staticmethod
+    def check_linear_electric_grid_model_method(linear_electric_grid_model_method):
 
-        elif linear_electric_grid_model_method is LinearElectricGridModelGlobal:
-            # TODO: if we have method LinearElectricGridModelGlobal, we approximate everything based on one timestep?
-            #  Is this correct? Or does the case exist where Global is used on every timestep?
-            # TODO: what to do with power flow solution set (there should only be one in this case)
-            linear_electric_grid_model = LinearElectricGridModelGlobal(
-                electric_grid_model,
-                power_flow_solution_set.power_flow_solutions[self.timesteps[0]]
-            )
-            self.linear_electric_grid_models = dict(zip(self.timesteps, itertools.repeat(linear_electric_grid_model)))
-
-        else:
-            print(f'Unknown linearization method: "{linear_electric_grid_model_method}"')
-            raise ValueError
+        if not issubclass(linear_electric_grid_model_method, LinearElectricGridModel):
+            raise ValueError(f"Invalid linear electric grid model method: {linear_electric_grid_model_method}")
 
     def define_optimization_variables(
             self,

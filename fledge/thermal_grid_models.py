@@ -995,33 +995,75 @@ class LinearThermalGridModelSet(object):
 
     linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
     thermal_grid_model: ThermalGridModel
-    thermal_power_flow_solution_set: ThermalPowerFlowSolutionSet
     timesteps: pd.Index
 
+    @multimethod
     def __init__(
             self,
             thermal_grid_model: ThermalGridModel,
             thermal_power_flow_solution_set: ThermalPowerFlowSolutionSet,
-            linear_thermal_grid_model_method=LinearThermalGridModelGlobal
+            linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal
+    ):
+
+        self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
+
+        # Obtain linear thermal grid models.
+        linear_thermal_grid_models = (
+            fledge.utils.starmap(
+                linear_thermal_grid_model_method,
+                zip(
+                    itertools.repeat(thermal_grid_model),
+                    thermal_power_flow_solution_set.power_flow_solutions.values()
+                )
+            )
+        )
+        linear_thermal_grid_models = (
+            dict(zip(thermal_grid_model.timesteps, linear_thermal_grid_models))
+        )
+
+        self.__init__(
+            thermal_grid_model,
+            linear_thermal_grid_models
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            thermal_grid_model: ThermalGridModel,
+            thermal_power_flow_solution: ThermalPowerFlowSolution,
+            linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal
+    ):
+
+        self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
+
+        # Obtain linear thermal grid models.
+        linear_thermal_grid_model = LinearThermalGridModelGlobal(thermal_grid_model, thermal_power_flow_solution)
+        linear_thermal_grid_models = (
+            dict(zip(thermal_grid_model.timesteps, itertools.repeat(linear_thermal_grid_model)))
+        )
+
+        self.__init__(
+            thermal_grid_model,
+            linear_thermal_grid_models
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            thermal_grid_model: ThermalGridModel,
+            linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
     ):
 
         # Store attributes.
         self.thermal_grid_model = thermal_grid_model
-        self.thermal_power_flow_solution_set = thermal_power_flow_solution_set
         self.timesteps = self.thermal_grid_model.timesteps
+        self.linear_thermal_grid_models = linear_thermal_grid_models
 
-        # TODO: Local approximation method.
+    @staticmethod
+    def check_linear_thermal_grid_model_method(linear_thermal_grid_model_method):
 
-        if linear_thermal_grid_model_method is LinearThermalGridModelGlobal:
-            linear_thermal_grid_model = LinearThermalGridModelGlobal(
-                thermal_grid_model,
-                thermal_power_flow_solution_set.power_flow_solutions[self.timesteps[0]]
-            )
-            self.linear_thermal_grid_models = dict(zip(self.timesteps, itertools.repeat(linear_thermal_grid_model)))
-
-        else:
-            print(f'Unknown linearization method: "{linear_thermal_grid_model_method}"')
-            raise ValueError
+        if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModel):
+            raise ValueError(f"Invalid linear thermal grid model method: {linear_thermal_grid_model_method}")
 
     def define_optimization_variables(
             self,

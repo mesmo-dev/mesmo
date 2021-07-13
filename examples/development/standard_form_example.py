@@ -29,33 +29,33 @@ def main():
     # Obtain model.
     der_model_set = fledge.der_models.DERModelSet(der_data)
     electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-    linear_electric_grid_model = fledge.electric_grid_models.LinearElectricGridModelGlobal(scenario_name)
-    der_power_vector = pd.DataFrame(
-        data=np.array([electric_grid_model.der_power_vector_reference for timestep in der_model_set.timesteps]),
-        index=der_model_set.timesteps,
-        columns=der_model_set.electric_ders
+    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
+    linear_electric_grid_model = (
+        fledge.electric_grid_models.LinearElectricGridModelGlobal(
+            electric_grid_model,
+            power_flow_solution
+        )
     )
-    power_flow_solution_set = fledge.electric_grid_models.PowerFlowSolutionSet(electric_grid_model, der_power_vector)
     linear_electric_grid_model_set = (
         fledge.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
-            power_flow_solution_set,
+            power_flow_solution,
             linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
         )
     )
     if has_thermal_grid:
         thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-        linear_thermal_grid_model = fledge.thermal_grid_models.LinearThermalGridModelGlobal(scenario_name)
-        der_thermal_power_vector = pd.DataFrame(
-            data=np.array([thermal_grid_model.der_thermal_power_vector_reference for timestep in der_model_set.timesteps]),
-            index=der_model_set.timesteps,
-            columns=der_model_set.thermal_ders
+        thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+        linear_thermal_grid_model = (
+            fledge.thermal_grid_models.LinearThermalGridModelGlobal(
+                thermal_grid_model,
+                thermal_power_flow_solution
+            )
         )
-        thermal_power_flow_solution_set = fledge.thermal_grid_models.ThermalPowerFlowSolutionSet(thermal_grid_model, der_thermal_power_vector)
         linear_thermal_grid_model_set = (
             fledge.thermal_grid_models.LinearThermalGridModelSet(
                 thermal_grid_model,
-                thermal_power_flow_solution_set,
+                thermal_power_flow_solution,
                 linear_thermal_grid_model_method=fledge.thermal_grid_models.LinearThermalGridModelGlobal
             )
         )

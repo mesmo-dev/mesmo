@@ -75,6 +75,7 @@ def main():
     der_model_set.define_optimization_variables(optimization_problem)
     der_model_set.define_optimization_parameters(optimization_problem, price_data)
     der_model_set.define_optimization_constraints(optimization_problem)
+    optimization_problem.flags['has_thermal_grid_objective'] = True
     der_model_set.define_optimization_objective(optimization_problem)
     fledge.utils.log_time('standard-form problem')
 
@@ -304,6 +305,26 @@ def main():
     optimization_problem_cvxpy.constraints.append(
         optimization_problem_cvxpy.branch_power_magnitude_vector_2_maximum_constraint
     )
+
+    # Define DER model constraints.
+    for der_name, der_model in der_model_set.fixed_der_models.items():
+
+        # Define connection constraints.
+        if der_model.is_electric_grid_connected:
+            if hasattr(optimization_problem, 'der_active_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_active_power_vector[:, der_model.electric_grid_der_index]
+                    ==
+                    np.transpose([der_model.active_power_nominal_timeseries.values])
+                    / (der_model.active_power_nominal if der_model.active_power_nominal != 0.0 else 1.0)
+                )
+            if hasattr(optimization_problem, 'der_reactive_power_vector'):
+                optimization_problem.constraints.append(
+                    optimization_problem.der_reactive_power_vector[:, der_model.electric_grid_der_index]
+                    ==
+                    np.transpose([der_model.reactive_power_nominal_timeseries.values])
+                    / (der_model.reactive_power_nominal if der_model.reactive_power_nominal != 0.0 else 1.0)
+                )
 
     # Define DER model constraints.
     for der_name, der_model in der_model_set.flexible_der_models.items():

@@ -2111,6 +2111,24 @@ class DERModelSet(DERModelSetBase):
         )
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
+                'active_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].active_power_nominal
+                            if self.fixed_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()
+            )
+            optimization_problem.define_parameter(
                 'mapping_active_power_by_output',
                 sp.block_diag([
                     (
@@ -2127,6 +2145,24 @@ class DERModelSet(DERModelSetBase):
                     else np.zeros((1, 0))
                     for der_type, der_name in self.electric_ders
                 ])
+            )
+            optimization_problem.define_parameter(
+                'reactive_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].reactive_power_nominal
+                            if self.fixed_der_models[der_name].reactive_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()
             )
             optimization_problem.define_parameter(
                 'mapping_reactive_power_by_output',
@@ -2147,6 +2183,24 @@ class DERModelSet(DERModelSetBase):
                 ])
             )
         if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'thermal_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].thermal_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].thermal_power_nominal
+                            if self.fixed_der_models[der_name].thermal_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_thermal_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].thermal_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.thermal_ders
+                ], axis=1).ravel()
+            )
             optimization_problem.define_parameter(
                 'mapping_thermal_power_by_output',
                 sp.block_diag([
@@ -2190,8 +2244,12 @@ class DERModelSet(DERModelSetBase):
             )
             optimization_problem.define_parameter(
                 'der_active_power_cost_sensitivity',
-                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_active_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost',
@@ -2201,20 +2259,28 @@ class DERModelSet(DERModelSetBase):
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost_sensitivity',
-                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_reactive_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
                 'der_thermal_power_cost',
                 np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
                 * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                @ sp.block_diag([np.array([self.der_thermal_power_vector_reference])] * len(self.timesteps)),
             )
             optimization_problem.define_parameter(
                 'der_thermal_power_cost_sensitivity',
-                price_data.price_sensitivity_coefficient  # TODO: Power is in per-unit.
+                price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_thermal_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
             )
         # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
         # TODO: Related: Cost for CHP defined twice.
@@ -2225,6 +2291,7 @@ class DERModelSet(DERModelSetBase):
                     np.ones((1, len(self.timesteps)))
                     * self.der_models[der_name].marginal_cost
                     * timestep_interval_hours  # In Wh.
+                    * self.der_models[der_name].active_power_nominal
                     for der_type, der_name in self.electric_ders
                 ], axis=1)
             )
@@ -2234,6 +2301,7 @@ class DERModelSet(DERModelSetBase):
                     np.zeros((1, len(self.timesteps)))
                     # * self.der_models[der_name].marginal_cost
                     # * timestep_interval_hours  # In Wh.
+                    # * self.der_models[der_name].reactive_power_nominal
                     for der_type, der_name in self.electric_ders
                 ], axis=1)
             )
@@ -2244,6 +2312,7 @@ class DERModelSet(DERModelSetBase):
                     np.ones((1, len(self.timesteps)))
                     * self.der_models[der_name].marginal_cost
                     * timestep_interval_hours  # In Wh.
+                    * self.der_models[der_name].thermal_power_nominal
                     for der_type, der_name in self.thermal_ders
                 ], axis=1)
             )
@@ -2314,17 +2383,18 @@ class DERModelSet(DERModelSetBase):
         )
 
         # Define connection constraints.
-        # TODO: Include fixed DERs.
         if len(self.electric_ders) > 0:
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)),
                 '==',
+                ('constant', 'active_power_constant'),
                 ('variable', 'mapping_active_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
                 broadcast='timestep'
             )
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)),
                 '==',
+                ('constant', 'reactive_power_constant'),
                 ('variable', 'mapping_reactive_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
                 broadcast='timestep'
             )
@@ -2332,6 +2402,7 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)),
                 '==',
+                ('constant', 'thermal_power_constant'),
                 ('variable', 'mapping_thermal_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
                 broadcast='timestep'
             )

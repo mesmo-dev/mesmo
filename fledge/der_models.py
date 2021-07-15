@@ -2287,34 +2287,32 @@ class DERModelSet(DERModelSetBase):
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
                 'der_active_power_marginal_cost',
-                np.concatenate([
-                    np.ones((1, len(self.timesteps)))
-                    * self.der_models[der_name].marginal_cost
+                np.concatenate([[[
+                    self.der_models[der_name].marginal_cost
                     * timestep_interval_hours  # In Wh.
                     * self.der_models[der_name].active_power_nominal
                     for der_type, der_name in self.electric_ders
-                ], axis=1)
+                ] * len(self.timesteps)]], axis=1)
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_marginal_cost',
-                np.concatenate([
-                    np.zeros((1, len(self.timesteps)))
-                    # * self.der_models[der_name].marginal_cost
+                np.concatenate([[[
+                    0.0
+                    # self.der_models[der_name].marginal_cost
                     # * timestep_interval_hours  # In Wh.
                     # * self.der_models[der_name].reactive_power_nominal
                     for der_type, der_name in self.electric_ders
-                ], axis=1)
+                ] * len(self.timesteps)]], axis=1)
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
                 'der_thermal_power_marginal_cost',
-                np.concatenate([
-                    np.ones((1, len(self.timesteps)))
-                    * self.der_models[der_name].marginal_cost
+                np.concatenate([[[
+                    self.der_models[der_name].marginal_cost
                     * timestep_interval_hours  # In Wh.
                     * self.der_models[der_name].thermal_power_nominal
                     for der_type, der_name in self.thermal_ders
-                ], axis=1)
+                ] * len(self.timesteps)]], axis=1)
             )
 
     def define_optimization_constraints(

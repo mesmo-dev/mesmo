@@ -203,6 +203,7 @@ def main():
     if has_thermal_grid:
         results_2.update(linear_thermal_grid_model.get_optimization_results(optimization_problem_cvxpy))
         results_2.update(linear_thermal_grid_model.get_optimization_dlmps(optimization_problem_cvxpy, price_data))
+    objective_2 = float(optimization_problem_cvxpy.objective.value)
     results_2.save(os.path.join(results_path, 'traditional_form'))
     fledge.utils.log_time('cvxpy get results')
     fledge.utils.log_time('cvxpy interface')

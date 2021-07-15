@@ -5288,37 +5288,70 @@ class LinearElectricGridModelSet(object):
 
         # Define voltage equation.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            ('variable', 1.0, dict(
+                name='node_voltage_magnitude_vector', timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            )),
             '==',
-            ('variable', 'voltage_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('variable', 'voltage_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('constant', 'voltage_constant', dict(timestep=self.timesteps)),
+            ('variable', 'voltage_active_term', dict(
+                name='der_active_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('variable', 'voltage_reactive_term', dict(
+                name='der_reactive_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('constant', 'voltage_constant', dict(timestep=self.timesteps))
         )
 
         # Define branch flow (direction 1) equation.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_1', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )),
             '==',
-            ('variable', 'branch_power_1_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('variable', 'branch_power_1_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('constant', 'branch_power_1_constant', dict(timestep=self.timesteps)),
+            ('variable', 'branch_power_1_active_term', dict(
+                name='der_active_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('variable', 'branch_power_1_reactive_term', dict(
+                name='der_reactive_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('constant', 'branch_power_1_constant', dict(timestep=self.timesteps))
         )
 
         # Define branch flow (direction 2) equation.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_2', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )),
             '==',
-            ('variable', 'branch_power_2_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('variable', 'branch_power_2_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('constant', 'branch_power_2_constant', dict(timestep=self.timesteps)),
+            ('variable', 'branch_power_2_active_term', dict(
+                name='der_active_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('variable', 'branch_power_2_reactive_term', dict(
+                name='der_reactive_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('constant', 'branch_power_2_constant', dict(timestep=self.timesteps))
         )
 
         # Define active loss equation.
         optimization_problem.define_constraint(
             ('variable', 1.0, dict(name='loss_active', timestep=self.timesteps)),
             '==',
-            ('variable', 'loss_active_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('variable', 'loss_active_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'loss_active_active_term', dict(
+                name='der_active_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('variable', 'loss_active_reactive_term', dict(
+                name='der_reactive_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
             ('constant', 'loss_active_constant', dict(timestep=self.timesteps)),
         )
 
@@ -5326,51 +5359,93 @@ class LinearElectricGridModelSet(object):
         optimization_problem.define_constraint(
             ('variable', 1.0, dict(name='loss_reactive', timestep=self.timesteps)),
             '==',
-            ('variable', 'loss_reactive_active_term', dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
-            ('variable', 'loss_reactive_reactive_term', dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_grid_model.ders)),
+            ('variable', 'loss_reactive_active_term', dict(
+                name='der_active_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
+            ('variable', 'loss_reactive_reactive_term', dict(
+                name='der_reactive_power_vector', timestep=self.timesteps,
+                der=self.electric_grid_model.ders
+            )),
             ('constant', 'loss_reactive_constant', dict(timestep=self.timesteps))
         )
 
         # Define voltage limits.
         # Add dedicated keys to enable retrieving dual variables.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            ('variable', 1.0, dict(
+                name='node_voltage_magnitude_vector', timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            )),
             '>=',
             ('constant', 'voltage_limit_minimum', dict(timestep=self.timesteps)),
-            keys=dict(name='voltage_magnitude_vector_minimum_constraint', timestep=self.timesteps, node=self.electric_grid_model.nodes),
+            keys=dict(
+                name='voltage_magnitude_vector_minimum_constraint', timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            )
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps, node=self.electric_grid_model.nodes)),
+            ('variable', 1.0, dict(
+                name='node_voltage_magnitude_vector', timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            )),
             '<=',
             ('constant', 'voltage_limit_maximum', dict(timestep=self.timesteps)),
-            keys=dict(name='voltage_magnitude_vector_maximum_constraint', timestep=self.timesteps, node=self.electric_grid_model.nodes),
+            keys=dict(
+                name='voltage_magnitude_vector_maximum_constraint', timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            )
         )
 
         # Define branch flow limits.
         # Add dedicated keys to enable retrieving dual variables.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_1', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )),
             '>=',
             ('constant', 'branch_power_minimum', dict(timestep=self.timesteps)),
-            keys=dict(name='branch_power_magnitude_vector_1_minimum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+            keys=dict(
+                name='branch_power_magnitude_vector_1_minimum_constraint', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_1', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_1', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )),
             '<=',
             ('constant', 'branch_power_maximum', dict(timestep=self.timesteps)),
-            keys=dict(name='branch_power_magnitude_vector_1_maximum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+            keys=dict(
+                name='branch_power_magnitude_vector_1_maximum_constraint', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_2', timestep=self.timesteps,
+                 branch=self.electric_grid_model.branches
+            )),
             '>=',
             ('constant', 'branch_power_minimum', dict(timestep=self.timesteps)),
-            keys=dict(name='branch_power_magnitude_vector_2_minimum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+            keys=dict(
+                name='branch_power_magnitude_vector_2_minimum_constraint', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='branch_power_magnitude_vector_2', timestep=self.timesteps, branch=self.electric_grid_model.branches)),
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_2', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )),
             '<=',
             ('constant', 'branch_power_maximum', dict(timestep=self.timesteps)),
-            keys=dict(name='branch_power_magnitude_vector_2_maximum_constraint', timestep=self.timesteps, branch=self.electric_grid_model.branches),
+            keys=dict(
+                name='branch_power_magnitude_vector_2_maximum_constraint', timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            )
         )
 
     def define_optimization_objective(

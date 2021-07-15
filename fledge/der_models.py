@@ -2325,16 +2325,6 @@ class DERModelSet(DERModelSetBase):
         # Define DER model constraints.
         # Initial state.
         # - For states which represent storage state of charge, initial state of charge is final state of charge.
-        if any(~self.states.isin(self.storage_states)):
-            optimization_problem.define_constraint(
-                ('constant', 'state_vector_initial'),
-                '==',
-                ('variable', 1.0, dict(
-                    name='state_vector', timestep=self.timesteps[0],
-                    state=self.states[~self.states.isin(self.storage_states)]
-                ))
-            )
-        # - For other states, set initial state according to the initial state vector.
         if any(self.states.isin(self.storage_states)):
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -2345,6 +2335,16 @@ class DERModelSet(DERModelSetBase):
                 ('variable', 1.0, dict(
                     name='state_vector', timestep=self.timesteps[-1],
                     state=self.states[self.states.isin(self.storage_states)]
+                ))
+            )
+        # - For other states, set initial state according to the initial state vector.
+        if any(~self.states.isin(self.storage_states)):
+            optimization_problem.define_constraint(
+                ('constant', 'state_vector_initial'),
+                '==',
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[0],
+                    state=self.states[~self.states.isin(self.storage_states)]
                 ))
             )
 

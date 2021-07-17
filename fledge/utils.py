@@ -515,6 +515,8 @@ class OptimizationProblem(ObjectBase):
                 elif broadcast_len > 1:
                     if type(variable_value) is np.matrix:
                         variable_value = np.array(variable_value)
+                    if len(np.shape(variable_value)) == 1:
+                        variable_value = np.array([variable_value])
                     variable_value = sp.block_diag([variable_value] * broadcast_len)
 
                 # Raise error if variable dimensions are inconsistent.
@@ -836,6 +838,8 @@ class OptimizationProblem(ObjectBase):
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
+                        if len(np.shape(values)) == 1:
+                            values = np.array([values])
                         values = sp.block_diag([values] * broadcast_len)
                     values = values * factor
                 # Obtain row index, column index and values for entry in A matrix.

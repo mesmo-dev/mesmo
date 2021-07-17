@@ -9,6 +9,7 @@ import numpy as np
 import os
 import pandas as pd
 import plotly
+import plotly.express as px
 import plotly.graph_objects as go
 import typing
 
@@ -1286,6 +1287,7 @@ def plot_histogram_cumulative_branch_utilization(
         branch_type: str = 'line',
         filename_base: str = 'branch_utilization_',
         filename_suffix: str = '',
+        plot_title: str = None,
         histogram_minimum: float = 0.0,
         histogram_maximum: float = 1.0,
         histogram_bin_count: int = 100,
@@ -1303,10 +1305,9 @@ def plot_histogram_cumulative_branch_utilization(
         # Obtain branch power in p.u. values.
         values_dict[key] = (
             (
-                results_dict[key].branch_power_magnitude_vector_1.abs()
-                + results_dict[key].branch_power_magnitude_vector_2.abs()
+                results_dict[key].branch_power_magnitude_vector_1_per_unit
+                + results_dict[key].branch_power_magnitude_vector_2_per_unit
             ) / 2
-            / results_dict[key].electric_grid_model.branch_power_vector_magnitude_reference
         )
         # Select branch type.
         values_dict[key] = (
@@ -1321,9 +1322,9 @@ def plot_histogram_cumulative_branch_utilization(
         )
 
     # Obtain plot title / labels / filename.
-    title = f"{branch_type} utilization".capitalize()
+    title = None
     filename = f'{filename_base}{branch_type}{filename_suffix}'
-    value_label = 'Peak utilization'
+    value_label = f'Maximum {branch_type} utilization'
     value_unit = 'p.u.'
 
     # Create plot.
@@ -1345,7 +1346,8 @@ def plot_histogram_cumulative_branch_utilization(
             y1=1.0,
             yref='paper',
             type='line',
-            line=go.layout.shape.Line(width=2)
+            line=go.layout.shape.Line(width=2),
+            layer='below'
         ))
         for trace in figure.data:
             if type(trace) is go.Scatter:
@@ -1359,7 +1361,8 @@ def plot_histogram_cumulative_branch_utilization(
                     y1=value,
                     yref='y',
                     type='line',
-                    line=go.layout.shape.Line(width=2, color=trace['line']['color'], dash='dot')
+                    line=go.layout.shape.Line(width=2, color=trace['line']['color']),
+                    layer='below'
                 ))
     # Add horizontal line.
     if horizontal_line is not None:
@@ -1371,7 +1374,8 @@ def plot_histogram_cumulative_branch_utilization(
             y1=horizontal_line,
             yref='y',
             type='line',
-            line=go.layout.shape.Line(width=2)
+            line=go.layout.shape.Line(width=2),
+            layer='below'
         ))
         for trace in figure.data:
             if type(trace) is go.Scatter:
@@ -1385,7 +1389,8 @@ def plot_histogram_cumulative_branch_utilization(
                     y1=horizontal_line,
                     yref='y',
                     type='line',
-                    line=go.layout.shape.Line(width=2, color=trace['line']['color'], dash='dot')
+                    line=go.layout.shape.Line(width=2, color=trace['line']['color']),
+                    layer='below'
                 ))
     figure.update_layout(
         title=title,
@@ -1396,4 +1401,72 @@ def plot_histogram_cumulative_branch_utilization(
         yaxis_title='Cumulative proportion',
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
     )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+
+
+def plot_histogram_node_utilization(
+        results_dict: fledge.problems.ResultsDict,
+        results_path: str,
+        filename_base: str = 'node_utilization',
+        filename_suffix: str = '',
+        plot_title: str = None,
+        histogram_bin_count: int = 30,
+        x_tick_interval: float = None
+):
+
+    # Pre-process values.
+    values_dict = dict.fromkeys(results_dict.keys())
+    for key in values_dict:
+        # Obtain node voltage in p.u. values.
+        values_dict[key] = (
+            results_dict[key].node_voltage_magnitude_vector_per_unit
+        )
+        # Obtain maximum utilization, i.e. minimum voltage.
+        values_dict[key] = 1.0 - values_dict[key].min()
+
+    # Obtain plot title / labels / filename.
+    title = plot_title
+    filename = f'{filename_base}{filename_suffix}'
+    value_label = 'Maximum voltage drop'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = (
+        px.histogram(
+            pd.DataFrame(values_dict),
+            barmode='group',
+            histnorm='probability',
+            nbins=histogram_bin_count,
+            marginal='box'
+        )
+    )
+    # Add median lines.
+    counter = 0
+    for trace in figure.data:
+        if type(trace) is go.Histogram:
+            counter += 1
+            key = trace['name']
+            value = np.median(values_dict[key])
+            figure.add_shape(go.layout.Shape(
+                x0=value,
+                x1=value,
+                xref='x',
+                y0=-0.05,
+                y1=float(
+                   figure.layout['yaxis2']['domain'][0]
+                   + counter * np.diff(figure.layout['yaxis2']['domain']) / len(values_dict)
+                ),
+                yref='paper',
+                type='line',
+                line=go.layout.shape.Line(width=2, color=trace['marker']['color']),
+                layer='below'
+            ))
+    figure.update_layout(
+        title=title,
+        xaxis_title=f'{value_label} [{value_unit}]',
+        xaxis_dtick=x_tick_interval,
+        yaxis_title='Frequency',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
+    )
+    # figure.show()
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))

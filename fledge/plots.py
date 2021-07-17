@@ -8,6 +8,7 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import plotly
 import plotly.graph_objects as go
 import typing
 
@@ -1277,3 +1278,122 @@ def plot_transformer_utilization_histogram_cumulative(
     )
     # figure.show()
     figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+
+
+def plot_histogram_cumulative_branch_utilization(
+        results_dict: fledge.problems.ResultsDict,
+        results_path: str,
+        branch_type: str = 'line',
+        filename_base: str = 'branch_utilization_',
+        filename_suffix: str = '',
+        histogram_minimum: float = 0.0,
+        histogram_maximum: float = 1.0,
+        histogram_bin_count: int = 100,
+        vertical_line: float = None,
+        horizontal_line: float = None
+):
+
+    # Obtain histogram bins.
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+
+    # Pre-process values.
+    values_dict = dict.fromkeys(results_dict.keys())
+    for key in values_dict:
+        # Obtain branch power in p.u. values.
+        values_dict[key] = (
+            (
+                results_dict[key].branch_power_magnitude_vector_1.abs()
+                + results_dict[key].branch_power_magnitude_vector_2.abs()
+            ) / 2
+            / results_dict[key].electric_grid_model.branch_power_vector_magnitude_reference
+        )
+        # Select branch type.
+        values_dict[key] = (
+            values_dict[key].loc[:, values_dict[key].columns.get_level_values('branch_type') == branch_type]
+        )
+        # Obtain maximum utilization.
+        values_dict[key] = values_dict[key].max()
+        # Obtain cumulative histogram values.
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
+            / len(values_dict[key])
+        )
+
+    # Obtain plot title / labels / filename.
+    title = f"{branch_type} utilization".capitalize()
+    filename = f'{filename_base}{branch_type}{filename_suffix}'
+    value_label = 'Peak utilization'
+    value_unit = 'p.u.'
+
+    # Create plot.
+    figure = go.Figure()
+    for index, key in enumerate(values_dict):
+        figure.add_trace(go.Scatter(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key,
+            line=go.scatter.Line(shape='hv', color=plotly.colors.qualitative.D3[index])
+        ))
+    # Add vertical line.
+    if vertical_line is not None:
+        figure.add_shape(go.layout.Shape(
+            x0=vertical_line,
+            x1=vertical_line,
+            xref='x',
+            y0=0.0,
+            y1=1.0,
+            yref='paper',
+            type='line',
+            line=go.layout.shape.Line(width=2)
+        ))
+        for trace in figure.data:
+            if type(trace) is go.Scatter:
+                key = trace['name']
+                value = np.interp(vertical_line, values_dict[key].index, values_dict[key].values)
+                figure.add_shape(go.layout.Shape(
+                    x0=histogram_minimum,
+                    x1=vertical_line,
+                    xref='x',
+                    y0=value,
+                    y1=value,
+                    yref='y',
+                    type='line',
+                    line=go.layout.shape.Line(width=2, color=trace['line']['color'], dash='dot')
+                ))
+    # Add horizontal line.
+    if horizontal_line is not None:
+        figure.add_shape(go.layout.Shape(
+            x0=0.0,
+            x1=1.0,
+            xref='paper',
+            y0=horizontal_line,
+            y1=horizontal_line,
+            yref='y',
+            type='line',
+            line=go.layout.shape.Line(width=2)
+        ))
+        for trace in figure.data:
+            if type(trace) is go.Scatter:
+                key = trace['name']
+                value = np.interp(horizontal_line, values_dict[key].values, values_dict[key].index)
+                figure.add_shape(go.layout.Shape(
+                    x0=value,
+                    x1=value,
+                    xref='x',
+                    y0=0.0,
+                    y1=horizontal_line,
+                    yref='y',
+                    type='line',
+                    line=go.layout.shape.Line(width=2, color=trace['line']['color'], dash='dot')
+                ))
+    figure.update_layout(
+        title=title,
+        xaxis_range=[histogram_minimum, histogram_maximum],
+        xaxis_dtick=0.1,
+        xaxis_title=f'{value_label} [{value_unit}]',
+        yaxis_dtick=0.1,
+        yaxis_title='Cumulative proportion',
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
+    )
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))

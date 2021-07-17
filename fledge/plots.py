@@ -11,6 +11,7 @@ import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.subplots
 import typing
 
 import fledge.config
@@ -1292,7 +1293,8 @@ def plot_histogram_cumulative_branch_utilization(
         histogram_maximum: float = 1.0,
         histogram_bin_count: int = 100,
         vertical_line: float = None,
-        horizontal_line: float = None
+        horizontal_line: float = None,
+        x_tick_interval: float = 0.1
 ):
 
     # Obtain histogram bins.
@@ -1301,6 +1303,7 @@ def plot_histogram_cumulative_branch_utilization(
 
     # Pre-process values.
     values_dict = dict.fromkeys(results_dict.keys())
+    box_values_dict = dict.fromkeys(results_dict.keys())
     for key in values_dict:
         # Obtain branch power in p.u. values.
         values_dict[key] = (
@@ -1315,6 +1318,8 @@ def plot_histogram_cumulative_branch_utilization(
         )
         # Obtain maximum utilization.
         values_dict[key] = values_dict[key].max()
+        # Keep these values for boxplot.
+        box_values_dict[key] = values_dict[key]
         # Obtain cumulative histogram values.
         values_dict[key] = (
             pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins).cumsum()
@@ -1328,26 +1333,40 @@ def plot_histogram_cumulative_branch_utilization(
     value_unit = 'p.u.'
 
     # Create plot.
-    figure = go.Figure()
+    figure = (
+        plotly.subplots.make_subplots(
+            rows=2,
+            cols=1,
+            row_heights=[0.2, 0.8],
+            vertical_spacing=0.0,
+            shared_xaxes=True
+        )
+    )
+    for key in box_values_dict:
+        figure.add_trace(go.Box(
+            x=box_values_dict[key].values,
+            boxmean=True,
+            name=key,
+            showlegend=False
+        ), row=1, col=1)
     for index, key in enumerate(values_dict):
         figure.add_trace(go.Scatter(
             x=values_dict[key].index,
             y=values_dict[key].values,
             name=key,
             line=go.scatter.Line(shape='hv', color=plotly.colors.qualitative.D3[index])
-        ))
+        ), row=2, col=1)
     # Add vertical line.
     if vertical_line is not None:
         figure.add_shape(go.layout.Shape(
             x0=vertical_line,
             x1=vertical_line,
-            xref='x',
+            xref='x2',
             y0=0.0,
             y1=1.0,
             yref='paper',
             type='line',
-            line=go.layout.shape.Line(width=2),
-            layer='below'
+            line=go.layout.shape.Line(width=2)
         ))
         for trace in figure.data:
             if type(trace) is go.Scatter:
@@ -1356,10 +1375,10 @@ def plot_histogram_cumulative_branch_utilization(
                 figure.add_shape(go.layout.Shape(
                     x0=histogram_minimum,
                     x1=vertical_line,
-                    xref='x',
+                    xref='x2',
                     y0=value,
                     y1=value,
-                    yref='y',
+                    yref='y2',
                     type='line',
                     line=go.layout.shape.Line(width=2, color=trace['line']['color']),
                     layer='below'
@@ -1372,10 +1391,9 @@ def plot_histogram_cumulative_branch_utilization(
             xref='paper',
             y0=horizontal_line,
             y1=horizontal_line,
-            yref='y',
+            yref='y2',
             type='line',
-            line=go.layout.shape.Line(width=2),
-            layer='below'
+            line=go.layout.shape.Line(width=2)
         ))
         for trace in figure.data:
             if type(trace) is go.Scatter:
@@ -1384,21 +1402,25 @@ def plot_histogram_cumulative_branch_utilization(
                 figure.add_shape(go.layout.Shape(
                     x0=value,
                     x1=value,
-                    xref='x',
+                    xref='x2',
                     y0=0.0,
                     y1=horizontal_line,
-                    yref='y',
+                    yref='y2',
                     type='line',
                     line=go.layout.shape.Line(width=2, color=trace['line']['color']),
                     layer='below'
                 ))
     figure.update_layout(
         title=title,
-        xaxis_range=[histogram_minimum, histogram_maximum],
-        xaxis_dtick=0.1,
-        xaxis_title=f'{value_label} [{value_unit}]',
-        yaxis_dtick=0.1,
-        yaxis_title='Cumulative proportion',
+        yaxis1_showticklabels=False,
+        xaxis1_side='top',
+        xaxis1_dtick=x_tick_interval,
+        xaxis1_showticklabels=True,
+        xaxis2_range=[histogram_minimum, histogram_maximum],
+        xaxis2_dtick=x_tick_interval,
+        xaxis2_title=f'{value_label} [{value_unit}]',
+        yaxis2_dtick=0.1,
+        yaxis2_title='Cumulative proportion',
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
     )
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
@@ -1416,13 +1438,27 @@ def plot_histogram_node_utilization(
 
     # Pre-process values.
     values_dict = dict.fromkeys(results_dict.keys())
+    box_values_dict = dict.fromkeys(results_dict.keys())
     for key in values_dict:
         # Obtain node voltage in p.u. values.
         values_dict[key] = (
             results_dict[key].node_voltage_magnitude_vector_per_unit
         )
-        # Obtain maximum utilization, i.e. minimum voltage.
+        # Obtain maximum voltage drop.
         values_dict[key] = 1.0 - values_dict[key].min()
+        # Keep these values for boxplot.
+        box_values_dict[key] = values_dict[key]
+    # Obtain histogram bins.
+    histogram_maximum = pd.DataFrame(values_dict).max().max()
+    histogram_minimum = pd.DataFrame(values_dict).min().min()
+    histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
+    histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
+    # Obtain cumulative histogram values.
+    for key in values_dict:
+        values_dict[key] = (
+            pd.Series([*np.histogram(values_dict[key], bins=histogram_bins)[0], 0], index=histogram_bins)
+            / len(values_dict[key])
+        )
 
     # Obtain plot title / labels / filename.
     title = plot_title
@@ -1432,41 +1468,106 @@ def plot_histogram_node_utilization(
 
     # Create plot.
     figure = (
-        px.histogram(
-            pd.DataFrame(values_dict),
-            barmode='group',
-            histnorm='probability',
-            nbins=histogram_bin_count,
-            marginal='box'
+        plotly.subplots.make_subplots(
+            rows=2,
+            cols=1,
+            row_heights=[0.2, 0.8],
+            vertical_spacing=0.0,
+            shared_xaxes=True
         )
     )
-    # Add median lines.
-    counter = 0
-    for trace in figure.data:
-        if type(trace) is go.Histogram:
-            counter += 1
-            key = trace['name']
-            value = np.median(values_dict[key])
-            figure.add_shape(go.layout.Shape(
-                x0=value,
-                x1=value,
-                xref='x',
-                y0=-0.05,
-                y1=float(
-                   figure.layout['yaxis2']['domain'][0]
-                   + counter * np.diff(figure.layout['yaxis2']['domain']) / len(values_dict)
-                ),
-                yref='paper',
-                type='line',
-                line=go.layout.shape.Line(width=2, color=trace['marker']['color']),
-                layer='below'
-            ))
+    for key in box_values_dict:
+        figure.add_trace(go.Box(
+            x=box_values_dict[key].values,
+            boxmean=True,
+            name=key,
+            showlegend=False
+        ), row=1, col=1)
+    for index, key in enumerate(values_dict):
+        figure.add_trace(go.Bar(
+            x=values_dict[key].index,
+            y=values_dict[key].values,
+            name=key,
+            marker=go.bar.Marker(color=plotly.colors.qualitative.D3[index])
+        ), row=2, col=1)
     figure.update_layout(
         title=title,
-        xaxis_title=f'{value_label} [{value_unit}]',
-        xaxis_dtick=x_tick_interval,
-        yaxis_title='Frequency',
+        yaxis1_showticklabels=False,
+        xaxis1_side='top',
+        xaxis1_dtick=x_tick_interval,
+        xaxis1_showticklabels=True,
+        xaxis2_title=f'{value_label} [{value_unit}]',
+        xaxis2_dtick=x_tick_interval,
+        yaxis2_title='Frequency',
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
     )
-    # figure.show()
+    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+
+
+def plot_aggregate_timeseries_der_power(
+        results_dict: fledge.problems.ResultsDict,
+        results_path: str,
+        filename_base: str = 'der_power',
+        filename_suffix: str = '',
+        plot_title: str = None,
+        value_factor: float = -1.0,
+        value_unit_label: str = None,
+        der_type_labels: dict = None
+):
+
+    # Pre-process values.
+    values_dict = dict.fromkeys(results_dict.keys())
+    value_minimum = 0.0
+    value_maximum = 0.0
+    for key in values_dict:
+        # Obtain values.
+        # TODO: Multiply by base power value. (Needs to be added to results object first.)
+        values_dict[key] = results_dict[key].der_active_power_vector
+        values_dict[key] = value_factor * values_dict[key].groupby('der_type', axis='columns').sum()
+        # Obtain value range.
+        value_minimum = min(value_minimum, values_dict[key].sum(axis='columns').min())
+        value_maximum = max(value_maximum, values_dict[key].sum(axis='columns').max())
+
+    # Obtain plot title / labels / filename.
+    title = plot_title
+    filename = f'{filename_base}{filename_suffix}'
+    value_label = 'Active power'
+    value_unit = f' [{value_unit_label}]' if value_unit_label is not None else ''
+
+    # Create plot.
+    figure = (
+        plotly.subplots.make_subplots(
+            rows=len(values_dict),
+            cols=1,
+            vertical_spacing=0.08,
+            shared_xaxes=True,
+            shared_yaxes=True,
+            subplot_titles=tuple(values_dict.keys()),
+            y_title=f'{value_label}{value_unit}'
+        )
+    )
+    legend_values = list()
+    for index, key in enumerate(values_dict):
+        for column in values_dict[key].columns:
+            if column not in legend_values:
+                legend_values.append(column)
+                showlegend = True
+            else:
+                showlegend = False
+            color_index = legend_values.index(column)
+            figure.add_trace(go.Scatter(
+                x=values_dict[key].index,
+                y=values_dict[key].loc[:, column].values,
+                name=der_type_labels[column] if der_type_labels is not None else column,
+                showlegend=showlegend,
+                line=go.scatter.Line(shape='hv', color=plotly.colors.qualitative.D3[color_index]),
+                fill='tozeroy' if column == values_dict[key].columns[0] else 'tonexty',
+                stackgroup='one'
+            ), row=index + 1, col=1)
+    figure.update_layout(
+        title=title,
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=1.05, yanchor='auto'),
+        **{f'xaxis{len(values_dict)}_tickformat': '%H:%M'},
+        **{f'yaxis{index}_range': [value_minimum, value_maximum] for index in range(1, len(values_dict) + 1)}
+    )
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))

@@ -1081,12 +1081,16 @@ class OptimizationProblem(ObjectBase):
         status_labels = {
             gp.GRB.INFEASIBLE: "Infeasible",
             gp.GRB.INF_OR_UNBD: "Infeasible or Unbounded",
-            gp.GRB.UNBOUNDED: "Unbounded"
+            gp.GRB.UNBOUNDED: "Unbounded",
+            gp.GRB.SUBOPTIMAL: "Suboptimal"
         }
         status = gurobipy_problem.getAttr('Status')
-        if status != gp.GRB.OPTIMAL:
+        if status not in [gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL]:
             status = status_labels[status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
             raise RuntimeError(f"Gurobi exited with non-optimal solution status: {status}")
+        elif status == gp.GRB.SUBOPTIMAL:
+            status = status_labels[status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
+            logger.warning(f"Gurobi exited with non-optimal solution status: {status}")
 
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])

@@ -280,7 +280,7 @@ class OptimizationProblem(ObjectBase):
         for element in elements:
 
             # Tuples are variables / constants.
-            if issubclass(type(element), tuple):
+            if isinstance(element, tuple):
 
                 # Obtain element attributes.
                 element_type = element[0]
@@ -587,7 +587,7 @@ class OptimizationProblem(ObjectBase):
         for element in elements:
 
             # Tuples are variables / constants.
-            if issubclass(type(element), tuple):
+            if isinstance(element, tuple):
 
                 # Obtain element attributes.
                 element_type = element[0]
@@ -1185,11 +1185,12 @@ class OptimizationProblem(ObjectBase):
                 )
 
                 # Reshape to dataframe with timesteps as index and other variable dimensions as columns.
-                results[name] = (
-                    results[name].unstack(level=[key for key in variable_dimensions.columns if key != 'timestep'])
-                )
+                if 'timestep' in variable_dimensions.columns:
+                    results[name] = (
+                        results[name].unstack(level=[key for key in variable_dimensions.columns if key != 'timestep'])
+                    )
 
-                # If no dimensions other than timesteps, convert to dataframe with variable name as column.
+                # If results are obtained as series, convert to dataframe with variable name as column.
                 if type(results[name]) is pd.Series:
                     results[name] = pd.DataFrame(results[name], columns=[name])
 
@@ -1411,9 +1412,9 @@ def get_index(
     """
 
     # Define handle for get_level_values() depending on index set type.
-    if issubclass(type(index_set), pd.Index):
+    if isinstance(index_set, pd.Index):
         get_level_values = lambda level: index_set.get_level_values(level)
-    elif issubclass(type(index_set), pd.DataFrame):
+    elif isinstance(index_set, pd.DataFrame):
         # get_level_values = lambda level: index_set.get(level, pd.Series(index=index_set.index, name=level))
         get_level_values = lambda level: index_set.loc[:, level]
     else:
@@ -1429,7 +1430,7 @@ def get_index(
         elif isinstance(values, tuple):
             # If values are passed as tuple, wrap in list, but only if index
             # level values are tuples. Otherwise, convert to list.
-            if isinstance(get_level_values(level).dropna()[0], tuple):
+            if isinstance(get_level_values(level).dropna().values[0], tuple):
                 values = [values]
             else:
                 values = list(values)

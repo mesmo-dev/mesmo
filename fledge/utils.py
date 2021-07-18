@@ -419,10 +419,6 @@ class OptimizationProblem(ObjectBase):
             dimension_constant = None
             constraint_index = None
 
-            # If no constants defined, set zero as default constant.
-            if len(constants) == 0:
-                constants = [(1.0, 0.0, None)]
-
             # Process constants.
             for constant_factor, constant_value, constant_keys in constants:
 
@@ -442,15 +438,8 @@ class OptimizationProblem(ObjectBase):
                 else:
                     broadcast_len = 1
 
-                # If constant is scalar, cast into vector of appropriate size, based on dimension of first variable.
-                if len(np.shape(constant_value)) == 0:
-                    # Obtain variable integer index & raise error if variable or key does not exist.
-                    variable_index = (
-                        tuple(fledge.utils.get_index(self.variables, **variables[0][2], raise_empty_index_error=True))
-                    )
-                    constant_value = constant_value * np.ones(len(variable_index))
                 # If broadcasting, values are repeated along broadcast dimension.
-                elif broadcast_len > 1:
+                if broadcast_len > 1:
                     constant_value = np.concatenate([constant_value] * broadcast_len, axis=0)
 
                 # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
@@ -465,7 +454,7 @@ class OptimizationProblem(ObjectBase):
                 elif len(constant_value) != dimension_constant:
                     raise ValueError(f"Dimension mismatch at constant: \n{constant_keys}")
 
-                # Obtain constraint index based on dimension of first constant.
+                # If not yet defined, obtain constraint index based on dimension of first constant.
                 if constraint_index is None:
                     constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
 
@@ -508,6 +497,9 @@ class OptimizationProblem(ObjectBase):
                     variable_value = self.parameters[parameter_name]
                 else:
                     parameter_name = None
+                # Flat arrays are interpreted as row vectors (1, n).
+                if len(np.shape(variable_value)) == 1:
+                    variable_value = np.array([variable_value])
                 # Scalar values are multiplied with identity matrix of appropriate size.
                 if len(np.shape(variable_value)) == 0:
                     variable_value = variable_value * sp.eye(len(variable_index))
@@ -515,9 +507,13 @@ class OptimizationProblem(ObjectBase):
                 elif broadcast_len > 1:
                     if type(variable_value) is np.matrix:
                         variable_value = np.array(variable_value)
-                    if len(np.shape(variable_value)) == 1:
-                        variable_value = np.array([variable_value])
                     variable_value = sp.block_diag([variable_value] * broadcast_len)
+
+                # If not yet defined, obtain constraint index based on dimension of first variable.
+                if constraint_index is None:
+                    constraint_index = (
+                        tuple(range(self.constraints_len, self.constraints_len + np.shape(variable_value)[0]))
+                    )
 
                 # Raise error if variable dimensions are inconsistent.
                 if np.shape(variable_value) != (len(constraint_index), len(variable_index)):
@@ -833,13 +829,13 @@ class OptimizationProblem(ObjectBase):
                 if type(values) is tuple:
                     factor, parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 1:
+                        values = np.array([values])
                     if len(np.shape(values)) == 0:
                         values = values * sp.eye(len(variable_index))
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        if len(np.shape(values)) == 1:
-                            values = np.array([values])
                         values = sp.block_diag([values] * broadcast_len)
                     values = values * factor
                 # Obtain row index, column index and values for entry in A matrix.
@@ -1173,29 +1169,34 @@ class OptimizationProblem(ObjectBase):
         for name in results:
 
             # Get variable dimensions.
-            # TODO: Check if this works for scalar variables without timesteps.
             variable_dimensions = (
-                pd.MultiIndex.from_frame(
-                    self.variables.iloc[fledge.utils.get_index(self.variables, name=name), :]
-                    .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
-                )
+                self.variables.iloc[fledge.utils.get_index(self.variables, name=name), :]
+                .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
             )
 
-            # Get results from x vector as pandas series.
-            results[name] = (
-                pd.Series(
-                    x_vector[fledge.utils.get_index(self.variables, name=name), 0],
-                    index=variable_dimensions
-                )
-            )
+            if len(variable_dimensions.columns) > 0:
 
-            # Reshape to dataframe with timesteps as index and other variable dimensions as columns.
-            results[name] = (
-                results[name].unstack(level=[key for key in variable_dimensions.names if key != 'timestep'])
-            )
-            # If no other dimensions, e.g. for scalar variables, convert to dataframe with variable name as column.
-            if type(results[name]) is pd.Series:
-                results[name] = pd.DataFrame(results[name], columns=[name])
+                # Get results from x vector as pandas series.
+                results[name] = (
+                    pd.Series(
+                        x_vector[fledge.utils.get_index(self.variables, name=name), 0],
+                        index=pd.MultiIndex.from_frame(variable_dimensions)
+                    )
+                )
+
+                # Reshape to dataframe with timesteps as index and other variable dimensions as columns.
+                results[name] = (
+                    results[name].unstack(level=[key for key in variable_dimensions.columns if key != 'timestep'])
+                )
+
+                # If no dimensions other than timesteps, convert to dataframe with variable name as column.
+                if type(results[name]) is pd.Series:
+                    results[name] = pd.DataFrame(results[name], columns=[name])
+
+            else:
+
+                # Scalar values are obtained as float.
+                results[name] = float(x_vector[fledge.utils.get_index(self.variables, name=name), 0])
 
         # Log time.
         log_time('get optimization problem results')

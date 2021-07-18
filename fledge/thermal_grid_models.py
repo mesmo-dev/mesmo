@@ -1424,26 +1424,26 @@ class LinearThermalGridModelSet(object):
         thermal_grid_energy_dlmp_node_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
-        thermal_grid_voltage_dlmp_node_thermal_power = (
+        thermal_grid_head_dlmp_node_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
         thermal_grid_congestion_dlmp_node_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
-        thermal_grid_loss_dlmp_node_thermal_power = (
+        thermal_grid_pump_dlmp_node_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
 
         thermal_grid_energy_dlmp_der_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.thermal_grid_model.timesteps, dtype=float)
         )
-        thermal_grid_voltage_dlmp_der_thermal_power = (
+        thermal_grid_head_dlmp_der_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.thermal_grid_model.timesteps, dtype=float)
         )
         thermal_grid_congestion_dlmp_der_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.thermal_grid_model.timesteps, dtype=float)
         )
-        thermal_grid_loss_dlmp_der_thermal_power = (
+        thermal_grid_pump_dlmp_der_thermal_power = (
             pd.DataFrame(columns=self.thermal_grid_model.ders, index=self.thermal_grid_model.timesteps, dtype=float)
         )
 
@@ -1452,7 +1452,7 @@ class LinearThermalGridModelSet(object):
             thermal_grid_energy_dlmp_node_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
-            thermal_grid_voltage_dlmp_node_thermal_power.loc[timestep, :] = (
+            thermal_grid_head_dlmp_node_thermal_power.loc[timestep, :] = (
                 (
                     self.linear_thermal_grid_models[timestep].sensitivity_node_head_by_node_power.transpose()
                     @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
@@ -1468,7 +1468,7 @@ class LinearThermalGridModelSet(object):
                     @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
             )
-            thermal_grid_loss_dlmp_node_thermal_power.loc[timestep, :] = (
+            thermal_grid_pump_dlmp_node_thermal_power.loc[timestep, :] = (
                 -1.0 * self.linear_thermal_grid_models[timestep].sensitivity_pump_power_by_node_power.ravel()
                 * price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
@@ -1476,7 +1476,7 @@ class LinearThermalGridModelSet(object):
             thermal_grid_energy_dlmp_der_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
-            thermal_grid_voltage_dlmp_der_thermal_power.loc[timestep, :] = (
+            thermal_grid_head_dlmp_der_thermal_power.loc[timestep, :] = (
                 (
                     self.linear_thermal_grid_models[timestep].sensitivity_node_head_by_der_power.transpose()
                     @ np.transpose([node_head_vector_minimum_dual.loc[timestep, :].values])
@@ -1492,22 +1492,22 @@ class LinearThermalGridModelSet(object):
                     @ np.transpose([branch_flow_vector_minimum_dual.loc[timestep, :].values])
                 ).ravel()
             )
-            thermal_grid_loss_dlmp_der_thermal_power.loc[timestep, :] = (
+            thermal_grid_pump_dlmp_der_thermal_power.loc[timestep, :] = (
                 -1.0 * self.linear_thermal_grid_models[timestep].sensitivity_pump_power_by_der_power.ravel()
                 * price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
             )
 
         thermal_grid_total_dlmp_node_thermal_power = (
             thermal_grid_energy_dlmp_node_thermal_power
-            + thermal_grid_voltage_dlmp_node_thermal_power
+            + thermal_grid_head_dlmp_node_thermal_power
             + thermal_grid_congestion_dlmp_node_thermal_power
-            + thermal_grid_loss_dlmp_node_thermal_power
+            + thermal_grid_pump_dlmp_node_thermal_power
         )
         thermal_grid_total_dlmp_der_thermal_power = (
             thermal_grid_energy_dlmp_der_thermal_power
-            + thermal_grid_voltage_dlmp_der_thermal_power
+            + thermal_grid_head_dlmp_der_thermal_power
             + thermal_grid_congestion_dlmp_der_thermal_power
-            + thermal_grid_loss_dlmp_der_thermal_power
+            + thermal_grid_pump_dlmp_der_thermal_power
         )
 
         # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
@@ -1533,14 +1533,14 @@ class LinearThermalGridModelSet(object):
 
         return ThermalGridDLMPResults(
             thermal_grid_energy_dlmp_node_thermal_power=thermal_grid_energy_dlmp_node_thermal_power,
-            thermal_grid_voltage_dlmp_node_thermal_power=thermal_grid_voltage_dlmp_node_thermal_power,
+            thermal_grid_head_dlmp_node_thermal_power=thermal_grid_head_dlmp_node_thermal_power,
             thermal_grid_congestion_dlmp_node_thermal_power=thermal_grid_congestion_dlmp_node_thermal_power,
-            thermal_grid_loss_dlmp_node_thermal_power=thermal_grid_loss_dlmp_node_thermal_power,
+            thermal_grid_pump_dlmp_node_thermal_power=thermal_grid_pump_dlmp_node_thermal_power,
             thermal_grid_total_dlmp_node_thermal_power=thermal_grid_total_dlmp_node_thermal_power,
             thermal_grid_energy_dlmp_der_thermal_power=thermal_grid_energy_dlmp_der_thermal_power,
-            thermal_grid_voltage_dlmp_der_thermal_power=thermal_grid_voltage_dlmp_der_thermal_power,
+            thermal_grid_head_dlmp_der_thermal_power=thermal_grid_head_dlmp_der_thermal_power,
             thermal_grid_congestion_dlmp_der_thermal_power=thermal_grid_congestion_dlmp_der_thermal_power,
-            thermal_grid_loss_dlmp_der_thermal_power=thermal_grid_loss_dlmp_der_thermal_power,
+            thermal_grid_pump_dlmp_der_thermal_power=thermal_grid_pump_dlmp_der_thermal_power,
             thermal_grid_total_dlmp_der_thermal_power=thermal_grid_total_dlmp_der_thermal_power,
             thermal_grid_total_dlmp_price_timeseries=thermal_grid_total_dlmp_price_timeseries
         )

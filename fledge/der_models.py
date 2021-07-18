@@ -2144,7 +2144,7 @@ class DERModelSet(DERModelSetBase):
                     if der_name in self.flexible_der_names
                     else (
                         np.zeros((1, 0))
-                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        if self.der_models[der_name].is_electric_grid_connected
                         else np.zeros((0, 0))
                     )
                     for der_type, der_name in self.ders
@@ -2184,7 +2184,7 @@ class DERModelSet(DERModelSetBase):
                     if der_name in self.flexible_der_names
                     else (
                         np.zeros((1, 0))
-                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        if self.der_models[der_name].is_electric_grid_connected
                         else np.zeros((0, 0))
                     )
                     for der_type, der_name in self.ders
@@ -2225,7 +2225,7 @@ class DERModelSet(DERModelSetBase):
                     if der_name in self.flexible_der_names
                     else (
                         np.zeros((1, 0))
-                        if self.flexible_der_models[der_name].is_thermal_grid_connected
+                        if self.der_models[der_name].is_thermal_grid_connected
                         else np.zeros((0, 0))
                     )
                     for der_type, der_name in self.ders

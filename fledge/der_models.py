@@ -2000,7 +2000,7 @@ class DERModelSet(DERModelSetBase):
             self.der_thermal_power_vector_reference = (
                 np.array([
                     self.der_models[der_name].thermal_power_nominal
-                    for der_type, der_name in self.electric_ders
+                    for der_type, der_name in self.thermal_ders
                 ])
             )
 
@@ -2139,11 +2139,15 @@ class DERModelSet(DERModelSetBase):
                             else 1.0
                         )
                         if self.flexible_der_models[der_name].is_electric_grid_connected
-                        else 0.0 * self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
                     )
                     if der_name in self.flexible_der_names
-                    else np.zeros((1, 0))
-                    for der_type, der_name in self.electric_ders
+                    else (
+                        np.zeros((1, 0))
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
                 ])
             )
             optimization_problem.define_parameter(
@@ -2175,11 +2179,15 @@ class DERModelSet(DERModelSetBase):
                             else 1.0
                         )
                         if self.flexible_der_models[der_name].is_electric_grid_connected
-                        else 0.0 * self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
                     )
                     if der_name in self.flexible_der_names
-                    else np.zeros((1, 0))
-                    for der_type, der_name in self.electric_ders
+                    else (
+                        np.zeros((1, 0))
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
                 ])
             )
         if len(self.thermal_ders) > 0:
@@ -2212,11 +2220,15 @@ class DERModelSet(DERModelSetBase):
                             else 1.0
                         )
                         if self.flexible_der_models[der_name].is_thermal_grid_connected
-                        else 0.0 * self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
                     )
                     if der_name in self.flexible_der_names
-                    else np.zeros((1, 0))
-                    for der_type, der_name in self.thermal_ders
+                    else (
+                        np.zeros((1, 0))
+                        if self.flexible_der_models[der_name].is_thermal_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
                 ])
             )
         optimization_problem.define_parameter(

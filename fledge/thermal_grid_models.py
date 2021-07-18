@@ -1212,6 +1212,7 @@ class LinearThermalGridModelSet(object):
             'thermal_grid_thermal_power_cost',
             np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
             * -1.0 * timestep_interval_hours  # In Wh.
+            / self.thermal_grid_model.plant_efficiency
             @ sp.block_diag(
                 [np.array([self.thermal_grid_model.der_thermal_power_vector_reference])] * len(self.timesteps)
             )
@@ -1451,6 +1452,7 @@ class LinearThermalGridModelSet(object):
         for timestep in self.thermal_grid_model.timesteps:
             thermal_grid_energy_dlmp_node_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
+                / self.thermal_grid_model.plant_efficiency
             )
             thermal_grid_head_dlmp_node_thermal_power.loc[timestep, :] = (
                 (
@@ -1475,6 +1477,7 @@ class LinearThermalGridModelSet(object):
 
             thermal_grid_energy_dlmp_der_thermal_power.loc[timestep, :] = (
                 price_data.price_timeseries.at[timestep, ('thermal_power', 'source', 'source')]
+                / self.thermal_grid_model.plant_efficiency
             )
             thermal_grid_head_dlmp_der_thermal_power.loc[timestep, :] = (
                 (

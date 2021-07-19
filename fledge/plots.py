@@ -1421,7 +1421,7 @@ def plot_histogram_cumulative_branch_utilization(
         xaxis2_title=f'{value_label} [{value_unit}]',
         yaxis2_dtick=0.1,
         yaxis2_title='Cumulative proportion',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.05, yanchor='auto')
     )
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
@@ -1499,7 +1499,7 @@ def plot_histogram_node_utilization(
         xaxis2_title=f'{value_label} [{value_unit}]',
         xaxis2_dtick=x_tick_interval,
         yaxis2_title='Frequency',
-        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.1, yanchor='auto')
+        legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.05, yanchor='auto')
     )
     fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
@@ -1567,6 +1567,7 @@ def plot_aggregate_timeseries_der_power(
     figure.update_layout(
         title=title,
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=1.05, yanchor='auto'),
+        height=fledge.config.config['plots']['plotly_figure_height'] * 1.25,
         **{f'xaxis{len(values_dict)}_tickformat': '%H:%M'},
         **{f'yaxis{index}_range': [value_minimum, value_maximum] for index in range(1, len(values_dict) + 1)}
     )

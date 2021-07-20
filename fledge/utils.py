@@ -415,58 +415,8 @@ class OptimizationProblem(ObjectBase):
             else:
                 operator_factor = 1.0
 
-            # Instantiate constant dimension / constraint index.
-            dimension_constant = None
+            # Instantiate constraint index.
             constraint_index = None
-
-            # Process constants.
-            for constant_factor, constant_value, constant_keys in constants:
-
-                # If constant value is string, it is interpreted as parameter.
-                if type(constant_value) is str:
-                    parameter_name = constant_value
-                    constant_value = self.parameters[parameter_name]
-                else:
-                    parameter_name = None
-
-                # Obtain broadcast dimension length for constant.
-                if (broadcast is not None) and (constant_keys is not None):
-                    if broadcast not in constant_keys.keys():
-                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                    else:
-                        broadcast_len = len(constant_keys[broadcast])
-                else:
-                    broadcast_len = 1
-
-                # If broadcasting, values are repeated along broadcast dimension.
-                if broadcast_len > 1:
-                    constant_value = np.concatenate([constant_value] * broadcast_len, axis=0)
-
-                # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
-                if len(np.shape(constant_value)) > 1:
-                    if np.shape(constant_value)[1] > 1:
-                        raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
-
-                # Obtain constant dimension.
-                # - Raise error if constant dimensions are inconsistent.
-                if dimension_constant is None:
-                    dimension_constant = len(constant_value)
-                elif len(constant_value) != dimension_constant:
-                    raise ValueError(f"Dimension mismatch at constant: \n{constant_keys}")
-
-                # If not yet defined, obtain constraint index based on dimension of first constant.
-                if constraint_index is None:
-                    constraint_index = tuple(range(self.constraints_len, self.constraints_len + dimension_constant))
-
-                # Append b vector entry.
-                if parameter_name is None:
-                    self.b_dict[constraint_index].append(
-                        operator_factor * constant_factor * constant_value
-                    )
-                else:
-                    self.b_dict[constraint_index].append(
-                        (operator_factor * constant_factor, parameter_name, broadcast_len)
-                    )
 
             # Process variables.
             for variable_factor, variable_value, variable_keys in variables:
@@ -530,6 +480,55 @@ class OptimizationProblem(ObjectBase):
                         (operator_factor * variable_factor, parameter_name, broadcast_len)
                     )
 
+            # Process constants.
+            for constant_factor, constant_value, constant_keys in constants:
+
+                # If constant value is string, it is interpreted as parameter.
+                if type(constant_value) is str:
+                    parameter_name = constant_value
+                    constant_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+
+                # Obtain broadcast dimension length for constant.
+                if (broadcast is not None) and (constant_keys is not None):
+                    if broadcast not in constant_keys.keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                    else:
+                        broadcast_len = len(constant_keys[broadcast])
+                else:
+                    broadcast_len = 1
+
+                # If constant is scalar, cast into vector of appropriate size.
+                if len(np.shape(constant_value)) == 0:
+                    constant_value = constant_value * np.ones(len(constraint_index))
+                # If broadcasting, values are repeated along broadcast dimension.
+                elif broadcast_len > 1:
+                    constant_value = np.concatenate([constant_value] * broadcast_len, axis=0)
+
+                # Raise error if constant is not a scalar, column vector (n, 1) or flat array (n, ).
+                if len(np.shape(constant_value)) > 1:
+                    if np.shape(constant_value)[1] > 1:
+                        raise ValueError(f"Constant must be column vector (n, 1), not row vector (1, n).")
+
+                # If not yet defined, obtain constraint index based on dimension of first constant.
+                if constraint_index is None:
+                    constraint_index = tuple(range(self.constraints_len, self.constraints_len + len(constant_value)))
+
+                # Raise error if constant dimensions are inconsistent.
+                if len(constant_value) != len(constraint_index):
+                    raise ValueError(f"Dimension mismatch at constant: \n{constant_keys}")
+
+                # Append b vector entry.
+                if parameter_name is None:
+                    self.b_dict[constraint_index].append(
+                        operator_factor * constant_factor * constant_value
+                    )
+                else:
+                    self.b_dict[constraint_index].append(
+                        (operator_factor * constant_factor, parameter_name, broadcast_len)
+                    )
+
             # Append constraints index entries.
             if keys is not None:
                 # Set constraint type:
@@ -549,10 +548,10 @@ class OptimizationProblem(ObjectBase):
                     ]), columns=keys.keys())
                 )
                 # Raise error if key set dimension does not align with constant dimension.
-                if len(new_constraints) != dimension_constant:
+                if len(new_constraints) != len(constraint_index):
                     raise ValueError(
                         f"Constraint key set dimension ({len(new_constraints)})"
-                        f" does not align with constant dimension ({dimension_constant})."
+                        f" does not align with constraint value dimension ({len(constraint_index)})."
                     )
                 # Add new constraints to index.
                 new_constraints.index = constraint_index
@@ -638,40 +637,6 @@ class OptimizationProblem(ObjectBase):
             ],
             broadcast: str = None
     ):
-
-        # Process constants.
-        for constant_value, constant_keys in constants:
-
-            # If constant value is string, it is interpreted as parameter.
-            if type(constant_value) is str:
-                parameter_name = constant_value
-                constant_value = self.parameters[parameter_name]
-            else:
-                parameter_name = None
-
-            # Obtain broadcast dimension length for constant.
-            if (broadcast is not None) and (constant_keys is not None):
-                if broadcast not in constant_keys.keys():
-                    raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                else:
-                    broadcast_len = len(constant_keys[broadcast])
-            else:
-                broadcast_len = 1
-
-            # If broadcasting, value is repeated along broadcast dimension.
-            if broadcast_len > 1:
-                constant_value = constant_value * broadcast_len
-
-            # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
-            if type(constant_value) is not float:
-                if np.shape(constant_value) not in [(1, ), (1, 1)]:
-                    raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
-
-            # Append d constant entry.
-            if parameter_name is None:
-                self.d_dict[0].append(constant_value)
-            else:
-                self.d_dict[0].append((parameter_name, broadcast_len))
 
         # Process variables.
         for variable_value, variable_keys in variables:
@@ -811,6 +776,40 @@ class OptimizationProblem(ObjectBase):
                 self.q_dict[variable_1_index, variable_2_index].append(variable_value)
             else:
                 self.q_dict[variable_1_index, variable_2_index].append((parameter_name, broadcast_len))
+
+        # Process constants.
+        for constant_value, constant_keys in constants:
+
+            # If constant value is string, it is interpreted as parameter.
+            if type(constant_value) is str:
+                parameter_name = constant_value
+                constant_value = self.parameters[parameter_name]
+            else:
+                parameter_name = None
+
+            # Obtain broadcast dimension length for constant.
+            if (broadcast is not None) and (constant_keys is not None):
+                if broadcast not in constant_keys.keys():
+                    raise ValueError(f"Invalid broadcast dimension: {broadcast}")
+                else:
+                    broadcast_len = len(constant_keys[broadcast])
+            else:
+                broadcast_len = 1
+
+            # If broadcasting, value is repeated along broadcast dimension.
+            if broadcast_len > 1:
+                constant_value = constant_value * broadcast_len
+
+            # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
+            if type(constant_value) is not float:
+                if np.shape(constant_value) not in [(1, ), (1, 1)]:
+                    raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
+
+            # Append d constant entry.
+            if parameter_name is None:
+                self.d_dict[0].append(constant_value)
+            else:
+                self.d_dict[0].append((parameter_name, broadcast_len))
 
     def get_a_matrix(self) -> sp.spmatrix:
 

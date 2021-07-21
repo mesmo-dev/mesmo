@@ -1238,8 +1238,12 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        - dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='==>='), 0]
-                        + dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='==<='), 0],
+                        - dual_vector[self.constraints.index[
+                            fledge.utils.get_index(self.constraints, name=name, constraint_type='==>=')
+                        ], 0]
+                        + dual_vector[self.constraints.index[
+                            fledge.utils.get_index(self.constraints, name=name, constraint_type='==<=')
+                        ], 0],
                         index=constraint_dimensions
                     )
                 )
@@ -1247,7 +1251,9 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        - dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='>='), 0],
+                        - dual_vector[self.constraints.index[
+                            fledge.utils.get_index(self.constraints, name=name, constraint_type='>=')
+                        ], 0],
                         index=constraint_dimensions
                     )
                 )
@@ -1255,7 +1261,9 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        + dual_vector[fledge.utils.get_index(self.constraints, name=name, constraint_type='<='), 0],
+                        + dual_vector[self.constraints.index[
+                            fledge.utils.get_index(self.constraints, name=name, constraint_type='<=')
+                        ], 0],
                         index=constraint_dimensions
                     )
                 )

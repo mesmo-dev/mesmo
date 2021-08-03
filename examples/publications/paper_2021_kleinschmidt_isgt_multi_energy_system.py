@@ -18,6 +18,8 @@ def main(
         scenario_number=1
 ):
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     if scenario_number in [1]:
         scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'

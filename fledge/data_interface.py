@@ -54,12 +54,23 @@ def recreate_database(
     for data_path in data_paths:
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Exclude CSV files from CoBMo folders, but add to CoBMo data path.
-            if (os.path.join('cobmo', '') in csv_file) or (os.path.join('cobmo_data', '') in csv_file):
+            # Ignore CSV files from CoBMo folders, but add to CoBMo data path.
+            if any(
+                    os.path.join('', folder, '') in csv_file
+                    for folder in ['cobmo', 'cobmo_data']
+            ):
 
                 # Add to CoBMo data path.
                 if os.path.dirname(csv_file) not in cobmo_data_paths:
                     cobmo_data_paths.append(os.path.dirname(csv_file))
+
+            # Ignore CSV files from folders defined in config parameter 'ignore_data_folders'.
+            elif any(
+                    os.path.join('', folder, '') in csv_file
+                    for folder in fledge.config.config['paths']['ignore_data_folders']
+            ):
+
+                pass
 
             else:
 
@@ -601,8 +612,8 @@ class DERData(object):
             timestep_frequency = 'h'
 
         # Load DER definitions, for timeseries / schedule definitions, for each `definition_name`.
-        fledge.utils.log_time('load DER timeseries / schedule definitions')
         if len(self.der_definitions) > 0:
+            fledge.utils.log_time('load DER timeseries / schedule definitions')
             der_definitions = (
                 fledge.utils.starmap(
                     self.load_der_timeseries_schedules,

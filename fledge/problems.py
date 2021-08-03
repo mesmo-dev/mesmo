@@ -40,16 +40,17 @@ class NominalOperationProblem(object):
     timesteps: pd.Index
     price_data: fledge.data_interface.PriceData
     electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
-    power_flow_solution_reference: fledge.electric_grid_models.PowerFlowSolution = None
     thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
-    thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
     der_model_set: fledge.der_models.DERModelSet
     results: Results
 
     @multimethod
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            der_model_set: fledge.der_models.DERModelSet = None
     ):
 
         # Obtain data.
@@ -61,26 +62,29 @@ class NominalOperationProblem(object):
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
-            fledge.utils.log_time("electric grid model instantiation")
-            self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-            self.power_flow_solution_reference = (
-                fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
-            )
-            fledge.utils.log_time("electric grid model instantiation")
+            if electric_grid_model is not None:
+                self.electric_grid_model = electric_grid_model
+            else:
+                fledge.utils.log_time("electric grid model instantiation")
+                self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
+                fledge.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
-            fledge.utils.log_time("thermal grid model instantiation")
-            self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-            self.thermal_power_flow_solution_reference = (
-                fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
-            )
-            fledge.utils.log_time("thermal grid model instantiation")
+            if thermal_grid_model is not None:
+                self.thermal_grid_model = thermal_grid_model
+            else:
+                fledge.utils.log_time("thermal grid model instantiation")
+                self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+                fledge.utils.log_time("thermal grid model instantiation")
 
         # Obtain DER model set.
-        fledge.utils.log_time("DER model instantiation")
-        self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
-        fledge.utils.log_time("DER model instantiation")
+        if der_model_set is not None:
+            self.der_model_set = der_model_set
+        else:
+            fledge.utils.log_time("DER model instantiation")
+            self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
+            fledge.utils.log_time("DER model instantiation")
 
     def solve(self):
 
@@ -270,10 +274,10 @@ class OptimalOperationProblem(object):
     price_data: fledge.data_interface.PriceData
     electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
     power_flow_solution_reference: fledge.electric_grid_models.PowerFlowSolution = None
-    linear_electric_grid_model: fledge.electric_grid_models.LinearElectricGridModel = None
+    linear_electric_grid_model_set: fledge.electric_grid_models.LinearElectricGridModelSet = None
     thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
     thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
-    linear_thermal_grid_model: fledge.thermal_grid_models.LinearThermalGridModel = None
+    linear_thermal_grid_model_set: fledge.thermal_grid_models.LinearThermalGridModelSet = None
     der_model_set: fledge.der_models.DERModelSet
     optimization_problem: fledge.utils.OptimizationProblem
     results: Results
@@ -281,7 +285,10 @@ class OptimalOperationProblem(object):
     @multimethod
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
+            der_model_set: fledge.der_models.DERModelSet = None
     ):
 
         # Obtain data.
@@ -293,39 +300,55 @@ class OptimalOperationProblem(object):
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
-            self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
+            fledge.utils.log_time("electric grid model instantiation")
+            if electric_grid_model is not None:
+                self.electric_grid_model = electric_grid_model
+            else:
+                self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
             self.power_flow_solution_reference = (
                 fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
             )
-            self.linear_electric_grid_model = (
-                fledge.electric_grid_models.LinearElectricGridModelGlobal(
+            self.linear_electric_grid_model_set = (
+                fledge.electric_grid_models.LinearElectricGridModelSet(
                     self.electric_grid_model,
-                    self.power_flow_solution_reference
+                    self.power_flow_solution_reference,
+                    linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
                 )
             )
+            fledge.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
-            self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+            fledge.utils.log_time("thermal grid model instantiation")
+            if thermal_grid_model is not None:
+                self.thermal_grid_model = thermal_grid_model
+            else:
+                self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
             self.thermal_power_flow_solution_reference = (
                 fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
             )
-            self.linear_thermal_grid_model = (
-                fledge.thermal_grid_models.LinearThermalGridModel(
+            self.linear_thermal_grid_model_set = (
+                fledge.thermal_grid_models.LinearThermalGridModelSet(
                     self.thermal_grid_model,
                     self.thermal_power_flow_solution_reference
                 )
             )
+            fledge.utils.log_time("thermal grid model instantiation")
 
         # Obtain DER model set.
-        self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
+        if der_model_set is not None:
+            self.der_model_set = der_model_set
+        else:
+            fledge.utils.log_time("DER model instantiation")
+            self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
+            fledge.utils.log_time("DER model instantiation")
 
         # Instantiate optimization problem.
         self.optimization_problem = fledge.utils.OptimizationProblem()
 
-        # Define linear electric grid model variables and constraints.
+        # Define electric grid problem.
         if self.electric_grid_model is not None:
-            self.linear_electric_grid_model.define_optimization_variables(self.optimization_problem)
+            self.linear_electric_grid_model_set.define_optimization_variables(self.optimization_problem)
             node_voltage_magnitude_vector_minimum = (
                 scenario_data.scenario['voltage_per_unit_minimum']
                 * np.abs(self.electric_grid_model.node_voltage_vector_reference)
@@ -344,16 +367,19 @@ class OptimalOperationProblem(object):
                 if pd.notnull(scenario_data.scenario['branch_flow_per_unit_maximum'])
                 else None
             )
-            self.linear_electric_grid_model.define_optimization_constraints(
+            self.linear_electric_grid_model_set.define_optimization_parameters(
                 self.optimization_problem,
+                self.price_data,
                 node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
                 node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
                 branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
             )
+            self.linear_electric_grid_model_set.define_optimization_constraints(self.optimization_problem)
+            self.linear_electric_grid_model_set.define_optimization_objective(self.optimization_problem)
 
-        # Define thermal grid model variables and constraints.
+        # Define thermal grid problem.
         if self.thermal_grid_model is not None:
-            self.linear_thermal_grid_model.define_optimization_variables(self.optimization_problem)
+            self.linear_thermal_grid_model_set.define_optimization_variables(self.optimization_problem)
             node_head_vector_minimum = (
                 scenario_data.scenario['node_head_per_unit_maximum']
                 * self.thermal_power_flow_solution_reference.node_head_vector
@@ -366,31 +392,20 @@ class OptimalOperationProblem(object):
                 if pd.notnull(scenario_data.scenario['pipe_flow_per_unit_maximum'])
                 else None
             )
-            self.linear_thermal_grid_model.define_optimization_constraints(
+            self.linear_thermal_grid_model_set.define_optimization_parameters(
                 self.optimization_problem,
+                self.price_data,
                 node_head_vector_minimum=node_head_vector_minimum,
                 branch_flow_vector_maximum=branch_flow_vector_maximum
             )
+            self.linear_thermal_grid_model_set.define_optimization_constraints(self.optimization_problem)
+            self.linear_thermal_grid_model_set.define_optimization_objective(self.optimization_problem)
 
-        # Define DER variables and constraints.
+        # Define DER problem.
         self.der_model_set.define_optimization_variables(self.optimization_problem)
+        self.der_model_set.define_optimization_parameters(self.optimization_problem, self.price_data)
         self.der_model_set.define_optimization_constraints(self.optimization_problem)
-
-        # Define objective.
-        if self.thermal_grid_model is not None:
-            self.linear_thermal_grid_model.define_optimization_objective(
-                self.optimization_problem,
-                self.price_data
-            )
-        if self.electric_grid_model is not None:
-            self.linear_electric_grid_model.define_optimization_objective(
-                self.optimization_problem,
-                self.price_data
-            )
-        self.der_model_set.define_optimization_objective(
-            self.optimization_problem,
-            self.price_data
-        )
+        self.der_model_set.define_optimization_objective(self.optimization_problem)
 
     def solve(self):
 
@@ -404,11 +419,11 @@ class OptimalOperationProblem(object):
 
         # Obtain electric grid results.
         if self.electric_grid_model is not None:
-            self.results.update(self.linear_electric_grid_model.get_optimization_results(self.optimization_problem))
+            self.results.update(self.linear_electric_grid_model_set.get_optimization_results(self.optimization_problem))
 
         # Obtain thermal grid results.
         if self.thermal_grid_model is not None:
-            self.results.update(self.linear_thermal_grid_model.get_optimization_results(self.optimization_problem))
+            self.results.update(self.linear_thermal_grid_model_set.get_optimization_results(self.optimization_problem))
 
         # Obtain DER results.
         self.results.update(self.der_model_set.get_optimization_results(self.optimization_problem))
@@ -416,7 +431,7 @@ class OptimalOperationProblem(object):
         # Obtain electric DLMPs.
         if self.electric_grid_model is not None:
             self.results.update(
-                self.linear_electric_grid_model.get_optimization_dlmps(
+                self.linear_electric_grid_model_set.get_optimization_dlmps(
                     self.optimization_problem,
                     self.price_data
                 )
@@ -425,7 +440,7 @@ class OptimalOperationProblem(object):
         # Obtain thermal DLMPs.
         if self.thermal_grid_model is not None:
             self.results.update(
-                self.linear_thermal_grid_model.get_optimization_dlmps(
+                self.linear_thermal_grid_model_set.get_optimization_dlmps(
                     self.optimization_problem,
                     self.price_data
                 )

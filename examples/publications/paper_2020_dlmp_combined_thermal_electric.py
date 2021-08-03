@@ -13,6 +13,8 @@ import fledge
 
 def main():
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     scenario_name = 'paper_2020_troitzsch_dlmp'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).

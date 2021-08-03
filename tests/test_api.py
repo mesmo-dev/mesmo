@@ -1,6 +1,6 @@
 """Test API."""
 
-import cvxpy as cp
+import gurobipy as gp
 import unittest
 
 import fledge
@@ -21,7 +21,7 @@ class TestAPI(unittest.TestCase):
         fledge.utils.log_time("test_run_optimal_operation_problem", log_level='info', logger_object=logger)
         try:
             fledge.api.run_optimal_operation_problem('singapore_tanjongpagar')
-        except (cp.SolverError, AttributeError):
+        except gp.GurobiError:
             # Soft fail: Only raise warning on selected errors, since it may be due to solver not installed.
             logger.warning(f"Test run_optimal_operation_problem failed due to solver error.", exc_info=True)
         fledge.utils.log_time("test_run_optimal_operation_problem", log_level='info', logger_object=logger)

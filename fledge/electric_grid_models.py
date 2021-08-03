@@ -4941,13 +4941,13 @@ class LinearElectricGridModelSet(object):
             self,
             electric_grid_model: ElectricGridModelDefault,
             power_flow_solution: PowerFlowSolution,
-            linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelLocal
+            linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelGlobal
     ):
 
         self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
 
         # Obtain linear electric grid models.
-        linear_electric_grid_model = LinearElectricGridModelGlobal(electric_grid_model, power_flow_solution)
+        linear_electric_grid_model = linear_electric_grid_model_method(electric_grid_model, power_flow_solution)
         linear_electric_grid_models = (
             dict(zip(electric_grid_model.timesteps, itertools.repeat(linear_electric_grid_model)))
         )

@@ -18,6 +18,8 @@ def main(
         admm_rho=None
 ):
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     admm_iteration_limit = 1000
     admm_rho = 1e-1 if admm_rho is None else admm_rho

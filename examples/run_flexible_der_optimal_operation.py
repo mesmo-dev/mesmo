@@ -21,63 +21,46 @@ def main():
     fledge.data_interface.recreate_database()
 
     # Obtain data.
-    der_data = fledge.data_interface.DERData(scenario_name)
     price_data = fledge.data_interface.PriceData(scenario_name)
 
     # Obtain model.
-    flexible_der_model = fledge.der_models.make_der_model(der_name, der_data)
+    # - The following creates a DER model set with a single item.
+    # - DER model set is obtained rather than single DER model, because the optimization problem definitions are only
+    #   implemented in the DER model set.
+    der_model_set = fledge.der_models.DERModelSet(scenario_name, der_name=der_name)
 
-    # Instantiate optimization problem.
+    # Define optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
-
-    # Define variables.
-    flexible_der_model.define_optimization_variables(
-        optimization_problem
-    )
-
-    # Define constraints.
-    flexible_der_model.define_optimization_constraints(
-        optimization_problem
-    )
-
-    # Define objective.
-    flexible_der_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
+    der_model_set.define_optimization_problem(optimization_problem, price_data)
 
     # Solve optimization problem.
     optimization_problem.solve()
 
     # Obtain results.
-    results = (
-        flexible_der_model.get_optimization_results(
-            optimization_problem
-        )
-    )
+    results = der_model_set.get_optimization_results(optimization_problem)
 
     # Store results to CSV.
     results.save(results_path)
 
     # Plot results.
-    for output in flexible_der_model.outputs:
+    for output in der_model_set.flexible_der_models[der_name].outputs:
 
         figure = go.Figure()
         figure.add_trace(go.Scatter(
-            x=flexible_der_model.output_maximum_timeseries.index,
-            y=flexible_der_model.output_maximum_timeseries.loc[:, output].values,
+            x=der_model_set.flexible_der_models[der_name].output_maximum_timeseries.index,
+            y=der_model_set.flexible_der_models[der_name].output_maximum_timeseries.loc[:, output].values,
             name='Maximum',
             line=go.scatter.Line(shape='hv')
         ))
         figure.add_trace(go.Scatter(
-            x=flexible_der_model.output_minimum_timeseries.index,
-            y=flexible_der_model.output_minimum_timeseries.loc[:, output].values,
+            x=der_model_set.flexible_der_models[der_name].output_minimum_timeseries.index,
+            y=der_model_set.flexible_der_models[der_name].output_minimum_timeseries.loc[:, output].values,
             name='Minimum',
             line=go.scatter.Line(shape='hv')
         ))
         figure.add_trace(go.Scatter(
             x=results['output_vector'].index,
-            y=results['output_vector'].loc[:, output].values,
+            y=results['output_vector'].loc[:, (der_name, output)].values,
             name='Optimal',
             line=go.scatter.Line(shape='hv')
         ))
@@ -89,12 +72,12 @@ def main():
         # figure.show()
         fledge.utils.write_figure_plotly(figure, os.path.join(results_path, output))
 
-    for disturbance in flexible_der_model.disturbances:
+    for disturbance in der_model_set.flexible_der_models[der_name].disturbances:
 
         figure = go.Figure()
         figure.add_trace(go.Scatter(
-            x=flexible_der_model.disturbance_timeseries.index,
-            y=flexible_der_model.disturbance_timeseries.loc[:, disturbance].values,
+            x=der_model_set.flexible_der_models[der_name].disturbance_timeseries.index,
+            y=der_model_set.flexible_der_models[der_name].disturbance_timeseries.loc[:, disturbance].values,
             line=go.scatter.Line(shape='hv')
         ))
         figure.update_layout(

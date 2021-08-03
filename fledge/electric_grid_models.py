@@ -4975,6 +4975,23 @@ class LinearElectricGridModelSet(object):
         if not issubclass(linear_electric_grid_model_method, LinearElectricGridModel):
             raise ValueError(f"Invalid linear electric grid model method: {linear_electric_grid_model_method}")
 
+    def define_optimization_problem(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData,
+            **kwargs
+    ):
+
+        # Defined optimization problem definitions through respective sub-methods.
+        self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(
+            optimization_problem,
+            price_data,
+            **kwargs
+        )
+        self.define_optimization_constraints(optimization_problem)
+        self.define_optimization_objective(optimization_problem)
+
     def define_optimization_variables(
             self,
             optimization_problem: fledge.utils.OptimizationProblem

@@ -1,19 +1,11 @@
 """Test problems."""
 
+import gurobipy as gp
 import unittest
 
 import fledge
 
 logger = fledge.config.get_logger(__name__)
-
-found_optimization_solver = False
-if fledge.config.config['optimization']['solver_name'] == 'gurobi':
-    import gurobipy
-    try:
-        gurobipy.Model()
-        found_optimization_solver = True
-    except gurobipy.GurobiError:
-        pass
 
 
 class TestProblems(unittest.TestCase):
@@ -30,7 +22,10 @@ class TestProblems(unittest.TestCase):
         # Get result.
         fledge.utils.log_time("test_optimal_operation_problem", log_level='info', logger_object=logger)
         problem = fledge.problems.OptimalOperationProblem('singapore_tanjongpagar')
-        if found_optimization_solver:
+        try:
             problem.solve()
             problem.get_results()
+        except gp.GurobiError:
+            # Soft fail: Only raise warning on selected errors, since it may be due to solver not installed.
+            logger.warning(f"Test test_optimal_operation_problem failed due to solver error.", exc_info=True)
         fledge.utils.log_time("test_optimal_operation_problem", log_level='info', logger_object=logger)

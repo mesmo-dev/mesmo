@@ -1877,21 +1877,33 @@ class DERModelSet(DERModelSetBase):
     @multimethod
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            **kwargs
     ):
 
         # Obtain data.
         der_data = fledge.data_interface.DERData(scenario_name)
 
         self.__init__(
-            der_data
+            der_data,
+            **kwargs
         )
 
     @multimethod
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData
+            der_data: fledge.data_interface.DERData,
+            der_name: str = None
     ):
+
+        # Filter DER data, if passing `der_name` to select specific DER.
+        if der_name is not None:
+            if der_name not in der_data.ders.index:
+                raise ValueError(f"DER '{der_name}' not found in DER data.")
+            else:
+                ders = der_data.ders.loc[[der_name], :]
+        else:
+            ders = der_data.ders
 
         # Obtain timesteps.
         self.timesteps = der_data.scenario_data.timesteps
@@ -1899,10 +1911,10 @@ class DERModelSet(DERModelSetBase):
         # Obtain DER index sets.
         # - Note: Implementation changes to `ders`, `electric_ders` and `thermal_ders` index sets must be aligned
         #   with `ElectricGridModel.ders` and `ThermalGridModel.ders`.
-        self.ders = pd.MultiIndex.from_frame(der_data.ders.loc[:, ['der_type', 'der_name']])
-        self.electric_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'electric_grid_name'])]
-        self.thermal_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name'])]
-        self.der_names = der_data.ders.index
+        self.ders = pd.MultiIndex.from_frame(ders.loc[:, ['der_type', 'der_name']])
+        self.electric_ders = self.ders[pd.notnull(ders.loc[:, 'electric_grid_name'])]
+        self.thermal_ders = self.ders[pd.notnull(ders.loc[:, 'thermal_grid_name'])]
+        self.der_names = ders.index
 
         # Obtain DER models.
         fledge.utils.log_time("DER model setup")

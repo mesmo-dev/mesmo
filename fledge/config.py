@@ -120,6 +120,8 @@ def memoize(name):
     but only if caching is enabled for given `name` in config.
     """
 
+    # TODO: Move memoize to utils.
+
     if config['caching']['enable'] and config['caching'][name]:
         return cache.memoize(expire=config['caching']['expiry_time'])
     else:

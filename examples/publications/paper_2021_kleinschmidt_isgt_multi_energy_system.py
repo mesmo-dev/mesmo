@@ -18,6 +18,8 @@ def main(
         scenario_number=1
 ):
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     if scenario_number in [1]:
         scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'
@@ -46,7 +48,7 @@ def main(
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_grid_model.cooling_plant_efficiency = 5
+    thermal_grid_model.plant_efficiency = 5
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(

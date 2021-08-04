@@ -13,6 +13,8 @@ import fledge
 
 def main():
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     scenario_name = 'paper_2020_troitzsch_dlmp'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
@@ -36,7 +38,7 @@ def main():
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.energy_transfer_station_head_loss = 0.0  # Modification for Thermal Electric DLMP paper
-    thermal_grid_model.cooling_plant_efficiency = 10.0  # Modification for Thermal Electric DLMP paper.
+    thermal_grid_model.plant_efficiency = 10.0  # Modification for Thermal Electric DLMP paper.
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model = (
         fledge.thermal_grid_models.LinearThermalGridModel(

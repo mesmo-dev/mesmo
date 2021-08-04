@@ -16,7 +16,8 @@ caching:
   expiry_time: 3600  # Expiry time of the cache, in seconds.
   get_building_model: true
 optimization:
-  solver_name: gurobi  # Must be valid solver name for CVXPY.
+  solver_interface:  # If 'cvxpy', will use CVXPY. If not defined, will use direct solver interfaces.
+  solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY.
   time_limit:  # Solver time limit in seconds. Infinite if not defined. Only for Gurobi / CPLEX.
   show_solver_output: true  # If True, activate verbose solver output.
 tests:

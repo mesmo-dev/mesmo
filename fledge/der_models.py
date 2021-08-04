@@ -7,13 +7,13 @@ from multimethod import multimethod
 import numpy as np
 import pandas as pd
 import scipy.constants
+import scipy.sparse as sp
 import sys
 import typing
 
 import fledge.config
 import fledge.data_interface
 import fledge.electric_grid_models
-import fledge.thermal_grid_models
 import fledge.utils
 
 logger = fledge.config.get_logger(__name__)
@@ -23,7 +23,10 @@ class DERModel(object):
     """DER model object."""
 
     der_type: str = None
+    # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
+    marginal_cost: float
     der_name: str
+    is_standalone: bool
     is_electric_grid_connected: bool
     is_thermal_grid_connected: bool
     electric_grid_der_index: typing.List[int]
@@ -39,7 +42,8 @@ class DERModel(object):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            is_standalone=False
     ):
 
         # Get shorthand for DER data.
@@ -49,6 +53,7 @@ class DERModel(object):
         self.der_name = der_name
 
         # Obtain grid connection flags.
+        self.is_standalone = is_standalone
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
 
@@ -96,18 +101,18 @@ class DERModel(object):
             )
             if 'per_unit' in der.at['definition_type']:
                 # If per unit definition, multiply nominal active / reactive power.
-                self.active_power_nominal_timeseries *= der.at['active_power_nominal']
-                self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+                self.active_power_nominal_timeseries *= self.active_power_nominal
+                self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['active_power_nominal'])
+                    np.sign(self.active_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(der.at['reactive_power_nominal'])
+                    np.sign(self.reactive_power_nominal)
                     * (
-                        der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                        if der.at['active_power_nominal'] != 0.0
+                        self.reactive_power_nominal / self.active_power_nominal
+                        if self.active_power_nominal != 0.0
                         else 1.0
                     )
                     / der_data.scenario_data.scenario.at['base_apparent_power']
@@ -135,10 +140,10 @@ class DERModel(object):
             )
             if 'per_unit' in der.at['definition_type']:
                 # If per unit definition, multiply nominal thermal power.
-                self.thermal_power_nominal_timeseries *= der.at['thermal_power_nominal']
+                self.thermal_power_nominal_timeseries *= self.thermal_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['thermal_power_nominal'])
+                    np.sign(self.thermal_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
         else:
@@ -146,27 +151,8 @@ class DERModel(object):
                 pd.Series(0.0, index=self.timesteps, name='thermal_power')
             )
 
-    def define_optimization_variables(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ):
-
-        raise NotImplementedError("This method must be implemented by the subclass.")
-
-    def define_optimization_constraints(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ):
-
-        raise NotImplementedError("This method must be implemented by the subclass.")
-
-    def define_optimization_objective(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
-    ):
-
-        raise NotImplementedError("This method must be implemented by the subclass.")
+        # Obtain marginal cost.
+        self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
 
 
 class DERModelOperationResults(fledge.utils.ResultsBase):
@@ -180,130 +166,6 @@ class DERModelOperationResults(fledge.utils.ResultsBase):
 class FixedDERModel(DERModel):
     """Fixed DER model object."""
 
-    def define_optimization_variables(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ):
-
-        # Fixed DERs have no optimization variables.
-        pass
-
-    def define_optimization_constraints(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ):
-
-        # Define connection constraints.
-        if self.is_electric_grid_connected:
-            if hasattr(optimization_problem, 'der_active_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
-                    ==
-                    np.transpose([self.active_power_nominal_timeseries.values])
-                    / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
-                )
-            if hasattr(optimization_problem, 'der_reactive_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
-                    ==
-                    np.transpose([self.reactive_power_nominal_timeseries.values])
-                    / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
-                )
-
-        if self.is_thermal_grid_connected:
-            if hasattr(optimization_problem, 'der_thermal_power_vector'):
-                # TODO: Implement fixed load / fixed generator models for thermal grid.
-                pass
-
-    def define_optimization_objective(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
-    ):
-
-        # Set objective flag.
-        optimization_problem.has_der_objective = True
-
-        # Obtain timestep interval in hours, for conversion of power to energy.
-        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
-
-        # Define objective for electric loads.
-        # - Defined as cost of electric power supply at the DER node.
-        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
-        #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
-        if self.is_electric_grid_connected and not optimization_problem.has_electric_grid_objective:
-
-            # Active power cost / revenue.
-            # - Cost for load / demand, revenue for generation / supply.
-            optimization_problem.objective += (
-                (
-                    price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                    * timestep_interval_hours  # In Wh.
-                    @ np.transpose([-1.0 * self.active_power_nominal_timeseries.values])
-                )
-                + ((
-                    price_data.price_sensitivity_coefficient
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum(np.transpose([self.active_power_nominal_timeseries.values]) ** 2)
-                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-            )
-
-            # Reactive power cost / revenue.
-            # - Cost for load / demand, revenue for generation / supply.
-            optimization_problem.objective += (
-                (
-                    price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                    * timestep_interval_hours  # In Wh.
-                    @ np.transpose([-1.0 * self.reactive_power_nominal_timeseries.values])
-                )
-                + ((
-                    price_data.price_sensitivity_coefficient
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum(np.transpose([self.reactive_power_nominal_timeseries.values]) ** 2)
-                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-            )
-
-        # TODO: Define objective for thermal loads.
-        # - Defined as cost of thermal power supply at the DER node.
-        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
-        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
-        if self.is_thermal_grid_connected and not optimization_problem.has_thermal_grid_objective:
-            pass
-
-        # Define objective for electric generators.
-        # - Always defined here as the cost of electric power generation at the DER node.
-        if self.is_electric_grid_connected:
-            if issubclass(type(self), FlexibleGeneratorModel):
-
-                # Active power generation cost.
-                optimization_problem.objective += (
-                    self.marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    @ cp.sum(self.active_power_nominal_timeseries.values)
-                )
-
-        # Define objective for thermal generators.
-        # - Always defined here as the cost of thermal power generation at the DER node.
-        if self.is_thermal_grid_connected:
-            if issubclass(type(self), FlexibleGeneratorModel):
-
-                # Thermal power generation cost.
-                optimization_problem.objective += (
-                    self.marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    @ cp.sum(self.thermal_power_nominal_timeseries.values)
-                )
-
-    def get_optimization_results(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ) -> DERModelOperationResults:
-
-        # Fixed DERs have no optimization variables, therefore return empty results, except for DER model itself.
-        return DERModelOperationResults(
-            der_model=self
-        )
-
 
 class FixedLoadModel(FixedDERModel):
     """Fixed load model object."""
@@ -313,12 +175,13 @@ class FixedLoadModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct fixed load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # If connected to both electric and thermal grid, raise error.
         if self.is_electric_grid_connected and self.is_thermal_grid_connected:
@@ -335,12 +198,13 @@ class FixedEVChargerModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct EV charger model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # If connected to thermal grid, raise error.
         if self.is_electric_grid_connected and self.is_thermal_grid_connected:
@@ -358,11 +222,12 @@ class FixedGeneratorModel(FixedDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -372,9 +237,6 @@ class FixedGeneratorModel(FixedDERModel):
             raise AssertionError(
                 f"Fixed generator '{self.der_name}' can only be connected to either electric grid or thermal grid."
             )
-
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
 
 
 class FlexibleDERModel(DERModel):
@@ -399,270 +261,6 @@ class FlexibleDERModel(DERModel):
     output_maximum_timeseries: pd.DataFrame
     output_minimum_timeseries: pd.DataFrame
 
-    def define_optimization_variables(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-    ):
-
-        # Define variables.
-        # - Defined as dict with single entry for current DER. This is for compability of
-        # `define_optimization_constraints`, etc. with `DERModelSet`.
-        optimization_problem.state_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.states)))}
-        optimization_problem.control_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.controls)))}
-        optimization_problem.output_vector = {self.der_name: cp.Variable((len(self.timesteps), len(self.outputs)))}
-
-    def define_optimization_constraints(
-        self,
-        optimization_problem: fledge.utils.OptimizationProblem
-    ):
-
-        # Initial state.
-        # - For states which represent storage state of charge, initial state of charge is final state of charge.
-        if any(self.states.isin(self.storage_states)):
-            optimization_problem.constraints.append(
-                optimization_problem.state_vector[self.der_name][0, self.states.isin(self.storage_states)]
-                ==
-                optimization_problem.state_vector[self.der_name][-1, self.states.isin(self.storage_states)]
-            )
-        # - For other states, set initial state according to the initial state vector.
-        if any(~self.states.isin(self.storage_states)):
-            optimization_problem.constraints.append(
-                optimization_problem.state_vector[self.der_name][0, ~self.states.isin(self.storage_states)]
-                ==
-                self.state_vector_initial.loc[~self.states.isin(self.storage_states)].values
-            )
-
-        # State equation.
-        optimization_problem.constraints.append(
-            optimization_problem.state_vector[self.der_name][1:, :]
-            ==
-            cp.transpose(
-                self.state_matrix.values
-                @ cp.transpose(optimization_problem.state_vector[self.der_name][:-1, :])
-                + self.control_matrix.values
-                @ cp.transpose(optimization_problem.control_vector[self.der_name][:-1, :])
-                + self.disturbance_matrix.values
-                @ np.transpose(self.disturbance_timeseries.iloc[:-1, :].values)
-            )
-        )
-
-        # Output equation.
-        optimization_problem.constraints.append(
-            optimization_problem.output_vector[self.der_name]
-            ==
-            cp.transpose(
-                self.state_output_matrix.values
-                @ cp.transpose(optimization_problem.state_vector[self.der_name])
-                + self.control_output_matrix.values
-                @ cp.transpose(optimization_problem.control_vector[self.der_name])
-                + self.disturbance_output_matrix.values
-                @ np.transpose(self.disturbance_timeseries.values)
-            )
-        )
-
-        # Output limits.
-        outputs_minimum_infinite = (
-            (self.output_minimum_timeseries == -np.inf).all()
-        )
-        optimization_problem.constraints.append(
-            optimization_problem.output_vector[self.der_name][:, ~outputs_minimum_infinite]
-            >=
-            self.output_minimum_timeseries.loc[:, ~outputs_minimum_infinite].values
-        )
-        outputs_maximum_infinite = (
-            (self.output_maximum_timeseries == np.inf).all()
-        )
-        optimization_problem.constraints.append(
-            optimization_problem.output_vector[self.der_name][:, ~outputs_maximum_infinite]
-            <=
-            self.output_maximum_timeseries.loc[:, ~outputs_maximum_infinite].values
-        )
-
-        # Define connection constraints.
-        if self.is_electric_grid_connected:
-            if hasattr(optimization_problem, 'der_active_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_active_power_vector[:, self.electric_grid_der_index]
-                    ==
-                    cp.transpose(
-                        self.mapping_active_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                    / (self.active_power_nominal if self.active_power_nominal != 0.0 else 1.0)
-                )
-            if hasattr(optimization_problem, 'der_reactive_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_reactive_power_vector[:, self.electric_grid_der_index]
-                    ==
-                    cp.transpose(
-                        self.mapping_reactive_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                    / (self.reactive_power_nominal if self.reactive_power_nominal != 0.0 else 1.0)
-                )
-
-        if self.is_thermal_grid_connected:
-            if hasattr(optimization_problem, 'der_thermal_power_vector'):
-                optimization_problem.constraints.append(
-                    optimization_problem.der_thermal_power_vector[:, self.thermal_grid_der_index]
-                    ==
-                    cp.transpose(
-                        self.mapping_thermal_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                    / (self.thermal_power_nominal if self.thermal_power_nominal != 0.0 else 1.0)
-                )
-
-    def define_optimization_objective(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
-    ):
-
-        # Obtain timestep interval in hours, for conversion of power to energy.
-        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
-
-        # Define objective for electric loads.
-        # - Defined as cost of electric power supply at the DER node.
-        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
-        #   in `fledge.electric_grid_models.LinearElectricGridModel.define_optimization_objective`.
-        if self.is_electric_grid_connected and not optimization_problem.has_electric_grid_objective:
-
-            # Active power cost / revenue.
-            # - Cost for load / demand, revenue for generation / supply.
-            optimization_problem.objective += (
-                (
-                    price_data.price_timeseries.loc[:, ('active_power', slice(None), self.der_name)].values.T
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ cp.transpose(
-                        self.mapping_active_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                )
-                + ((
-                    price_data.price_sensitivity_coefficient
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum((
-                        self.mapping_active_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    ) ** 2)
-                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-            )
-
-            # Reactive power cost / revenue.
-            # - Cost for load / demand, revenue for generation / supply.
-            optimization_problem.objective += (
-                (
-                    price_data.price_timeseries.loc[:, ('reactive_power', slice(None), self.der_name)].values.T
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ cp.transpose(
-                        self.mapping_reactive_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                )
-                + ((
-                    price_data.price_sensitivity_coefficient
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum((
-                        self.mapping_reactive_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    ) ** 2)
-                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-            )
-
-        # Define objective for thermal loads.
-        # - Defined as cost of thermal power supply at the DER node.
-        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
-        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
-        if self.is_thermal_grid_connected and not optimization_problem.has_thermal_grid_objective:
-
-            # Thermal power cost / revenue.
-            # - Cost for load / demand, revenue for generation / supply.
-            optimization_problem.objective += (
-                (
-                    price_data.price_timeseries.loc[:, ('thermal_power', slice(None), self.der_name)].values.T
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ cp.transpose(
-                        self.mapping_thermal_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                )
-                + ((
-                    price_data.price_sensitivity_coefficient
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum((
-                        self.mapping_thermal_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    ) ** 2)
-                ) if price_data.price_sensitivity_coefficient != 0.0 else 0.0)
-            )
-
-        # Define objective for electric generators.
-        # - Always defined here as the cost of electric power generation at the DER node.
-        if self.is_electric_grid_connected:
-            if issubclass(type(self), (FlexibleGeneratorModel, FlexibleCHP)):
-
-                # Active power generation cost.
-                optimization_problem.objective += (
-                    self.marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum(
-                        self.mapping_active_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                )
-
-        # Define objective for thermal generators.
-        # - Always defined here as the cost of thermal power generation at the DER node.
-        # - TODO: Cost for CHP defined twice. Is it correct?
-        if self.is_thermal_grid_connected:
-            if issubclass(type(self), (FlexibleGeneratorModel, FlexibleCHP)):
-
-                # Thermal power generation cost.
-                optimization_problem.objective += (
-                    self.marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    * cp.sum(
-                        self.mapping_thermal_power_by_output.values
-                        @ cp.transpose(optimization_problem.output_vector[self.der_name])
-                    )
-                )
-
-    def get_optimization_results(
-            self,
-            optimization_problem: fledge.utils.OptimizationProblem
-    ) -> DERModelOperationResults:
-
-        # Obtain results.
-        state_vector = (
-            pd.DataFrame(
-                optimization_problem.state_vector[self.der_name].value,
-                index=self.timesteps,
-                columns=self.states
-            )
-        )
-        control_vector = (
-            pd.DataFrame(
-                optimization_problem.control_vector[self.der_name].value,
-                index=self.timesteps,
-                columns=self.controls
-            )
-        )
-        output_vector = (
-            pd.DataFrame(
-                optimization_problem.output_vector[self.der_name].value,
-                index=self.timesteps,
-                columns=self.outputs
-            )
-        )
-
-        return DERModelOperationResults(
-            der_model=self,
-            state_vector=state_vector,
-            control_vector=control_vector,
-            output_vector=output_vector
-        )
-
 
 class FlexibleLoadModel(FlexibleDERModel):
     """Flexible load model object."""
@@ -672,12 +270,13 @@ class FlexibleLoadModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -730,8 +329,8 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['active_power', 'active_power'] = 1.0
             self.control_output_matrix.at['reactive_power', 'active_power'] = (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
+                self.reactive_power_nominal / self.active_power_nominal
+                if self.active_power_nominal != 0.0
                 else 0.0
             )
             self.disturbance_output_matrix = (
@@ -869,12 +468,13 @@ class FlexibleEVChargerModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -907,18 +507,18 @@ class FlexibleEVChargerModel(FlexibleDERModel):
             )
             if 'per_unit' in der.at['nominal_charging_definition_type']:
                 # If per unit definition, multiply nominal active / reactive power.
-                self.active_power_nominal_timeseries *= der.at['active_power_nominal']
-                self.reactive_power_nominal_timeseries *= der.at['reactive_power_nominal']
+                self.active_power_nominal_timeseries *= self.active_power_nominal
+                self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(der.at['active_power_nominal'])
+                    np.sign(self.active_power_nominal)
                     / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(der.at['reactive_power_nominal'])
+                    np.sign(self.reactive_power_nominal)
                     * (
-                        der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                        if der.at['active_power_nominal'] != 0.0
+                        self.reactive_power_nominal / self.active_power_nominal
+                        if self.active_power_nominal != 0.0
                         else 1.0
                     )
                     / der_data.scenario_data.scenario.at['base_apparent_power']
@@ -991,13 +591,13 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
-            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            -1.0 * self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.disturbance_output_matrix = (
@@ -1053,11 +653,12 @@ class FlexibleGeneratorModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1067,9 +668,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             raise AssertionError(
                 f"Flexible load '{self.der_name}' can only be connected to either electric grid or thermal grid."
             )
-
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
 
         if self.is_electric_grid_connected:
 
@@ -1102,8 +700,8 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['active_power', 'active_power'] = 1.0
             self.control_output_matrix.at['reactive_power', 'active_power'] = (
-                der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-                if der.at['active_power_nominal'] != 0.0
+                self.reactive_power_nominal / self.active_power_nominal
+                if self.active_power_nominal != 0.0
                 else 0.0
             )
             self.disturbance_output_matrix = (
@@ -1200,11 +798,12 @@ class StorageModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1279,13 +878,13 @@ class StorageModel(FlexibleDERModel):
         self.control_output_matrix.at['active_power', 'active_power_charge'] = -1.0
         self.control_output_matrix.at['active_power', 'active_power_discharge'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power_charge'] = (
-            -1.0 * der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            -1.0 * self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['reactive_power', 'active_power_discharge'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.disturbance_output_matrix = (
@@ -1338,12 +937,13 @@ class FlexibleBuildingModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible building model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
@@ -1364,10 +964,10 @@ class FlexibleBuildingModel(FlexibleDERModel):
         if self.is_electric_grid_connected:
             power_factor_nominal = (
                 np.cos(np.arctan(
-                    der.at['reactive_power_nominal']
-                    / der.at['active_power_nominal']
+                    self.reactive_power_nominal
+                    / self.active_power_nominal
                 ))
-                if ((der.at['active_power_nominal'] != 0.0) and (der.at['reactive_power_nominal'] != 0.0))
+                if ((self.active_power_nominal != 0.0) and (self.reactive_power_nominal != 0.0))
                 else 1.0
             )
 
@@ -1431,19 +1031,20 @@ class CoolingPlantModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
         """Construct flexible load model object by `der_data` and `der_name`."""
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :].copy()
         der = pd.concat([der, der_data.der_definitions[der.at['definition_index']]])
 
         # Cooling plant must be connected to both thermal grid and electric grid.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise ValueError(f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
 
         # Obtain cooling plant efficiency.
@@ -1557,8 +1158,8 @@ class CoolingPlantModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
@@ -1579,14 +1180,14 @@ class CoolingPlantModel(FlexibleDERModel):
         # Construct output constraint timeseries
         self.output_maximum_timeseries = (
             pd.DataFrame(
-                [[0.0, 0.0, der.at['thermal_power_nominal']]],
+                [[0.0, 0.0, self.thermal_power_nominal]],
                 index=self.timesteps,
                 columns=self.outputs
             )
         )
         self.output_minimum_timeseries = (
             pd.DataFrame(
-                [[der.at['active_power_nominal'], der.at['reactive_power_nominal'], 0.0]],
+                [[self.active_power_nominal, self.reactive_power_nominal, 0.0]],
                 index=self.timesteps,
                 columns=self.outputs
             )
@@ -1602,17 +1203,18 @@ class HeatPumpModel(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # If not connected to both thermal grid and electric grid, raise error.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise AssertionError(
                 f"Heat pump '{self.der_name}' must be connected to both thermal grid and electric grid."
             )
@@ -1666,8 +1268,8 @@ class HeatPumpModel(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.heat_pump_efficiency
@@ -1693,7 +1295,7 @@ class HeatPumpModel(FlexibleDERModel):
                     * self.reactive_power_nominal_timeseries
                 ),
                 (
-                    der.at['thermal_power_nominal']
+                    self.thermal_power_nominal
                     * self.thermal_power_nominal_timeseries
                 )
             ], axis ='columns')
@@ -1726,26 +1328,24 @@ class FlexibleCHP(FlexibleDERModel):
     def __init__(
             self,
             der_data: fledge.data_interface.DERData,
-            der_name: str
+            der_name: str,
+            **kwargs
     ):
 
         # Common initializations are implemented in parent class.
-        super().__init__(der_data, der_name)
+        super().__init__(der_data, der_name, **kwargs)
 
         # Get shorthand for DER data.
         der = der_data.ders.loc[self.der_name, :]
 
         # If not connected to both thermal grid and electric grid, raise error.
-        if not (self.is_electric_grid_connected and self.is_thermal_grid_connected):
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise AssertionError(
                 f"CHP '{self.der_name}' must be connected to both thermal grid and electric grid."
             )
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
-
-        # Obtain levelized cost of energy.
-        self.marginal_cost = der.at['marginal_cost']
 
         # Obtain thermal and electrical efficiency
         self.thermal_efficiency = der.at['thermal_efficiency']
@@ -1795,8 +1395,8 @@ class FlexibleCHP(FlexibleDERModel):
         )
         self.control_output_matrix.at['active_power', 'active_power'] = 1.0
         self.control_output_matrix.at['reactive_power', 'active_power'] = (
-            der.at['reactive_power_nominal'] / der.at['active_power_nominal']
-            if der.at['active_power_nominal'] != 0.0
+            self.reactive_power_nominal / self.active_power_nominal
+            if self.active_power_nominal != 0.0
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
@@ -1844,6 +1444,10 @@ class DERModelSetBase:
     states: pd.Index
     controls: pd.Index
     outputs: pd.Index
+    storage_states: pd.Index
+    der_active_power_vector_reference: np.array
+    der_reactive_power_vector_reference: np.array
+    der_thermal_power_vector_reference: np.array
 
 
 class DERModelSetOperationResults(fledge.electric_grid_models.ElectricGridDEROperationResults):
@@ -1863,21 +1467,33 @@ class DERModelSet(DERModelSetBase):
     @multimethod
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            **kwargs
     ):
 
         # Obtain data.
         der_data = fledge.data_interface.DERData(scenario_name)
 
         self.__init__(
-            der_data
+            der_data,
+            **kwargs
         )
 
     @multimethod
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData
+            der_data: fledge.data_interface.DERData,
+            der_name: str = None
     ):
+
+        # Filter DER data, if passing `der_name` to select specific DER.
+        if der_name is not None:
+            if der_name not in der_data.ders.index:
+                raise ValueError(f"DER '{der_name}' not found in DER data.")
+            else:
+                ders = der_data.ders.loc[[der_name], :]
+        else:
+            ders = der_data.ders
 
         # Obtain timesteps.
         self.timesteps = der_data.scenario_data.timesteps
@@ -1885,10 +1501,10 @@ class DERModelSet(DERModelSetBase):
         # Obtain DER index sets.
         # - Note: Implementation changes to `ders`, `electric_ders` and `thermal_ders` index sets must be aligned
         #   with `ElectricGridModel.ders` and `ThermalGridModel.ders`.
-        self.ders = pd.MultiIndex.from_frame(der_data.ders.loc[:, ['der_type', 'der_name']])
-        self.electric_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'electric_grid_name'])]
-        self.thermal_ders = self.ders[pd.notnull(der_data.ders.loc[:, 'thermal_grid_name'])]
-        self.der_names = der_data.ders.index
+        self.ders = pd.MultiIndex.from_frame(ders.loc[:, ['der_type', 'der_name']])
+        self.electric_ders = self.ders[pd.notnull(ders.loc[:, 'electric_grid_name'])]
+        self.thermal_ders = self.ders[pd.notnull(ders.loc[:, 'thermal_grid_name'])]
+        self.der_names = ders.index
 
         # Obtain DER models.
         fledge.utils.log_time("DER model setup")
@@ -1929,6 +1545,11 @@ class DERModelSet(DERModelSetBase):
         self.fixed_der_names = pd.Index(self.fixed_der_names)
         self.flexible_der_names = pd.Index(self.flexible_der_names)
 
+        # Update model data, i.e. parameters which are aggregated from individual DER models.
+        self.update_data()
+
+    def update_data(self):
+
         # Obtain flexible DER state space indexes.
         self.states = (
             pd.MultiIndex.from_tuples([
@@ -1954,49 +1575,373 @@ class DERModelSet(DERModelSetBase):
             ])
             if len(self.flexible_der_names) > 0 else pd.Index([])
         )
+        self.storage_states = (
+            pd.MultiIndex.from_tuples([
+                (der_name, state)
+                for der_name in self.flexible_der_names
+                for state in self.flexible_der_models[der_name].storage_states
+            ], names=['der_name', 'state'])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
+        )
+
+        # Obtain nominal power vectors.
+        if len(self.electric_ders) > 0:
+            self.der_active_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].active_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+            self.der_reactive_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].reactive_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ])
+            )
+        if len(self.thermal_ders) > 0:
+            self.der_thermal_power_vector_reference = (
+                np.array([
+                    self.der_models[der_name].thermal_power_nominal
+                    for der_type, der_name in self.thermal_ders
+                ])
+            )
+
+    def define_optimization_problem(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData
+    ):
+
+        # Defined optimization problem definitions through respective sub-methods.
+        self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(
+            optimization_problem,
+            price_data
+        )
+        self.define_optimization_constraints(optimization_problem)
+        self.define_optimization_objective(optimization_problem)
 
     def define_optimization_variables(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define flexible DER state space variables.
-        optimization_problem.state_vector = dict.fromkeys(self.flexible_der_names)
-        optimization_problem.control_vector = dict.fromkeys(self.flexible_der_names)
-        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
-        for der_name in self.flexible_der_names:
-            optimization_problem.state_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].states)
-                ))
-            )
-            optimization_problem.control_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].controls)
-                ))
-            )
-            optimization_problem.output_vector[der_name] = (
-                cp.Variable((
-                    len(self.flexible_der_models[der_name].timesteps),
-                    len(self.flexible_der_models[der_name].outputs)
-                ))
-            )
+        # Define state space variables.
+        optimization_problem.define_variable('state_vector', timestep=self.timesteps, state=self.states)
+        optimization_problem.define_variable('control_vector', timestep=self.timesteps, control=self.controls)
+        optimization_problem.define_variable('output_vector', timestep=self.timesteps, output=self.outputs)
 
         # Define DER power vector variables.
         # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
-        if (not hasattr(optimization_problem, 'der_active_power_vector')) and (len(self.electric_ders) > 0):
-            optimization_problem.der_active_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+        if (
+                ('der_active_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.electric_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_active_power_vector', timestep=self.timesteps, der=self.electric_ders
             )
-        if (not hasattr(optimization_problem, 'der_reactive_power_vector')) and (len(self.electric_ders) > 0):
-            optimization_problem.der_reactive_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.electric_ders)))
+        if (
+                ('der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.electric_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders
             )
-        if (not hasattr(optimization_problem, 'der_thermal_power_vector')) and (len(self.thermal_ders) > 0):
-            optimization_problem.der_thermal_power_vector = (
-                cp.Variable((len(self.timesteps), len(self.thermal_ders)))
+        if (
+                ('der_thermal_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.thermal_ders) > 0)
+        ):
+            optimization_problem.define_variable(
+                'der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders
+            )
+
+    def define_optimization_parameters(
+            self,
+            optimization_problem: fledge.utils.OptimizationProblem,
+            price_data: fledge.data_interface.PriceData
+    ):
+
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
+
+        # Define parameters.
+        optimization_problem.define_parameter(
+            'state_vector_initial',
+            np.concatenate([
+                self.flexible_der_models[der_name].state_vector_initial.values
+                for der_name in self.flexible_der_names
+            ])[~self.states.isin(self.storage_states)]
+        )
+        optimization_problem.define_parameter(
+            'state_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].state_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'control_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].control_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'disturbance_state_equation',
+            (
+                sp.block_diag([
+                    self.flexible_der_models[der_name].disturbance_matrix.values
+                    for der_name in self.flexible_der_names
+                ])
+                @ pd.concat([
+                    self.flexible_der_models[der_name].disturbance_timeseries
+                    for der_name in self.flexible_der_names
+                ], axis='columns').iloc[:-1, :].T.values
+            ).T.ravel()
+        )
+        optimization_problem.define_parameter(
+            'state_output_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].state_output_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'control_output_matrix',
+            sp.block_diag([
+                self.flexible_der_models[der_name].control_output_matrix.values
+                for der_name in self.flexible_der_names
+            ])
+        )
+        optimization_problem.define_parameter(
+            'disturbance_output_equation',
+            (
+                sp.block_diag([
+                    self.flexible_der_models[der_name].disturbance_output_matrix.values
+                    for der_name in self.flexible_der_names
+                ])
+                @ pd.concat([
+                    self.flexible_der_models[der_name].disturbance_timeseries
+                    for der_name in self.flexible_der_names
+                ], axis='columns').T.values
+            ).T.ravel()
+        )
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'active_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].active_power_nominal
+                            if self.fixed_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()
+            )
+            optimization_problem.define_parameter(
+                'mapping_active_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].active_power_nominal
+                            if self.flexible_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                    )
+                    if der_name in self.flexible_der_names
+                    else (
+                        np.zeros((1, 0))
+                        if self.der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
+                ])
+            )
+            optimization_problem.define_parameter(
+                'reactive_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].reactive_power_nominal
+                            if self.fixed_der_models[der_name].reactive_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()
+            )
+            optimization_problem.define_parameter(
+                'mapping_reactive_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].reactive_power_nominal
+                            if self.flexible_der_models[der_name].reactive_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                    )
+                    if der_name in self.flexible_der_names
+                    else (
+                        np.zeros((1, 0))
+                        if self.der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
+                ])
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'thermal_power_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].thermal_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].thermal_power_nominal
+                            if self.fixed_der_models[der_name].thermal_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_thermal_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].thermal_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.thermal_ders
+                ], axis=1).ravel()
+            )
+            optimization_problem.define_parameter(
+                'mapping_thermal_power_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_thermal_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].thermal_power_nominal
+                            if self.flexible_der_models[der_name].thermal_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_thermal_grid_connected
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                    )
+                    if der_name in self.flexible_der_names
+                    else (
+                        np.zeros((1, 0))
+                        if self.der_models[der_name].is_thermal_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
+                ])
+            )
+        optimization_problem.define_parameter(
+            'output_minimum_timeseries',
+            pd.concat([
+                self.flexible_der_models[der_name].output_minimum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel()
+        )
+        optimization_problem.define_parameter(
+            'output_maximum_timeseries',
+            pd.concat([
+                self.flexible_der_models[der_name].output_maximum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel()
+        )
+
+        # Define objective parameters.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_active_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_active_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_active_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_reactive_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_reactive_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_thermal_power_cost',
+                np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
+                * -1.0 * timestep_interval_hours  # In Wh.
+                @ sp.block_diag([np.array([self.der_thermal_power_vector_reference])] * len(self.timesteps)),
+            )
+            optimization_problem.define_parameter(
+                'der_thermal_power_cost_sensitivity',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_thermal_power_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
+            )
+        # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
+        # TODO: Related: Cost for CHP defined twice.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_active_power_marginal_cost',
+                np.concatenate([[[
+                    self.der_models[der_name].marginal_cost
+                    * timestep_interval_hours  # In Wh.
+                    * self.der_models[der_name].active_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ] * len(self.timesteps)]], axis=1)
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_marginal_cost',
+                np.concatenate([[[
+                    0.0
+                    # self.der_models[der_name].marginal_cost
+                    # * timestep_interval_hours  # In Wh.
+                    # * self.der_models[der_name].reactive_power_nominal
+                    for der_type, der_name in self.electric_ders
+                ] * len(self.timesteps)]], axis=1)
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_thermal_power_marginal_cost',
+                np.concatenate([[[
+                    self.der_models[der_name].marginal_cost
+                    * timestep_interval_hours  # In Wh.
+                    * self.der_models[der_name].thermal_power_nominal
+                    for der_type, der_name in self.thermal_ders
+                ] * len(self.timesteps)]], axis=1)
             )
 
     def define_optimization_constraints(
@@ -2004,24 +1949,177 @@ class DERModelSet(DERModelSetBase):
             optimization_problem: fledge.utils.OptimizationProblem
     ):
 
-        # Define DER constraints for each DER.
-        for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_constraints(optimization_problem)
+        # Define DER model constraints.
+        # Initial state.
+        # - For states which represent storage state of charge, initial state of charge is final state of charge.
+        if any(self.states.isin(self.storage_states)):
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[0],
+                    state=self.states[self.states.isin(self.storage_states)]
+                )),
+                '==',
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[-1],
+                    state=self.states[self.states.isin(self.storage_states)]
+                ))
+            )
+        # - For other states, set initial state according to the initial state vector.
+        if any(~self.states.isin(self.storage_states)):
+            optimization_problem.define_constraint(
+                ('constant', 'state_vector_initial'),
+                '==',
+                ('variable', 1.0, dict(
+                    name='state_vector', timestep=self.timesteps[0],
+                    state=self.states[~self.states.isin(self.storage_states)]
+                ))
+            )
+
+        # State equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='state_vector', timestep=self.timesteps[1:])),
+            '==',
+            ('variable', 'state_matrix', dict(name='state_vector', timestep=self.timesteps[:-1])),
+            ('variable', 'control_matrix', dict(name='control_vector', timestep=self.timesteps[:-1])),
+            ('constant', 'disturbance_state_equation'),
+            broadcast='timestep'
+        )
+
+        # Output equation.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '==',
+            ('variable', 'state_output_matrix', dict(name='state_vector', timestep=self.timesteps)),
+            ('variable', 'control_output_matrix', dict(name='control_vector', timestep=self.timesteps)),
+            ('constant', 'disturbance_output_equation'),
+            broadcast='timestep'
+        )
+
+        # Output limits.
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '>=',
+            ('constant', 'output_minimum_timeseries'),
+            broadcast='timestep'
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            '<=',
+            ('constant', 'output_maximum_timeseries'),
+            broadcast='timestep'
+        )
+
+        # Define connection constraints.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                '==',
+                ('constant', 'active_power_constant'),
+                ('variable', 'mapping_active_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                '==',
+                ('constant', 'reactive_power_constant'),
+                ('variable', 'mapping_reactive_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)),
+                '==',
+                ('constant', 'thermal_power_constant'),
+                ('variable', 'mapping_thermal_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
+                broadcast='timestep'
+            )
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            optimization_problem: fledge.utils.OptimizationProblem
     ):
 
         # Set objective flag.
-        optimization_problem.has_der_objective = True
+        optimization_problem.flags['has_der_objective'] = True
 
-        # Define objective for each DER.
-        for der_name in self.der_names:
-            self.der_models[der_name].define_optimization_objective(
-                optimization_problem,
-                price_data
+        # Obtain timestep interval in hours, for conversion of power to energy.
+        timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
+
+        # Define objective for electric loads.
+        # - Defined as cost of electric power supply at the DER node.
+        # - Cost for load / demand, revenue for generation / supply.
+        # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
+        #   in `fledge.electric_grid_models.LinearElectricGridModelSet.define_optimization_objective`.
+        if (len(self.electric_ders) > 0) and not optimization_problem.flags.get('has_electric_grid_objective'):
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'der_active_power_cost',
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    'der_active_power_cost_sensitivity',
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders),
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    'der_reactive_power_cost',
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                ), (
+                    'variable',
+                    'der_reactive_power_cost_sensitivity',
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders),
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                )
+            )
+
+        # Define objective for thermal loads.
+        # - Defined as cost of thermal power supply at the DER node.
+        # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
+        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        if (len(self.thermal_ders) > 0) and not optimization_problem.flags.get('has_thermal_grid_objective'):
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'der_thermal_power_cost',
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                ), (
+                    'variable',
+                    'der_thermal_power_cost_sensitivity',
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders),
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
+            )
+
+        # Define objective for electric generators.
+        # - That is: Active power generation cost.
+        # - Always defined here as the cost of electric power generation at the DER node.
+        if len(self.electric_ders) > 0:
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'der_active_power_marginal_cost',
+                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                )
+            )
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'der_reactive_power_marginal_cost',
+                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
+                )
+            )
+
+        # Define objective for thermal generators.
+        # - That is: Thermal power generation cost.
+        # - Always defined here as the cost of thermal power generation at the DER node.
+        if len(self.thermal_ders) > 0:
+            optimization_problem.define_objective(
+                (
+                    'variable',
+                    'der_thermal_power_marginal_cost',
+                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
+                )
             )
 
     def evaluate_optimization_objective(
@@ -2034,84 +2132,80 @@ class DERModelSet(DERModelSetBase):
 
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
-        optimization_problem.has_electric_grid_objective = has_electric_grid_objective
-        optimization_problem.has_thermal_grid_objective = has_thermal_grid_objective
+        optimization_problem.flags['has_electric_grid_objective'] = has_electric_grid_objective
+        optimization_problem.flags['has_thermal_grid_objective'] = has_thermal_grid_objective
+        self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(optimization_problem, price_data)
+        self.define_optimization_objective(optimization_problem)
 
-        # Instantiate optimization variables as parameters using results values.
-        optimization_problem.output_vector = dict.fromkeys(self.flexible_der_names)
-        for der_name in self.flexible_der_names:
-            optimization_problem.output_vector[der_name] = (
-                cp.Parameter(
-                    results.output_vector.loc[:, (der_name, slice(None))].shape,
-                    value=results.output_vector.loc[:, (der_name, slice(None))].values
-                )
-            )
+        # Instantiate variable vector.
+        x_vector = np.zeros((len(optimization_problem.variables), 1))
 
-        # Define objective.
-        self.define_optimization_objective(
-            optimization_problem,
-            price_data
-        )
+        # Set variable vector values.
+        objective_variable_names = list()
+        if len(self.electric_ders) > 0:
+            objective_variable_names.extend([
+                'der_active_power_vector_per_unit',
+                'der_reactive_power_vector_per_unit'
+            ])
+        if len(self.thermal_ders) > 0:
+            objective_variable_names.extend([
+                'der_thermal_power_vector_per_unit'
+            ])
+        for variable_name in objective_variable_names:
+            index = fledge.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
+            x_vector[index, 0] = results[variable_name].values.ravel()
 
-        return float(optimization_problem.objective.value)
+        # Obtain objective value.
+        objective = optimization_problem.evaluate_objective(x_vector)
+
+        return objective
 
     def get_optimization_results(
             self,
             optimization_problem: fledge.utils.OptimizationProblem
     ) -> DERModelSetOperationResults:
 
-        # Instantiate results variables.
-        state_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.states)
-        control_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.controls)
-        output_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.outputs)
-        der_active_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
-        der_active_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
-        der_reactive_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
-        der_reactive_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.electric_ders)
-        der_thermal_power_vector = pd.DataFrame(0.0, index=self.timesteps, columns=self.thermal_ders)
-        der_thermal_power_vector_per_unit = pd.DataFrame(0.0, index=self.timesteps, columns=self.thermal_ders)
-
         # Obtain results.
-        for der_name in self.flexible_der_names:
-            state_vector.loc[:, (der_name, slice(None))] = (
-                optimization_problem.state_vector[der_name].value
-            )
-            control_vector.loc[:, (der_name, slice(None))] = (
-                optimization_problem.control_vector[der_name].value
-            )
-            output_vector.loc[:, (der_name, slice(None))] = (
-                optimization_problem.output_vector[der_name].value
-            )
-        for der_name in self.der_names:
-            if self.der_models[der_name].is_electric_grid_connected:
-                der_active_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
-                    optimization_problem.der_active_power_vector[
-                        :, fledge.utils.get_index(self.electric_ders, der_name=der_name)
-                    ].value
-                )
-                der_active_power_vector.loc[:, (slice(None), der_name)] = (
-                    der_active_power_vector_per_unit.loc[:, (slice(None), der_name)].values
-                    * self.der_models[der_name].active_power_nominal
-                )
-                der_reactive_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
-                    optimization_problem.der_reactive_power_vector[
-                        :, fledge.utils.get_index(self.electric_ders, der_name=der_name)
-                    ].value
-                )
-                der_reactive_power_vector.loc[:, (slice(None), der_name)] = (
-                    der_reactive_power_vector_per_unit.loc[:, (slice(None), der_name)].values
-                    * self.der_models[der_name].reactive_power_nominal
-                )
-            if self.der_models[der_name].is_thermal_grid_connected:
-                der_thermal_power_vector_per_unit.loc[:, (slice(None), der_name)] = (
-                    optimization_problem.der_thermal_power_vector[
-                        :, fledge.utils.get_index(self.thermal_ders, der_name=der_name)
-                    ].value
-                )
-                der_thermal_power_vector.loc[:, (slice(None), der_name)] = (
-                    der_thermal_power_vector_per_unit.loc[:, (slice(None), der_name)].values
-                    * self.der_models[der_name].thermal_power_nominal
-                )
+        state_vector = (
+            optimization_problem.results['state_vector'].loc[self.timesteps, self.states]
+            if len(self.states) > 0 else None
+        )
+        control_vector = (
+            optimization_problem.results['control_vector'].loc[self.timesteps, self.controls]
+            if len(self.controls) > 0 else None
+        )
+        output_vector = (
+            optimization_problem.results['output_vector'].loc[self.timesteps, self.outputs]
+            if len(self.outputs) > 0 else None
+        )
+        der_active_power_vector_per_unit = (
+            optimization_problem.results['der_active_power_vector'].loc[self.timesteps, self.electric_ders]
+            if len(self.electric_ders) > 0 else None
+        )
+        der_active_power_vector = (
+            der_active_power_vector_per_unit
+            * self.der_active_power_vector_reference
+            if len(self.electric_ders) > 0 else None
+        )
+        der_reactive_power_vector_per_unit = (
+            optimization_problem.results['der_reactive_power_vector'].loc[self.timesteps, self.electric_ders]
+            if len(self.electric_ders) > 0 else None
+        )
+        der_reactive_power_vector = (
+            der_reactive_power_vector_per_unit
+            * self.der_reactive_power_vector_reference
+            if len(self.electric_ders) > 0 else None
+        )
+        der_thermal_power_vector_per_unit = (
+            optimization_problem.results['der_thermal_power_vector'].loc[self.timesteps, self.thermal_ders]
+            if len(self.thermal_ders) > 0 else None
+        )
+        der_thermal_power_vector = (
+            der_thermal_power_vector_per_unit
+            * self.der_thermal_power_vector_reference
+            if len(self.thermal_ders) > 0 else None
+        )
 
         return DERModelSetOperationResults(
             der_model_set=self,
@@ -2134,8 +2228,9 @@ class DERModelSet(DERModelSetBase):
         # Instantiate optimization problem.
         optimization_problem = fledge.utils.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)
+        self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_constraints(optimization_problem)
-        self.define_optimization_objective(optimization_problem, price_data)
+        self.define_optimization_objective(optimization_problem)
 
         # Solve optimization problem and obtain results.
         optimization_problem.solve()
@@ -2154,13 +2249,14 @@ class DERModelSet(DERModelSetBase):
                 self.der_models[der_name].thermal_power_nominal_timeseries.loc[:] = (
                     results.der_thermal_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
                 )
+        self.update_data()
 
         return results
 
 
 def make_der_models(
-    der_names: typing.List[str],
-    der_data: fledge.data_interface.DERData
+        der_names: typing.List[str],
+        der_data: fledge.data_interface.DERData
 ) -> typing.Dict[str, DERModel]:
 
     der_models = dict.fromkeys(der_names)
@@ -2172,8 +2268,9 @@ def make_der_models(
 
 
 def make_der_model(
-    der_name: str,
-    der_data: fledge.data_interface.DERData
+        der_name: str,
+        der_data: fledge.data_interface.DERData,
+        is_standalone=False
 ) -> DERModel:
     """Factory method for DER models, makes appropriate DER model type for given `der_name`."""
 
@@ -2188,7 +2285,7 @@ def make_der_model(
     # Obtain DER model for given `der_type`.
     for der_model_class_name, der_model_class in der_model_classes:
         if der_type == der_model_class.der_type:
-            return der_model_class(der_data, der_name)
+            return der_model_class(der_data, der_name, is_standalone=is_standalone)
 
     # Raise error, if no DER model class found for given `der_type`.
     raise ValueError(

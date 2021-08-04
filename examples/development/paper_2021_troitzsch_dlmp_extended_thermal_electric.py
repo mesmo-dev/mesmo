@@ -14,6 +14,8 @@ def main(
         scenario_number=None
 ):
 
+    # TODO: To be updated for new optimization problem interface.
+
     # Settings.
     scenario_number = 1 if scenario_number is None else scenario_number
     # Choices:

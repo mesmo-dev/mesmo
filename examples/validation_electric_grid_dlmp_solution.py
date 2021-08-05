@@ -94,7 +94,7 @@ def main():
     optimization_decentralized = fledge.utils.OptimizationProblem()
 
     # Define DER problem.
-    der_model_set.define_optimization_problem(optimization_decentralized, price_data)
+    der_model_set.define_optimization_problem(optimization_decentralized, price_data_dlmps)
 
     # Solve decentralized DER optimization problem.
     optimization_decentralized.solve()

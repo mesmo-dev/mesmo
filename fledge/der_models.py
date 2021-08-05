@@ -1869,8 +1869,11 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_cost',
                 np.array([(
                     (
-                        price_data.price_timeseries.loc[:, ('active_power', slice(None), slice(None))]
-                            .drop(('active_power', 'source', 'source'), axis='columns').values
+                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                            price_data.price_timeseries.columns,
+                            commodity_type='active_power',
+                            der_name=self.electric_ders.get_level_values('der_name')
+                        )].values
                     )
                     * -1.0 * timestep_interval_hours  # In Wh.
                     @ sp.block_diag(self.der_active_power_vector_reference)
@@ -1889,8 +1892,11 @@ class DERModelSet(DERModelSetBase):
                 'der_reactive_power_cost',
                 np.array([(
                     (
-                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), slice(None))]
-                        .drop(('reactive_power', 'source', 'source'), axis='columns').values
+                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                            price_data.price_timeseries.columns,
+                            commodity_type='reactive_power',
+                            der_name=self.electric_ders.get_level_values('der_name')
+                        )].values
                     )
                     * -1.0 * timestep_interval_hours  # In Wh.
                     @ sp.block_diag(self.der_reactive_power_vector_reference)
@@ -1908,9 +1914,17 @@ class DERModelSet(DERModelSetBase):
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
                 'der_thermal_power_cost',
-                np.array([price_data.price_timeseries.loc[:, ('thermal_power', 'source', 'source')].values])
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([self.der_thermal_power_vector_reference])] * len(self.timesteps)),
+                np.array([(
+                    (
+                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                            price_data.price_timeseries.columns,
+                            commodity_type='thermal_power',
+                            der_name=self.thermal_ders.get_level_values('der_name')
+                        )].values
+                    )
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag(self.der_thermal_power_vector_reference)
+                ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_thermal_power_cost_sensitivity',

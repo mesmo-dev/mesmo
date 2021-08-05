@@ -1867,9 +1867,14 @@ class DERModelSet(DERModelSetBase):
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
                 'der_active_power_cost',
-                np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([self.der_active_power_vector_reference])] * len(self.timesteps)),
+                np.array([(
+                    (
+                        price_data.price_timeseries.loc[:, ('active_power', slice(None), slice(None))]
+                            .drop(('active_power', 'source', 'source'), axis='columns').values
+                    )
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag(self.der_active_power_vector_reference)
+                ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_active_power_cost_sensitivity',
@@ -1882,9 +1887,14 @@ class DERModelSet(DERModelSetBase):
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost',
-                np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
-                * -1.0 * timestep_interval_hours  # In Wh.
-                @ sp.block_diag([np.array([self.der_reactive_power_vector_reference])] * len(self.timesteps)),
+                np.array([(
+                    (
+                        price_data.price_timeseries.loc[:, ('reactive_power', slice(None), slice(None))]
+                        .drop(('reactive_power', 'source', 'source'), axis='columns').values
+                    )
+                    * -1.0 * timestep_interval_hours  # In Wh.
+                    @ sp.block_diag(self.der_reactive_power_vector_reference)
+                ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost_sensitivity',

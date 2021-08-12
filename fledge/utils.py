@@ -235,7 +235,7 @@ class OptimizationProblem(ObjectBase):
         new_variables = (
             pd.DataFrame(itertools.product([name], *[
                 list(value)
-                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple]
+                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple, range]
                 else [value]
                 for value in keys.values()
             ]), columns=['name', *keys.keys()])
@@ -1445,6 +1445,9 @@ def get_index(
                 values = [values]
             else:
                 values = list(values)
+        elif isinstance(values, range):
+            # Convert range to list.
+            values = list(values)
         elif isinstance(values, np.ndarray):
             # Convert numpy arrays to list.
             values = values.tolist()

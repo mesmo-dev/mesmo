@@ -925,7 +925,10 @@ class OptimizationProblem(ObjectBase):
                     if len(np.shape(values)) == 0:
                         values = values * np.ones(len(variable_index))
                     elif broadcast_len > 1:
-                        values = np.concatenate([values] * broadcast_len, axis=1)
+                        if len(np.shape(values)) > 1:
+                            values = np.concatenate([values] * broadcast_len, axis=1)
+                        else:
+                            values = np.concatenate([[values]] * broadcast_len, axis=1)
                 # Insert entry in c vector.
                 c_vector[0, variable_index] += values.ravel()
 
@@ -956,7 +959,10 @@ class OptimizationProblem(ObjectBase):
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        values = np.concatenate([values] * broadcast_len, axis=1)
+                        if len(np.shape(values)) > 1:
+                            values = np.concatenate([values] * broadcast_len, axis=1)
+                        else:
+                            values = np.concatenate([[values]] * broadcast_len, axis=1)
                 # Obtain row index, column index and values for entry in Q matrix.
                 rows, columns, values = sp.find(values.ravel())
                 rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])

@@ -365,7 +365,7 @@ class OptimizationProblem(ObjectBase):
                 typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
             keys: dict = None,
-            broadcast: str = None
+            broadcast: typing.Union[str, list, tuple] = None
     ):
 
         # Raise error if no variables in constraint.
@@ -384,6 +384,13 @@ class OptimizationProblem(ObjectBase):
                 raise ValueError(f"'name' key is required in constraint `keys` dictionary. Only found: {keys.keys()}")
 
             # TODO: Raise error if using reserved 'constraint_type' key.
+
+        # Run type checks for broadcast argument.
+        if broadcast is not None:
+            if type(broadcast) is str:
+                broadcast = [broadcast]
+            elif type(broadcast) not in [list, tuple]:
+                raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
 
         # For equality constraint, define separate upper / lower inequality.
         if operator in ['==']:
@@ -434,10 +441,12 @@ class OptimizationProblem(ObjectBase):
 
                 # Obtain broadcast dimension length for variable.
                 if broadcast is not None:
-                    if broadcast not in variable_keys.keys():
-                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                    else:
-                        broadcast_len = len(variable_keys[broadcast])
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key not in variable_keys.keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                        else:
+                            broadcast_len *= len(variable_keys[broadcast_key])
                 else:
                     broadcast_len = 1
 
@@ -492,10 +501,10 @@ class OptimizationProblem(ObjectBase):
 
                 # Obtain broadcast dimension length for constant.
                 if (broadcast is not None) and (constant_keys is not None):
-                    if broadcast not in constant_keys.keys():
-                        raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                    else:
-                        broadcast_len = len(constant_keys[broadcast])
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key in constant_keys.keys():
+                            broadcast_len *= len(constant_keys[broadcast_key])
                 else:
                     broadcast_len = 1
 
@@ -635,8 +644,15 @@ class OptimizationProblem(ObjectBase):
             constants: typing.List[
                 typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
             ],
-            broadcast: str = None
+            broadcast: typing.Union[str, list, tuple] = None
     ):
+
+        # Run type checks for broadcast argument.
+        if broadcast is not None:
+            if type(broadcast) is str:
+                broadcast = [broadcast]
+            elif type(broadcast) not in [list, tuple]:
+                raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
 
         # Process variables.
         for variable_value, variable_keys in variables:
@@ -654,10 +670,12 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain broadcast dimension length for variable.
             if broadcast is not None:
-                if broadcast not in variable_keys.keys():
-                    raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                else:
-                    broadcast_len = len(variable_keys[broadcast])
+                broadcast_len = 1
+                for broadcast_key in broadcast:
+                    if broadcast_key not in variable_keys.keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                    else:
+                        broadcast_len *= len(variable_keys[broadcast_key])
             else:
                 broadcast_len = 1
 
@@ -721,10 +739,12 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain broadcast dimension length for variable.
             if broadcast is not None:
-                if broadcast not in variable_keys_1.keys():
-                    raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                else:
-                    broadcast_len = len(variable_keys_1[broadcast])
+                broadcast_len = 1
+                for broadcast_key in broadcast:
+                    if broadcast_key not in variable_keys_1.keys():
+                        raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                    else:
+                        broadcast_len *= len(variable_keys_1[broadcast_key])
             else:
                 broadcast_len = 1
 
@@ -789,10 +809,10 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain broadcast dimension length for constant.
             if (broadcast is not None) and (constant_keys is not None):
-                if broadcast not in constant_keys.keys():
-                    raise ValueError(f"Invalid broadcast dimension: {broadcast}")
-                else:
-                    broadcast_len = len(constant_keys[broadcast])
+                broadcast_len = 1
+                for broadcast_key in broadcast:
+                    if broadcast_key in constant_keys.keys():
+                        broadcast_len *= len(constant_keys[broadcast_key])
             else:
                 broadcast_len = 1
 

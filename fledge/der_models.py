@@ -1609,27 +1609,36 @@ class DERModelSet(DERModelSetBase):
     def define_optimization_problem(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            price_data: fledge.data_interface.PriceData,
+            scenarios: typing.Union[list, pd.Index] = None
     ):
 
-        # Defined optimization problem definitions through respective sub-methods.
-        self.define_optimization_variables(optimization_problem)
-        self.define_optimization_parameters(
-            optimization_problem,
-            price_data
-        )
-        self.define_optimization_constraints(optimization_problem)
-        self.define_optimization_objective(optimization_problem)
+        # Define optimization problem definitions through respective sub-methods.
+        self.define_optimization_variables(optimization_problem, scenarios=scenarios)
+        self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios)
+        self.define_optimization_constraints(optimization_problem, scenarios=scenarios)
+        self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
     def define_optimization_variables(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: fledge.utils.OptimizationProblem,
+            scenarios: typing.Union[list, pd.Index] = None
     ):
 
+        # If no scenarios given, obtain default value.
+        if scenarios is None:
+            scenarios = [None]
+
         # Define state space variables.
-        optimization_problem.define_variable('state_vector', timestep=self.timesteps, state=self.states)
-        optimization_problem.define_variable('control_vector', timestep=self.timesteps, control=self.controls)
-        optimization_problem.define_variable('output_vector', timestep=self.timesteps, output=self.outputs)
+        optimization_problem.define_variable(
+            'state_vector', scenario=scenarios, timestep=self.timesteps, state=self.states
+        )
+        optimization_problem.define_variable(
+            'control_vector', scenario=scenarios, timestep=self.timesteps, control=self.controls
+        )
+        optimization_problem.define_variable(
+            'output_vector', scenario=scenarios, timestep=self.timesteps, output=self.outputs
+        )
 
         # Define DER power vector variables.
         # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
@@ -1638,28 +1647,33 @@ class DERModelSet(DERModelSetBase):
                 and (len(self.electric_ders) > 0)
         ):
             optimization_problem.define_variable(
-                'der_active_power_vector', timestep=self.timesteps, der=self.electric_ders
+                'der_active_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
             )
         if (
                 ('der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
                 and (len(self.electric_ders) > 0)
         ):
             optimization_problem.define_variable(
-                'der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders
+                'der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
             )
         if (
                 ('der_thermal_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
                 and (len(self.thermal_ders) > 0)
         ):
             optimization_problem.define_variable(
-                'der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders
+                'der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.thermal_ders
             )
 
     def define_optimization_parameters(
             self,
             optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            price_data: fledge.data_interface.PriceData,
+            scenarios: typing.Union[list, pd.Index] = None
     ):
+
+        # If no scenarios given, obtain default value.
+        if scenarios is None:
+            scenarios = [None]
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
@@ -1946,8 +1960,13 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: fledge.utils.OptimizationProblem,
+            scenarios: typing.Union[list, pd.Index] = None
     ):
+
+        # If no scenarios given, obtain default value.
+        if scenarios is None:
+            scenarios = [None]
 
         # Define DER model constraints.
         # Initial state.
@@ -1955,89 +1974,119 @@ class DERModelSet(DERModelSetBase):
         if any(self.states.isin(self.storage_states)):
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
-                    name='state_vector', timestep=self.timesteps[0],
+                    name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
                     state=self.states[self.states.isin(self.storage_states)]
                 )),
                 '==',
                 ('variable', 1.0, dict(
-                    name='state_vector', timestep=self.timesteps[-1],
+                    name='state_vector', scenario=scenarios, timestep=self.timesteps[-1],
                     state=self.states[self.states.isin(self.storage_states)]
-                ))
+                )),
+                broadcast='scenario'
             )
         # - For other states, set initial state according to the initial state vector.
         if any(~self.states.isin(self.storage_states)):
             optimization_problem.define_constraint(
-                ('constant', 'state_vector_initial'),
+                ('constant', 'state_vector_initial', dict(scenario=scenarios)),
                 '==',
                 ('variable', 1.0, dict(
-                    name='state_vector', timestep=self.timesteps[0],
+                    name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
                     state=self.states[~self.states.isin(self.storage_states)]
-                ))
+                )),
+                broadcast='scenario'
             )
 
         # State equation.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='state_vector', timestep=self.timesteps[1:])),
+            ('variable', 1.0, dict(name='state_vector', scenario=scenarios, timestep=self.timesteps[1:])),
             '==',
-            ('variable', 'state_matrix', dict(name='state_vector', timestep=self.timesteps[:-1])),
-            ('variable', 'control_matrix', dict(name='control_vector', timestep=self.timesteps[:-1])),
-            ('constant', 'disturbance_state_equation'),
-            broadcast='timestep'
+            ('variable', 'state_matrix', dict(
+                name='state_vector', scenario=scenarios, timestep=self.timesteps[:-1]
+            )),
+            ('variable', 'control_matrix', dict(
+                name='control_vector', scenario=scenarios, timestep=self.timesteps[:-1]
+            )),
+            ('constant', 'disturbance_state_equation', dict(scenario=scenarios)),
+            broadcast=['timestep', 'scenario']
         )
 
         # Output equation.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
             '==',
-            ('variable', 'state_output_matrix', dict(name='state_vector', timestep=self.timesteps)),
-            ('variable', 'control_output_matrix', dict(name='control_vector', timestep=self.timesteps)),
-            ('constant', 'disturbance_output_equation'),
-            broadcast='timestep'
+            ('variable', 'state_output_matrix', dict(
+                name='state_vector', scenario=scenarios, timestep=self.timesteps
+            )),
+            ('variable', 'control_output_matrix', dict(
+                name='control_vector', scenario=scenarios, timestep=self.timesteps
+            )),
+            ('constant', 'disturbance_output_equation', dict(scenario=scenarios)),
+            broadcast=['timestep', 'scenario']
         )
 
         # Output limits.
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
             '>=',
-            ('constant', 'output_minimum_timeseries'),
-            broadcast='timestep'
+            ('constant', 'output_minimum_timeseries', dict(scenario=scenarios)),
+            broadcast=['timestep', 'scenario']
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', timestep=self.timesteps)),
+            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
             '<=',
-            ('constant', 'output_maximum_timeseries'),
-            broadcast='timestep'
+            ('constant', 'output_maximum_timeseries', dict(scenario=scenarios)),
+            broadcast=['timestep', 'scenario']
         )
 
         # Define connection constraints.
         if len(self.electric_ders) > 0:
             optimization_problem.define_constraint(
-                ('variable', 1.0, dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                ('variable', 1.0, dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
                 '==',
-                ('constant', 'active_power_constant'),
-                ('variable', 'mapping_active_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
-                broadcast='timestep'
+                ('constant', 'active_power_constant', dict(scenario=scenarios)),
+                ('variable', 'mapping_active_power_by_output', dict(
+                    name='output_vector', scenario=scenarios, timestep=self.timesteps
+                )),
+                broadcast=['timestep', 'scenario']
             )
             optimization_problem.define_constraint(
-                ('variable', 1.0, dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)),
+                ('variable', 1.0, dict(
+                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
                 '==',
-                ('constant', 'reactive_power_constant'),
-                ('variable', 'mapping_reactive_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
-                broadcast='timestep'
+                ('constant', 'reactive_power_constant', dict(scenario=scenarios)),
+                ('variable', 'mapping_reactive_power_by_output', dict(
+                    name='output_vector', scenario=scenarios, timestep=self.timesteps
+                )),
+                broadcast=['timestep', 'scenario']
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_constraint(
-                ('variable', 1.0, dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)),
+                ('variable', 1.0, dict(
+                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.thermal_ders
+                )),
                 '==',
-                ('constant', 'thermal_power_constant'),
-                ('variable', 'mapping_thermal_power_by_output', dict(name='output_vector', timestep=self.timesteps)),
-                broadcast='timestep'
+                ('constant', 'thermal_power_constant', dict(scenario=scenarios)),
+                ('variable', 'mapping_thermal_power_by_output', dict(
+                    name='output_vector', scenario=scenarios, timestep=self.timesteps
+                )),
+                broadcast=['timestep', 'scenario']
             )
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: fledge.utils.OptimizationProblem,
+            scenarios: typing.Union[list, pd.Index] = None
     ):
+
+        # If no scenarios given, obtain default value.
+        if scenarios is None:
+            scenarios = [None]
 
         # Set objective flag.
         optimization_problem.flags['has_der_objective'] = True
@@ -2052,25 +2101,29 @@ class DERModelSet(DERModelSetBase):
         #   in `fledge.electric_grid_models.LinearElectricGridModelSet.define_optimization_objective`.
         if (len(self.electric_ders) > 0) and not optimization_problem.flags.get('has_electric_grid_objective'):
             optimization_problem.define_objective(
-                (
-                    'variable',
-                    'der_active_power_cost',
-                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                ), (
-                    'variable',
-                    'der_active_power_cost_sensitivity',
-                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders),
-                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                ), (
-                    'variable',
-                    'der_reactive_power_cost',
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                ), (
-                    'variable',
-                    'der_reactive_power_cost_sensitivity',
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders),
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                )
+                ('variable', 'der_active_power_cost', dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                ('variable', 'der_active_power_cost_sensitivity', dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                ), dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                ('variable', 'der_reactive_power_cost', dict(
+                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                ('variable', 'der_reactive_power_cost_sensitivity', dict(
+                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                ), dict(
+                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                broadcast='scenario'
             )
 
         # Define objective for thermal loads.
@@ -2079,16 +2132,18 @@ class DERModelSet(DERModelSetBase):
         #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
         if (len(self.thermal_ders) > 0) and not optimization_problem.flags.get('has_thermal_grid_objective'):
             optimization_problem.define_objective(
-                (
-                    'variable',
-                    'der_thermal_power_cost',
-                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
-                ), (
-                    'variable',
-                    'der_thermal_power_cost_sensitivity',
-                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders),
-                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
-                )
+                ('variable', 'der_thermal_power_cost', dict(
+                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.thermal_ders
+                )),
+                ('variable', 'der_thermal_power_cost_sensitivity', dict(
+                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.thermal_ders
+                ), dict(
+                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.thermal_ders
+                )),
+                broadcast='scenario'
             )
 
         # Define objective for electric generators.
@@ -2096,18 +2151,18 @@ class DERModelSet(DERModelSetBase):
         # - Always defined here as the cost of electric power generation at the DER node.
         if len(self.electric_ders) > 0:
             optimization_problem.define_objective(
-                (
-                    'variable',
-                    'der_active_power_marginal_cost',
-                    dict(name='der_active_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                )
+                ('variable', 'der_active_power_marginal_cost', dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                broadcast='scenario'
             )
             optimization_problem.define_objective(
-                (
-                    'variable',
-                    'der_reactive_power_marginal_cost',
-                    dict(name='der_reactive_power_vector', timestep=self.timesteps, der=self.electric_ders)
-                )
+                ('variable', 'der_reactive_power_marginal_cost', dict(
+                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                broadcast='scenario'
             )
 
         # Define objective for thermal generators.
@@ -2115,11 +2170,11 @@ class DERModelSet(DERModelSetBase):
         # - Always defined here as the cost of thermal power generation at the DER node.
         if len(self.thermal_ders) > 0:
             optimization_problem.define_objective(
-                (
-                    'variable',
-                    'der_thermal_power_marginal_cost',
-                    dict(name='der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_ders)
-                )
+                ('variable', 'der_thermal_power_marginal_cost', dict(
+                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.thermal_ders
+                )),
+                broadcast='scenario'
             )
 
     def evaluate_optimization_objective(
@@ -2163,8 +2218,15 @@ class DERModelSet(DERModelSetBase):
 
     def get_optimization_results(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: fledge.utils.OptimizationProblem,
+            scenarios: typing.Union[list, pd.Index] = None
     ) -> DERModelSetOperationResults:
+
+        # If no scenarios given, obtain default value.
+        if scenarios is None:
+            scenarios = [None]
+
+        print()
 
         # Obtain results.
         state_vector = (

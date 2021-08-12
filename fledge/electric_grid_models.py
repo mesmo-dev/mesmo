@@ -4768,6 +4768,7 @@ class LinearElectricGridModelSet(object):
 
         # Instantiate DLMP variables.
         # TODO: Consider delta connections in nodal DLMPs.
+        # TODO: Consider single-phase DLMPs.
         electric_grid_energy_dlmp_node_active_power = (
             pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.electric_grid_model.timesteps, dtype=float)
         )

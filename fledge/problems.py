@@ -4,6 +4,7 @@ import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import typing
 
 import fledge.config
 import fledge.data_interface
@@ -26,7 +27,22 @@ class Results(
     price_data: fledge.data_interface.PriceData
 
 
-class NominalOperationProblem(object):
+class ResultsDict(typing.Dict[str, Results]):
+
+    pass
+
+
+class Problem(fledge.utils.ObjectBase):
+
+    pass
+
+
+class ProblemDict(typing.Dict[str, Problem]):
+
+    pass
+
+
+class NominalOperationProblem(Problem):
     """Nominal operation problem object, consisting of the corresponding electric / thermal grid models,
     reference power flow solutions and DER model set for the given scenario.
 
@@ -257,7 +273,7 @@ class NominalOperationProblem(object):
         return self.results
 
 
-class OptimalOperationProblem(object):
+class OptimalOperationProblem(Problem):
     """Optimal operation problem object, consisting of an optimization problem as well as the corresponding
     electric / thermal grid models, reference power flow solutions, linear grid models and DER model set
     for the given scenario.

@@ -34,7 +34,7 @@ def main():
 
     # Obtain linear electric grid model for nominal power conditions.
     linear_electric_grid_model = (
-        fledge.electric_grid_models.LinearElectricGridModelLocal(
+        fledge.electric_grid_models.LinearElectricGridModelGlobal(
             electric_grid_model,
             power_flow_solution_initial
         )

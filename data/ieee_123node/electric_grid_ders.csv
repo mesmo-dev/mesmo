@@ -1,4 +1,4 @@
-electric_grid_name,der_name,der_type,model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+electric_grid_name,der_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
 ieee_123node,1,fixed_load,mixed_commercial_residential,1,1,0,0,wye,40000,20000
 ieee_123node,2,fixed_load,mixed_commercial_residential,2,0,1,0,wye,20000,10000
 ieee_123node,3,fixed_load,mixed_commercial_residential,4,0,0,1,wye,40000,20000

@@ -2247,10 +2247,9 @@ class DERModelSet(DERModelSetBase):
     ) -> DERModelSetOperationResults:
 
         # If no scenarios given, obtain default value.
+        # TODO: Validate behavior when passing scenarios.
         if scenarios is None:
             scenarios = [None]
-
-        print()
 
         # Obtain results.
         state_vector = (

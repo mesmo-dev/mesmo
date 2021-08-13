@@ -4786,10 +4786,9 @@ class LinearElectricGridModelSet(object):
     ) -> ElectricGridDLMPResults:
 
         # If no scenarios given, obtain default value.
+        # TODO: Validate behavior when passing scenarios.
         if scenarios is None:
             scenarios = [None]
-
-        print()
 
         # Obtain individual duals.
         voltage_magnitude_vector_minimum_dual = (
@@ -5119,10 +5118,9 @@ class LinearElectricGridModelSet(object):
     ) -> ElectricGridOperationResults:
 
         # If no scenarios given, obtain default value.
+        # TODO: Validate behavior when passing scenarios.
         if scenarios is None:
             scenarios = [None]
-
-        print()
 
         # Obtain results.
         der_active_power_vector_per_unit = (

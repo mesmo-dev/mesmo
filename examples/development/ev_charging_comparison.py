@@ -8,36 +8,36 @@ import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse as sp
 
-import fledge
+import mesmo
 
 
 def main():
 
     # Settings.
     scenario_basename = 'singapore_geylang'
-    results_path = fledge.utils.get_results_path(__file__, scenario_basename)
+    results_path = mesmo.utils.get_results_path(__file__, scenario_basename)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.config.config['paths']['additional_data'].append(
+    mesmo.config.config['paths']['additional_data'].append(
         os.path.join(
             os.path.dirname(os.path.normpath(__file__)),
-            '..', '..', '..', 'data_processing', 'singapore_synthetic_grid_to_fledge', 'output'
+            '..', '..', '..', 'data_processing', 'singapore_synthetic_grid_to_mesmo', 'output'
         )
     )
-    fledge.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain problems.
     problem_dict = (
-        fledge.problems.ProblemDict({
-            'Baseline scenario': fledge.problems.NominalOperationProblem(f'{scenario_basename}_no_charging'),
-            '25% EVs (uncontrolled)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
-            '75% EVs (uncontrolled)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
-            '100% EVs (uncontrolled)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '25% EVs (smart charging)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
-            '75% EVs (smart charging)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
-            '100% EVs (smart charging)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '100% EVs (peak shaving)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '100% EVs (price based)': fledge.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
+        mesmo.problems.ProblemDict({
+            'Baseline scenario': mesmo.problems.NominalOperationProblem(f'{scenario_basename}_no_charging'),
+            '25% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
+            '75% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
+            '100% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
+            '25% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
+            '75% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
+            '100% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
+            '100% EVs (peak shaving)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
+            '100% EVs (price based)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
         })
     )
 
@@ -85,7 +85,7 @@ def main():
                 ('variable', -1e9, dict(name='der_peak_power'))
             )
         elif key in ['100% EVs (price based)']:
-            price_data = fledge.data_interface.PriceData(
+            price_data = mesmo.data_interface.PriceData(
                 f'{scenario_basename}_100percent',
                 price_type='singapore_wholesale'
             )
@@ -104,7 +104,7 @@ def main():
 
     # Obtain results.
     results_dict = (
-        fledge.problems.ResultsDict({
+        mesmo.problems.ResultsDict({
             label: problem.get_results()
             for label, problem in problem_dict.items()
         })
@@ -178,26 +178,26 @@ def main():
     # Make plots.
     for results_label, results_set in results_sets.items():
         if len(results_set) > 0:
-            fledge.plots.plot_histogram_cumulative_branch_utilization(
+            mesmo.plots.plot_histogram_cumulative_branch_utilization(
                 results_set,
                 results_path,
                 filename_suffix=results_label,
                 branch_type='transformer',
                 vertical_line=0.9
             )
-            fledge.plots.plot_histogram_cumulative_branch_utilization(
+            mesmo.plots.plot_histogram_cumulative_branch_utilization(
                 results_set,
                 results_path,
                 filename_suffix=results_label,
                 branch_type='line',
                 vertical_line=0.9
             )
-            fledge.plots.plot_histogram_node_utilization(
+            mesmo.plots.plot_histogram_node_utilization(
                 results_set,
                 results_path,
                 filename_suffix=results_label,
             )
-            fledge.plots.plot_aggregate_timeseries_der_power(
+            mesmo.plots.plot_aggregate_timeseries_der_power(
                 results_set,
                 results_path,
                 filename_suffix=results_label,
@@ -234,7 +234,7 @@ def main():
     #                 legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     #             )
     #             # figure.show()
-    #             fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'output_{der_name}_{output}'))
+    #             mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'output_{der_name}_{output}'))
     #         for disturbance in der_model.disturbances:
     #             figure = go.Figure()
     #             figure.add_trace(go.Scatter(
@@ -248,10 +248,10 @@ def main():
     #                 showlegend=False
     #             )
     #             # figure.show()
-    #             fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'disturbance_{der_name}_{disturbance}'))
+    #             mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'disturbance_{der_name}_{disturbance}'))
 
     # Print results path.
-    fledge.utils.launch(results_path)
+    mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

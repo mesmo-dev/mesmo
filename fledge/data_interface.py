@@ -11,18 +11,18 @@ import sqlite3
 import typing
 
 import cobmo.data_interface
-import fledge.config
+import mesmo.config
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 def recreate_database(
-        additional_data_paths: typing.List[str] = fledge.config.config['paths']['additional_data']
+        additional_data_paths: typing.List[str] = mesmo.config.config['paths']['additional_data']
 ) -> None:
     """Recreate SQLITE database from SQL schema file and CSV files in the data path / additional data paths."""
 
     # Connect SQLITE database (creates file, if none).
-    database_connection = sqlite3.connect(fledge.config.config['paths']['database'])
+    database_connection = sqlite3.connect(mesmo.config.config['paths']['database'])
     cursor = database_connection.cursor()
 
     # Remove old data, if any.
@@ -36,16 +36,16 @@ def recreate_database(
     )
 
     # Recreate SQLITE database schema from SQL schema file.
-    with open(os.path.join(fledge.config.base_path, 'fledge', 'data_schema.sql'), 'r') as database_schema_file:
+    with open(os.path.join(mesmo.config.base_path, 'mesmo', 'data_schema.sql'), 'r') as database_schema_file:
         cursor.executescript(database_schema_file.read())
     database_connection.commit()
 
     # Import CSV files into SQLITE database.
     # - Import only from data path, if no additional data paths are specified.
     data_paths = (
-        [fledge.config.config['paths']['data']] + additional_data_paths
+        [mesmo.config.config['paths']['data']] + additional_data_paths
         if additional_data_paths is not None
-        else [fledge.config.config['paths']['data']]
+        else [mesmo.config.config['paths']['data']]
     )
     cobmo_data_paths = []
     valid_table_names = (
@@ -67,7 +67,7 @@ def recreate_database(
             # Ignore CSV files from folders defined in config parameter 'ignore_data_folders'.
             elif any(
                     os.path.join('', folder, '') in csv_file
-                    for folder in fledge.config.config['paths']['ignore_data_folders']
+                    for folder in mesmo.config.config['paths']['ignore_data_folders']
             ):
 
                 pass
@@ -100,12 +100,12 @@ def recreate_database(
     cursor.close()
     database_connection.close()
 
-    # Recreate CoBMo database to include FLEDGE's CoBMo definitions.
+    # Recreate CoBMo database to include MESMO's CoBMo definitions.
     # TODO: Modify CoBMo config instead.
     cobmo.data_interface.recreate_database(
         additional_data_paths=[
             *cobmo_data_paths,
-            *fledge.config.config['paths']['cobmo_additional_data']
+            *mesmo.config.config['paths']['cobmo_additional_data']
         ]
     )
 
@@ -114,12 +114,12 @@ def connect_database() -> sqlite3.Connection:
     """Connect to the database and return connection handle."""
 
     # Recreate database, if no database exists.
-    if not os.path.isfile(fledge.config.config['paths']['database']):
-        logger.debug(f"Database does not exist and is recreated at: {fledge.config.config['paths']['database']}")
+    if not os.path.isfile(mesmo.config.config['paths']['database']):
+        logger.debug(f"Database does not exist and is recreated at: {mesmo.config.config['paths']['database']}")
         recreate_database()
 
     # Obtain connection handle.
-    database_connection = sqlite3.connect(fledge.config.config['paths']['database'])
+    database_connection = sqlite3.connect(mesmo.config.config['paths']['database'])
     return database_connection
 
 
@@ -613,12 +613,12 @@ class DERData(object):
 
         # Load DER definitions, for timeseries / schedule definitions, for each `definition_name`.
         if len(self.der_definitions) > 0:
-            fledge.utils.log_time('load DER timeseries / schedule definitions')
+            mesmo.utils.log_time('load DER timeseries / schedule definitions')
             der_definitions = (
-                fledge.utils.starmap(
+                mesmo.utils.starmap(
                     self.load_der_timeseries_schedules,
                     zip(
-                        fledge.utils.chunk_dict(self.der_definitions)
+                        mesmo.utils.chunk_dict(self.der_definitions)
                     ),
                     dict(
                         timestep_frequency=timestep_frequency,
@@ -628,7 +628,7 @@ class DERData(object):
             )
             for chunk in der_definitions:
                 self.der_definitions.update(chunk)
-            fledge.utils.log_time('load DER timeseries / schedule definitions')
+            mesmo.utils.log_time('load DER timeseries / schedule definitions')
 
     @staticmethod
     def load_der_timeseries_schedules(

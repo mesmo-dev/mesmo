@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge
+import mesmo
 
 
 def main():
@@ -15,41 +15,41 @@ def main():
     # TODO: Currently not working. Review limits below.
 
     # Settings.
-    scenario_name = fledge.config.config['tests']['scenario_name']
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    scenario_name = mesmo.config.config['tests']['scenario_name']
+    results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-    price_data = fledge.data_interface.PriceData(scenario_name, price_type='singapore_wholesale')
+    scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
+    price_data = mesmo.data_interface.PriceData(scenario_name, price_type='singapore_wholesale')
     price_data.price_sensitivity_coefficient = 1e-6
 
     # Obtain models.
-    electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model_set = (
-        fledge.electric_grid_models.LinearElectricGridModelSet(
+        mesmo.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
             power_flow_solution
         )
     )
-    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate centralized optimization problem.
-    optimization_centralized = fledge.utils.OptimizationProblem()
+    optimization_centralized = mesmo.utils.OptimizationProblem()
 
     # Define electric grid problem.
     # TODO: Review limits.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     # node_voltage_magnitude_vector_minimum[
-    #     fledge.utils.get_index(electric_grid_model.nodes, node_name='4')
+    #     mesmo.utils.get_index(electric_grid_model.nodes, node_name='4')
     # ] *= 0.95 / 0.5
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
     # branch_power_magnitude_vector_maximum[
-    #     fledge.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
+    #     mesmo.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
     # ] *= 1.2 / 10.0
     linear_electric_grid_model_set.define_optimization_problem(
         optimization_centralized,
@@ -66,7 +66,7 @@ def main():
     optimization_centralized.solve()
 
     # Obtain results.
-    results_centralized = fledge.problems.Results()
+    results_centralized = mesmo.problems.Results()
     results_centralized.update(linear_electric_grid_model_set.get_optimization_results(optimization_centralized))
     results_centralized.update(der_model_set.get_optimization_results(optimization_centralized))
 
@@ -91,7 +91,7 @@ def main():
     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
 
     # Instantiate decentralized DER optimization problem.
-    optimization_decentralized = fledge.utils.OptimizationProblem()
+    optimization_decentralized = mesmo.utils.OptimizationProblem()
 
     # Define DER problem.
     der_model_set.define_optimization_problem(optimization_decentralized, price_data_dlmps)
@@ -153,7 +153,7 @@ def main():
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.5, yanchor='auto')
     )
     # figure.show()
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
     # Plot: Active power comparison.
     active_power_centralized = (
@@ -192,10 +192,10 @@ def main():
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
     # figure.show()
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
     # Print results path.
-    fledge.utils.launch(results_path)
+    mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

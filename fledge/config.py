@@ -15,13 +15,13 @@ import yaml
 def get_config() -> dict:
     """Load the configuration dictionary.
 
-    - Default configuration is obtained from `./fledge/config_default.yml`.
+    - Default configuration is obtained from `./mesmo/config_default.yml`.
     - Custom configuration is obtained from `./config.yml` and overwrites the respective default configuration.
     - `./` denotes the repository base directory.
     """
 
     # Load default configuration values.
-    with open(os.path.join(base_path, 'fledge', 'config_default.yml'), 'r') as file:
+    with open(os.path.join(base_path, 'mesmo', 'config_default.yml'), 'r') as file:
         default_config = yaml.safe_load(file)
 
     # Create local `config.yml` for custom configuration in base directory, if not existing.
@@ -30,8 +30,8 @@ def get_config() -> dict:
         with open(os.path.join(base_path, 'config.yml'), 'w') as file:
             file.write(
                 "# Local configuration parameters.\n"
-                "# - Configuration parameters and their defaults are defined in `fledge/config_default.yml`\n"
-                "# - Copy from `fledge/config_default.yml` and modify parameters here to set the local configuration.\n"
+                "# - Configuration parameters and their defaults are defined in `mesmo/config_default.yml`\n"
+                "# - Copy from `mesmo/config_default.yml` and modify parameters here to set the local configuration.\n"
                 "paths:\n"
                 "  additional_data: []\n"
             )
@@ -141,7 +141,7 @@ water_kinematic_viscosity = 1.3504e-6  # [m^2/s]
 gravitational_acceleration = 9.81  # [m^2/s]
 
 # Instantiate multiprocessing / parallel computing pool.
-# - Pool is instantiated as None and only created on first use in `fledge.utils.starmap`.
+# - Pool is instantiated as None and only created on first use in `mesmo.utils.starmap`.
 parallel_pool = None
 
 # Instantiate / reload cache.

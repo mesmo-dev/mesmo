@@ -11,12 +11,12 @@ import scipy.sparse as sp
 import sys
 import typing
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.utils
+import mesmo.config
+import mesmo.data_interface
+import mesmo.electric_grid_models
+import mesmo.utils
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 class DERModel(object):
@@ -41,7 +41,7 @@ class DERModel(object):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             is_standalone=False
     ):
@@ -155,7 +155,7 @@ class DERModel(object):
         self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
 
 
-class DERModelOperationResults(fledge.utils.ResultsBase):
+class DERModelOperationResults(mesmo.utils.ResultsBase):
 
     der_model: DERModel
     state_vector: pd.DataFrame
@@ -174,7 +174,7 @@ class FixedLoadModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -197,7 +197,7 @@ class FixedEVChargerModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -221,7 +221,7 @@ class FixedGeneratorModel(FixedDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -269,7 +269,7 @@ class FlexibleLoadModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -467,7 +467,7 @@ class FlexibleEVChargerModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -652,7 +652,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -797,7 +797,7 @@ class StorageModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -936,7 +936,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -950,7 +950,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Obtain CoBMo building model.
         flexible_building_model = (
-            fledge.utils.get_building_model(
+            mesmo.utils.get_building_model(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
@@ -1030,7 +1030,7 @@ class CoolingPlantModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -1202,7 +1202,7 @@ class HeatPumpModel(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -1327,7 +1327,7 @@ class FlexibleCHP(FlexibleDERModel):
 
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str,
             **kwargs
     ):
@@ -1450,7 +1450,7 @@ class DERModelSetBase:
     der_thermal_power_vector_reference: np.array
 
 
-class DERModelSetOperationResults(fledge.electric_grid_models.ElectricGridDEROperationResults):
+class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
 
     der_model_set: DERModelSetBase
     state_vector: pd.DataFrame
@@ -1472,7 +1472,7 @@ class DERModelSet(DERModelSetBase):
     ):
 
         # Obtain data.
-        der_data = fledge.data_interface.DERData(scenario_name)
+        der_data = mesmo.data_interface.DERData(scenario_name)
 
         self.__init__(
             der_data,
@@ -1482,7 +1482,7 @@ class DERModelSet(DERModelSetBase):
     @multimethod
     def __init__(
             self,
-            der_data: fledge.data_interface.DERData,
+            der_data: mesmo.data_interface.DERData,
             der_name: str = None
     ):
 
@@ -1507,12 +1507,12 @@ class DERModelSet(DERModelSetBase):
         self.der_names = ders.index
 
         # Obtain DER models.
-        fledge.utils.log_time("DER model setup")
+        mesmo.utils.log_time("DER model setup")
         der_models = (
-            fledge.utils.starmap(
+            mesmo.utils.starmap(
                 make_der_models,
                 zip(
-                    fledge.utils.chunk_list(self.der_names.to_list())
+                    mesmo.utils.chunk_list(self.der_names.to_list())
                 ),
                 dict(
                     der_data=der_data
@@ -1522,7 +1522,7 @@ class DERModelSet(DERModelSetBase):
         self.der_models = dict()
         for chunk in der_models:
             self.der_models.update(chunk)
-        fledge.utils.log_time("DER model setup")
+        mesmo.utils.log_time("DER model setup")
 
         # Obtain fixed / flexible DER name / models.
         self.fixed_der_names = list()
@@ -1608,8 +1608,8 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_problem(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -1621,7 +1621,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_variables(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -1666,8 +1666,8 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_parameters(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -1883,7 +1883,7 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_cost',
                 np.array([(
                     (
-                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
                             price_data.price_timeseries.columns,
                             commodity_type='active_power',
                             der_name=self.electric_ders.get_level_values('der_name')
@@ -1906,7 +1906,7 @@ class DERModelSet(DERModelSetBase):
                 'der_reactive_power_cost',
                 np.array([(
                     (
-                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
                             price_data.price_timeseries.columns,
                             commodity_type='reactive_power',
                             der_name=self.electric_ders.get_level_values('der_name')
@@ -1930,7 +1930,7 @@ class DERModelSet(DERModelSetBase):
                 'der_thermal_power_cost',
                 np.array([(
                     (
-                        price_data.price_timeseries.iloc[:, fledge.utils.get_index(
+                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
                             price_data.price_timeseries.columns,
                             commodity_type='thermal_power',
                             der_name=self.thermal_ders.get_level_values('der_name')
@@ -1984,7 +1984,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -2104,7 +2104,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -2122,7 +2122,7 @@ class DERModelSet(DERModelSetBase):
         # - Defined as cost of electric power supply at the DER node.
         # - Cost for load / demand, revenue for generation / supply.
         # - Only defined here, if not yet defined as cost of electric supply at electric grid source node
-        #   in `fledge.electric_grid_models.LinearElectricGridModelSet.define_optimization_objective`.
+        #   in `mesmo.electric_grid_models.LinearElectricGridModelSet.define_optimization_objective`.
         if (len(self.electric_ders) > 0) and not optimization_problem.flags.get('has_electric_grid_objective'):
             optimization_problem.define_objective(
                 ('variable', 'der_active_power_cost', dict(
@@ -2153,7 +2153,7 @@ class DERModelSet(DERModelSetBase):
         # Define objective for thermal loads.
         # - Defined as cost of thermal power supply at the DER node.
         # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
-        #   in `fledge.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        #   in `mesmo.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
         if (len(self.thermal_ders) > 0) and not optimization_problem.flags.get('has_thermal_grid_objective'):
             optimization_problem.define_objective(
                 ('variable', 'der_thermal_power_cost', dict(
@@ -2204,13 +2204,13 @@ class DERModelSet(DERModelSetBase):
     def evaluate_optimization_objective(
             self,
             results: DERModelSetOperationResults,
-            price_data: fledge.data_interface.PriceData,
+            price_data: mesmo.data_interface.PriceData,
             has_electric_grid_objective: bool = False,
             has_thermal_grid_objective: bool = False
     ) -> float:
 
         # Instantiate optimization problem.
-        optimization_problem = fledge.utils.OptimizationProblem()
+        optimization_problem = mesmo.utils.OptimizationProblem()
         optimization_problem.flags['has_electric_grid_objective'] = has_electric_grid_objective
         optimization_problem.flags['has_thermal_grid_objective'] = has_thermal_grid_objective
         self.define_optimization_variables(optimization_problem)
@@ -2232,7 +2232,7 @@ class DERModelSet(DERModelSetBase):
                 'der_thermal_power_vector_per_unit'
             ])
         for variable_name in objective_variable_names:
-            index = fledge.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
+            index = mesmo.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
             x_vector[index, 0] = results[variable_name].values.ravel()
 
         # Obtain objective value.
@@ -2242,7 +2242,7 @@ class DERModelSet(DERModelSetBase):
 
     def get_optimization_results(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ) -> DERModelSetOperationResults:
 
@@ -2307,11 +2307,11 @@ class DERModelSet(DERModelSetBase):
 
     def pre_solve(
             self,
-            price_data: fledge.data_interface.PriceData
+            price_data: mesmo.data_interface.PriceData
     ) -> DERModelSetOperationResults:
 
         # Instantiate optimization problem.
-        optimization_problem = fledge.utils.OptimizationProblem()
+        optimization_problem = mesmo.utils.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_constraints(optimization_problem)
@@ -2341,7 +2341,7 @@ class DERModelSet(DERModelSetBase):
 
 def make_der_models(
         der_names: typing.List[str],
-        der_data: fledge.data_interface.DERData
+        der_data: mesmo.data_interface.DERData
 ) -> typing.Dict[str, DERModel]:
 
     der_models = dict.fromkeys(der_names)
@@ -2354,7 +2354,7 @@ def make_der_models(
 
 def make_der_model(
         der_name: str,
-        der_data: fledge.data_interface.DERData,
+        der_data: mesmo.data_interface.DERData,
         is_standalone=False
 ) -> DERModel:
     """Factory method for DER models, makes appropriate DER model type for given `der_name`."""

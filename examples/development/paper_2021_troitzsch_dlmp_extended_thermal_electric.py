@@ -7,7 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 
-import fledge
+import mesmo
 
 
 def main(
@@ -54,38 +54,38 @@ def main(
         scenario_name = 'paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5'
 
     # Obtain results path.
-    results_path = fledge.utils.get_results_path(__file__, f'scenario{scenario_number}_{scenario_name}')
+    results_path = mesmo.utils.get_results_path(__file__, f'scenario{scenario_number}_{scenario_name}')
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
+    price_data = mesmo.data_interface.PriceData(scenario_name)
 
     # Obtain models.
-    electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
-    power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
+    power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
     linear_electric_grid_model_set = (
-        fledge.electric_grid_models.LinearElectricGridModelSet(
+        mesmo.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
             power_flow_solution,
-            linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
+            linear_electric_grid_model_method=mesmo.electric_grid_models.LinearElectricGridModelGlobal
         )
     )
-    thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
+    thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
     linear_thermal_grid_model_set = (
-        fledge.thermal_grid_models.LinearThermalGridModelSet(
+        mesmo.thermal_grid_models.LinearThermalGridModelSet(
             thermal_grid_model,
             thermal_power_flow_solution
         )
     )
-    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Modify DER models depending on scenario.
     # Cooling plant.
@@ -101,7 +101,7 @@ def main(
         der_model_set.flexible_der_models['24'].marginal_cost = 0.04
 
     # Instantiate optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
+    optimization_problem = mesmo.utils.OptimizationProblem()
 
     # Define electric grid problem.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
@@ -110,11 +110,11 @@ def main(
     # Modify limits for scenarios.
     if scenario_number in [4, 12, 13, 14, 15]:
         branch_power_magnitude_vector_maximum[
-            fledge.utils.get_index(electric_grid_model.branches, branch_name='4')
+            mesmo.utils.get_index(electric_grid_model.branches, branch_name='4')
         ] *= 8.5 / 100.0
     elif scenario_number in [5]:
         node_voltage_magnitude_vector_minimum[
-            fledge.utils.get_index(electric_grid_model.nodes, node_name='15')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_name='15')
         ] *= 0.9985 / 0.5
     else:
         pass
@@ -137,11 +137,11 @@ def main(
     # Modify limits for scenarios.
     if scenario_number in [2, 8, 9, 15]:
         branch_flow_vector_maximum[
-            fledge.utils.get_index(thermal_grid_model.branches, branch_name='4')
+            mesmo.utils.get_index(thermal_grid_model.branches, branch_name='4')
         ] *= 0.2 / 100.0
     elif scenario_number in [3]:
         node_head_vector_minimum[
-            fledge.utils.get_index(thermal_grid_model.nodes, node_name='15')
+            mesmo.utils.get_index(thermal_grid_model.nodes, node_name='15')
         ] *= 0.2 / 100.0
     else:
         pass
@@ -165,14 +165,14 @@ def main(
     optimization_problem.solve()
 
     # Obtain results.
-    results = fledge.problems.Results()
+    results = mesmo.problems.Results()
     results.update(linear_electric_grid_model_set.get_optimization_results(optimization_problem))
     results.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
     results.update(der_model_set.get_optimization_results(optimization_problem))
     results.save(results_path)
 
     # Obtain DLMPs.
-    dlmps = fledge.problems.Results()
+    dlmps = mesmo.problems.Results()
     dlmps.update(linear_electric_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
     dlmps.update(linear_thermal_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
     dlmps.save(results_path)
@@ -354,8 +354,8 @@ def main(
         plt.close()
 
     # Obtain graphs.
-    electric_grid_graph = fledge.plots.ElectricGridGraph(scenario_name)
-    thermal_grid_graph = fledge.plots.ThermalGridGraph(scenario_name)
+    electric_grid_graph = mesmo.plots.ElectricGridGraph(scenario_name)
+    thermal_grid_graph = mesmo.plots.ThermalGridGraph(scenario_name)
 
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
@@ -379,7 +379,7 @@ def main(
                 pos=thermal_grid_graph.node_positions,
                 nodelist=(
                     thermal_grid_model.nodes[
-                        fledge.utils.get_index(thermal_grid_model.nodes, node_type='source')
+                        mesmo.utils.get_index(thermal_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
                 edgelist=[],
@@ -432,7 +432,7 @@ def main(
                 pos=electric_grid_graph.node_positions,
                 nodelist=(
                     electric_grid_model.nodes[
-                        fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+                        mesmo.utils.get_index(electric_grid_model.nodes, node_type='source')
                     ].get_level_values('node_name')[:1].to_list()
                 ),
                 edgelist=[],
@@ -464,14 +464,14 @@ def main(
             plt.close()
 
     # Plot electric grid line utilization.
-    fledge.plots.plot_grid_line_utilization(
+    mesmo.plots.plot_grid_line_utilization(
         electric_grid_model,
         electric_grid_graph,
         results[f'branch_power_magnitude_vector_1{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
         value_unit='%' if in_per_unit else 'kW',
     )
-    fledge.plots.plot_grid_line_utilization(
+    mesmo.plots.plot_grid_line_utilization(
         thermal_grid_model,
         thermal_grid_graph,
         results[f'branch_flow_vector{results_suffix}'] * (100.0 if in_per_unit else 1.0e-3),
@@ -480,7 +480,7 @@ def main(
     )
 
     # Plot electric grid nodes voltage drop.
-    fledge.plots.plot_grid_node_utilization(
+    mesmo.plots.plot_grid_node_utilization(
         electric_grid_model,
         electric_grid_graph,
         results['node_voltage_magnitude_vector_per_unit'],
@@ -488,7 +488,7 @@ def main(
     )
 
     # Print results path.
-    fledge.utils.launch(results_path)
+    mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

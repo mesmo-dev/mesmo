@@ -10,12 +10,12 @@ import scipy.sparse as sp
 import scipy.sparse.linalg
 import typing
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.utils
+import mesmo.config
+import mesmo.data_interface
+import mesmo.der_models
+import mesmo.utils
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 class ThermalGridModel(object):
@@ -41,7 +41,7 @@ class ThermalGridModel(object):
     ):
 
         # Obtain thermal grid data.
-        thermal_grid_data = fledge.data_interface.ThermalGridData(scenario_name)
+        thermal_grid_data = mesmo.data_interface.ThermalGridData(scenario_name)
 
         # Obtain index set for time steps.
         # - This is needed for optimization problem definitions within linear thermal grid models.
@@ -128,7 +128,7 @@ class ThermalGridModel(object):
         # Obtain DER model source node.
         # TODO: Use state space model for simulation / optimization.
         self.source_der_model = (
-            fledge.der_models.make_der_model(
+            mesmo.der_models.make_der_model(
                 thermal_grid_data.thermal_grid.at['source_der_model_name'],
                 thermal_grid_data.der_data,
                 is_standalone=True
@@ -143,7 +143,7 @@ class ThermalGridModel(object):
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
 
-class ThermalGridDEROperationResults(fledge.utils.ResultsBase):
+class ThermalGridDEROperationResults(mesmo.utils.ResultsBase):
 
     der_thermal_power_vector: pd.DataFrame
     der_thermal_power_vector_per_unit: pd.DataFrame
@@ -159,7 +159,7 @@ class ThermalGridOperationResults(ThermalGridDEROperationResults):
     pump_power: pd.DataFrame
 
 
-class ThermalGridDLMPResults(fledge.utils.ResultsBase):
+class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
 
     thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame
     thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame
@@ -230,7 +230,7 @@ class ThermalPowerFlowSolution(object):
         # Obtain DER / source volume flow vector.
         self.der_flow_vector = (
             self.der_thermal_power_vector
-            / fledge.config.water_density
+            / mesmo.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
         )
         self.source_flow = (
@@ -241,11 +241,11 @@ class ThermalPowerFlowSolution(object):
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
                 thermal_grid_model.branch_node_incidence_matrix[
-                    fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                     :
                 ],
                 thermal_grid_model.der_node_incidence_matrix[
-                    fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                     :
                 ]
                 @ np.transpose([self.der_flow_vector])
@@ -262,7 +262,7 @@ class ThermalPowerFlowSolution(object):
         self.branch_reynold_vector = (
             np.abs(self.branch_velocity_vector)
             * thermal_grid_model.line_diameter_vector
-            / fledge.config.water_kinematic_viscosity
+            / mesmo.config.water_kinematic_viscosity
         )
 
         # Obtain branch friction factor vector.
@@ -315,7 +315,7 @@ class ThermalPowerFlowSolution(object):
             * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
             * 8.0 * thermal_grid_model.line_length_vector
             / (
-                fledge.config.gravitational_acceleration
+                mesmo.config.gravitational_acceleration
                 * thermal_grid_model.line_diameter_vector ** 5
                 * np.pi ** 2
             )
@@ -326,7 +326,7 @@ class ThermalPowerFlowSolution(object):
             scipy.sparse.linalg.spsolve(
                 np.transpose(
                     thermal_grid_model.branch_node_incidence_matrix[
-                        fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
+                        mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                         :
                     ]
                 ),
@@ -337,7 +337,7 @@ class ThermalPowerFlowSolution(object):
             np.max(np.abs(node_head_vector_no_source))
         )
         self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
-        self.node_head_vector[fledge.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
+        self.node_head_vector[mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
             node_head_vector_no_source
         )
 
@@ -348,14 +348,14 @@ class ThermalPowerFlowSolution(object):
                 + thermal_grid_model.energy_transfer_station_head_loss
             )
             * self.source_flow
-            * fledge.config.water_density
-            * fledge.config.gravitational_acceleration
+            * mesmo.config.water_density
+            * mesmo.config.gravitational_acceleration
             / thermal_grid_model.distribution_pump_efficiency
         )
         self.source_thermal_power_cooling_plant = (
             self.source_flow
             * thermal_grid_model.enthalpy_difference_distribution_water
-            * fledge.config.water_density
+            * mesmo.config.water_density
             / thermal_grid_model.plant_efficiency
         )
 
@@ -398,7 +398,7 @@ class ThermalPowerFlowSolutionSet(object):
 
         # Obtain power flow solutions.
         power_flow_solutions = (
-            fledge.utils.starmap(
+            mesmo.utils.starmap(
                 power_flow_solution_method,
                 zip(
                     itertools.repeat(self.thermal_grid_model),
@@ -469,7 +469,7 @@ class LinearThermalGridModel(object):
 
         # Obtain inverse / transpose incidence matrices.
         node_index_no_source = (
-            fledge.utils.get_index(self.thermal_grid_model.nodes, node_type='no_source')  # Define shorthand.
+            mesmo.utils.get_index(self.thermal_grid_model.nodes, node_type='no_source')  # Define shorthand.
         )
         branch_node_incidence_matrix_inverse = (
             sp.dok_matrix(
@@ -509,7 +509,7 @@ class LinearThermalGridModel(object):
         )
         self.sensitivity_branch_flow_by_node_power = (
             branch_node_incidence_matrix_inverse
-            / fledge.config.water_density
+            / mesmo.config.water_density
             / self.thermal_grid_model.enthalpy_difference_distribution_water
         )
         self.sensitivity_branch_flow_by_der_power = (
@@ -523,7 +523,7 @@ class LinearThermalGridModel(object):
                 * thermal_power_flow_solution.branch_friction_factor_vector
                 * 8.0 * self.thermal_grid_model.line_length_vector
                 / (
-                    fledge.config.gravitational_acceleration
+                    mesmo.config.gravitational_acceleration
                     * self.thermal_grid_model.line_diameter_vector ** 5
                     * np.pi ** 2
                 )
@@ -539,14 +539,14 @@ class LinearThermalGridModel(object):
                 (-1.0 * thermal_power_flow_solution.der_flow_vector)
                 @ (-2.0 * der_node_incidence_matrix_transpose)
                 @ self.sensitivity_node_head_by_node_power
-                * fledge.config.water_density
-                * fledge.config.gravitational_acceleration
+                * mesmo.config.water_density
+                * mesmo.config.gravitational_acceleration
                 / self.thermal_grid_model.distribution_pump_efficiency
             )
             + (
                 -1.0
                 * self.thermal_grid_model.energy_transfer_station_head_loss
-                * fledge.config.gravitational_acceleration
+                * mesmo.config.gravitational_acceleration
                 / self.thermal_grid_model.enthalpy_difference_distribution_water
                 / self.thermal_grid_model.distribution_pump_efficiency
             )
@@ -581,7 +581,7 @@ class LinearThermalGridModelSet(object):
 
         # Obtain linear thermal grid models.
         linear_thermal_grid_models = (
-            fledge.utils.starmap(
+            mesmo.utils.starmap(
                 linear_thermal_grid_model_method,
                 zip(
                     itertools.repeat(thermal_grid_model),
@@ -639,8 +639,8 @@ class LinearThermalGridModelSet(object):
 
     def define_optimization_problem(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             **kwargs
     ):
 
@@ -656,7 +656,7 @@ class LinearThermalGridModelSet(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: mesmo.utils.OptimizationProblem
     ):
 
         # Define DER power vector variables.
@@ -679,8 +679,8 @@ class LinearThermalGridModelSet(object):
 
     def define_optimization_parameters(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             node_head_vector_minimum: np.ndarray = None,
             branch_flow_vector_maximum: np.ndarray = None,
     ):
@@ -825,7 +825,7 @@ class LinearThermalGridModelSet(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
     ):
 
         # Define head equation.
@@ -911,7 +911,7 @@ class LinearThermalGridModelSet(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: mesmo.utils.OptimizationProblem
     ):
 
         # Set objective flag.
@@ -920,7 +920,7 @@ class LinearThermalGridModelSet(object):
         # Define objective for thermal loads.
         # - Defined as cost of thermal supply at thermal grid source node.
         # - Only defined here, if not yet defined as cost of thermal power supply at the DER node
-        #   in `fledge.der_models.DERModel.define_optimization_objective`.
+        #   in `mesmo.der_models.DERModel.define_optimization_objective`.
         if not optimization_problem.flags.get('has_der_objective'):
 
             # Thermal power cost / revenue.
@@ -955,11 +955,11 @@ class LinearThermalGridModelSet(object):
     def evaluate_optimization_objective(
             self,
             results: ThermalGridOperationResults,
-            price_data: fledge.data_interface.PriceData
+            price_data: mesmo.data_interface.PriceData
     ) -> float:
 
         # Instantiate optimization problem.
-        optimization_problem = fledge.utils.OptimizationProblem()
+        optimization_problem = mesmo.utils.OptimizationProblem()
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_objective(optimization_problem)
@@ -973,7 +973,7 @@ class LinearThermalGridModelSet(object):
             'pump_power'
         ]
         for variable_name in objective_variable_names:
-            index = fledge.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
+            index = mesmo.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
             x_vector[index, 0] = results[variable_name].values.ravel()
 
         # Obtain objective value.
@@ -983,8 +983,8 @@ class LinearThermalGridModelSet(object):
 
     def get_optimization_dlmps(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData
     ) -> ThermalGridDLMPResults:
 
         # Obtain individual duals.
@@ -1099,7 +1099,7 @@ class LinearThermalGridModelSet(object):
             + thermal_grid_pump_dlmp_der_thermal_power
         )
 
-        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        # Obtain total DLMPs in format similar to `mesmo.data_interface.PriceData.price_timeseries`.
         thermal_grid_total_dlmp_price_timeseries = (
             pd.concat(
                 [
@@ -1136,7 +1136,7 @@ class LinearThermalGridModelSet(object):
 
     def get_optimization_results(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem
+            optimization_problem: mesmo.utils.OptimizationProblem
     ) -> ThermalGridOperationResults:
 
         # Obtain results.

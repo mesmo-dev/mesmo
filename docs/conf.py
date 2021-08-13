@@ -2,7 +2,7 @@
 # - Documentation: <http://www.sphinx-doc.org/en/master/config>
 
 # Project information.
-project = 'FLEDGE'
+project = 'MESMO'
 copyright = '2018-2021, TUMCREATE'
 author = 'TUMCREATE'
 
@@ -66,7 +66,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 # - The theme to use for HTML and HTML Help pages.  See the documentation for
 #   a list of builtin themes.
 html_theme = 'furo'
-html_title = 'FLEDGE'
+html_title = 'MESMO'
 html_favicon = 'assets/favicon.ico'
 templates_path = ['templates']
 html_sidebars = {

@@ -1,11 +1,11 @@
-"""FLEDGE - Flexible Distribution Grid Demonstrator."""
+"""MESMO - Flexible Distribution Grid Demonstrator."""
 
-import fledge.api
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.plots
-import fledge.problems
-import fledge.thermal_grid_models
-import fledge.utils
+import mesmo.api
+import mesmo.config
+import mesmo.data_interface
+import mesmo.der_models
+import mesmo.electric_grid_models
+import mesmo.plots
+import mesmo.problems
+import mesmo.thermal_grid_models
+import mesmo.utils

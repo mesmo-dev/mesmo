@@ -7,34 +7,34 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge
+import mesmo
 
 
 def main():
 
     # Settings.
     scenario_name = 'singapore_tanjongpagar_thermal_only'
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    price_data = mesmo.data_interface.PriceData(scenario_name)
 
     # Obtain models.
-    thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-    thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
+    thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
+    thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model_set = (
-        fledge.thermal_grid_models.LinearThermalGridModelSet(
+        mesmo.thermal_grid_models.LinearThermalGridModelSet(
             thermal_grid_model,
             thermal_power_flow_solution
         )
     )
-    der_model_set = fledge.der_models.DERModelSet(scenario_name)
+    der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
+    optimization_problem = mesmo.utils.OptimizationProblem()
 
     # Define thermal grid problem.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
@@ -53,7 +53,7 @@ def main():
     optimization_problem.solve()
 
     # Obtain results.
-    results = fledge.problems.Results()
+    results = mesmo.problems.Results()
     results.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
     results.update(der_model_set.get_optimization_results(optimization_problem))
 
@@ -73,7 +73,7 @@ def main():
     dlmps.save(results_path)
 
     # Print results path.
-    fledge.utils.launch(results_path)
+    mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 

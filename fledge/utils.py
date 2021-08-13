@@ -23,20 +23,20 @@ import subprocess
 import sys
 
 import cobmo.building_model
-import fledge.config
+import mesmo.config
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 # Instantiate dictionary for execution time logging.
 log_times = dict()
 
 
 class ObjectBase(object):
-    """FLEDGE object base class, which extends the Python object base class.
+    """MESMO object base class, which extends the Python object base class.
 
     - Requires all attributes, i.e. parameters or object variables, to be defined with type declaration at the
       beginning of the class definition. Setting a value to an attribute which has not been defined will raise
-      a warning. This is to ensure consistent definition structure of FLEDGE classes.
+      a warning. This is to ensure consistent definition structure of MESMO classes.
     - String representation of the object is the concatenation of the string representation of all its attributes.
       Thus, printing the object will print all its attributes.
 
@@ -436,7 +436,7 @@ class OptimizationProblem(ObjectBase):
 
                 # Obtain variable integer index & raise error if variable or key does not exist.
                 variable_index = (
-                    tuple(fledge.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
+                    tuple(mesmo.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
                 )
 
                 # Obtain broadcast dimension length for variable.
@@ -665,7 +665,7 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain variable index & raise error if variable or key does not exist.
             variable_index = (
-                tuple(fledge.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
+                tuple(mesmo.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
             )
 
             # Obtain broadcast dimension length for variable.
@@ -731,10 +731,10 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain variable index & raise error if variable or key does not exist.
             variable_1_index = (
-                tuple(fledge.utils.get_index(self.variables, **variable_keys_1, raise_empty_index_error=True))
+                tuple(mesmo.utils.get_index(self.variables, **variable_keys_1, raise_empty_index_error=True))
             )
             variable_2_index = (
-                tuple(fledge.utils.get_index(self.variables, **variable_keys_2, raise_empty_index_error=True))
+                tuple(mesmo.utils.get_index(self.variables, **variable_keys_2, raise_empty_index_error=True))
             )
 
             # Obtain broadcast dimension length for variable.
@@ -1016,28 +1016,28 @@ class OptimizationProblem(ObjectBase):
         # Log time.
         log_time(f'solve optimization problem problem')
         logger.debug(
-            f"Solver name: {fledge.config.config['optimization']['solver_name']};"
-            f" Solver interface: {fledge.config.config['optimization']['solver_interface']};"
+            f"Solver name: {mesmo.config.config['optimization']['solver_name']};"
+            f" Solver interface: {mesmo.config.config['optimization']['solver_interface']};"
             f" Problem statistics: {len(self.variables)} variables, {self.constraints_len} constraints"
         )
 
         # Use CVXPY solver interface, if selected.
-        if fledge.config.config['optimization']['solver_interface'] == 'cvxpy':
+        if mesmo.config.config['optimization']['solver_interface'] == 'cvxpy':
             self.solve_cvxpy(*self.get_cvxpy_problem())
         # Use direct solver interfaces, if selected.
-        elif fledge.config.config['optimization']['solver_interface'] == 'direct':
-            if fledge.config.config['optimization']['solver_name'] == 'gurobi':
+        elif mesmo.config.config['optimization']['solver_interface'] == 'direct':
+            if mesmo.config.config['optimization']['solver_name'] == 'gurobi':
                 self.solve_gurobi(*self.get_gurobi_problem())
             # If no direct solver interface found, fall back to CVXPY interface.
             else:
                 logger.debug(
                     f"No direct solver interface implemented for"
-                    f" '{fledge.config.config['optimization']['solver_name']}'. Falling back to CVXPY."
+                    f" '{mesmo.config.config['optimization']['solver_name']}'. Falling back to CVXPY."
                 )
                 self.solve_cvxpy(*self.get_cvxpy_problem())
         # Raise error, if invalid solver interface selected.
         else:
-            raise ValueError(f"Invalid solver interface: '{fledge.config.config['optimization']['solver_interface']}'")
+            raise ValueError(f"Invalid solver interface: '{mesmo.config.config['optimization']['solver_interface']}'")
 
         # Get results / duals.
         self.results = self.get_results()
@@ -1053,8 +1053,8 @@ class OptimizationProblem(ObjectBase):
         #   and the associated attributes.
         gurobipy_problem = gp.Model()
         # Set solver parameters.
-        gurobipy_problem.setParam('OutputFlag', int(fledge.config.config['optimization']['show_solver_output']))
-        for key, value in fledge.config.solver_parameters.items():
+        gurobipy_problem.setParam('OutputFlag', int(mesmo.config.config['optimization']['show_solver_output']))
+        for key, value in mesmo.config.solver_parameters.items():
             gurobipy_problem.setParam(key, value)
 
         # Define variables.
@@ -1158,12 +1158,12 @@ class OptimizationProblem(ObjectBase):
         # Solve optimization problem.
         cvxpy_problem.solve(
             solver=(
-                fledge.config.config['optimization']['solver_name'].upper()
-                if fledge.config.config['optimization']['solver_name'] is not None
+                mesmo.config.config['optimization']['solver_name'].upper()
+                if mesmo.config.config['optimization']['solver_name'] is not None
                 else None
             ),
-            verbose=fledge.config.config['optimization']['show_solver_output'],
-            **fledge.config.solver_parameters
+            verbose=mesmo.config.config['optimization']['show_solver_output'],
+            **mesmo.config.solver_parameters
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
@@ -1199,7 +1199,7 @@ class OptimizationProblem(ObjectBase):
 
             # Get variable dimensions.
             variable_dimensions = (
-                self.variables.iloc[fledge.utils.get_index(self.variables, name=name), :]
+                self.variables.iloc[mesmo.utils.get_index(self.variables, name=name), :]
                 .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
             )
 
@@ -1208,7 +1208,7 @@ class OptimizationProblem(ObjectBase):
                 # Get results from x vector as pandas series.
                 results[name] = (
                     pd.Series(
-                        x_vector[fledge.utils.get_index(self.variables, name=name), 0],
+                        x_vector[mesmo.utils.get_index(self.variables, name=name), 0],
                         index=pd.MultiIndex.from_frame(variable_dimensions)
                     )
                 )
@@ -1226,7 +1226,7 @@ class OptimizationProblem(ObjectBase):
             else:
 
                 # Scalar values are obtained as float.
-                results[name] = float(x_vector[fledge.utils.get_index(self.variables, name=name), 0])
+                results[name] = float(x_vector[mesmo.utils.get_index(self.variables, name=name), 0])
 
         # Log time.
         log_time('get optimization problem results')
@@ -1251,7 +1251,7 @@ class OptimizationProblem(ObjectBase):
             # TODO: Check if this works for scalar constraints without timesteps.
             constraint_dimensions = (
                 pd.MultiIndex.from_frame(
-                    self.constraints.iloc[fledge.utils.get_index(self.constraints, name=name), :]
+                    self.constraints.iloc[mesmo.utils.get_index(self.constraints, name=name), :]
                     .drop(['name', 'constraint_type'], axis=1).drop_duplicates().dropna(axis=1)
                 )
             )
@@ -1265,10 +1265,10 @@ class OptimizationProblem(ObjectBase):
                     pd.Series(
                         0.0
                         - dual_vector[self.constraints.index[
-                            fledge.utils.get_index(self.constraints, name=name, constraint_type='==>=')
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='==>=')
                         ], 0]
                         - dual_vector[self.constraints.index[
-                            fledge.utils.get_index(self.constraints, name=name, constraint_type='==<=')
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='==<=')
                         ], 0],
                         index=constraint_dimensions
                     )
@@ -1278,7 +1278,7 @@ class OptimizationProblem(ObjectBase):
                     pd.Series(
                         0.0
                         - dual_vector[self.constraints.index[
-                            fledge.utils.get_index(self.constraints, name=name, constraint_type='>=')
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='>=')
                         ], 0],
                         index=constraint_dimensions
                     )
@@ -1288,7 +1288,7 @@ class OptimizationProblem(ObjectBase):
                     pd.Series(
                         0.0
                         - dual_vector[self.constraints.index[
-                            fledge.utils.get_index(self.constraints, name=name, constraint_type='<=')
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='<=')
                         ], 0],
                         index=constraint_dimensions
                     )
@@ -1340,14 +1340,14 @@ def starmap(
     else:
         function_partial = function
 
-    if fledge.config.config['multiprocessing']['run_parallel']:
+    if mesmo.config.config['multiprocessing']['run_parallel']:
         # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
-        if fledge.config.parallel_pool is None:
+        if mesmo.config.parallel_pool is None:
             # Setup parallel pool on first execution.
             log_time('parallel pool setup')
-            fledge.config.parallel_pool = fledge.config.get_parallel_pool()
+            mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
             log_time('parallel pool setup')
-        results = fledge.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+        results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
     else:
         # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
         results = list(itertools.starmap(function_partial, argument_sequence))
@@ -1557,10 +1557,10 @@ def get_results_path(
     # Preprocess results path name components, including removing non-alphanumeric characters.
     base_name = re.sub(r'\W-+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
     scenario_name = '' if scenario_name is None else re.sub(r'\W-+', '', scenario_name) + '_'
-    timestamp = fledge.utils.get_timestamp()
+    timestamp = mesmo.utils.get_timestamp()
 
     # Obtain results path.
-    results_path = os.path.join(fledge.config.config['paths']['results'], f'{base_name}{scenario_name}{timestamp}')
+    results_path = os.path.join(mesmo.config.config['paths']['results'], f'{base_name}{scenario_name}{timestamp}')
 
     # Instantiate results directory.
     # TODO: Catch error if dir exists.
@@ -1591,7 +1591,7 @@ def launch(path):
         subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-@fledge.config.memoize('get_building_model')
+@mesmo.config.memoize('get_building_model')
 def get_building_model(*args, **kwargs):
     """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
 
@@ -1601,7 +1601,7 @@ def get_building_model(*args, **kwargs):
 def write_figure_plotly(
         figure: go.Figure,
         results_path: str,
-        file_format=fledge.config.config['plots']['file_format']
+        file_format=mesmo.config.config['plots']['file_format']
 ):
     """Utility function for writing / storing plotly figure to output file. File format can be given with
     `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.
@@ -1615,8 +1615,8 @@ def write_figure_plotly(
         pio.write_image(
             figure,
             f"{results_path}.{file_format}",
-            width=fledge.config.config['plots']['plotly_figure_width'],
-            height=fledge.config.config['plots']['plotly_figure_height']
+            width=mesmo.config.config['plots']['plotly_figure_width'],
+            height=mesmo.config.config['plots']['plotly_figure_height']
         )
     elif file_format in ['html']:
         pio.write_html(figure, f"{results_path}.{file_format}")

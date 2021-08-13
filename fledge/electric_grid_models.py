@@ -11,11 +11,11 @@ import scipy.sparse as sp
 import scipy.sparse.linalg
 import typing
 
-import fledge.config
-import fledge.data_interface
-import fledge.utils
+import mesmo.config
+import mesmo.data_interface
+import mesmo.utils
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 class ElectricGridModel(object):
@@ -74,7 +74,7 @@ class ElectricGridModel(object):
 
     def __init__(
             self,
-            electric_grid_data: fledge.data_interface.ElectricGridData
+            electric_grid_data: mesmo.data_interface.ElectricGridData
     ):
 
         # Process overhead line type definitions.
@@ -91,7 +91,7 @@ class ElectricGridModel(object):
             pd.Index(
                 np.unique(np.concatenate(
                     electric_grid_data.electric_grid_nodes.apply(
-                        fledge.utils.get_element_phases_array,
+                        mesmo.utils.get_element_phases_array,
                         axis=1
                     ).values
                 ))
@@ -273,12 +273,12 @@ class ElectricGridModel(object):
         # Obtain index sets for lines / transformers corresponding to branches.
         self.lines = (
             self.branches[
-                fledge.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='line')
+                mesmo.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='line')
             ]
         )
         self.transformers = (
             self.branches[
-                fledge.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='transformer')
+                mesmo.utils.get_index(self.branches, raise_empty_index_error=False, branch_type='transformer')
             ]
         )
 
@@ -296,8 +296,8 @@ class ElectricGridModel(object):
         )
         for node_name, node in electric_grid_data.electric_grid_nodes.iterrows():
             # Obtain phases index & node index for positioning the node voltage in the voltage vector.
-            phases_index = fledge.utils.get_element_phases_array(node) - 1
-            node_index = fledge.utils.get_index(self.nodes, node_name=node_name)
+            phases_index = mesmo.utils.get_element_phases_array(node) - 1
+            node_index = mesmo.utils.get_index(self.nodes, node_name=node_name)
 
             # Insert voltage into voltage vector.
             self.node_voltage_vector_reference[node_index] = (
@@ -309,7 +309,7 @@ class ElectricGridModel(object):
         self.branch_power_vector_magnitude_reference = np.zeros(len(self.branches), dtype=float)
         for line_name, line in electric_grid_data.electric_grid_lines.iterrows():
             # Obtain branch index.
-            branch_index = fledge.utils.get_index(self.branches, branch_type='line', branch_name=line_name)
+            branch_index = mesmo.utils.get_index(self.branches, branch_type='line', branch_name=line_name)
 
             # Insert rated power into branch power vector.
             self.branch_power_vector_magnitude_reference[branch_index] = (
@@ -319,7 +319,7 @@ class ElectricGridModel(object):
             )
         for transformer_name, transformer in electric_grid_data.electric_grid_transformers.iterrows():
             # Obtain branch index.
-            branch_index = fledge.utils.get_index(self.branches, branch_type='transformer', branch_name=transformer_name)
+            branch_index = mesmo.utils.get_index(self.branches, branch_type='transformer', branch_name=transformer_name)
 
             # Insert rated power into branch flow vector.
             self.branch_power_vector_magnitude_reference[branch_index] = (
@@ -345,12 +345,12 @@ class ElectricGridModel(object):
 
         # Make modifications for single-phase-equivalent modelling.
         if self.is_single_phase_equivalent:
-            self.branch_power_vector_magnitude_reference[fledge.utils.get_index(self.branches, branch_type='line')] *= 3
+            self.branch_power_vector_magnitude_reference[mesmo.utils.get_index(self.branches, branch_type='line')] *= 3
 
     @staticmethod
     def process_line_types_overhead(
-            electric_grid_data: fledge.data_interface.ElectricGridData
-    ) -> fledge.data_interface.ElectricGridData:
+            electric_grid_data: mesmo.data_interface.ElectricGridData
+    ) -> mesmo.data_interface.ElectricGridData:
         """Process overhead line type definitions in electric grid data object."""
 
         # Process over-head line type definitions.
@@ -581,8 +581,8 @@ class ElectricGridModelDefault(ElectricGridModel):
           The required `electric_grid_data` is obtained from the database.
 
     Arguments:
-        electric_grid_data (fledge.data_interface.ElectricGridData): Electric grid data object.
-        scenario_name (str): FLEDGE scenario name.
+        electric_grid_data (mesmo.data_interface.ElectricGridData): Electric grid data object.
+        scenario_name (str): MESMO scenario name.
 
     Attributes:
         phases (pd.Index): Index set of the phases.
@@ -634,7 +634,7 @@ class ElectricGridModelDefault(ElectricGridModel):
     ):
 
         # Obtain electric grid data.
-        electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+        electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
 
         # Instantiate electric grid model object.
         self.__init__(
@@ -644,7 +644,7 @@ class ElectricGridModelDefault(ElectricGridModel):
     @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.data_interface.ElectricGridData,
+            electric_grid_data: mesmo.data_interface.ElectricGridData,
     ):
 
         # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
@@ -680,7 +680,7 @@ class ElectricGridModelDefault(ElectricGridModel):
         # Add lines to admittance, transformation and incidence matrices.
         for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
             # Obtain phases vector.
-            phases_vector = fledge.utils.get_element_phases_array(line)
+            phases_vector = mesmo.utils.get_element_phases_array(line)
 
             # Obtain line resistance / reactance / capacitance matrix entries for the line.
             matrices_index = (
@@ -750,21 +750,21 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Obtain indexes for positioning the line element matrices
             # in the full admittance matrices.
             node_index_1 = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=line['node_1_name'],
                     phase=phases_vector
                 )
             )
             node_index_2 = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=line['node_2_name'],
                     phase=phases_vector
                 )
             )
             branch_index = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.branches,
                     branch_type='line',
                     branch_name=line['line_name']
@@ -942,7 +942,7 @@ class ElectricGridModelDefault(ElectricGridModel):
                 raise ValueError(f"Unknown transformer type: {transformer.at['connection']}")
 
             # Obtain phases vector.
-            phases_vector = fledge.utils.get_element_phases_array(transformer)
+            phases_vector = mesmo.utils.get_element_phases_array(transformer)
 
             # Obtain element admittance matrices for correct phases.
             admittance_matrix_11 = (
@@ -961,21 +961,21 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Obtain indexes for positioning the transformer element
             # matrices in the full matrices.
             node_index_1 = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=transformer.at['node_1_name'],
                     phase=phases_vector
                 )
             )
             node_index_2 = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=transformer.at['node_2_name'],
                     phase=phases_vector
                 )
             )
             branch_index = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.branches,
                     branch_type='transformer',
                     branch_name=transformer['transformer_name']
@@ -1013,14 +1013,14 @@ class ElectricGridModelDefault(ElectricGridModel):
         )
         for node_name, node in electric_grid_data.electric_grid_nodes.iterrows():
             # Obtain node phases index.
-            phases_index = fledge.utils.get_element_phases_array(node) - 1
+            phases_index = mesmo.utils.get_element_phases_array(node) - 1
 
             # Construct node transformation matrix.
             transformation_matrix = transformation_entries[np.ix_(phases_index, phases_index)]
 
             # Obtain index for positioning node transformation matrix in full transformation matrix.
             node_index = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=node['node_name']
                 )
@@ -1036,14 +1036,14 @@ class ElectricGridModelDefault(ElectricGridModel):
 
             # Obtain indexes for positioning the DER in the incidence matrix.
             node_index = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.nodes,
                     node_name=der['node_name'],
-                    phase=fledge.utils.get_element_phases_array(der)
+                    phase=mesmo.utils.get_element_phases_array(der)
                 )
             )
             der_index = (
-                fledge.utils.get_index(
+                mesmo.utils.get_index(
                     self.ders,
                     der_name=der['der_name']
                 )
@@ -1061,7 +1061,7 @@ class ElectricGridModelDefault(ElectricGridModel):
 
             elif connection == "delta":
                 # Obtain phases of the delta der.
-                phases_list = fledge.utils.get_element_phases_array(der).tolist()
+                phases_list = mesmo.utils.get_element_phases_array(der).tolist()
 
                 # Select connection node based on phase arrangement of delta der.
                 # TODO: Why no multi-phase delta DERs?
@@ -1104,26 +1104,26 @@ class ElectricGridModelDefault(ElectricGridModel):
         # TODO: Replace local variables in power flow / linear models.
         self.node_admittance_matrix_no_source = (
             self.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(self.nodes, node_type='no_source'),
-                fledge.utils.get_index(self.nodes, node_type='no_source')
+                mesmo.utils.get_index(self.nodes, node_type='no_source'),
+                mesmo.utils.get_index(self.nodes, node_type='no_source')
             )]
         )
         self.node_admittance_matrix_source_to_no_source = (
             self.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(self.nodes, node_type='no_source'),
-                fledge.utils.get_index(self.nodes, node_type='source')
+                mesmo.utils.get_index(self.nodes, node_type='no_source'),
+                mesmo.utils.get_index(self.nodes, node_type='source')
             )]
         )
         self.node_transformation_matrix_no_source = (
             self.node_transformation_matrix[np.ix_(
-                fledge.utils.get_index(self.nodes, node_type='no_source'),
-                fledge.utils.get_index(self.nodes, node_type='no_source')
+                mesmo.utils.get_index(self.nodes, node_type='no_source'),
+                mesmo.utils.get_index(self.nodes, node_type='no_source')
             )]
         )
         self.der_incidence_wye_matrix_no_source = (
             self.der_incidence_wye_matrix[
                 np.ix_(
-                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    mesmo.utils.get_index(self.nodes, node_type='no_source'),
                     range(len(self.ders))
                 )
             ]
@@ -1131,19 +1131,19 @@ class ElectricGridModelDefault(ElectricGridModel):
         self.der_incidence_delta_matrix_no_source = (
             self.der_incidence_delta_matrix[
                 np.ix_(
-                    fledge.utils.get_index(self.nodes, node_type='no_source'),
+                    mesmo.utils.get_index(self.nodes, node_type='no_source'),
                     range(len(self.ders))
                 )
             ]
         )
         self.node_voltage_vector_reference_no_source = (
             self.node_voltage_vector_reference[
-                fledge.utils.get_index(self.nodes, node_type='no_source')
+                mesmo.utils.get_index(self.nodes, node_type='no_source')
             ]
         )
         self.node_voltage_vector_reference_source = (
             self.node_voltage_vector_reference[
-                fledge.utils.get_index(self.nodes, node_type='source')
+                mesmo.utils.get_index(self.nodes, node_type='source')
             ]
         )
 
@@ -1178,8 +1178,8 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
           The required `electric_grid_data` is obtained from the database.
 
     Parameters:
-        scenario_name (str): FLEDGE scenario name.
-        electric_grid_data (fledge.data_interface.ElectricGridData): Electric grid data object.
+        scenario_name (str): MESMO scenario name.
+        electric_grid_data (mesmo.data_interface.ElectricGridData): Electric grid data object.
 
     Attributes:
         phases (pd.Index): Index set of the phases.
@@ -1206,12 +1206,12 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
             as single-phase-equivalent of three-phase balanced system.
         circuit_name (str): Circuit name, stored for validation that the correct OpenDSS model is being accessed.
-        electric_grid_data: (fledge.data_interface.ElectricGridData): Electric grid data object, stored for
+        electric_grid_data: (mesmo.data_interface.ElectricGridData): Electric grid data object, stored for
             possible reinitialization of the OpenDSS model.
     """
 
     circuit_name: str
-    electric_grid_data: fledge.data_interface.ElectricGridData
+    electric_grid_data: mesmo.data_interface.ElectricGridData
 
     @multimethod
     def __init__(
@@ -1221,7 +1221,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
         # Obtain electric grid data.
         electric_grid_data = (
-            fledge.data_interface.ElectricGridData(scenario_name)
+            mesmo.data_interface.ElectricGridData(scenario_name)
         )
 
         self.__init__(
@@ -1231,7 +1231,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
     @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.data_interface.ElectricGridData
+            electric_grid_data: mesmo.data_interface.ElectricGridData
     ):
 
         # TODO: Add reset method to ensure correct circuit model is set in OpenDSS when handling multiple models.
@@ -1336,15 +1336,15 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # Define lines.
         for line_index, line in electric_grid_data.electric_grid_lines.iterrows():
             # Obtain number of phases for the line.
-            n_phases = len(fledge.utils.get_element_phases_array(line))
+            n_phases = len(mesmo.utils.get_element_phases_array(line))
 
             # Add line name, phases, node connections, line type and length
             # to OpenDSS command string.
             opendss_command_string = (
                 f"new line.{line['line_name']}"
                 + f" phases={n_phases}"
-                + f" bus1={line['node_1_name']}{fledge.utils.get_element_phases_string(line)}"
-                + f" bus2={line['node_2_name']}{fledge.utils.get_element_phases_string(line)}"
+                + f" bus1={line['node_1_name']}{mesmo.utils.get_element_phases_string(line)}"
+                + f" bus2={line['node_2_name']}{mesmo.utils.get_element_phases_string(line)}"
                 + f" linecode={line['line_type']}"
                 + f" length={line['length']}"
             )
@@ -1356,7 +1356,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # Define transformers.
         for transformer_index, transformer in electric_grid_data.electric_grid_transformers.iterrows():
             # Obtain number of phases.
-            n_phases = len(fledge.utils.get_element_phases_array(transformer))
+            n_phases = len(mesmo.utils.get_element_phases_array(transformer))
 
             # Add transformer name, number of phases / windings and reactances to OpenDSS command string.
             opendss_command_string = (
@@ -1376,12 +1376,12 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
                 connection = transformer.at['connection'].split('-')[winding - 1]
                 if connection == "wye":
                     node_phases_string = (
-                        fledge.utils.get_element_phases_string(transformer)
+                        mesmo.utils.get_element_phases_string(transformer)
                         + ".0"  # Enforce wye-grounded connection.
                     )
                 elif connection == "delta":
                     node_phases_string = (
-                        fledge.utils.get_element_phases_string(transformer)
+                        mesmo.utils.get_element_phases_string(transformer)
                     )
                 else:
                     raise ValueError(f"Unknown transformer connection type: {connection}")
@@ -1409,7 +1409,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         # TODO: At the moment, all DERs are modelled as loads in OpenDSS.
         for der_index, der in electric_grid_data.electric_grid_ders.iterrows():
             # Obtain number of phases for the DER.
-            n_phases = len(fledge.utils.get_element_phases_array(der))
+            n_phases = len(mesmo.utils.get_element_phases_array(der))
 
             # Obtain nominal voltage level for the DER.
             voltage = electric_grid_data.electric_grid_nodes.at[der['node_name'], 'voltage']
@@ -1431,7 +1431,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
             # Add node connection, model type, voltage, nominal power to OpenDSS command string.
             opendss_command_string = (
                 f"new load.{der['der_name']}"
-                + f" bus1={der['node_name']}{ground_phase_string}{fledge.utils.get_element_phases_string(der)}"
+                + f" bus1={der['node_name']}{ground_phase_string}{mesmo.utils.get_element_phases_string(der)}"
                 + f" phases={n_phases}"
                 + f" conn={der['connection']}"
                 # All loads are modelled as constant P/Q according to:
@@ -1475,7 +1475,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         opendssdirect.run_command(opendss_command_string)
 
 
-class ElectricGridDEROperationResults(fledge.utils.ResultsBase):
+class ElectricGridDEROperationResults(mesmo.utils.ResultsBase):
 
     der_active_power_vector: pd.DataFrame
     der_active_power_vector_per_unit: pd.DataFrame
@@ -1496,7 +1496,7 @@ class ElectricGridOperationResults(ElectricGridDEROperationResults):
     loss_reactive: pd.DataFrame
 
 
-class ElectricGridDLMPResults(fledge.utils.ResultsBase):
+class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
 
     electric_grid_energy_dlmp_node_active_power: pd.DataFrame
     electric_grid_voltage_dlmp_node_active_power: pd.DataFrame
@@ -1981,10 +1981,10 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
         # Get full voltage vector.
         node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=complex)
-        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
+        node_voltage_vector[mesmo.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
             electric_grid_model.node_voltage_vector_reference_source
         )
-        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
+        node_voltage_vector[mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
             node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
         )
 
@@ -2113,8 +2113,8 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
         )
         node_admittance_matrix_source_to_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='source')
             )]
         )
         node_voltage_vector_initial_no_source = (
@@ -2185,10 +2185,10 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
 
         # Get full voltage vector.
         node_voltage_vector = np.zeros(len(electric_grid_model.nodes), dtype=complex)
-        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
+        node_voltage_vector[mesmo.utils.get_index(electric_grid_model.nodes, node_type='source')] += (
             electric_grid_model.node_voltage_vector_reference_source
         )
-        node_voltage_vector[fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
+        node_voltage_vector[mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')] += (
             node_voltage_vector_initial_no_source  # Takes value of `node_voltage_vector_estimate_no_source`.
         )
 
@@ -2292,7 +2292,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         opendss_nodes.loc[:, 'phase'] = opendss_nodes.loc[:, 'phase'].astype(int)
         opendss_nodes = pd.MultiIndex.from_frame(opendss_nodes)
 
-        # Extract nodal voltage vector and reindex to match FLEDGE nodes order.
+        # Extract nodal voltage vector and reindex to match MESMO nodes order.
         node_voltage_vector_solution = (
             pd.Series(
                 (
@@ -2436,7 +2436,7 @@ class PowerFlowSolutionSet(object):
 
         # Obtain power flow solutions.
         power_flow_solutions = (
-            fledge.utils.starmap(
+            mesmo.utils.starmap(
                 power_flow_solution_method,
                 zip(
                     itertools.repeat(self.electric_grid_model),
@@ -2696,7 +2696,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
     Parameters:
         electric_grid_model (ElectricGridModelDefault): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Power flow solution object.
-        scenario_name (str): FLEDGE scenario name.
+        scenario_name (str): MESMO scenario name.
 
     Attributes:
         electric_grid_model (ElectricGridModelDefault): Electric grid model object.
@@ -2845,19 +2845,19 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         # Obtain shorthands for no-source matrices and vectors.
         electric_grid_model.node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         electric_grid_model.node_transformation_matrix_no_source = (
             electric_grid_model.node_transformation_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         node_voltage_no_source = (
             self.power_flow_solution.node_voltage_vector[
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             ]
         )
 
@@ -2890,8 +2890,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         # Calculate voltage sensitivity matrices.
         # TODO: Document the change in sign in the reactive part compared to Hanif.
         self.sensitivity_voltage_by_power_wye_active[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 electric_grid_model.node_admittance_matrix_no_source.tocsc(),
@@ -2899,8 +2899,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_wye_reactive[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
@@ -2908,8 +2908,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_delta_active[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 electric_grid_model.node_admittance_matrix_no_source.tocsc(),
@@ -2925,8 +2925,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_delta_reactive[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 1.0j * electric_grid_model.node_admittance_matrix_no_source.tocsc(),
@@ -3383,7 +3383,7 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
     Parameters:
         electric_grid_model (ElectricGridModelDefault): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Power flow solution object.
-        scenario_name (str): FLEDGE scenario name.
+        scenario_name (str): MESMO scenario name.
 
     Attributes:
         electric_grid_model (ElectricGridModelDefault): Electric grid model object.
@@ -3531,19 +3531,19 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
         # Obtain shorthands for no-source matrices and vectors.
         electric_grid_model.node_admittance_matrix_no_source = (
             electric_grid_model.node_admittance_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         electric_grid_model.node_transformation_matrix_no_source = (
             electric_grid_model.node_transformation_matrix[np.ix_(
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             )]
         )
         node_voltage_no_source = (
             self.power_flow_solution.node_voltage_vector[
-                fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+                mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
             ]
         )
 
@@ -3602,8 +3602,8 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
         # Calculate voltage sensitivity matrices.
         # - TODO: Consider delta loads.
         self.sensitivity_voltage_by_power_wye_active[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 B_matrix.tocsc(),
@@ -3617,8 +3617,8 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
             )
         )
         self.sensitivity_voltage_by_power_wye_reactive[np.ix_(
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-            fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+            mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         )] = (
             scipy.sparse.linalg.spsolve(
                 B_matrix.tocsc(),
@@ -3632,14 +3632,14 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
             )
         )
         # self.sensitivity_voltage_by_power_delta_active[np.ix_(
-        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        #     mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+        #     mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         # )] = (
         #     ???
         # )
         # self.sensitivity_voltage_by_power_delta_reactive[np.ix_(
-        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
-        #     fledge.utils.get_index(electric_grid_model.nodes, node_type='no_source')
+        #     mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source'),
+        #     mesmo.utils.get_index(electric_grid_model.nodes, node_type='no_source')
         # )] = (
         #     ???
         # )
@@ -4124,7 +4124,7 @@ class LinearElectricGridModelSet(object):
 
         # Obtain linear electric grid models.
         linear_electric_grid_models = (
-            fledge.utils.starmap(
+            mesmo.utils.starmap(
                 linear_electric_grid_model_method,
                 zip(
                     itertools.repeat(electric_grid_model),
@@ -4161,8 +4161,8 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_problem(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None,
             **kwargs
     ):
@@ -4180,7 +4180,7 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_variables(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -4227,8 +4227,8 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_parameters(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None,
@@ -4501,7 +4501,7 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_constraints(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -4684,7 +4684,7 @@ class LinearElectricGridModelSet(object):
 
     def define_optimization_objective(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -4698,7 +4698,7 @@ class LinearElectricGridModelSet(object):
         # Define objective for electric loads.
         # - Defined as cost of electric supply at electric grid source node.
         # - Only defined here, if not yet defined as cost of electric power supply at the DER node
-        #   in `fledge.der_models.DERModel.define_optimization_objective`.
+        #   in `mesmo.der_models.DERModel.define_optimization_objective`.
         if not optimization_problem.flags.get('has_der_objective'):
 
             # Active power cost / revenue.
@@ -4751,11 +4751,11 @@ class LinearElectricGridModelSet(object):
     def evaluate_optimization_objective(
             self,
             results: ElectricGridOperationResults,
-            price_data: fledge.data_interface.PriceData
+            price_data: mesmo.data_interface.PriceData
     ) -> float:
 
         # Instantiate optimization problem.
-        optimization_problem = fledge.utils.OptimizationProblem()
+        optimization_problem = mesmo.utils.OptimizationProblem()
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_objective(optimization_problem)
@@ -4770,7 +4770,7 @@ class LinearElectricGridModelSet(object):
             'loss_active'
         ]
         for variable_name in objective_variable_names:
-            index = fledge.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
+            index = mesmo.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
             x_vector[index, 0] = results[variable_name].values.ravel()
 
         # Obtain objective value.
@@ -4780,8 +4780,8 @@ class LinearElectricGridModelSet(object):
 
     def get_optimization_dlmps(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
-            price_data: fledge.data_interface.PriceData,
+            optimization_problem: mesmo.utils.OptimizationProblem,
+            price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None
     ) -> ElectricGridDLMPResults:
 
@@ -5062,7 +5062,7 @@ class LinearElectricGridModelSet(object):
             + electric_grid_loss_dlmp_der_reactive_power
         )
 
-        # Obtain total DLMPs in format similar to `fledge.data_interface.PriceData.price_timeseries`.
+        # Obtain total DLMPs in format similar to `mesmo.data_interface.PriceData.price_timeseries`.
         electric_grid_total_dlmp_price_timeseries = (
             pd.concat(
                 [
@@ -5113,7 +5113,7 @@ class LinearElectricGridModelSet(object):
 
     def get_optimization_results(
             self,
-            optimization_problem: fledge.utils.OptimizationProblem,
+            optimization_problem: mesmo.utils.OptimizationProblem,
             scenarios: typing.Union[list, pd.Index] = None
     ) -> ElectricGridOperationResults:
 

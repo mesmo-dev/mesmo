@@ -14,17 +14,17 @@ import plotly.graph_objects as go
 import plotly.subplots
 import typing
 
-import fledge.config
-import fledge.data_interface
-import fledge.electric_grid_models
-import fledge.thermal_grid_models
-import fledge.utils
+import mesmo.config
+import mesmo.data_interface
+import mesmo.electric_grid_models
+import mesmo.thermal_grid_models
+import mesmo.utils
 
-if fledge.config.config['plots']['add_basemap']:
+if mesmo.config.config['plots']['add_basemap']:
     # Basemap requires `contextily`, which is an optional dependency, due to needing installation through `conda`.
     import contextily as ctx
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 class ElectricGridGraph(nx.DiGraph):
@@ -42,7 +42,7 @@ class ElectricGridGraph(nx.DiGraph):
     ):
 
         # Obtain electric grid data.
-        electric_grid_data = fledge.data_interface.ElectricGridData(scenario_name)
+        electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
 
         self.__init__(
             electric_grid_data
@@ -51,7 +51,7 @@ class ElectricGridGraph(nx.DiGraph):
     @multimethod
     def __init__(
             self,
-            electric_grid_data: fledge.data_interface.ElectricGridData
+            electric_grid_data: mesmo.data_interface.ElectricGridData
     ):
 
         # Create electric grid graph.
@@ -113,7 +113,7 @@ class ThermalGridGraph(nx.DiGraph):
     ):
 
         # Obtain thermal grid data.
-        thermal_grid_data = fledge.data_interface.ThermalGridData(scenario_name)
+        thermal_grid_data = mesmo.data_interface.ThermalGridData(scenario_name)
 
         self.__init__(
             thermal_grid_data
@@ -122,7 +122,7 @@ class ThermalGridGraph(nx.DiGraph):
     @multimethod
     def __init__(
             self,
-            thermal_grid_data: fledge.data_interface.ThermalGridData
+            thermal_grid_data: mesmo.data_interface.ThermalGridData
     ):
 
         # Create thermal grid graph.
@@ -174,7 +174,7 @@ def create_video(
     images = []
     for label in labels:
         if type(label) is pd.Timestamp:
-            filename = f"{name}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+            filename = f"{name}_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
             images.append(cv2.imread(os.path.join(results_path, filename)))
         if len(images) == 0:
             raise FileNotFoundError(f"No images / frames found for video of '{name}'. Check if given labels are valid timesteps.")
@@ -201,8 +201,8 @@ def create_video(
 @multimethod
 def plot_line_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -221,7 +221,7 @@ def plot_line_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_line_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -248,8 +248,8 @@ def plot_line_utilization(
 @multimethod
 def plot_line_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -286,7 +286,7 @@ def plot_line_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Line utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"line_utilization_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = f"Line utilization"
         filename = "line_utilization.png"
@@ -322,7 +322,7 @@ def wrapper_plot_line_utilization(*args, **kwargs):
 
 @multimethod
 def plot_transformer_utilization(
-        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_model: mesmo.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         value_vector: pd.DataFrame,
         results_path: str,
@@ -337,7 +337,7 @@ def plot_transformer_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_transformer_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -363,7 +363,7 @@ def plot_transformer_utilization(
 
 @multimethod
 def plot_transformer_utilization(
-        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_model: mesmo.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         value_vector: pd.Series,
         results_path: str,
@@ -396,7 +396,7 @@ def plot_transformer_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"transformer_utilization_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = f"Transformer utilization"
         filename = "transformer_utilization.png"
@@ -433,8 +433,8 @@ def wrapper_plot_transformer_utilization(*args, **kwargs):
 @multimethod
 def plot_node_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -453,7 +453,7 @@ def plot_node_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_node_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -480,8 +480,8 @@ def plot_node_utilization(
 @multimethod
 def plot_node_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -529,7 +529,7 @@ def plot_node_utilization(
         value_unit = 'm' if value_unit is None else value_unit
     if label is not None:
         title = f"{title}: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"{filename}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"{filename}_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = f"{title}"
         filename = f"{filename}.png"
@@ -565,8 +565,8 @@ def wrapper_plot_node_utilization(*args, **kwargs):
 @multimethod
 def plot_grid_line_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -585,7 +585,7 @@ def plot_grid_line_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_grid_line_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -612,8 +612,8 @@ def plot_grid_line_utilization(
 @multimethod
 def plot_grid_line_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -646,7 +646,7 @@ def plot_grid_line_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Line utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"grid_line_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"grid_line_utilization_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = "Line utilization"
         filename = "grid_line_utilization.png"
@@ -688,7 +688,7 @@ def plot_grid_line_utilization(
     cb = plt.colorbar(sm, shrink=0.9)
     cb.set_label(f'Utilization [{value_unit}]')
 
-    if fledge.config.config['plots']['add_basemap']:
+    if mesmo.config.config['plots']['add_basemap']:
         # Adjust axis limits, to get a better view of surrounding map.
         xlim = plt.xlim()
         xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
@@ -701,7 +701,7 @@ def plot_grid_line_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=fledge.config.config['plots']['show_basemap_attribution']
+            attribution=mesmo.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.
@@ -717,7 +717,7 @@ def wrapper_plot_grid_line_utilization(*args, **kwargs):
 
 @multimethod
 def plot_grid_transformer_utilization(
-        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_model: mesmo.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         value_vector: pd.DataFrame,
         results_path: str,
@@ -732,7 +732,7 @@ def plot_grid_transformer_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_grid_transformer_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -758,7 +758,7 @@ def plot_grid_transformer_utilization(
 
 @multimethod
 def plot_grid_transformer_utilization(
-        grid_model: fledge.electric_grid_models.ElectricGridModel,
+        grid_model: mesmo.electric_grid_models.ElectricGridModel,
         grid_graph: ElectricGridGraph,
         value_vector: pd.Series,
         results_path: str,
@@ -784,7 +784,7 @@ def plot_grid_transformer_utilization(
     # Obtain plot title / filename.
     if label is not None:
         title = f"Transformer utilization: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"grid_transformer_utilization_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"grid_transformer_utilization_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = "Transformer utilization"
         filename = "grid_transformer_utilization.png"
@@ -822,7 +822,7 @@ def plot_grid_transformer_utilization(
     cb = plt.colorbar(sm, shrink=0.9)
     cb.set_label(f'Utilization [{value_unit}]')
 
-    if fledge.config.config['plots']['add_basemap']:
+    if mesmo.config.config['plots']['add_basemap']:
         # Adjust axis limits, to get a better view of surrounding map.
         xlim = plt.xlim()
         xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
@@ -835,7 +835,7 @@ def plot_grid_transformer_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=fledge.config.config['plots']['show_basemap_attribution']
+            attribution=mesmo.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.
@@ -852,8 +852,8 @@ def wrapper_plot_grid_transformer_utilization(*args, **kwargs):
 @multimethod
 def plot_grid_node_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -872,7 +872,7 @@ def plot_grid_node_utilization(
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
 
     # Create plot for each column in `value_vector`.
-    fledge.utils.starmap(
+    mesmo.utils.starmap(
         wrapper_plot_grid_node_utilization,
         zip(
             itertools.repeat(grid_model),
@@ -899,8 +899,8 @@ def plot_grid_node_utilization(
 @multimethod
 def plot_grid_node_utilization(
         grid_model: typing.Union[
-            fledge.electric_grid_models.ElectricGridModel,
-            fledge.thermal_grid_models.ThermalGridModel
+            mesmo.electric_grid_models.ElectricGridModel,
+            mesmo.thermal_grid_models.ThermalGridModel
         ],
         grid_graph: typing.Union[
             ElectricGridGraph,
@@ -944,7 +944,7 @@ def plot_grid_node_utilization(
         value_unit = 'm' if value_unit is None else value_unit
     if label is not None:
         title = f"{title}: {label.strftime('%H:%M:%S') if type(label) is pd.Timestamp else label}"
-        filename = f"{filename}_{fledge.utils.get_alphanumeric_string(f'{label}')}.png"
+        filename = f"{filename}_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
     else:
         title = f"{title}"
         filename = f"{filename}.png"
@@ -985,7 +985,7 @@ def plot_grid_node_utilization(
     cb = plt.colorbar(sm, shrink=0.9)
     cb.set_label(f'{colorbar_label} [{value_unit}]')
 
-    if fledge.config.config['plots']['add_basemap']:
+    if mesmo.config.config['plots']['add_basemap']:
         # Adjust axis limits, to get a better view of surrounding map.
         xlim = plt.xlim()
         xlim = (xlim[0] - 0.05 * (xlim[1] - xlim[0]), xlim[1] + 0.05 * (xlim[1] - xlim[0]))
@@ -998,7 +998,7 @@ def plot_grid_node_utilization(
             plt.gca(),
             crs='EPSG:4326',  # Use 'EPSG:4326' for latitude / longitude coordinates.
             source=ctx.providers.CartoDB.Positron,
-            attribution=fledge.config.config['plots']['show_basemap_attribution']
+            attribution=mesmo.config.config['plots']['show_basemap_attribution']
         )
 
     # Store / show / close figure.
@@ -1045,7 +1045,7 @@ def plot_total_active_power(
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_line_utilization_histogram(
@@ -1095,7 +1095,7 @@ def plot_line_utilization_histogram(
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_line_utilization_histogram_cumulative(
@@ -1157,7 +1157,7 @@ def plot_line_utilization_histogram_cumulative(
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_transformer_utilization_histogram(
@@ -1212,7 +1212,7 @@ def plot_transformer_utilization_histogram(
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_transformer_utilization_histogram_cumulative(
@@ -1279,11 +1279,11 @@ def plot_transformer_utilization_histogram_cumulative(
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{fledge.config.config['plots']['file_format']}"))
+    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_histogram_cumulative_branch_utilization(
-        results_dict: fledge.problems.ResultsDict,
+        results_dict: mesmo.problems.ResultsDict,
         results_path: str,
         branch_type: str = 'line',
         filename_base: str = 'branch_utilization_',
@@ -1423,11 +1423,11 @@ def plot_histogram_cumulative_branch_utilization(
         yaxis2_title='Cumulative proportion',
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.05, yanchor='auto')
     )
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
 
 def plot_histogram_node_utilization(
-        results_dict: fledge.problems.ResultsDict,
+        results_dict: mesmo.problems.ResultsDict,
         results_path: str,
         filename_base: str = 'node_utilization',
         filename_suffix: str = '',
@@ -1501,11 +1501,11 @@ def plot_histogram_node_utilization(
         yaxis2_title='Frequency',
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.05, yanchor='auto')
     )
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
 
 
 def plot_aggregate_timeseries_der_power(
-        results_dict: fledge.problems.ResultsDict,
+        results_dict: mesmo.problems.ResultsDict,
         results_path: str,
         filename_base: str = 'der_power',
         filename_suffix: str = '',
@@ -1567,8 +1567,8 @@ def plot_aggregate_timeseries_der_power(
     figure.update_layout(
         title=title,
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=1.05, yanchor='auto'),
-        height=fledge.config.config['plots']['plotly_figure_height'] * 1.25,
+        height=mesmo.config.config['plots']['plotly_figure_height'] * 1.25,
         **{f'xaxis{len(values_dict)}_tickformat': '%H:%M'},
         **{f'yaxis{index}_range': [value_minimum, value_maximum] for index in range(1, len(values_dict) + 1)}
     )
-    fledge.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))

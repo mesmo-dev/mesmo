@@ -6,25 +6,25 @@ import numpy as np
 import pandas as pd
 import typing
 
-import fledge.config
-import fledge.data_interface
-import fledge.der_models
-import fledge.electric_grid_models
-import fledge.thermal_grid_models
-import fledge.utils
+import mesmo.config
+import mesmo.data_interface
+import mesmo.der_models
+import mesmo.electric_grid_models
+import mesmo.thermal_grid_models
+import mesmo.utils
 
-logger = fledge.config.get_logger(__name__)
+logger = mesmo.config.get_logger(__name__)
 
 
 class Results(
-    fledge.electric_grid_models.ElectricGridOperationResults,
-    fledge.thermal_grid_models.ThermalGridOperationResults,
-    fledge.der_models.DERModelSetOperationResults,
-    fledge.electric_grid_models.ElectricGridDLMPResults,
-    fledge.thermal_grid_models.ThermalGridDLMPResults
+    mesmo.electric_grid_models.ElectricGridOperationResults,
+    mesmo.thermal_grid_models.ThermalGridOperationResults,
+    mesmo.der_models.DERModelSetOperationResults,
+    mesmo.electric_grid_models.ElectricGridDLMPResults,
+    mesmo.thermal_grid_models.ThermalGridDLMPResults
 ):
 
-    price_data: fledge.data_interface.PriceData
+    price_data: mesmo.data_interface.PriceData
 
 
 class ResultsDict(typing.Dict[str, Results]):
@@ -32,7 +32,7 @@ class ResultsDict(typing.Dict[str, Results]):
     pass
 
 
-class Problem(fledge.utils.ObjectBase):
+class Problem(mesmo.utils.ObjectBase):
 
     pass
 
@@ -54,24 +54,24 @@ class NominalOperationProblem(Problem):
 
     scenario_name: str
     timesteps: pd.Index
-    price_data: fledge.data_interface.PriceData
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
-    thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
-    der_model_set: fledge.der_models.DERModelSet
+    price_data: mesmo.data_interface.PriceData
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None
+    thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None
+    der_model_set: mesmo.der_models.DERModelSet
     results: Results
 
     @multimethod
     def __init__(
             self,
             scenario_name: str,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-            der_model_set: fledge.der_models.DERModelSet = None
+            electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
+            der_model_set: mesmo.der_models.DERModelSet = None
     ):
 
         # Obtain data.
-        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-        self.price_data = fledge.data_interface.PriceData(scenario_name)
+        scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
+        self.price_data = mesmo.data_interface.PriceData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
@@ -81,26 +81,26 @@ class NominalOperationProblem(Problem):
             if electric_grid_model is not None:
                 self.electric_grid_model = electric_grid_model
             else:
-                fledge.utils.log_time("electric grid model instantiation")
-                self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
-                fledge.utils.log_time("electric grid model instantiation")
+                mesmo.utils.log_time("electric grid model instantiation")
+                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+                mesmo.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
             if thermal_grid_model is not None:
                 self.thermal_grid_model = thermal_grid_model
             else:
-                fledge.utils.log_time("thermal grid model instantiation")
-                self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
-                fledge.utils.log_time("thermal grid model instantiation")
+                mesmo.utils.log_time("thermal grid model instantiation")
+                self.thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
+                mesmo.utils.log_time("thermal grid model instantiation")
 
         # Obtain DER model set.
         if der_model_set is not None:
             self.der_model_set = der_model_set
         else:
-            fledge.utils.log_time("DER model instantiation")
-            self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
-            fledge.utils.log_time("DER model instantiation")
+            mesmo.utils.log_time("DER model instantiation")
+            self.der_model_set = mesmo.der_models.DERModelSet(scenario_name)
+            mesmo.utils.log_time("DER model instantiation")
 
     def solve(self):
 
@@ -148,11 +148,11 @@ class NominalOperationProblem(Problem):
                 )
 
         # Solve power flow.
-        fledge.utils.log_time("power flow solution")
+        mesmo.utils.log_time("power flow solution")
         if self.electric_grid_model is not None:
             power_flow_solutions = (
-                fledge.utils.starmap(
-                    fledge.electric_grid_models.PowerFlowSolutionFixedPoint,
+                mesmo.utils.starmap(
+                    mesmo.electric_grid_models.PowerFlowSolutionFixedPoint,
                     zip(
                         itertools.repeat(self.electric_grid_model),
                         der_power_vector.values
@@ -162,13 +162,13 @@ class NominalOperationProblem(Problem):
             power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
         if self.thermal_grid_model is not None:
             thermal_power_flow_solutions = (
-                fledge.utils.starmap(
-                    fledge.thermal_grid_models.ThermalPowerFlowSolution,
+                mesmo.utils.starmap(
+                    mesmo.thermal_grid_models.ThermalPowerFlowSolution,
                     [(self.thermal_grid_model, row) for row in der_thermal_power_vector.values]
                 )
             )
             thermal_power_flow_solutions = dict(zip(self.timesteps, thermal_power_flow_solutions))
-        fledge.utils.log_time("power flow solution")
+        mesmo.utils.log_time("power flow solution")
 
         # Obtain results.
         if self.electric_grid_model is not None:
@@ -287,80 +287,80 @@ class OptimalOperationProblem(Problem):
 
     scenario_name: str
     timesteps: pd.Index
-    price_data: fledge.data_interface.PriceData
-    electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None
-    power_flow_solution_reference: fledge.electric_grid_models.PowerFlowSolution = None
-    linear_electric_grid_model_set: fledge.electric_grid_models.LinearElectricGridModelSet = None
-    thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None
-    thermal_power_flow_solution_reference: fledge.thermal_grid_models.ThermalPowerFlowSolution = None
-    linear_thermal_grid_model_set: fledge.thermal_grid_models.LinearThermalGridModelSet = None
-    der_model_set: fledge.der_models.DERModelSet
-    optimization_problem: fledge.utils.OptimizationProblem
+    price_data: mesmo.data_interface.PriceData
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None
+    power_flow_solution_reference: mesmo.electric_grid_models.PowerFlowSolution = None
+    linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
+    thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None
+    thermal_power_flow_solution_reference: mesmo.thermal_grid_models.ThermalPowerFlowSolution = None
+    linear_thermal_grid_model_set: mesmo.thermal_grid_models.LinearThermalGridModelSet = None
+    der_model_set: mesmo.der_models.DERModelSet
+    optimization_problem: mesmo.utils.OptimizationProblem
     results: Results
 
     @multimethod
     def __init__(
             self,
             scenario_name: str,
-            electric_grid_model: fledge.electric_grid_models.ElectricGridModelDefault = None,
-            thermal_grid_model: fledge.thermal_grid_models.ThermalGridModel = None,
-            der_model_set: fledge.der_models.DERModelSet = None
+            electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
+            thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
+            der_model_set: mesmo.der_models.DERModelSet = None
     ):
 
         # Obtain data.
-        scenario_data = fledge.data_interface.ScenarioData(scenario_name)
-        self.price_data = fledge.data_interface.PriceData(scenario_name)
+        scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
+        self.price_data = mesmo.data_interface.PriceData(scenario_name)
 
         # Store timesteps.
         self.timesteps = scenario_data.timesteps
 
         # Obtain electric grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['electric_grid_name']):
-            fledge.utils.log_time("electric grid model instantiation")
+            mesmo.utils.log_time("electric grid model instantiation")
             if electric_grid_model is not None:
                 self.electric_grid_model = electric_grid_model
             else:
-                self.electric_grid_model = fledge.electric_grid_models.ElectricGridModelDefault(scenario_name)
+                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
             self.power_flow_solution_reference = (
-                fledge.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
+                mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(self.electric_grid_model)
             )
             self.linear_electric_grid_model_set = (
-                fledge.electric_grid_models.LinearElectricGridModelSet(
+                mesmo.electric_grid_models.LinearElectricGridModelSet(
                     self.electric_grid_model,
                     self.power_flow_solution_reference,
-                    linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
+                    linear_electric_grid_model_method=mesmo.electric_grid_models.LinearElectricGridModelGlobal
                 )
             )
-            fledge.utils.log_time("electric grid model instantiation")
+            mesmo.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
         if pd.notnull(scenario_data.scenario.at['thermal_grid_name']):
-            fledge.utils.log_time("thermal grid model instantiation")
+            mesmo.utils.log_time("thermal grid model instantiation")
             if thermal_grid_model is not None:
                 self.thermal_grid_model = thermal_grid_model
             else:
-                self.thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
+                self.thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
             self.thermal_power_flow_solution_reference = (
-                fledge.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
+                mesmo.thermal_grid_models.ThermalPowerFlowSolution(self.thermal_grid_model)
             )
             self.linear_thermal_grid_model_set = (
-                fledge.thermal_grid_models.LinearThermalGridModelSet(
+                mesmo.thermal_grid_models.LinearThermalGridModelSet(
                     self.thermal_grid_model,
                     self.thermal_power_flow_solution_reference
                 )
             )
-            fledge.utils.log_time("thermal grid model instantiation")
+            mesmo.utils.log_time("thermal grid model instantiation")
 
         # Obtain DER model set.
         if der_model_set is not None:
             self.der_model_set = der_model_set
         else:
-            fledge.utils.log_time("DER model instantiation")
-            self.der_model_set = fledge.der_models.DERModelSet(scenario_name)
-            fledge.utils.log_time("DER model instantiation")
+            mesmo.utils.log_time("DER model instantiation")
+            self.der_model_set = mesmo.der_models.DERModelSet(scenario_name)
+            mesmo.utils.log_time("DER model instantiation")
 
         # Instantiate optimization problem.
-        self.optimization_problem = fledge.utils.OptimizationProblem()
+        self.optimization_problem = mesmo.utils.OptimizationProblem()
 
         # Define electric grid problem.
         if self.electric_grid_model is not None:

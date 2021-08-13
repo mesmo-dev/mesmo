@@ -1,10 +1,10 @@
-# FLEDGE - Flexible Distribution Grid Demonstrator
+# MESMO - Flexible Distribution Grid Demonstrator
 
 [![DOI](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 
-The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
+The Flexible Distribution Grid Demonstrator (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
 
-> Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/TUMCREATE-ESTL/fledge/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
+> Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/mesmo-dev/mesmo/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 
 ## Features
 
@@ -28,7 +28,7 @@ The Flexible Distribution Grid Demonstrator (FLEDGE) is a software tool for opti
 
 ## Documentation
 
-The preliminary documentation is located at [tumcreate-estl.github.io/fledge](https://tumcreate-estl.github.io/fledge).
+The preliminary documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.github.io/mesmo).
 
 ## Installation
 
@@ -47,12 +47,12 @@ If you are keen to contribute to this project, please see [docs/contributing.md]
 
 ## Publications
 
-Information on citing FLEDGE and a list of related publications is available at [docs/publications.md](docs/publications.md).
+Information on citing MESMO and a list of related publications is available at [docs/publications.md](docs/publications.md).
 
 ## Acknowledgements
 
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
-- Sebastian Troitzsch implemented the initial version of FLEDGE and maintains this repository.
+- Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modelling and approximation methodologies.

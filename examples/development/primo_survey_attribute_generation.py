@@ -8,21 +8,21 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import fledge
+import mesmo
 
 
 def main():
 
     # Settings.
     scenario_name = 'primo_survey'
-    results_path = fledge.utils.get_results_path(__file__, scenario_name)
+    results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    fledge.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    der_data = fledge.data_interface.DERData(scenario_name)
-    price_data = fledge.data_interface.PriceData(scenario_name)
+    der_data = mesmo.data_interface.DERData(scenario_name)
+    price_data = mesmo.data_interface.PriceData(scenario_name)
     timesteps_off_peak = (der_data.scenario_data.timesteps.hour <= 7) | (der_data.scenario_data.timesteps.hour >= 23)
     price_data.price_timeseries.loc[timesteps_off_peak, ('active_power', slice(None), slice(None))] += (
         0.0476 / 1e3 * der_data.scenario_data.scenario.at['base_apparent_power']
@@ -32,7 +32,7 @@ def main():
     )
 
     # Obtain air-conditioning models.
-    ac_1 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_1 = mesmo.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
     ac_1.disturbance_output_matrix *= 0.0
     outputs_temperature = ac_1.outputs.str.contains('temperature')
     outputs_heat = ac_1.outputs.str.contains('_heat_')
@@ -44,7 +44,7 @@ def main():
     ac_1.output_minimum_timeseries.loc[:, outputs_temperature] = (
         ac_1.output_maximum_timeseries.loc[:, outputs_temperature].values - 0.01
     )
-    ac_2 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_2 = mesmo.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
     ac_2.disturbance_output_matrix *= 0.0
     ac_2.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     ac_2.output_minimum_timeseries.loc[timestep_reset, outputs_temperature] = (
@@ -56,7 +56,7 @@ def main():
     ac_2.output_minimum_timeseries.loc[timesteps_nonsmart, outputs_temperature] = (
         ac_2.output_maximum_timeseries.loc[timesteps_nonsmart, outputs_temperature].values - 0.01
     )
-    ac_3 = fledge.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
+    ac_3 = mesmo.der_models.FlexibleBuildingModel(der_data, 'flexible_building')
     ac_3.disturbance_output_matrix *= 0.0
     ac_3.output_maximum_timeseries.loc[:, outputs_heat] = 0.0
     ac_3.output_minimum_timeseries.loc[timestep_reset, outputs_temperature] = (
@@ -64,12 +64,12 @@ def main():
     )
 
     # Obtain EV charger models.
-    ev_1 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    ev_1 = mesmo.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
     # timesteps_urgent_depart = (ev_1.timesteps.hour > 20) | (ev_1.timesteps.hour < 17)
     timesteps_urgent_depart = ev_1.timesteps.hour > 11
     ev_1.output_maximum_timeseries.loc[timesteps_urgent_depart, 'active_power_charge'] = 0.0
-    ev_2 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
-    ev_3 = fledge.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    ev_2 = mesmo.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
+    ev_3 = mesmo.der_models.FlexibleEVChargerModel(der_data, 'flexible_ev_charger')
     ev_3.output_maximum_timeseries.loc[:, 'active_power_discharge'] = (
         ev_3.output_maximum_timeseries.loc[:, 'active_power_charge'].values
     )
@@ -139,23 +139,23 @@ def main():
                 xaxis=go.layout.XAxis(tickformat='%H:%M')
             )
             # figure.show()
-            fledge.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
 
     # Print results path.
-    fledge.utils.launch(results_path)
+    mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 
 def solve_problem(
-        flexible_der_model: fledge.der_models.FlexibleDERModel,
-        price_data: fledge.data_interface.PriceData
-) -> fledge.der_models.DERModelOperationResults:
+        flexible_der_model: mesmo.der_models.FlexibleDERModel,
+        price_data: mesmo.data_interface.PriceData
+) -> mesmo.der_models.DERModelOperationResults:
 
     # Enforce storage states, initial state is linked to final state.
     flexible_der_model.storage_states = flexible_der_model.states
 
     # Instantiate optimization problem.
-    optimization_problem = fledge.utils.OptimizationProblem()
+    optimization_problem = mesmo.utils.OptimizationProblem()
 
     # Define / solve optimization problem.
     flexible_der_model.define_optimization_variables(optimization_problem)
@@ -185,7 +185,7 @@ def save_results(
     for label, result in results.items():
 
         # Parse label.
-        label = fledge.utils.get_alphanumeric_string(str(label))
+        label = mesmo.utils.get_alphanumeric_string(str(label))
 
         # Create folder.
         try:
@@ -208,13 +208,13 @@ def plot_results(
 
 @multimethod
 def plot_results(
-        results: fledge.der_models.DERModelOperationResults,
+        results: mesmo.der_models.DERModelOperationResults,
         results_path: str,
         label: tuple
 ):
 
     # Parse label.
-    label = fledge.utils.get_alphanumeric_string(str(label))
+    label = mesmo.utils.get_alphanumeric_string(str(label))
 
     # Create folder.
     try:
@@ -250,7 +250,7 @@ def plot_results(
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
         # figure.show()
-        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, label, output))
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, label, output))
 
     # Plot disturbances.
     for disturbance in results.der_model.disturbances:
@@ -267,7 +267,7 @@ def plot_results(
             showlegend=False
         )
         # figure.show()
-        fledge.utils.write_figure_plotly(figure, os.path.join(results_path, label, disturbance))
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, label, disturbance))
 
 
 if __name__ == '__main__':

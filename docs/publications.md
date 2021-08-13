@@ -7,7 +7,7 @@ The recommended way to cite MESMO is to refer to its latest [Zenodo record](http
 ```
 @misc{mesmo,
 author = {Sebastian Troitzsch and Verena Kleinschmidt and Tom Schelo and Arif Ahmed},
-title = {{MESMO - Flexible Distribution Grid Demonstrator}},
+title = {{MESMO - Multi-Energy System Modeling and Optimization}},
 year = 2021,
 howpublished = {Version 0.4.1, Zenodo},
 doi = {10.5281/zenodo.3523568},
@@ -33,7 +33,7 @@ The following publications are based on MESMO.
 
 The following publications served as the methodological basis for the implementation of MESMO as well as for the development of test cases.
 
-- Troitzsch, S., Hanif, S., Zhang, K., Trpovski, A., & Hamacher, T., **Flexible Distribution Grid Demonstrator (MESMO): Requirements and Software Architecture**, in IEEE PES General Meeting, Atlanta, GA, USA, 2019. [`doi: 10.1109/PESGM40551.2019.8973567`](https://doi.org/10.1109/PESGM40551.2019.8973567).
+- Troitzsch, S., Hanif, S., Zhang, K., Trpovski, A., & Hamacher, T., **Flexible Distribution Grid Demonstrator (FLEDGE): Requirements and Software Architecture**, in IEEE PES General Meeting, Atlanta, GA, USA, 2019. [`doi: 10.1109/PESGM40551.2019.8973567`](https://doi.org/10.1109/PESGM40551.2019.8973567).
     - This paper served as an outline for the [software architecture](software_architecture.md) of MESMO.
 - D. Recalde, A. Trpovski, S. Troitzsch, K. Zhang, S. Hanif, and T. Hamacher, **A Review of Operation Methods and Simulation Requirements for Future Smart Distribution Grids**, in IEEE PES Innovative Smart Grid Technologies Conference Asia, Singapore, 2018. [`doi:10.1109/ISGT-Asia.2018.8467850`](https://doi.org/10.1109/ISGT-Asia.2018.8467850).
     - This review paper initiated the development of MESMO.

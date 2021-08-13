@@ -1,8 +1,10 @@
-# MESMO - Flexible Distribution Grid Demonstrator
+# MESMO - Multi-Energy System Modeling and Optimization
 
 [![DOI](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 
-The Flexible Distribution Grid Demonstrator (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
+> **Looking for FLEDGE?** - The Flexible Distribution Grid Demonstrator (FLEDGE) is now called Multi-Energy System Modeling and Optimization (MESMO) and has moved to this shiny new repository.
+
+Multi-Energy System Modeling and Optimization (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
 
 > Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/mesmo-dev/mesmo/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 

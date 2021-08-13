@@ -1,4 +1,4 @@
-"""MESMO - Flexible Distribution Grid Demonstrator."""
+"""MESMO - Multi-Energy System Modeling and Optimization."""
 
 import mesmo.api
 import mesmo.config

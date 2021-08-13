@@ -68,18 +68,19 @@ def main(
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
     power_flow_solution = fledge.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
-    linear_electric_grid_model = (
-        fledge.electric_grid_models.LinearElectricGridModelGlobal(
+    linear_electric_grid_model_set = (
+        fledge.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
-            power_flow_solution
+            power_flow_solution,
+            linear_electric_grid_model_method=fledge.electric_grid_models.LinearElectricGridModelGlobal
         )
     )
     thermal_grid_model = fledge.thermal_grid_models.ThermalGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
     thermal_power_flow_solution = fledge.thermal_grid_models.ThermalPowerFlowSolution('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')
-    linear_thermal_grid_model = (
-        fledge.thermal_grid_models.LinearThermalGridModel(
+    linear_thermal_grid_model_set = (
+        fledge.thermal_grid_models.LinearThermalGridModelSet(
             thermal_grid_model,
             thermal_power_flow_solution
         )
@@ -102,10 +103,7 @@ def main(
     # Instantiate optimization problem.
     optimization_problem = fledge.utils.OptimizationProblem()
 
-    # Define linear electric grid model variables.
-    linear_electric_grid_model.define_optimization_variables(optimization_problem)
-
-    # Define linear electric grid model constraints.
+    # Define electric grid problem.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 100.0 * electric_grid_model.branch_power_vector_magnitude_reference
@@ -120,17 +118,18 @@ def main(
         ] *= 0.9985 / 0.5
     else:
         pass
-    linear_electric_grid_model.define_optimization_constraints(
+    linear_electric_grid_model_set.define_optimization_variables(optimization_problem)
+    linear_electric_grid_model_set.define_optimization_parameters(
         optimization_problem,
+        price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
+    linear_electric_grid_model_set.define_optimization_constraints(optimization_problem)
+    linear_electric_grid_model_set.define_optimization_objective(optimization_problem)
 
-    # Define thermal grid model variables.
-    linear_thermal_grid_model.define_optimization_variables(optimization_problem)
-
-    # Define thermal grid model constraints.
+    # Define thermal grid problem.
     # TODO: Rename branch_flow_vector_maximum to branch_flow_vector_magnitude_maximum.
     # TODO: Revise node_head_vector constraint formulation.
     node_head_vector_minimum = 100.0 * thermal_power_flow_solution.node_head_vector
@@ -146,70 +145,36 @@ def main(
         ] *= 0.2 / 100.0
     else:
         pass
-    linear_thermal_grid_model.define_optimization_constraints(
+    linear_thermal_grid_model_set.define_optimization_variables(optimization_problem)
+    linear_thermal_grid_model_set.define_optimization_parameters(
         optimization_problem,
+        price_data,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
+    linear_thermal_grid_model_set.define_optimization_constraints(optimization_problem)
+    linear_thermal_grid_model_set.define_optimization_objective(optimization_problem)
 
-    # Define DER variables.
+    # Define DER problem.
     der_model_set.define_optimization_variables(optimization_problem)
-
-    # Define DER constraints.
+    der_model_set.define_optimization_parameters(optimization_problem, price_data)
     der_model_set.define_optimization_constraints(optimization_problem)
-
-    # Define electric grid objective.
-    linear_electric_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-
-    # Define thermal grid objective.
-    linear_thermal_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-
-    # Define DER objective.
-    der_model_set.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
+    der_model_set.define_optimization_objective(optimization_problem)
 
     # Solve optimization problem.
     optimization_problem.solve()
 
     # Obtain results.
     results = fledge.problems.Results()
-    results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
-    results.update(linear_thermal_grid_model.get_optimization_results(optimization_problem))
+    results.update(linear_electric_grid_model_set.get_optimization_results(optimization_problem))
+    results.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
     results.update(der_model_set.get_optimization_results(optimization_problem))
-
-    # Print results.
-    print(results)
-
-    # Store results as CSV.
     results.save(results_path)
 
     # Obtain DLMPs.
     dlmps = fledge.problems.Results()
-    dlmps.update(
-        linear_electric_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
-    dlmps.update(
-        linear_thermal_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
-
-    # Print DLMPs.
-    print(dlmps)
-
-    # Store DLMPs as CSV.
+    dlmps.update(linear_electric_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
+    dlmps.update(linear_thermal_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
     dlmps.save(results_path)
 
     # Plot results.

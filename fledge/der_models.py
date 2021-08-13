@@ -142,9 +142,9 @@ class DERModel(object):
                 # If per unit definition, multiply nominal thermal power.
                 self.thermal_power_nominal_timeseries *= self.thermal_power_nominal
             else:
-                self.active_power_nominal_timeseries *= (
+                self.thermal_power_nominal_timeseries *= (
                     np.sign(self.thermal_power_nominal)
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                    / der_data.scenario_data.scenario.at['base_thermal_power']
                 )
         else:
             self.thermal_power_nominal_timeseries = (

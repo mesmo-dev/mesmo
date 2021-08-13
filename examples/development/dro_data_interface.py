@@ -29,16 +29,14 @@ class DRO_data(object):
             self,
             data_path: str,
     ):
-        self.forecast_price_raw = \
-            pd.read_csv(data_path + "price_forecast_2021_26_07.csv")
+        self.forecast_price_raw = pd.read_csv(os.path.join(data_path, 'price_forecast_2021_26_07.csv'))
         # forecast_price_raw = pd.read_csv(
         #     "C:\\Users\\kai.zhang\\Desktop\\local_fledge_data\\dro_data\\price_forecast_2021_26_07.csv")
         self.energy_price = self.forecast_price_raw['USEP($/MWh)'] / 100
 
         self.contingency_reserve_price = self.forecast_price_raw['Contingency($/MWh)'] / 100
 
-        self.dro_base_data = \
-            pd.read_csv(data_path + "dro_base_data.csv" )
+        self.dro_base_data = pd.read_csv(os.path.join(data_path, 'dro_base_data.csv'))
 
         self.mean_energy_price = statistics.mean(self.energy_price)
 
@@ -63,7 +61,7 @@ class DRO_ambiguity_set(object):
     def __init__(
             self,
             scenario_name: str,
-            standard_form_stage_2: fledge.utils.StandardForm,
+            standard_form_stage_2: fledge.utils.OptimizationProblem,
             delta_indices_stage2: float,
             dro_data_set: DRO_data
     ):

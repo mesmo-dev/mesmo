@@ -2246,50 +2246,60 @@ class DERModelSet(DERModelSetBase):
             scenarios: typing.Union[list, pd.Index] = None
     ) -> DERModelSetOperationResults:
 
-        # If no scenarios given, obtain default value.
-        # TODO: Validate behavior when passing scenarios.
-        if scenarios is None:
+        # Obtain results index sets, depending on if / if not scenarios given.
+        if scenarios in [None, [None]]:
             scenarios = [None]
+            states = self.states
+            controls = self.controls
+            outputs = self.outputs
+            electric_ders = self.electric_ders
+            thermal_ders = self.thermal_ders
+        else:
+            states = (scenarios, self.states) if len(self.states) > 0 else self.states
+            controls = (scenarios, self.controls) if len(self.controls) > 0 else self.controls
+            outputs = (scenarios, self.outputs) if len(self.outputs) > 0 else self.outputs
+            electric_ders = (scenarios, self.electric_ders) if len(self.electric_ders) > 0 else self.electric_ders
+            thermal_ders = (scenarios, self.thermal_ders) if len(self.thermal_ders) > 0 else self.thermal_ders
 
         # Obtain results.
         state_vector = (
-            optimization_problem.results['state_vector'].loc[self.timesteps, self.states]
-            if len(self.states) > 0 else None
+            optimization_problem.results['state_vector'].loc[self.timesteps, states]
+            if len(states) > 0 else None
         )
         control_vector = (
-            optimization_problem.results['control_vector'].loc[self.timesteps, self.controls]
-            if len(self.controls) > 0 else None
+            optimization_problem.results['control_vector'].loc[self.timesteps, controls]
+            if len(controls) > 0 else None
         )
         output_vector = (
-            optimization_problem.results['output_vector'].loc[self.timesteps, self.outputs]
-            if len(self.outputs) > 0 else None
+            optimization_problem.results['output_vector'].loc[self.timesteps, outputs]
+            if len(outputs) > 0 else None
         )
         der_active_power_vector_per_unit = (
-            optimization_problem.results['der_active_power_vector'].loc[self.timesteps, self.electric_ders]
-            if len(self.electric_ders) > 0 else None
+            optimization_problem.results['der_active_power_vector'].loc[self.timesteps, electric_ders]
+            if len(electric_ders) > 0 else None
         )
         der_active_power_vector = (
             der_active_power_vector_per_unit
-            * self.der_active_power_vector_reference
-            if len(self.electric_ders) > 0 else None
+            * np.concatenate([self.der_active_power_vector_reference] * len(scenarios))
+            if len(electric_ders) > 0 else None
         )
         der_reactive_power_vector_per_unit = (
-            optimization_problem.results['der_reactive_power_vector'].loc[self.timesteps, self.electric_ders]
-            if len(self.electric_ders) > 0 else None
+            optimization_problem.results['der_reactive_power_vector'].loc[self.timesteps, electric_ders]
+            if len(electric_ders) > 0 else None
         )
         der_reactive_power_vector = (
             der_reactive_power_vector_per_unit
-            * self.der_reactive_power_vector_reference
-            if len(self.electric_ders) > 0 else None
+            * np.concatenate([self.der_reactive_power_vector_reference] * len(scenarios))
+            if len(electric_ders) > 0 else None
         )
         der_thermal_power_vector_per_unit = (
-            optimization_problem.results['der_thermal_power_vector'].loc[self.timesteps, self.thermal_ders]
-            if len(self.thermal_ders) > 0 else None
+            optimization_problem.results['der_thermal_power_vector'].loc[self.timesteps, thermal_ders]
+            if len(thermal_ders) > 0 else None
         )
         der_thermal_power_vector = (
             der_thermal_power_vector_per_unit
-            * self.der_thermal_power_vector_reference
-            if len(self.thermal_ders) > 0 else None
+            * np.concatenate([self.der_thermal_power_vector_reference] * len(scenarios))
+            if len(thermal_ders) > 0 else None
         )
 
         return DERModelSetOperationResults(

@@ -1,6 +1,5 @@
 """Distributed energy resource (DER) models."""
 
-import cvxpy as cp
 import inspect
 import itertools
 from multimethod import multimethod
@@ -1564,6 +1563,14 @@ class DERModelSet(DERModelSetBase):
                 (der_name, control)
                 for der_name in self.flexible_der_names
                 for control in self.flexible_der_models[der_name].controls
+            ])
+            if len(self.flexible_der_names) > 0 else pd.Index([])
+        )
+        self.disturbances = (
+            pd.MultiIndex.from_tuples([
+                (der_name, output)
+                for der_name in self.flexible_der_names
+                for output in self.flexible_der_models[der_name].disturbances
             ])
             if len(self.flexible_der_names) > 0 else pd.Index([])
         )

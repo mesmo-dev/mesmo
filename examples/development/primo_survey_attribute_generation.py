@@ -76,12 +76,12 @@ def main():
 
     # Obtain solutions.
     results = {
-        ('ac', 'fixed', 'yes'): solve_problem(ac_1, price_data),
-        ('ac', 'upper/lower', 'yes'): solve_problem(ac_2, price_data),
-        ('ac', 'upper/lower', 'no'): solve_problem(ac_3, price_data),
-        ('ev', '3h', 'no'): solve_problem(ev_1, price_data),
-        ('ev', '8h', 'no'): solve_problem(ev_2, price_data),
-        ('ev', '8h', 'yes'): solve_problem(ev_3, price_data)
+        ('ac', 'fixed', 'yes'): solve_problem(ac_1, price_data, scenario_name, 'flexible_building'),
+        ('ac', 'upper/lower', 'yes'): solve_problem(ac_2, price_data, scenario_name, 'flexible_building'),
+        ('ac', 'upper/lower', 'no'): solve_problem(ac_3, price_data, scenario_name, 'flexible_building'),
+        ('ev', '3h', 'no'): solve_problem(ev_1, price_data, scenario_name, 'flexible_ev_charger'),
+        ('ev', '8h', 'no'): solve_problem(ev_2, price_data, scenario_name, 'flexible_ev_charger'),
+        ('ev', '8h', 'yes'): solve_problem(ev_3, price_data, scenario_name, 'flexible_ev_charger')
     }
 
     # Obtain cost distribution.
@@ -122,7 +122,7 @@ def main():
     costs_daily.to_csv(os.path.join(results_path, 'costs_daily.csv'))
     costs_overview.to_csv(os.path.join(results_path, 'costs_overview.csv'))
     save_results(results, results_path)
-    plot_results(results, results_path)
+    # plot_results(results, results_path)  # TODO: Fix plots.
 
     # Plot prices.
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
@@ -148,31 +148,36 @@ def main():
 
 def solve_problem(
         flexible_der_model: mesmo.der_models.FlexibleDERModel,
-        price_data: mesmo.data_interface.PriceData
-) -> mesmo.der_models.DERModelOperationResults:
+        price_data: mesmo.data_interface.PriceData,
+        scenario_name: str,
+        der_name: str
+) -> mesmo.der_models.DERModelSetOperationResults:
 
     # Enforce storage states, initial state is linked to final state.
     flexible_der_model.storage_states = flexible_der_model.states
+
+    # Obtain DER model set.
+    der_model_set = mesmo.der_models.DERModelSet(scenario_name, der_name=der_name)
+    der_model_set.der_models[der_name] = flexible_der_model
+    der_model_set.flexible_der_models[der_name] = flexible_der_model
 
     # Instantiate optimization problem.
     optimization_problem = mesmo.utils.OptimizationProblem()
 
     # Define / solve optimization problem.
-    flexible_der_model.define_optimization_variables(optimization_problem)
-    flexible_der_model.define_optimization_constraints(optimization_problem)
-    flexible_der_model.define_optimization_objective(optimization_problem, price_data)
+    der_model_set.define_optimization_problem(optimization_problem, price_data)
     optimization_problem.solve()
 
     # Obtain results.
-    results = flexible_der_model.get_optimization_results(optimization_problem)
-    results.objective = optimization_problem.objective.value
+    results = der_model_set.get_optimization_results(optimization_problem)
     # Obtain timestep interval in hours, for conversion of power to energy.
     timestep_interval_hours = (flexible_der_model.timesteps[1] - flexible_der_model.timesteps[0]) / pd.Timedelta('1h')
     results.cost_timeseries = (
-        -1.0 * (flexible_der_model.mapping_active_power_by_output @ results.output_vector.T).T
+        -1.0 * (flexible_der_model.mapping_active_power_by_output @ results.output_vector.T.values).T
         * price_data.price_timeseries.loc[:, [('active_power', 'source', 'source')]].values
         * timestep_interval_hours
     )
+    results.cost_timeseries.index = price_data.price_timeseries.index
 
     return results
 
@@ -208,7 +213,7 @@ def plot_results(
 
 @multimethod
 def plot_results(
-        results: mesmo.der_models.DERModelOperationResults,
+        results: mesmo.der_models.DERModelSetOperationResults,
         results_path: str,
         label: tuple
 ):

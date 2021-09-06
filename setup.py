@@ -21,9 +21,6 @@ for submodule in submodules:
 for submodule in submodules:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', submodule])
 
-# Install Gurobi interface. Use `pip -v` to see subprocess outputs.
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-i', 'https://pypi.gurobi.com', 'gurobipy'])
-
 setuptools.setup(
     name='mesmo',
     version='0.4.1',
@@ -33,6 +30,7 @@ setuptools.setup(
         'cvxpy',
         'dill',
         'diskcache',
+        'gurobipy',
         'kaleido',  # For static plot output with plotly.
         'matplotlib',
         'multimethod',

@@ -235,7 +235,7 @@ class OptimizationProblem(ObjectBase):
         new_variables = (
             pd.DataFrame(itertools.product([name], *[
                 list(value)
-                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple, range]
+                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple, range]
                 else [value]
                 for value in keys.values()
             ]), columns=['name', *keys.keys()])
@@ -551,7 +551,7 @@ class OptimizationProblem(ObjectBase):
                 new_constraints = (
                     pd.DataFrame(itertools.product(*[
                         list(value)
-                        if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, list, tuple]
+                        if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple]
                         else [value]
                         for value in keys.values()
                     ]), columns=keys.keys())

@@ -1123,7 +1123,16 @@ class OptimizationProblem(ObjectBase):
 
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
-        self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+        if gurobipy_problem.getAttr('NumQCNZs') == 0:
+            self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+        else:
+            # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
+            logger.warning(
+                f"Duals of the optimization problem's constraints are not retrieved,"
+                f" because quadratic or SOC constraints have been added to the problem."
+                f"\nPlease retrieve the duals manually."
+            )
+            self.dual_vector = np.nan * np.zeros(constraints.shape)
         self.objective = float(objective.getValue())
 
         return gurobipy_problem

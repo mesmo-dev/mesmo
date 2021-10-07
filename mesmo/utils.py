@@ -508,6 +508,10 @@ class OptimizationProblem(ObjectBase):
                 else:
                     broadcast_len = 1
 
+                # If constant is sparse, convert to dense array.
+                if isinstance(constant_value, sp.spmatrix):
+                    constant_value = constant_value.toarray()
+
                 # If constant is scalar, cast into vector of appropriate size.
                 if len(np.shape(constant_value)) == 0:
                     constant_value = constant_value * np.ones(len(constraint_index))
@@ -816,14 +820,14 @@ class OptimizationProblem(ObjectBase):
             else:
                 broadcast_len = 1
 
-            # If broadcasting, value is repeated along broadcast dimension.
-            if broadcast_len > 1:
-                constant_value = constant_value * broadcast_len
-
             # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
             if type(constant_value) is not float:
                 if np.shape(constant_value) not in [(1, ), (1, 1)]:
                     raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
+
+            # If broadcasting, value is repeated along broadcast dimension.
+            if broadcast_len > 1:
+                constant_value = constant_value * broadcast_len
 
             # Append d constant entry.
             if parameter_name is None:
@@ -1119,7 +1123,16 @@ class OptimizationProblem(ObjectBase):
 
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
-        self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+        if gurobipy_problem.getAttr('NumQCNZs') == 0:
+            self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+        else:
+            # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
+            logger.warning(
+                f"Duals of the optimization problem's constraints are not retrieved,"
+                f" because quadratic or SOC constraints have been added to the problem."
+                f"\nPlease retrieve the duals manually."
+            )
+            self.dual_vector = np.nan * np.zeros(constraints.shape)
         self.objective = float(objective.getValue())
 
         return gurobipy_problem

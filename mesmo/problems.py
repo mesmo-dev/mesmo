@@ -197,36 +197,36 @@ class NominalOperationProblem(Problem):
         if self.electric_grid_model is not None:
             der_active_power_vector_per_unit = (
                 der_active_power_vector
-                / np.real(self.electric_grid_model.der_power_vector_reference)
+                * mesmo.utils.get_inverse_with_zeros(np.real(self.electric_grid_model.der_power_vector_reference))
             )
             der_reactive_power_vector_per_unit = (
                 der_reactive_power_vector
-                / np.imag(self.electric_grid_model.der_power_vector_reference)
+                * mesmo.utils.get_inverse_with_zeros(np.imag(self.electric_grid_model.der_power_vector_reference))
             )
             node_voltage_magnitude_vector_per_unit = (
                 node_voltage_magnitude_vector
-                / np.abs(self.electric_grid_model.node_voltage_vector_reference)
+                * mesmo.utils.get_inverse_with_zeros(np.abs(self.electric_grid_model.node_voltage_vector_reference))
             )
             branch_power_magnitude_vector_1_per_unit = (
                 branch_power_magnitude_vector_1
-                / self.electric_grid_model.branch_power_vector_magnitude_reference
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
             )
             branch_power_magnitude_vector_2_per_unit = (
                 branch_power_magnitude_vector_2
-                / self.electric_grid_model.branch_power_vector_magnitude_reference
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
             )
         if self.thermal_grid_model is not None:
             der_thermal_power_vector_per_unit = (
                 der_thermal_power_vector
-                / self.thermal_grid_model.der_thermal_power_vector_reference
+                * mesmo.utils.get_inverse_with_zeros(self.thermal_grid_model.der_thermal_power_vector_reference)
             )
             node_head_vector_per_unit = (
                 node_head_vector
-                / self.thermal_grid_model.node_head_vector_reference
+                * mesmo.utils.get_inverse_with_zeros(self.thermal_grid_model.node_head_vector_reference)
             )
             branch_flow_vector_per_unit = (
                 branch_flow_vector
-                / self.thermal_grid_model.branch_flow_vector_reference
+                * mesmo.utils.get_inverse_with_zeros(self.thermal_grid_model.branch_flow_vector_reference)
             )
 
         # Store results.

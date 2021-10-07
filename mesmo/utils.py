@@ -1530,6 +1530,22 @@ def get_element_phases_string(element: pd.Series):
     return phases_string
 
 
+def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
+    """Obtain the inverse of an array, but do not take the inverse of zero values to avoid numerical errors.
+
+    - Takes the inverse of an array and replaces the inverse of any zero values with zero,
+      thus avoiding `inf` or `nan` values in the inverse.
+    """
+
+    # Take inverse.
+    array_inverse = array ** -1
+
+    # Replace inverse of zero values.
+    array_inverse[array == 0.0] = array[array == 0.0]
+
+    return array_inverse
+
+
 def get_timestamp(
         time: datetime.datetime = None
 ) -> str:

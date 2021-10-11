@@ -1,6 +1,11 @@
 # Configuration file for the Sphinx documentation builder.
 # - Documentation: <http://www.sphinx-doc.org/en/master/config>
 
+# Append path to include source code.
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
 # Project information.
 project = 'MESMO'
 copyright = '2018-2021, TUMCREATE'
@@ -32,6 +37,7 @@ autodoc_mock_imports = [
     'cv2',
     'diskcache',
     'dill',  # Deprecated.
+    'gurobipy',
     'kaleido',
     'matplotlib',
     'multimethod',

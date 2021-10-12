@@ -661,10 +661,9 @@ class LinearThermalGridModelSet(object):
 
         # Define DER power vector variables.
         # - Only if these have not yet been defined within `DERModelSet`.
-        if 'der_thermal_power_vector' not in optimization_problem.variables.loc[:, 'name'].values:
-            optimization_problem.define_variable(
-                'der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_grid_model.ders
-            )
+        optimization_problem.define_variable(
+            'der_thermal_power_vector', timestep=self.timesteps, der=self.thermal_grid_model.ders
+        )
 
         # Define node head, branch flow and pump power variables.
         optimization_problem.define_variable(

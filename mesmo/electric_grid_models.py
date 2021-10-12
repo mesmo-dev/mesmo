@@ -4189,7 +4189,6 @@ class LinearElectricGridModelSet(object):
             scenarios = [None]
 
         # Define DER power vector variables.
-        # - Only if these have not yet been defined within `DERModelSet`.
         optimization_problem.define_variable(
             'der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
             der=self.electric_grid_model.ders

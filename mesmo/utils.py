@@ -243,7 +243,7 @@ class OptimizationProblem(ObjectBase):
         # Add new variables to index.
         # - Duplicate definitions are automatically removed.
         self.variables = (
-            pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates().reset_index(drop=True)
+            pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates(ignore_index=True)
         )
 
     def define_parameter(

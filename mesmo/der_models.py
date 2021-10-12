@@ -1648,7 +1648,6 @@ class DERModelSet(DERModelSetBase):
         )
 
         # Define DER power vector variables.
-        # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
         if len(self.electric_ders) > 0:
             optimization_problem.define_variable(
                 'der_active_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.electric_ders

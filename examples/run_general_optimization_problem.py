@@ -1,4 +1,14 @@
-"""Example script for interacting with the optimization problem interface."""
+"""Example script for interacting with the optimization problem interface.
+
+This script considers the following example problem:
+
+    min  sum(b)
+    s.t. b = P @ a
+         10 <= a <= +10
+
+The matrix P of size (n,n) is an arbitrary parameter matrix. The column vectors a, b of size size (n,1)
+are decision variable vectors. The problem dimension is n = 1000.
+"""
 
 import numpy as np
 import mesmo

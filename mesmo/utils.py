@@ -15,8 +15,10 @@ import pandas as pd
 import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
+import ray
 import re
 import time
+import tqdm
 import typing
 import scipy.sparse as sp
 import subprocess
@@ -1355,17 +1357,30 @@ def starmap(
     else:
         function_partial = function
 
+    # Ensure that argument sequence is list.
+    argument_sequence = list(argument_sequence)
+
     if mesmo.config.config['multiprocessing']['run_parallel']:
-        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # if mesmo.config.parallel_pool is None:
+        #     # Setup parallel pool on first execution.
+        #     log_time('parallel pool setup')
+        #     mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+        #     log_time('parallel pool setup')
+        # results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+
+        # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
-            # Setup parallel pool on first execution.
             log_time('parallel pool setup')
-            mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+            ray.init()
+            mesmo.config.parallel_pool = True
             log_time('parallel pool setup')
-        results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+        results = ray_starmap(function_partial, argument_sequence)
     else:
-        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
-        results = list(itertools.starmap(function_partial, argument_sequence))
+        # If not `run_parallel`, use for loop for sequential execution.
+        results = [
+            function_partial(*arguments) for arguments in tqdm.tqdm(argument_sequence, total=len(argument_sequence))
+        ]
 
     return results
 
@@ -1398,6 +1413,47 @@ def chunk_list(
         [j for j in itertools.islice(list_iter, chunk_size)]
         for i in range(0, len(list_in), chunk_size)
     ]
+
+
+def ray_iterator(objects: list):
+    """Utility iterator for a list of parallelized ``ray`` objects.
+
+    - This iterator enables progress reporting with ``tqdm`` in :func:`ray_get`.
+    """
+
+    while objects:
+        done, objects = ray.wait(objects)
+        yield ray.get(done[0])
+
+
+def ray_get(objects: list):
+    """Utility function for parallelized execution of a list of ``ray`` objects.
+
+    - This function enables the parallelized execution with built-in progress reporting.
+    """
+
+    try:
+        for _ in tqdm.tqdm(ray_iterator(objects), total=len(objects)):
+            pass
+    except TypeError:
+        pass
+    return ray.get(objects)
+
+
+def ray_starmap(
+        function_handle: typing.Callable,
+        argument_sequence: list
+):
+    """Utility function to provide an interface similar to ``itertools.starmap`` for ``ray``.
+
+    - This replicates the ``starmap`` interface of the ``multiprocessing`` API, which ray also supports,
+      but allows for additional modifications, e.g. progress reporting via :func:`ray_get`.
+    """
+
+    return ray_get([
+        ray.remote(lambda *args: function_handle(*args)).remote(*arguments)
+        for arguments in argument_sequence
+    ])
 
 
 def log_time(

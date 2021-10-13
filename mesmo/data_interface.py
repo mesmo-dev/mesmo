@@ -138,7 +138,7 @@ class ScenarioData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain parameters.
         self.parameters = (
@@ -340,7 +340,7 @@ class DERData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -424,7 +424,7 @@ class DERData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -478,7 +478,7 @@ class DERData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain DERs.
         self.ders = (
@@ -880,7 +880,7 @@ class ElectricGridData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -1057,7 +1057,7 @@ class ThermalGridData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain scenario data.
         self.scenario_data = ScenarioData(scenario_name)
@@ -1172,7 +1172,7 @@ class PriceData(object):
 
         # Obtain database connection.
         if database_connection is None:
-            database_connection=connect_database()
+            database_connection = connect_database()
 
         # Obtain scenario data.
         scenario_data = der_data.scenario_data

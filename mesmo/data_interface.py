@@ -21,6 +21,35 @@ def recreate_database(
 ) -> None:
     """Recreate SQLITE database from SQL schema file and CSV files in the data path / additional data paths."""
 
+    # Log message.
+    mesmo.utils.log_time("recreate SQLITE database")
+
+    # Find CSV files.
+    # - Import only from data path, if no additional data paths are specified.
+    data_paths = (
+        [mesmo.config.config['paths']['data']] + additional_data_paths
+        if additional_data_paths is not None
+        else [mesmo.config.config['paths']['data']]
+    )
+    cobmo_data_paths = set([  # Convert to set to remove duplicate entries.
+        os.path.dirname(csv_file)
+        for data_path in data_paths
+        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
+        if any(
+            os.path.join('', folder, '') in csv_file
+            for folder in ['cobmo', 'cobmo_data']
+        )
+    ])
+    csv_files = [
+        csv_file
+        for data_path in data_paths
+        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
+        if all(
+            os.path.join('', folder, '') not in csv_file
+            for folder in ['cobmo', 'cobmo_data', *mesmo.config.config['paths']['ignore_data_folders']]
+        )
+    ]
+
     # Connect SQLITE database (creates file, if none).
     database_connection = sqlite3.connect(mesmo.config.config['paths']['database'])
     cursor = database_connection.cursor()
@@ -40,63 +69,26 @@ def recreate_database(
         cursor.executescript(database_schema_file.read())
     database_connection.commit()
 
-    # Import CSV files into SQLITE database.
-    # - Import only from data path, if no additional data paths are specified.
-    data_paths = (
-        [mesmo.config.config['paths']['data']] + additional_data_paths
-        if additional_data_paths is not None
-        else [mesmo.config.config['paths']['data']]
-    )
-    cobmo_data_paths = []
+    # Obtain valid table names.
     valid_table_names = (
         pd.read_sql("SELECT name FROM sqlite_master WHERE type='table'", database_connection).iloc[:, 0].tolist()
     )
-    for data_path in data_paths:
-        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True):
 
-            # Ignore CSV files from CoBMo folders, but add to CoBMo data path.
-            if any(
-                    os.path.join('', folder, '') in csv_file
-                    for folder in ['cobmo', 'cobmo_data']
-            ):
+    # Import CSV files into SQLITE database.
+    mesmo.utils.log_time("import CSV files into SQLITE database")
+    mesmo.utils.starmap(
+        import_csv_file,
+        zip(csv_files),
+        dict(
+            valid_table_names=valid_table_names,
+            database_connection=(
+                database_connection if not mesmo.config.config['multiprocessing']['run_parallel'] else None
+            )
+        )
+    )
+    mesmo.utils.log_time("import CSV files into SQLITE database")
 
-                # Add to CoBMo data path.
-                if os.path.dirname(csv_file) not in cobmo_data_paths:
-                    cobmo_data_paths.append(os.path.dirname(csv_file))
-
-            # Ignore CSV files from folders defined in config parameter 'ignore_data_folders'.
-            elif any(
-                    os.path.join('', folder, '') in csv_file
-                    for folder in mesmo.config.config['paths']['ignore_data_folders']
-            ):
-
-                pass
-
-            else:
-
-                # Debug message.
-                logger.debug(f"Loading {csv_file} into database.")
-
-                # Obtain table name.
-                table_name = os.path.splitext(os.path.basename(csv_file))[0]
-                # Raise exception, if table doesn't exist.
-                if not (table_name in valid_table_names):
-                    raise NameError(
-                        f"Error loading '{csv_file}' into database, because there is no table named '{table_name}'."
-                    )
-
-                # Load table and write to database.
-                try:
-                    table = pd.read_csv(csv_file, dtype=str)
-                    table.to_sql(
-                        table_name,
-                        con=database_connection,
-                        if_exists='append',
-                        index=False
-                    )
-                except Exception as exception:
-                    raise ImportError(f"Error loading {csv_file} into database.") from exception
-
+    # Close SQLITE connection.
     cursor.close()
     database_connection.close()
 
@@ -108,6 +100,40 @@ def recreate_database(
             *mesmo.config.config['paths']['cobmo_additional_data']
         ]
     )
+
+    # Log message.
+    mesmo.utils.log_time("recreate SQLITE database")
+
+
+def import_csv_file(
+        csv_file,
+        valid_table_names,
+        database_connection=None
+):
+
+    # Obtain database connection.
+    if database_connection is None:
+        database_connection = connect_database()
+
+    # Obtain table name.
+    table_name = os.path.splitext(os.path.basename(csv_file))[0]
+    # Raise exception, if table doesn't exist.
+    if not (table_name in valid_table_names):
+        raise NameError(
+            f"Error loading '{csv_file}' into database, because there is no table named '{table_name}'."
+        )
+
+    # Load table and write to database.
+    try:
+        table = pd.read_csv(csv_file, dtype=str)
+        table.to_sql(
+            table_name,
+            con=database_connection,
+            if_exists='append',
+            index=False
+        )
+    except Exception as exception:
+        raise ImportError(f"Error loading {csv_file} into database.") from exception
 
 
 def connect_database() -> sqlite3.Connection:

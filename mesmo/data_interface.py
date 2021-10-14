@@ -25,7 +25,6 @@ def recreate_database(
     mesmo.utils.log_time("recreate SQLITE database")
 
     # Find CSV files.
-    # - Import only from data path, if no additional data paths are specified.
     data_paths = (
         [mesmo.config.config['paths']['data']] + additional_data_paths
         if additional_data_paths is not None
@@ -145,7 +144,8 @@ def connect_database() -> sqlite3.Connection:
         recreate_database()
 
     # Obtain connection handle.
-    database_connection = sqlite3.connect(mesmo.config.config['paths']['database'])
+    # - Set large timeout to allow concurrent access during parallel processing.
+    database_connection = sqlite3.connect(mesmo.config.config['paths']['database'], timeout=30.0)
     return database_connection
 
 

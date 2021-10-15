@@ -24,7 +24,7 @@ tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.
 logs:
   level: info  # Choices: `debug`, `info`, `warn`.
-  format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+  format: '%(asctime)s | %(levelname)s | %(message)s'
 plots:
   matplotlib_style: seaborn-colorblind
   matplotlib_colormap: viridis_r

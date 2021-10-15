@@ -30,6 +30,7 @@ def recreate_database(
         if additional_data_paths is not None
         else [mesmo.config.config['paths']['data']]
     )
+    logger.debug("MESMO data paths:\n" + '\n'.join(data_paths))
     cobmo_data_paths = set([  # Convert to set to remove duplicate entries.
         os.path.dirname(csv_file)
         for data_path in data_paths
@@ -39,6 +40,7 @@ def recreate_database(
             for folder in ['cobmo', 'cobmo_data']
         )
     ])
+    logger.debug("CoBMo data paths:\n" + '\n'.join(cobmo_data_paths))
     csv_files = [
         csv_file
         for data_path in data_paths
@@ -48,6 +50,7 @@ def recreate_database(
             for folder in ['cobmo', 'cobmo_data', *mesmo.config.config['paths']['ignore_data_folders']]
         )
     ]
+    logger.debug("Found MESMO CSV files:\n" + '\n'.join(csv_files))
 
     # Connect SQLITE database (creates file, if none).
     database_connection = sqlite3.connect(mesmo.config.config['paths']['database'])

@@ -16,37 +16,25 @@ import mesmo.config
 logger = mesmo.config.get_logger(__name__)
 
 
-def recreate_database(
-        additional_data_paths: typing.List[str] = mesmo.config.config['paths']['additional_data']
-) -> None:
+def recreate_database():
     """Recreate SQLITE database from SQL schema file and CSV files in the data path / additional data paths."""
 
     # Log message.
-    mesmo.utils.log_time("recreate SQLITE database")
+    mesmo.utils.log_time("recreate MESMO SQLITE database")
 
     # Find CSV files.
     data_paths = (
-        [mesmo.config.config['paths']['data']] + additional_data_paths
-        if additional_data_paths is not None
+        [mesmo.config.config['paths']['data']] + mesmo.config.config['paths']['additional_data']
+        if mesmo.config.config['paths']['additional_data'] is not None
         else [mesmo.config.config['paths']['data']]
     )
     logger.debug("MESMO data paths:\n" + '\n'.join(data_paths))
-    cobmo_data_paths = set([  # Convert to set to remove duplicate entries.
-        os.path.dirname(csv_file)
-        for data_path in data_paths
-        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
-        if any(
-            os.path.join('', folder, '') in csv_file
-            for folder in ['cobmo', 'cobmo_data']
-        )
-    ])
-    logger.debug("CoBMo data paths:\n" + '\n'.join(cobmo_data_paths))
     csv_files = [
         csv_file
         for data_path in data_paths
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
         if all(
-            os.path.join('', folder, '') not in csv_file
+            os.path.join(folder, '') not in csv_file
             for folder in ['cobmo', 'cobmo_data', *mesmo.config.config['paths']['ignore_data_folders']]
         )
     ]
@@ -94,17 +82,25 @@ def recreate_database(
     cursor.close()
     database_connection.close()
 
-    # Recreate CoBMo database to include MESMO's CoBMo definitions.
-    # TODO: Modify CoBMo config instead.
-    cobmo.data_interface.recreate_database(
-        additional_data_paths=[
-            *cobmo_data_paths,
-            *mesmo.config.config['paths']['cobmo_additional_data']
-        ]
-    )
-
     # Log message.
-    mesmo.utils.log_time("recreate SQLITE database")
+    mesmo.utils.log_time("recreate MESMO SQLITE database")
+
+    # Recreate CoBMo database.
+    cobmo_data_paths = set([  # Convert to set to remove duplicate entries.
+        os.path.dirname(csv_file)
+        for data_path in data_paths
+        for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
+        if any(
+            os.path.join(folder, '') in csv_file
+            for folder in ['cobmo', 'cobmo_data']
+        )
+    ])
+    cobmo.config.config['paths']['additional_data'] = [
+        *cobmo_data_paths,
+        *mesmo.config.config['paths']['cobmo_additional_data'],
+        *cobmo.config.config['paths']['additional_data']
+    ]
+    cobmo.data_interface.recreate_database()
 
 
 def import_csv_file(

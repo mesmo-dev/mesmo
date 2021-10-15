@@ -44,5 +44,6 @@ setuptools.setup(
         'pyyaml',
         'ray[default]',
         'scipy',
+        'tqdm',
     ]
 )

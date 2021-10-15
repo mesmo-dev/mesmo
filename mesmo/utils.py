@@ -1360,6 +1360,7 @@ def starmap(
     argument_sequence = list(argument_sequence)
 
     if mesmo.config.config['multiprocessing']['run_parallel']:
+        # TODO: Remove old parallel pool traces.
         # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
         # if mesmo.config.parallel_pool is None:
         #     # Setup parallel pool on first execution.

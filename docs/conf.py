@@ -46,6 +46,7 @@ autodoc_mock_imports = [
     'pyomo',  # Deprecated.
     'ray',
     'scipy',
+    'tqdm',
 ]
 napoleon_use_ivar = True
 

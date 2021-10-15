@@ -10,6 +10,7 @@ import scipy.sparse as sp
 import sys
 import typing
 
+import cobmo.building_model
 import mesmo.config
 import mesmo.data_interface
 import mesmo.electric_grid_models
@@ -949,7 +950,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Obtain CoBMo building model.
         flexible_building_model = (
-            mesmo.utils.get_building_model(
+            cobmo.building_model.BuildingModel(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],

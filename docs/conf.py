@@ -30,7 +30,7 @@ autodoc_mock_imports = [
     'cvxpy',
     'cobmo',
     'cv2',
-    'diskcache',
+    'diskcache',  # Deprecated.
     'dill',  # Deprecated.
     'kaleido',
     'matplotlib',

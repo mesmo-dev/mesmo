@@ -24,7 +24,6 @@ import scipy.sparse as sp
 import subprocess
 import sys
 
-import cobmo.building_model
 import mesmo.config
 
 logger = mesmo.config.get_logger(__name__)
@@ -1684,13 +1683,6 @@ def launch(path):
         subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
         subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-
-@mesmo.config.memoize('get_building_model')
-def get_building_model(*args, **kwargs):
-    """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
-
-    return cobmo.building_model.BuildingModel(*args, **kwargs)
 
 
 def write_figure_plotly(

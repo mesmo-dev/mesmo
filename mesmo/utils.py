@@ -1379,7 +1379,11 @@ def starmap(
     else:
         # If not `run_parallel`, use for loop for sequential execution.
         results = [
-            function_partial(*arguments) for arguments in tqdm.tqdm(argument_sequence, total=len(argument_sequence))
+            function_partial(*arguments) for arguments in tqdm.tqdm(
+                argument_sequence,
+                total=len(argument_sequence),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+            )
         ]
 
     return results
@@ -1433,7 +1437,11 @@ def ray_get(objects: list):
     """
 
     try:
-        for _ in tqdm.tqdm(ray_iterator(objects), total=len(objects)):
+        for _ in tqdm.tqdm(
+                ray_iterator(objects),
+                total=len(objects),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+        ):
             pass
     except TypeError:
         pass

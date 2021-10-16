@@ -4,7 +4,7 @@
 
 > **Looking for FLEDGE?** - The Flexible Distribution Grid Demonstrator (FLEDGE) is now called Multi-Energy System Modeling and Optimization (MESMO) and has moved to this shiny new repository.
 
-Multi-Energy System Modeling and Optimization (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
+Multi-Energy System Modeling and Optimization (MESMO) is a Python tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
 
 > Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/mesmo-dev/mesmo/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
 
@@ -30,18 +30,24 @@ Multi-Energy System Modeling and Optimization (MESMO) is a software tool for opt
 
 ## Documentation
 
-The preliminary documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.github.io/mesmo).
+The documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.github.io/mesmo).
 
 ## Installation
 
-1. Check requirements:
-    - Python 3.8
-    - [Gurobi Optimizer](http://www.gurobi.com/)
-2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
-3. In your Python environment, run:
-    1. `pip install -v -e path_to_repository`
+MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but can be installed in a local development environment as follows:
 
-Please also read [docs/getting_started.md](./docs/getting_started.md).
+1. Check requirements:
+    - Python distribution: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
+    - Optimization solver: [Gurobi Optimizer](http://www.gurobi.com/) or other solver [via manual configuration](docs/getting_started/configuration.md#optimization-solver).
+2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
+3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
+    - `cd path_to_mesmo_repository`
+    - On Intel CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy "libblas=*=*mkl"; conda activate mesmo; pip install -v -e .`
+    - On other CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo; pip install -v -e .`
+
+The installation via `conda` is recommended, because it sets up a dedicated Python environment and supports the performant MKL math library on Intel CPUs for `numpy` / `scipy`. It also allows installing the `contextily` package on Windows, which is required for some geographical plots. The direct installation via `pip` in a non-`conda` environment is also possible, but is currently not tested.
+
+For more information, see [docs/getting_started/installation.md](docs/getting_started/installation.md).
 
 ## Contributing
 

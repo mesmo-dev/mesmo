@@ -1,7 +1,7 @@
 """Script to generate an network plot of the electric grid for given scenario.
 
 - This script depends on `contextily`, which is not included in the package dependencies, but can be installed
-  under Anaconda via `conda install -c conda-forge contextily`.
+  under `conda install -c conda-forge contextily`.
 """
 
 import contextily as ctx

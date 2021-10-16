@@ -32,8 +32,8 @@ autodoc_default_options = {
 autodoc_typehints = 'description'
 autodoc_mock_imports = [
     # Please note: Do not remove deprecated dependencies, because these are still needed for docs of previous versions.
-    'cvxpy',
     'cobmo',
+    'cvxpy',
     'cv2',
     'diskcache',
     'dill',  # Deprecated.

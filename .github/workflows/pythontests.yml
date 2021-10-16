@@ -1,10 +1,8 @@
 name: Python tests
-
 on: [push]
 
 jobs:
   run-tests:
-
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,6 +14,9 @@ jobs:
           ubuntu-latest
         ]
         python-version: [3.7, 3.8]
+    defaults:
+      run:
+        shell: bash -l {0}  # Required for conda commands.
 
     steps:
     - name: Checkout repository
@@ -26,21 +27,23 @@ jobs:
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: s-weigand/setup-conda@v1
+    - name: Set up Python
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        miniforge-version: latest
     - name: Install dependencies
       run: |
+        conda create -n mesmo -c conda-forge python=${{ matrix.python-version }} contextily cvxpy numpy pandas
+        conda activate mesmo
         pip install -v -e .
     - name: Lint with flake8
       run: |
+        conda activate mesmo
         pip install flake8
         # Stop the build if there are Python syntax errors or undefined names.
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings. Line lengths should not exceed 120 characters.
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
-    - name: Test with pytest
+    - name: Run tests
       run: |
+        conda activate mesmo
         pip install pytest
         pytest tests

@@ -9,8 +9,8 @@ These sections serve as introductory guide on how to use MESMO.
 :maxdepth: 2
 
 installation
-configuration
 examples
+configuration
 ```
 
 ## Contributing

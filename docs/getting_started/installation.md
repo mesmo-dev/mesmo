@@ -5,30 +5,38 @@
 MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but can be installed in a local development environment as follows:
 
 1. Check requirements:
-   - Python distribution: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
-   - Optimization solver: [Gurobi Optimizer](http://www.gurobi.com/) or other solver [via manual configuration](optimization-solver).
+   - Python distribution¹: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
+   - Optimization solver²: [Gurobi](http://www.gurobi.com/) or [CVXPY-supported solver](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
 2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
    - `cd path_to_mesmo_repository`
-   - On Intel CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy "libblas=*=*mkl"; conda activate mesmo; pip install -v -e .`
-   - On other CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo; pip install -v -e .`
+   - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo`
+   - `pip install -v -e .`
+   - On Intel CPUs³: `conda install -c conda-forge "libblas=*=*mkl"`
 
-The installation via `conda` is recommended, because it sets up a dedicated Python environment and supports the performant MKL math library on Intel CPUs for `numpy` / `scipy`. It also allows installing the `contextily` package on Windows, which is required for some geographical plots. The direct installation via `pip` in a non-`conda` environment is also possible, but is currently not tested.
+### Notes
+
+¹ The installation via `conda` is recommended, because it sets up a dedicated Python environment and supports the performant Intel MKL math library on Intel CPUs for `numpy` / `scipy`. It also allows installing the `contextily` package on Windows, which is required for some geographical plots. The direct installation via `pip` in a non-`conda` environment is also possible, but is currently not tested.
+
+² Gurobi is currently the default optimization solver, because MESMO implements a direct Gurobi interface for better performance. Other solvers are supported [via CVXPY](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver) and can be selected via [MESMO configuration](configuration.md). CVXPY is bundled with several open-source solvers and supports additional solvers via manual installation (see "Install with ... support" sections in [CVPXY installation guide](https://www.cvxpy.org/install/index.html)). Note that interfacing solvers via CVXPY currently has [performance limitations](https://github.com/cvxpy/cvxpy/issues/704) for large-scale scenarios.
+
+³ This [command](https://conda-forge.org/docs/maintainer/knowledge_base.html#switching-blas-implementation) ensures the use of the Intel MKL math library, which enables better performance in `numpy` / `scipy` on Intel CPUs over the default OpenBLAS library.
 
 ## Alternative installation
 
 If you are running into errors when installing or running MESMO, this may be due to incompatibility with new versions of package dependencies, which have yet to be discovered and fixed. As a workaround, try installing MESMO via the provided `environment-windows-latest.yml` / `environment-macos-latest.yml` / `environment-ubuntu-latest.yml`, which represent the latest Python environment in which MESMO was tested and is expected to work for the respective OS.
 
 ```{important}
-Please create an issue on Github if you run into problems with the normal installation procedure.
+Please create an issue on Github if you run into problems with the recommended installation procedure.
 ```
 
 1. Check requirements:
    - Python distribution: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
-   - Optimization solver: [Gurobi Optimizer](http://www.gurobi.com/) or other optimization solver [via manual configuration](configuration.md).
+   - Optimization solver: [Gurobi](http://www.gurobi.com/) or [CVXPY-supported solver](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
 2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
 4. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
    - `cd path_to_mesmo_repository`
-   - On Windows: `conda env create -f path_to_mesmo_repository/environment-windows-latest.yml; conda activate mesmo; pip install -v -e .`
-   - On macOS: `conda env create -f path_to_mesmo_repository/environment-macos-latest.yml; conda activate mesmo; pip install -v -e .`
-   - On Ubuntu: `conda env create -f path_to_mesmo_repository/environment-ubuntu-latest.yml; conda activate mesmo; pip install -v -e .`
+   - On Windows: `conda env create -f environment-windows-latest.yml; conda activate mesmo`
+   - On macOS: `conda env create -f environment-macos-latest.yml; conda activate mesmo`
+   - On Ubuntu: `conda env create -f environment-ubuntu-latest.yml; conda activate mesmo`
+   - `pip install -v -e .`

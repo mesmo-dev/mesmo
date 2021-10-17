@@ -8,7 +8,6 @@ If you want to change the configuration, you can create or modify `config.yml` i
 
 The configuration parameters which are defined in `config.yml` will take precedence over those defined in `mesmo/config_default.yml`. If you would like to revert a parameter to its default value, just delete the parameter from `config.yml`. Please do not modify `mesmo/config_default.yml` directly.
 
-(optimization-solver)=
 ## Optimization solver
 
 To define CPLEX as the optimization solver, use:

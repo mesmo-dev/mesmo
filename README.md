@@ -37,17 +37,16 @@ The documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.gi
 MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but can be installed in a local development environment as follows:
 
 1. Check requirements:
-    - Python distribution: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
-    - Optimization solver: [Gurobi Optimizer](http://www.gurobi.com/) or other solver [via manual configuration](docs/getting_started/configuration.md#optimization-solver).
+    - Python distribution¹: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
+    - Optimization solver²: [Gurobi](http://www.gurobi.com/) or [CVXPY-supported solver](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
 2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
     - `cd path_to_mesmo_repository`
-    - On Intel CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy "libblas=*=*mkl"; conda activate mesmo; pip install -v -e .`
-    - On other CPUs: `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo; pip install -v -e .`
+    - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo`
+    - `pip install -v -e .`
+    - On Intel CPUs³: `conda install -c conda-forge "libblas=*=*mkl"`
 
-The installation via `conda` is recommended, because it sets up a dedicated Python environment and supports the performant MKL math library on Intel CPUs for `numpy` / `scipy`. It also allows installing the `contextily` package on Windows, which is required for some geographical plots. The direct installation via `pip` in a non-`conda` environment is also possible, but is currently not tested.
-
-For more information, see [docs/getting_started/installation.md](docs/getting_started/installation.md).
+For notes ¹/²/³ and alternative installation guide, see [docs/getting_started/installation.md](docs/getting_started/installation.md).
 
 ## Contributing
 

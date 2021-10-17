@@ -20,8 +20,8 @@ url = {https://doi.org/10.5281/zenodo.3523568}
 The following publications are based on MESMO.
 
 - [Preprint] Kleinschmidt, V., Troitzsch, S., Hamacher, T., Perić, V., **Flexibility in distribution systems – Modelling a thermal-electric multi-energy system in MESMO**, 2021.
-  - MESMO [v0.4.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.0) was used to prepare the results for this paper.
-  - The related script is at `examples/publications/paper_2021_kleinschmidt_isgt_multi_energy_system.py`.
+    - MESMO [v0.4.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.0) was used to prepare the results for this paper.
+    - The related script is at `examples/publications/paper_2021_kleinschmidt_isgt_multi_energy_system.py`.
 - [Preprint] Troitzsch, S., Zhang, K., Massier, T., & Hamacher, T., **Coordinated Market Clearing for Combined Thermal and Electric Distribution Grid Operation**, in IEEE Power & Energy Society General Meeting (PESGM), 2021. [`doi:10.36227/techrxiv.13247246`](https://doi.org/10.36227/techrxiv.13247246)
     - MESMO [v0.4.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.0) was used to prepare the results for this paper.
     - The related script is at `examples/publications/paper_2021_troitzsch_admm_coordination_thermal_electric.py`.

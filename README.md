@@ -42,7 +42,8 @@ MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but c
 2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
     - `cd path_to_mesmo_repository`
-    - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy; conda activate mesmo`
+    - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy`
+    - `conda activate mesmo`
     - `pip install -v -e .`
     - On Intel CPUs³: `conda install -c conda-forge "libblas=*=*mkl"`
 

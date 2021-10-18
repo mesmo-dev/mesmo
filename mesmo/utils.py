@@ -697,7 +697,6 @@ class OptimizationProblem(ObjectBase):
                 variable_value = variable_value * np.ones((1, len(variable_index)))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
                 if broadcast_len > 1:
                     if len(np.shape(variable_value)) > 1:
                         variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
@@ -714,7 +713,7 @@ class OptimizationProblem(ObjectBase):
 
             # Raise error if variable dimensions are inconsistent.
             if (
-                    (np.shape(variable_value)[1] != len(variable_index)) or (np.shape(variable_value)[0] != 1)
+                    np.shape(variable_value)[1] != len(variable_index)
                     if len(np.shape(variable_value)) > 1
                     else np.shape(variable_value)[0] != len(variable_index)
             ):
@@ -761,40 +760,31 @@ class OptimizationProblem(ObjectBase):
                 variable_value = self.parameters[parameter_name]
             else:
                 parameter_name = None
-            # Scalar values are multiplied with row vector of ones of appropriate size.
+            # Flat arrays are interpreted as diagonal matrix.
+            if len(np.shape(variable_value)) == 1:
+                # TODO: Raise error for flat arrays instead?
+                variable_value = sp.diags(variable_value)
+            # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
             if len(np.shape(variable_value)) == 0:
-                variable_value = variable_value * np.ones((1, len(variable_1_index)))
+                variable_value = variable_value * sp.eye(len(variable_1_index))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
-                if broadcast_len > 1:
-                    if len(np.shape(variable_value)) > 1:
-                        variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
-                    else:
-                        variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
-
-            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
-            if len(np.shape(variable_value)) > 1:
-                if np.shape(variable_value)[0] > 1:
-                    raise ValueError(
-                        f"Quadratic objective factor must be row vector (1, n) or flat array (n, ),"
-                        f" not column vector (n, 1) nor matrix (m, n)."
-                    )
+                if type(variable_value) is np.matrix:
+                    variable_value = np.array(variable_value)
+                variable_value = sp.block_diag([variable_value] * broadcast_len)
 
             # Raise error if variable dimensions are inconsistent.
-            if len(variable_1_index) != len(variable_2_index):
+            if np.shape(variable_value)[0] != len(variable_1_index):
                 raise ValueError(
-                    f"Quadratic variable dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
-            if (
-                    (np.shape(variable_value)[1] != len(variable_1_index)) or (np.shape(variable_value)[0] != 1)
-                    if len(np.shape(variable_value)) > 1
-                    else np.shape(variable_value)[0] != len(variable_1_index)
-            ):
+            if np.shape(variable_value)[1] != len(variable_2_index):
                 raise ValueError(
-                    f"Quadratic objective factor dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
 
             # Add Q matrix entry.
@@ -961,20 +951,18 @@ class OptimizationProblem(ObjectBase):
                 if type(values) is tuple:
                     parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 1:
+                        values = sp.diags(values)
                     if len(np.shape(values)) == 0:
-                        values = values * np.ones(len(variable_1_index))
+                        values = values * sp.eye(len(variable_1_index))
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        if len(np.shape(values)) > 1:
-                            values = np.concatenate([values] * broadcast_len, axis=1)
-                        else:
-                            values = np.concatenate([[values]] * broadcast_len, axis=1)
+                        values = sp.block_diag([values] * broadcast_len)
                 # Obtain row index, column index and values for entry in Q matrix.
-                rows, columns, values = sp.find(values.ravel())
-                rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
-                columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
-                values = np.concatenate([values, values])
+                rows, columns, values = sp.find(values)
+                rows = np.array(variable_1_index)[rows]
+                columns = np.array(variable_2_index)[columns]
                 # Insert entry in collections.
                 values_list.append(values)
                 rows_list.append(rows)

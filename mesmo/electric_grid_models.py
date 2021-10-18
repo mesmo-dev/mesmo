@@ -4463,10 +4463,7 @@ class LinearElectricGridModelSet(object):
             'electric_grid_active_power_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
-            * np.concatenate(
-                [np.array([np.real(self.electric_grid_model.der_power_vector_reference) ** 2])] * len(self.timesteps),
-                axis=1
-            )
+            * np.concatenate([np.real(self.electric_grid_model.der_power_vector_reference) ** 2] * len(self.timesteps))
         )
         optimization_problem.define_parameter(
             'electric_grid_reactive_power_cost',
@@ -4480,10 +4477,7 @@ class LinearElectricGridModelSet(object):
             'electric_grid_reactive_power_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
-            * np.concatenate(
-                [np.array([np.imag(self.electric_grid_model.der_power_vector_reference) ** 2])] * len(self.timesteps),
-                axis=1
-            )
+            * np.concatenate([np.imag(self.electric_grid_model.der_power_vector_reference) ** 2] * len(self.timesteps))
         )
         optimization_problem.define_parameter(
             'electric_grid_loss_active_cost',

@@ -817,10 +817,7 @@ class LinearThermalGridModelSet(object):
             'thermal_grid_thermal_power_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
-            * np.concatenate(
-                [np.array([self.thermal_grid_model.der_thermal_power_vector_reference ** 2])] * len(self.timesteps),
-                axis=1
-            )
+            * np.concatenate([self.thermal_grid_model.der_thermal_power_vector_reference ** 2] * len(self.timesteps))
         )
         optimization_problem.define_parameter(
             'thermal_grid_pump_power_cost',

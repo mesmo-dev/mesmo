@@ -1894,10 +1894,7 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_active_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_active_power_vector_reference ** 2] * len(self.timesteps))
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost',
@@ -1917,10 +1914,7 @@ class DERModelSet(DERModelSetBase):
                 'der_reactive_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_reactive_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_reactive_power_vector_reference ** 2] * len(self.timesteps))
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
@@ -1941,10 +1935,7 @@ class DERModelSet(DERModelSetBase):
                 'der_thermal_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_thermal_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_thermal_power_vector_reference ** 2] * len(self.timesteps))
             )
         # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
         # TODO: Related: Cost for CHP defined twice.

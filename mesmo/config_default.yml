@@ -1,7 +1,6 @@
 # Configuration default values.
 # - These values can be overwritten with a custom `config.yml` in the repository base directory.
-
-# Path configuration.
+# - Please see the configuration documentation at `../docs/getting_started/configuration.md`.
 # - In the path settings, `./` denotes the repository base directory and is replaced with the full path upon loading.
 paths:
   additional_data: []
@@ -10,35 +9,23 @@ paths:
   database: ./data/database.sqlite
   results: ./results
   cobmo_additional_data: []
-
-# Optimization solver configuration.
 optimization:
   solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY in lower caps.
   solver_interface: direct # Choices: 'direct' or 'cvxpy'. If not defined, will use 'direct'.
-  show_solver_output: true  # Choices: 'true' or 'false'. If 'true', activate verbose solver output.
+  show_solver_output: true # Choices: 'true' or 'false'. If 'true', activate verbose solver output.
   time_limit:  # Solver time limit in seconds. If not defined, will use infinite. Only for Gurobi and CPLEX.
-
-# Multiprocessing configuration.
 multiprocessing:
   run_parallel: false  # Disabled by default to avoid unexpected issues.
-
-# Caching configuration.
 caching:
   enable: false  # If false, no cache is created. Disabled by default to avoid unexpected issues.
   reset_cache: false  # If true, reset the cache on each restart of MESMO, to incorporate changes in the database.
   expiry_time: 3600  # Expiry time of the cache, in seconds.
   get_building_model: true
-
-# Test configuration.
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.
-
-# Log configuration.
 logs:
   level: info  # Choices: `debug`, `info`, `warn`.
   format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
-
-# Plot configuration.
 plots:
   matplotlib_style: seaborn-colorblind
   matplotlib_colormap: viridis_r

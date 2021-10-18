@@ -4,23 +4,17 @@ The MESMO configuration is defined via `config.yml`. As an initial user, you lik
 
 ## Configuration workflow
 
-If it does not exist, MESMO will create an empty `config.yml` during first runtime. To define the local configuration, you can copy and modify key / value pairs from the configuration reference below.
+An empty `config.yml` is created during the first runtime of MESMO. To define the local configuration, simply insert and modify key / value pairs from the configuration references below.
 
-```{figure} ../assets/configuration_file_structure.svg
-:width: 45%
-:align: center
+![](../assets/configuration_file_structure.png)
 
-Configuration file location.
-```
+**Figure: Configuration file location.**
 
-MESMO distinguishes 1) local configuration in `config.yml` and 2) default configuration in `config_default.yml`. The local configuration takes precedence over that default configuration. That means, during initialization, `get_config()` first reads the default configuration from `config_default.yml` and then redefines any key / value pairs that have been modified in `config.yml`.
+MESMO distinguishes 1) local configuration in `config.yml` and 2) default configuration in `config_default.yml`. The local configuration takes precedence over the default configuration. That means, during initialization, `get_config()` first reads the default configuration from `config_default.yml` and then redefines any key / value pairs that have been modified in `config.yml`.
 
-```{figure} ../assets/configuration_workflow.svg
-:width: 40%
-:align: center
+![](../assets/configuration_workflow.png)
 
-Configuration initialization workflow.
-```
+**Figure: Configuration initialization workflow.**
 
 The following sections serve as a reference for configuration key / value pairs. Please note that key / value pairs are defined in a nested structure for each configuration type. This nested structure needs to be replicated for key / value pairs in `config.yml`.
 
@@ -32,10 +26,12 @@ Please only modify `config.yml`, but do not make changes to `config_default.yml`
 
 ### Default configuration
 
-```{include} ../../mesmo/config_default.yml
-:code:
-:start-after: '# Optimization solver configuration.'
-:end-before: '# Multiprocessing configuration.'
+```yaml
+optimization:
+  solver_name: gurobi
+  solver_interface: direct
+  show_solver_output: true
+  time_limit:
 ```
 
 ### Configuration keys
@@ -49,7 +45,7 @@ Please only modify `config.yml`, but do not make changes to `config_default.yml`
 
 As an example, [CPLEX](https://www.ibm.com/analytics/cplex-optimizer) can be defined as the optimization solver with the following configuration snippet:
 
-```
+```yaml
 optimization:
   solver_name: cplex
   solver_interface: cvxpy

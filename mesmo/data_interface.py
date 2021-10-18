@@ -23,13 +23,13 @@ def recreate_database():
     mesmo.utils.log_time("recreate MESMO SQLITE database")
 
     # Find CSV files.
-    data_paths = (
-        [mesmo.config.config['paths']['data']] + mesmo.config.config['paths']['additional_data']
-        if mesmo.config.config['paths']['additional_data'] is not None
-        else [mesmo.config.config['paths']['data']]
-    )
+    # - Using set instead of list to avoid duplicate entries.
+    data_paths = {
+        mesmo.config.config['paths']['data'],
+        *mesmo.config.config['paths']['additional_data']
+    }
     logger.debug("MESMO data paths:\n" + '\n'.join(data_paths))
-    csv_files = [
+    csv_files = {
         csv_file
         for data_path in data_paths
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
@@ -37,7 +37,7 @@ def recreate_database():
             os.path.join(folder, '') not in csv_file
             for folder in ['cobmo', 'cobmo_data', *mesmo.config.config['paths']['ignore_data_folders']]
         )
-    ]
+    }
     logger.debug("Found MESMO CSV files:\n" + '\n'.join(csv_files))
 
     # Connect SQLITE database (creates file, if none).
@@ -86,7 +86,8 @@ def recreate_database():
     mesmo.utils.log_time("recreate MESMO SQLITE database")
 
     # Recreate CoBMo database.
-    cobmo_data_paths = set([  # Convert to set to remove duplicate entries.
+    # - Using set instead of list to avoid duplicate entries.
+    cobmo_data_paths = {
         os.path.dirname(csv_file)
         for data_path in data_paths
         for csv_file in glob.glob(os.path.join(data_path, '**', '*.csv'), recursive=True)
@@ -94,12 +95,12 @@ def recreate_database():
             os.path.join(folder, '') in csv_file
             for folder in ['cobmo', 'cobmo_data']
         )
-    ])
-    cobmo.config.config['paths']['additional_data'] = [
+    }
+    cobmo.config.config['paths']['additional_data'] = {
         *cobmo_data_paths,
         *mesmo.config.config['paths']['cobmo_additional_data'],
         *cobmo.config.config['paths']['additional_data']
-    ]
+    }
     cobmo.data_interface.recreate_database()
 
 

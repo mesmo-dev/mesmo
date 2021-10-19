@@ -1,16 +1,31 @@
 # MESMO - Multi-Energy System Modeling and Optimization
 
 ```{toctree}
-:maxdepth: 2
+:caption: User guide
 :hidden:
 
-getting_started/index
+installation
+architecture
+examples
+```
+
+```{toctree}
+:caption: Reference
+:hidden:
+
 data_reference
 api_reference
-software_architecture
+configuration_reference
+```
+
+```{toctree}
+:caption: About
+:hidden:
+
 contributing
 change_log
 publications
+License <https://github.com/mesmo-dev/mesmo/blob/develop/LICENSE>
 GitHub repository <https://github.com/mesmo-dev/mesmo>
 ```
 

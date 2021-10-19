@@ -47,7 +47,7 @@ MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but c
     - `pip install -v -e .`
     - On Intel CPUs³: `conda install -c conda-forge "libblas=*=*mkl"`
 
-For notes ¹/²/³ and alternative installation guide, see [docs/getting_started/installation.md](docs/getting_started/installation.md).
+For notes ¹/²/³ and alternative installation guide, see [docs/installation.md](docs/installation.md).
 
 ## Contributing
 

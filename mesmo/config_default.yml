@@ -1,5 +1,5 @@
 # Configuration default values.
-# - Please see the configuration documentation at `../docs/getting_started/configuration.md`.
+# - For documentation, see the configuration reference at `../docs/configuration_reference.md`.
 # - These values can be overwritten with a custom `config.yml` in the repository base directory.
 # - In the path parameters, `./` denotes the MESMO repository base directory as reference for relative path definitions.
 paths:

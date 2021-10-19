@@ -66,7 +66,10 @@ def get_config() -> dict:
     # Define utility function to obtain full paths.
     # - Replace `./` with the base path and normalize paths.
     def get_full_path(path: str) -> str:
-        return os.path.normpath(path.replace('./', base_path + os.path.sep))
+        if path.startswith('./'):
+            # Replace only first occurrence.
+            path = path.replace('./', base_path + os.path.sep, 1)
+        return os.path.normpath(path)
 
     # Obtain full paths.
     complete_config['paths']['data'] = get_full_path(complete_config['paths']['data'])

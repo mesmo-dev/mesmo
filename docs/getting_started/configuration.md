@@ -4,27 +4,64 @@ The MESMO configuration is defined via `config.yml`. As an initial user, you lik
 
 ## Configuration workflow
 
-An empty `config.yml` is created during the first runtime of MESMO. To define the local configuration, simply insert and modify key / value pairs from the configuration references below.
+An empty `config.yml` is created during the first runtime of MESMO. To define the local configuration, simply insert and modify configuration parameters from the references below.
 
 ![](../assets/configuration_file_structure.png)
 
 **Figure: Configuration file location.**
 
-MESMO distinguishes 1) local configuration in `config.yml` and 2) default configuration in `config_default.yml`. The local configuration takes precedence over the default configuration. That means, during initialization, `get_config()` first reads the default configuration from `config_default.yml` and then redefines any key / value pairs that have been modified in `config.yml`.
+MESMO distinguishes 1) local configuration in `config.yml` and 2) default configuration in `config_default.yml`. The local configuration takes precedence over the default configuration. That means, during initialization, `get_config()` first reads the default configuration from `config_default.yml` and then redefines any parameters that have been modified in `config.yml`.
 
 ![](../assets/configuration_workflow.png)
 
 **Figure: Configuration initialization workflow.**
 
-The following sections serve as a reference for configuration key / value pairs. Please note that key / value pairs are defined in a nested structure for each configuration type. This nested structure needs to be replicated for key / value pairs in `config.yml`.
+The following sections serve as a reference for configuration parameters. Please note that key / value pairs are defined in a nested structure for each configuration type. This nested structure needs to be replicated for key / value pairs in `config.yml`.
 
 ```{important}
 Please only modify `config.yml`, but do not make changes to `config_default.yml`.
 ```
 
+## Path configuration
+
+### Default values
+
+```yaml
+paths:
+  data: ./data
+  database: ./data/database.sqlite
+  results: ./results
+  additional_data: []
+  ignore_data_folders: []
+  cobmo_additional_data: []
+```
+
+### Configuration keys
+
+ - `data`: Defines the main data directory, i.e. the location of the CSV input files which are imported by {func}`mesmo.data_interface.recreate_database()`. Can be given as absolute path or relative path to `./`¹. Defaults to the data directory that is included with the MESMO repository. If you want to include additional data from other directories, please see `additional_data` below.
+ - `database`: Defines the file path for the internal SQLITE database. Can be given as absolute path or relative path to `./`¹. This file will be created by {func}`mesmo.data_interface.recreate_database()`, if it does not exist.
+ - `results`: Defines the main results directory, i.e. the directory where results outputs are stored. This parameter is used as base path in {func}`mesmo.utils.get_results_path()`. Defaults to the results directory in the MESMO repository.
+ - `additional_data`: Defines list of supplementary data directories, which are imported in addition to the main data directory by {func}`mesmo.data_interface.recreate_database()`. Should be defined as list of absolute or relative paths to `./`¹.
+ - `ignore_data_folders`: Defines a list of directory names that are excluded during import by {func}`mesmo.data_interface.recreate_database()`. Should be defined as list of folder names to exclude, but does accept full paths.
+ - `cobmo_additional_data`: Defines list of supplementary data directories for the `cobmo` submodule, similar to `additional_data` above.
+
+¹ In the path parameters, `./` denotes the MESMO repository base directory as reference for relative path definitions.
+
+### Using additional data directories
+
+As an example, additional data from folders `supplementary_data` and `project_data` adjacent to the MESMO repository base directory can be defined with the following configuration snippet:
+
+```yaml
+paths:
+  additional_data: [
+    ./../supplementary_data,
+    ./../project_data
+  ]
+```
+
 ## Optimization solver configuration
 
-### Default configuration
+### Default values
 
 ```yaml
 optimization:

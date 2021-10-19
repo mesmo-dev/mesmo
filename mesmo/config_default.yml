@@ -1,13 +1,13 @@
 # Configuration default values.
-# - These values can be overwritten with a custom `config.yml` in the repository base directory.
 # - Please see the configuration documentation at `../docs/getting_started/configuration.md`.
-# - In the path settings, `./` denotes the repository base directory and is replaced with the full path upon loading.
+# - These values can be overwritten with a custom `config.yml` in the repository base directory.
+# - In the path parameters, `./` denotes the MESMO repository base directory as reference for relative path definitions.
 paths:
-  additional_data: []
-  ignore_data_folders: []
   data: ./data
   database: ./data/database.sqlite
   results: ./results
+  additional_data: []
+  ignore_data_folders: []
   cobmo_additional_data: []
 optimization:
   solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY in lower caps.

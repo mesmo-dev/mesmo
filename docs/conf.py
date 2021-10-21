@@ -35,7 +35,7 @@ autodoc_mock_imports = [
     'cobmo',
     'cvxpy',
     'cv2',
-    'diskcache',
+    'diskcache',  # Deprecated.
     'dill',  # Deprecated.
     'gurobipy',
     'kaleido',
@@ -52,6 +52,7 @@ autodoc_mock_imports = [
     'pyomo',  # Deprecated.
     'ray',
     'scipy',
+    'tqdm',
 ]
 napoleon_use_ivar = True
 

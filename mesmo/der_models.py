@@ -10,6 +10,7 @@ import scipy.sparse as sp
 import sys
 import typing
 
+import cobmo.building_model
 import mesmo.config
 import mesmo.data_interface
 import mesmo.electric_grid_models
@@ -949,7 +950,7 @@ class FlexibleBuildingModel(FlexibleDERModel):
 
         # Obtain CoBMo building model.
         flexible_building_model = (
-            mesmo.utils.get_building_model(
+            cobmo.building_model.BuildingModel(
                 der.at['der_model_name'],
                 timestep_start=der_data.scenario_data.scenario.at['timestep_start'],
                 timestep_end=der_data.scenario_data.scenario.at['timestep_end'],
@@ -1648,25 +1649,14 @@ class DERModelSet(DERModelSetBase):
         )
 
         # Define DER power vector variables.
-        # - Only if these have not yet been defined within `LinearElectricGridModel` or `LinearThermalGridModel`.
-        if (
-                ('der_active_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
-                and (len(self.electric_ders) > 0)
-        ):
+        if len(self.electric_ders) > 0:
             optimization_problem.define_variable(
                 'der_active_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
             )
-        if (
-                ('der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
-                and (len(self.electric_ders) > 0)
-        ):
             optimization_problem.define_variable(
                 'der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
             )
-        if (
-                ('der_thermal_power_vector' not in optimization_problem.variables.loc[:, 'name'].values)
-                and (len(self.thermal_ders) > 0)
-        ):
+        if len(self.thermal_ders) > 0:
             optimization_problem.define_variable(
                 'der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.thermal_ders
             )
@@ -1904,10 +1894,7 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_active_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_active_power_vector_reference ** 2] * len(self.timesteps))
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost',
@@ -1927,10 +1914,7 @@ class DERModelSet(DERModelSetBase):
                 'der_reactive_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_reactive_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_reactive_power_vector_reference ** 2] * len(self.timesteps))
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
@@ -1951,10 +1935,7 @@ class DERModelSet(DERModelSetBase):
                 'der_thermal_power_cost_sensitivity',
                 price_data.price_sensitivity_coefficient
                 * timestep_interval_hours  # In Wh.
-                * np.concatenate(
-                    [np.array([self.der_thermal_power_vector_reference ** 2])] * len(self.timesteps),
-                    axis=1
-                )
+                * np.concatenate([self.der_thermal_power_vector_reference ** 2] * len(self.timesteps))
             )
         # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
         # TODO: Related: Cost for CHP defined twice.

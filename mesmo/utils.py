@@ -15,14 +15,15 @@ import pandas as pd
 import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
+import ray
 import re
 import time
+import tqdm
 import typing
 import scipy.sparse as sp
 import subprocess
 import sys
 
-import cobmo.building_model
 import mesmo.config
 
 logger = mesmo.config.get_logger(__name__)
@@ -343,8 +344,10 @@ class OptimizationProblem(ObjectBase):
             ]), columns=['name', *keys.keys()])
         )
         # Add new variables to index.
-        self.variables = pd.concat([self.variables, new_variables], ignore_index=True)
-        # TODO: Raise error if defining duplicate variables.
+        # - Duplicate definitions are automatically removed.
+        self.variables = (
+            pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates(ignore_index=True)
+        )
 
     def define_parameter(
             self,
@@ -837,7 +840,6 @@ class OptimizationProblem(ObjectBase):
                 variable_value = variable_value * np.ones((1, len(variable_index)))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
                 if broadcast_len > 1:
                     if len(np.shape(variable_value)) > 1:
                         variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
@@ -854,7 +856,7 @@ class OptimizationProblem(ObjectBase):
 
             # Raise error if variable dimensions are inconsistent.
             if (
-                    (np.shape(variable_value)[1] != len(variable_index)) or (np.shape(variable_value)[0] != 1)
+                    np.shape(variable_value)[1] != len(variable_index)
                     if len(np.shape(variable_value)) > 1
                     else np.shape(variable_value)[0] != len(variable_index)
             ):
@@ -901,40 +903,31 @@ class OptimizationProblem(ObjectBase):
                 variable_value = self.parameters[parameter_name]
             else:
                 parameter_name = None
-            # Scalar values are multiplied with row vector of ones of appropriate size.
+            # Flat arrays are interpreted as diagonal matrix.
+            if len(np.shape(variable_value)) == 1:
+                # TODO: Raise error for flat arrays instead?
+                variable_value = sp.diags(variable_value)
+            # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
             if len(np.shape(variable_value)) == 0:
-                variable_value = variable_value * np.ones((1, len(variable_1_index)))
+                variable_value = variable_value * sp.eye(len(variable_1_index))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
-                if broadcast_len > 1:
-                    if len(np.shape(variable_value)) > 1:
-                        variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
-                    else:
-                        variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
-
-            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
-            if len(np.shape(variable_value)) > 1:
-                if np.shape(variable_value)[0] > 1:
-                    raise ValueError(
-                        f"Quadratic objective factor must be row vector (1, n) or flat array (n, ),"
-                        f" not column vector (n, 1) nor matrix (m, n)."
-                    )
+                if type(variable_value) is np.matrix:
+                    variable_value = np.array(variable_value)
+                variable_value = sp.block_diag([variable_value] * broadcast_len)
 
             # Raise error if variable dimensions are inconsistent.
-            if len(variable_1_index) != len(variable_2_index):
+            if np.shape(variable_value)[0] != len(variable_1_index):
                 raise ValueError(
-                    f"Quadratic variable dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
-            if (
-                    (np.shape(variable_value)[1] != len(variable_1_index)) or (np.shape(variable_value)[0] != 1)
-                    if len(np.shape(variable_value)) > 1
-                    else np.shape(variable_value)[0] != len(variable_1_index)
-            ):
+            if np.shape(variable_value)[1] != len(variable_2_index):
                 raise ValueError(
-                    f"Quadratic objective factor dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
 
             # Add Q matrix entry.
@@ -1105,20 +1098,18 @@ class OptimizationProblem(ObjectBase):
                 if type(values) is tuple:
                     parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 1:
+                        values = sp.diags(values)
                     if len(np.shape(values)) == 0:
-                        values = values * np.ones(len(variable_1_index))
+                        values = values * sp.eye(len(variable_1_index))
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        if len(np.shape(values)) > 1:
-                            values = np.concatenate([values] * broadcast_len, axis=1)
-                        else:
-                            values = np.concatenate([[values]] * broadcast_len, axis=1)
+                        values = sp.block_diag([values] * broadcast_len)
                 # Obtain row index, column index and values for entry in Q matrix.
-                rows, columns, values = sp.find(values.ravel())
-                rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
-                columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
-                values = np.concatenate([values, values])
+                rows, columns, values = sp.find(values)
+                rows = np.array(variable_1_index)[rows]
+                columns = np.array(variable_2_index)[columns]
                 # Insert entry in collections.
                 values_list.append(values)
                 rows_list.append(rows)
@@ -1549,17 +1540,35 @@ def starmap(
     else:
         function_partial = function
 
+    # Ensure that argument sequence is list.
+    argument_sequence = list(argument_sequence)
+
     if mesmo.config.config['multiprocessing']['run_parallel']:
-        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # TODO: Remove old parallel pool traces.
+        # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # if mesmo.config.parallel_pool is None:
+        #     # Setup parallel pool on first execution.
+        #     log_time('parallel pool setup')
+        #     mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+        #     log_time('parallel pool setup')
+        # results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+
+        # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
-            # Setup parallel pool on first execution.
             log_time('parallel pool setup')
-            mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+            ray.init()
+            mesmo.config.parallel_pool = True
             log_time('parallel pool setup')
-        results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+        results = ray_starmap(function_partial, argument_sequence)
     else:
-        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
-        results = list(itertools.starmap(function_partial, argument_sequence))
+        # If not `run_parallel`, use for loop for sequential execution.
+        results = [
+            function_partial(*arguments) for arguments in tqdm.tqdm(
+                argument_sequence,
+                total=len(argument_sequence),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+            )
+        ]
 
     return results
 
@@ -1592,6 +1601,51 @@ def chunk_list(
         [j for j in itertools.islice(list_iter, chunk_size)]
         for i in range(0, len(list_in), chunk_size)
     ]
+
+
+def ray_iterator(objects: list):
+    """Utility iterator for a list of parallelized ``ray`` objects.
+
+    - This iterator enables progress reporting with ``tqdm`` in :func:`ray_get`.
+    """
+
+    while objects:
+        done, objects = ray.wait(objects)
+        yield ray.get(done[0])
+
+
+def ray_get(objects: list):
+    """Utility function for parallelized execution of a list of ``ray`` objects.
+
+    - This function enables the parallelized execution with built-in progress reporting.
+    """
+
+    try:
+        for _ in tqdm.tqdm(
+                ray_iterator(objects),
+                total=len(objects),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+        ):
+            pass
+    except TypeError:
+        pass
+    return ray.get(objects)
+
+
+def ray_starmap(
+        function_handle: typing.Callable,
+        argument_sequence: list
+):
+    """Utility function to provide an interface similar to ``itertools.starmap`` for ``ray``.
+
+    - This replicates the ``starmap`` interface of the ``multiprocessing`` API, which ray also supports,
+      but allows for additional modifications, e.g. progress reporting via :func:`ray_get`.
+    """
+
+    return ray_get([
+        ray.remote(lambda *args: function_handle(*args)).remote(*arguments)
+        for arguments in argument_sequence
+    ])
 
 
 def log_time(
@@ -1814,13 +1868,6 @@ def launch(path):
         subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
         subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-
-@mesmo.config.memoize('get_building_model')
-def get_building_model(*args, **kwargs):
-    """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
-
-    return cobmo.building_model.BuildingModel(*args, **kwargs)
 
 
 def write_figure_plotly(

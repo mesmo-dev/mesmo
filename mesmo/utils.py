@@ -15,14 +15,15 @@ import pandas as pd
 import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
+import ray
 import re
 import time
+import tqdm
 import typing
 import scipy.sparse as sp
 import subprocess
 import sys
 
-import cobmo.building_model
 import mesmo.config
 
 logger = mesmo.config.get_logger(__name__)
@@ -180,8 +181,101 @@ class ResultsBase(ObjectBase):
 
 
 class OptimizationProblem(ObjectBase):
-    """Optimization problem object."""
-    # TODO: Documentation.
+    r"""Optimization problem object class, which allows the definition and solution of convex optimization problems.
+    The optimization problem object serves as a container for the parameters, variables, constraints and objective
+    terms. The object provides methods for defining variables, parameters, constraints and objectives as well as
+    methods for solving the numerical optimization problem and obtaining results for variables, objective value and
+    dual values.
+
+    - This documentation assumes a fundamental understanding of convex optimization. As a general reference
+      on this topic, refer to: *S. P. Boyd and L. Vandenberghe, Convex optimization. Cambridge University Press, 2004.*
+      Available at: https://web.stanford.edu/~boyd/cvxbook/
+    - The optimization problem object currently supports convex optimization problems in the form of
+      1) linear program (LP) or 2) quadratic program (QP) with only linear constraints.
+    - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
+      convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
+      to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces are
+      assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as a fallback to
+      allow a high degree of compatibility with various solvers.
+
+    The optimization problem object internally translates optimizations into LP / QP standard form. Where the following
+    formulation is assumed for the standard form:
+
+    .. math::
+        \begin{align}
+            \min_{\boldsymbol{x}} \quad
+            & \boldsymbol{c}^{\intercal} \boldsymbol{x}
+            + \frac{1}{2} \boldsymbol{x}^{\intercal} \boldsymbol{Q} \boldsymbol{x} + d \\
+            \text{s.t.} \quad
+            & \boldsymbol{A} \boldsymbol{x} \leq \boldsymbol{b} \quad : \ \boldsymbol{\mu}
+        \end{align}
+
+    The vectors :math:`\boldsymbol{x}` and :math:`\boldsymbol{\mu}` are the variable vector and
+    associated constraint dual variable vector. The matrix :math:`\boldsymbol{A}` defines the linear
+    constraint coefficients, whereas the matrix :math:`\boldsymbol{Q}` defines quadradtic objective coefficients.
+    The vectors :math:`\boldsymbol{b}` and :math:`\boldsymbol{c}` define constant constraint terms
+    and linear objective coefficients. Lastly, the scalar :math:`d` defines the constant objective term.
+    Note that the scalar :math:`d` represents a slight abuse of the standard form to include constant objective term,
+    which may prove useful for comparing objective values across different problem definitions.
+
+    Example:
+
+        Consider the following optimization problem:
+
+        .. math::
+            \begin{align}
+                \min_{\boldsymbol{a},\boldsymbol{b}} \quad
+                & \sum_{i=1}^{n=1000} b_i \\
+                \text{s.t.} \quad
+                & \boldsymbol{b} = \boldsymbol{a} \cdot \boldsymbol{P} \\
+                & -10 \leq \boldsymbol{a} \leq +10
+            \end{align}
+
+        The matrix :math:`\boldsymbol{P} \in \mathbb{R}^{n \times n}` is an abitrary parameter matrix. The vectors
+        :math:`\boldsymbol{a}, \boldsymbol{b} \in \mathbb{R}^{n \times 1}` are decision variable vectors. The symbol
+        :math:`n` defines the problem dimension.
+        This problem can be defined and solved with the optimization problem interface as follows::
+
+            # Instantiate optimization problem.
+            optimization_problem = mesmo.utils.OptimizationProblem()
+
+            # Define optimization parameters.
+            optimization_problem.define_parameter('parameter_matrix', parameter_matrix)
+
+            # Define optimization variables.
+            optimization_problem.define_variable('a_vector', a_index=range(dimension))
+            optimization_problem.define_variable('b_vector', b_index=range(dimension))
+
+            # Define optimization constraints.
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='b_vector')),
+                '==',
+                ('variable', 'parameter_matrix', dict(name='a_vector')),
+            )
+            optimization_problem.define_constraint(
+                ('constant', -10.0),
+                '<=',
+                ('variable', 1.0, dict(name='a_vector')),
+            )
+            optimization_problem.define_constraint(
+                ('constant', +10.0),
+                '>=',
+                ('variable', 1.0, dict(name='a_vector')),
+            )
+
+            # Define optimization objective.
+            optimization_problem.define_objective(('variable', 1.0, dict(name='b_vector')))
+
+            # Solve optimization problem.
+            optimization_problem.solve()
+
+            # Obtain results.
+            results = optimization_problem.get_results()
+            a_vector = results['a_vector']
+            b_vector = results['b_vector']
+
+        This example is also available as standalone script at: ``examples/run_general_optimization_problem.py``
+    """
 
     variables: pd.DataFrame
     constraints: pd.DataFrame
@@ -194,7 +288,7 @@ class OptimizationProblem(ObjectBase):
     q_dict: dict
     d_dict: dict
     x_vector: np.ndarray
-    dual_vector: np.ndarray
+    mu_vector: np.ndarray
     results: dict
     duals: dict
     objective: float
@@ -229,6 +323,15 @@ class OptimizationProblem(ObjectBase):
             name: str,
             **keys
     ):
+        """Define decision variable with given name and key set.
+
+        - Variables are defined by passing a name string and index key sets. The variable dimension is determined by
+          the dimension of the index key sets. Accepted key set values are 1) lists, 2) tuples, 3) numpy arrays,
+          4) pandas index objects and 5) range objects.
+        - If multiple index key sets are passed, the variable dimension is determined as the cartesian product of
+          the key sets. However, note that variables always take the shape of column vectors in constraint and
+          objective definitions. That means, multiple key sets are not interpreted as array dimensions.
+        """
 
         # Obtain new variables based on ``keys``.
         # - Variable dimensions are constructed based by taking the product of the given key sets.
@@ -241,14 +344,24 @@ class OptimizationProblem(ObjectBase):
             ]), columns=['name', *keys.keys()])
         )
         # Add new variables to index.
-        self.variables = pd.concat([self.variables, new_variables], ignore_index=True)
-        # TODO: Raise error if defining duplicate variables.
+        # - Duplicate definitions are automatically removed.
+        self.variables = (
+            pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates(ignore_index=True)
+        )
 
     def define_parameter(
             self,
             name: str,
             value: typing.Union[float, np.ndarray, sp.spmatrix]
     ):
+        """Define constant parameters with given name and numerical value.
+
+        - Numerical values can be numerical value can be real-valued 1) float, 2) numpy array and
+          3) scipy sparse matrix.
+        - Defining parameters is optional. – Numerical values can also be directly passed in the constraints /
+          objective definitions. However, using parameters allows updating the numerical values of the problem
+          without re-defining the complete problem.
+        """
 
         # Validate dimensions, if parameter already defined.
         if name in self.parameters.keys():
@@ -267,6 +380,24 @@ class OptimizationProblem(ObjectBase):
             ],
             **kwargs
     ):
+        """Define linear constraint for given list of constraint elements.
+
+        - Constraints are defined as list of tuples and strings, where tuples are either 1) variable terms or
+          2) constant terms and strings represent operators (==, <= or >=). If multiple variable and constant
+          terms are on either side of the operator, these are interpreted as summation of the variables / constants.
+        - Constant terms are tuples in the form (‘constant’, numerical value), where the numerical value can be
+          real-valued 1) float, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string.
+          The numerical value is expected to represent a column vector with appropriate size matching the
+          constraint dimension. If a float value is given as numerical value, the value is multiplied with
+          a column vector of ones of appropriate size.
+        - Variable terms are tuples in the form (‘variable’, numerical factor, dict(name=variable name, keys…)),
+          where the numerical factor can be real-valued 1) float, 2) numpy array, 3) scipy sparse matrix or
+          4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected
+          to represent a matrix of appropriate size for the multiplication. If a float value is given as
+          numerical factor, the value is multiplied with a identity matrix of appropriate size. Keys can
+          be optionally given to select / slice a portion of the variable vector.
+          Note that variables always take the shape of column vectors.
+        """
 
         # Instantiate constraint element aggregation variables.
         variables = list()
@@ -589,6 +720,21 @@ class OptimizationProblem(ObjectBase):
             ],
             **kwargs
     ):
+        """Define objective terms for the given list of objective elements.
+
+        - Objective terms are defined as list of tuples, where tuples are either 1) variable terms or
+          2) constant terms. Each term is expected to evaluate to a scalar value. If multiple variable and
+          constant terms are defined, these are interpreted as summation of the variables / constants.
+        - Constant terms are tuples in the form (‘constant’, numerical value), where the numerical value can be
+          1) float value or 2) a parameter name string.
+        - Variable terms are tuples in the form (‘variable’, numerical factor, dict(name=variable name, keys…)),
+          where the numerical factor can be 1) float value, 2) numpy array, 3) scipy sparse matrix or
+          4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected
+          to represent a matrix of appropriate size for the multiplication, such that the multiplication evaluates
+          to a scalar. If a float value is given as numerical factor, the value is multiplied with a row vector of
+          ones of appropriate size. Keys can be optionally given to select / slice a portion of the variable vector.
+          Note that variables always take the shape of column vectors.
+        """
 
         # Instantiate objective element aggregation variables.
         variables = list()
@@ -694,7 +840,6 @@ class OptimizationProblem(ObjectBase):
                 variable_value = variable_value * np.ones((1, len(variable_index)))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
                 if broadcast_len > 1:
                     if len(np.shape(variable_value)) > 1:
                         variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
@@ -711,7 +856,7 @@ class OptimizationProblem(ObjectBase):
 
             # Raise error if variable dimensions are inconsistent.
             if (
-                    (np.shape(variable_value)[1] != len(variable_index)) or (np.shape(variable_value)[0] != 1)
+                    np.shape(variable_value)[1] != len(variable_index)
                     if len(np.shape(variable_value)) > 1
                     else np.shape(variable_value)[0] != len(variable_index)
             ):
@@ -758,40 +903,31 @@ class OptimizationProblem(ObjectBase):
                 variable_value = self.parameters[parameter_name]
             else:
                 parameter_name = None
-            # Scalar values are multiplied with row vector of ones of appropriate size.
+            # Flat arrays are interpreted as diagonal matrix.
+            if len(np.shape(variable_value)) == 1:
+                # TODO: Raise error for flat arrays instead?
+                variable_value = sp.diags(variable_value)
+            # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
             if len(np.shape(variable_value)) == 0:
-                variable_value = variable_value * np.ones((1, len(variable_1_index)))
+                variable_value = variable_value * sp.eye(len(variable_1_index))
             # If broadcasting, values are repeated along broadcast dimension.
             else:
-                variable_value = variable_value
-                if broadcast_len > 1:
-                    if len(np.shape(variable_value)) > 1:
-                        variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
-                    else:
-                        variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
-
-            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
-            if len(np.shape(variable_value)) > 1:
-                if np.shape(variable_value)[0] > 1:
-                    raise ValueError(
-                        f"Quadratic objective factor must be row vector (1, n) or flat array (n, ),"
-                        f" not column vector (n, 1) nor matrix (m, n)."
-                    )
+                if type(variable_value) is np.matrix:
+                    variable_value = np.array(variable_value)
+                variable_value = sp.block_diag([variable_value] * broadcast_len)
 
             # Raise error if variable dimensions are inconsistent.
-            if len(variable_1_index) != len(variable_2_index):
+            if np.shape(variable_value)[0] != len(variable_1_index):
                 raise ValueError(
-                    f"Quadratic variable dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
-            if (
-                    (np.shape(variable_value)[1] != len(variable_1_index)) or (np.shape(variable_value)[0] != 1)
-                    if len(np.shape(variable_value)) > 1
-                    else np.shape(variable_value)[0] != len(variable_1_index)
-            ):
+            if np.shape(variable_value)[1] != len(variable_2_index):
                 raise ValueError(
-                    f"Quadratic objective factor dimension mismatch at variables:"
-                    f" \n{variable_keys_1}\n{variable_keys_2}"
+                    f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
+                    f"\nThe shape of quadratic objective factor matrix must be "
+                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                 )
 
             # Add Q matrix entry.
@@ -835,7 +971,8 @@ class OptimizationProblem(ObjectBase):
             else:
                 self.d_dict[0].append((parameter_name, broadcast_len))
 
-    def get_a_matrix(self) -> sp.spmatrix:
+    def get_a_matrix(self) -> sp.csr_matrix:
+        r"""Obtain :math:`\boldsymbol{A}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         log_time('get optimization problem A matrix')
@@ -884,6 +1021,7 @@ class OptimizationProblem(ObjectBase):
         return a_matrix
 
     def get_b_vector(self) -> np.ndarray:
+        r"""Obtain :math:`\boldsymbol{b}` vector for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         log_time('get optimization problem b vector')
@@ -912,6 +1050,7 @@ class OptimizationProblem(ObjectBase):
         return b_vector
 
     def get_c_vector(self) -> np.ndarray:
+        r"""Obtain :math:`\boldsymbol{c}` vector for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         log_time('get optimization problem c vector')
@@ -942,6 +1081,7 @@ class OptimizationProblem(ObjectBase):
         return c_vector
 
     def get_q_matrix(self) -> sp.spmatrix:
+        r"""Obtain :math:`\boldsymbol{Q}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         log_time('get optimization problem Q matrix')
@@ -958,20 +1098,18 @@ class OptimizationProblem(ObjectBase):
                 if type(values) is tuple:
                     parameter_name, broadcast_len = values
                     values = self.parameters[parameter_name]
+                    if len(np.shape(values)) == 1:
+                        values = sp.diags(values)
                     if len(np.shape(values)) == 0:
-                        values = values * np.ones(len(variable_1_index))
+                        values = values * sp.eye(len(variable_1_index))
                     elif broadcast_len > 1:
                         if type(values) is np.matrix:
                             values = np.array(values)
-                        if len(np.shape(values)) > 1:
-                            values = np.concatenate([values] * broadcast_len, axis=1)
-                        else:
-                            values = np.concatenate([[values]] * broadcast_len, axis=1)
+                        values = sp.block_diag([values] * broadcast_len)
                 # Obtain row index, column index and values for entry in Q matrix.
-                rows, columns, values = sp.find(values.ravel())
-                rows = np.concatenate([np.array(variable_1_index)[columns], np.array(variable_2_index)[columns]])
-                columns = np.concatenate([np.array(variable_2_index)[columns], np.array(variable_1_index)[columns]])
-                values = np.concatenate([values, values])
+                rows, columns, values = sp.find(values)
+                rows = np.array(variable_1_index)[rows]
+                columns = np.array(variable_2_index)[columns]
                 # Insert entry in collections.
                 values_list.append(values)
                 rows_list.append(rows)
@@ -992,6 +1130,7 @@ class OptimizationProblem(ObjectBase):
         return q_matrix
 
     def get_d_constant(self) -> float:
+        r"""Obtain :math:`d` value for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         log_time('get optimization problem d constant')
@@ -1016,6 +1155,44 @@ class OptimizationProblem(ObjectBase):
         return d_constant
 
     def solve(self):
+        r"""Solve the optimization problem.
+
+        - The solve method compiles the standard form of the optimization problem
+          (see :class:`OptimizationProblem`) and passes the standard-form problem to the optimization
+          solver interface.
+        - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
+          convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
+          to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces
+          are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as
+          a fallback to allow a high degree of compatibility with various solvers.
+        - The choice of solver and solver interface can be controlled through the config parameters
+          ``optimization > solver_name`` and ``optimization > solver_interface`` (see ``mesmo/config_default.yml``).
+
+        The default workflow of the solve method is as follows:
+
+        1. Obtain problem definition through selected solver interface via :meth:`get_cvxpy_problem()` or
+           :meth:`get_gurobi_problem()`.
+        2. Solve optimization problem and obtain standard-form results via :meth:`solve_cvxpy()` or
+           :meth:`solve_gurobi()`. The standard-form results include the 1) :math:`\boldsymbol{x}` variable vector
+           value, 2) :math:`\boldsymbol{\mu}` dual vector value and 3) objective value, which are stored into the
+           object attributes :attr:`x_vector`, :attr:`mu_vector` and :attr:`objective`.
+        3. Obtain results with respect to the original problem formulation via :meth:`get_results()` and
+           :meth:`get_duals()`. These results are 1) decision variable values and
+           2) constraint dual values, which are stored into the object attributes :attr:`results` and :attr:`duals`.
+
+        Low-level customizations of the problem definition are possible, e.g. definition of quadratic constraints or
+        second-order conic (SOC) constraints via the solver interfaces, with the following workflow.
+
+        1. Obtain problem definition through selected solver interface via :meth:`get_cvxpy_problem()` or
+           :meth:`get_gurobi_problem()`.
+        2. Customize problem definitions, e.g. add custom constraints directly with the Gurobi or CVXPY interfaces.
+        3. Solve optimization problem and obtain standard-form results via :meth:`solve_cvxpy()` or
+           :meth:`solve_gurobi()`.
+        4. Obtain results with respect to the original problem formulation via :meth:`get_results()` and
+           :meth:`get_duals()`.
+        """
+
+        # TODO: Add example for low-level customization solve workflow.
 
         # Log time.
         log_time(f'solve optimization problem problem')
@@ -1051,6 +1228,7 @@ class OptimizationProblem(ObjectBase):
         log_time(f'solve optimization problem problem')
 
     def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
+        """Obtain standard-form problem via Gurobi direct interface."""
 
         # Instantiate Gurobi model.
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
@@ -1102,6 +1280,7 @@ class OptimizationProblem(ObjectBase):
             constraints: gp.MConstr,
             objective: gp.MQuadExpr
     ) -> gp.Model:
+        """Solve optimization problem via Gurobi direct interface."""
 
         # Solve optimization problem.
         gurobipy_problem.optimize()
@@ -1124,7 +1303,7 @@ class OptimizationProblem(ObjectBase):
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
         if gurobipy_problem.getAttr('NumQCNZs') == 0:
-            self.dual_vector = np.transpose([constraints.getAttr('Pi')])
+            self.mu_vector = np.transpose([constraints.getAttr('Pi')])
         else:
             # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
             logger.warning(
@@ -1132,12 +1311,13 @@ class OptimizationProblem(ObjectBase):
                 f" because quadratic or SOC constraints have been added to the problem."
                 f"\nPlease retrieve the duals manually."
             )
-            self.dual_vector = np.nan * np.zeros(constraints.shape)
+            self.mu_vector = np.nan * np.zeros(constraints.shape)
         self.objective = float(objective.getValue())
 
         return gurobipy_problem
 
     def get_cvxpy_problem(self) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
+        """Obtain standard-form problem via CVXPY interface."""
 
         # Define variables.
         x_vector = cp.Variable(shape=(len(self.variables), 1), name='x_vector')
@@ -1164,6 +1344,7 @@ class OptimizationProblem(ObjectBase):
             constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
             objective: cp.Expression
     ) -> cp.Problem:
+        """Solve optimization problem via CVXPY interface."""
 
         # Instantiate CVXPY problem.
         cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
@@ -1185,7 +1366,7 @@ class OptimizationProblem(ObjectBase):
 
         # Store results.
         self.x_vector = x_vector.value
-        self.dual_vector = constraints[0].dual_value
+        self.mu_vector = constraints[0].dual_value
         self.objective = float(cvxpy_problem.objective.value)
 
         return cvxpy_problem
@@ -1194,6 +1375,10 @@ class OptimizationProblem(ObjectBase):
         self,
         x_vector: typing.Union[cp.Variable, np.ndarray] = None
     ) -> dict:
+        """Obtain results for decisions variables.
+
+        - Results are returned as dictionary with keys corresponding to the variable names that have been defined.
+        """
 
         # Log time.
         log_time('get optimization problem results')
@@ -1247,12 +1432,13 @@ class OptimizationProblem(ObjectBase):
         return results
 
     def get_duals(self) -> dict:
+        """Obtain results for constraint dual variables.
+
+        - Duals are returned as dictionary with keys corresponding to the constraint names that have been defined.
+        """
 
         # Log time.
         log_time('get optimization problem duals')
-
-        # Obtain dual vector.
-        dual_vector = self.dual_vector
 
         # Instantiate results object.
         results = dict.fromkeys(self.constraints.loc[:, 'name'].unique())
@@ -1277,10 +1463,10 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        - dual_vector[self.constraints.index[
+                        - self.mu_vector[self.constraints.index[
                             mesmo.utils.get_index(self.constraints, name=name, constraint_type='==>=')
                         ], 0]
-                        - dual_vector[self.constraints.index[
+                        - self.mu_vector[self.constraints.index[
                             mesmo.utils.get_index(self.constraints, name=name, constraint_type='==<=')
                         ], 0],
                         index=constraint_dimensions
@@ -1290,7 +1476,7 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        - dual_vector[self.constraints.index[
+                        - self.mu_vector[self.constraints.index[
                             mesmo.utils.get_index(self.constraints, name=name, constraint_type='>=')
                         ], 0],
                         index=constraint_dimensions
@@ -1300,7 +1486,7 @@ class OptimizationProblem(ObjectBase):
                 results[name] = (
                     pd.Series(
                         0.0
-                        - dual_vector[self.constraints.index[
+                        - self.mu_vector[self.constraints.index[
                             mesmo.utils.get_index(self.constraints, name=name, constraint_type='<=')
                         ], 0],
                         index=constraint_dimensions
@@ -1324,6 +1510,7 @@ class OptimizationProblem(ObjectBase):
             self,
             x_vector: np.ndarray
     ) -> float:
+        r"""Utility function for evaluating the objective value for a given :math:`x` vector value."""
 
         objective = float(
             self.get_c_vector() @ x_vector
@@ -1353,17 +1540,35 @@ def starmap(
     else:
         function_partial = function
 
+    # Ensure that argument sequence is list.
+    argument_sequence = list(argument_sequence)
+
     if mesmo.config.config['multiprocessing']['run_parallel']:
-        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # TODO: Remove old parallel pool traces.
+        # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
+        # if mesmo.config.parallel_pool is None:
+        #     # Setup parallel pool on first execution.
+        #     log_time('parallel pool setup')
+        #     mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+        #     log_time('parallel pool setup')
+        # results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+
+        # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
-            # Setup parallel pool on first execution.
             log_time('parallel pool setup')
-            mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
+            ray.init()
+            mesmo.config.parallel_pool = True
             log_time('parallel pool setup')
-        results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+        results = ray_starmap(function_partial, argument_sequence)
     else:
-        # If not `run_parallel`, use `itertools.starmap` for non-parallel / sequential execution.
-        results = list(itertools.starmap(function_partial, argument_sequence))
+        # If not `run_parallel`, use for loop for sequential execution.
+        results = [
+            function_partial(*arguments) for arguments in tqdm.tqdm(
+                argument_sequence,
+                total=len(argument_sequence),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+            )
+        ]
 
     return results
 
@@ -1396,6 +1601,51 @@ def chunk_list(
         [j for j in itertools.islice(list_iter, chunk_size)]
         for i in range(0, len(list_in), chunk_size)
     ]
+
+
+def ray_iterator(objects: list):
+    """Utility iterator for a list of parallelized ``ray`` objects.
+
+    - This iterator enables progress reporting with ``tqdm`` in :func:`ray_get`.
+    """
+
+    while objects:
+        done, objects = ray.wait(objects)
+        yield ray.get(done[0])
+
+
+def ray_get(objects: list):
+    """Utility function for parallelized execution of a list of ``ray`` objects.
+
+    - This function enables the parallelized execution with built-in progress reporting.
+    """
+
+    try:
+        for _ in tqdm.tqdm(
+                ray_iterator(objects),
+                total=len(objects),
+                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+        ):
+            pass
+    except TypeError:
+        pass
+    return ray.get(objects)
+
+
+def ray_starmap(
+        function_handle: typing.Callable,
+        argument_sequence: list
+):
+    """Utility function to provide an interface similar to ``itertools.starmap`` for ``ray``.
+
+    - This replicates the ``starmap`` interface of the ``multiprocessing`` API, which ray also supports,
+      but allows for additional modifications, e.g. progress reporting via :func:`ray_get`.
+    """
+
+    return ray_get([
+        ray.remote(lambda *args: function_handle(*args)).remote(*arguments)
+        for arguments in argument_sequence
+    ])
 
 
 def log_time(
@@ -1618,13 +1868,6 @@ def launch(path):
         subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
         subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-
-@mesmo.config.memoize('get_building_model')
-def get_building_model(*args, **kwargs):
-    """Wrapper function for `cobmo.building_model.BuildingModel` with caching support for better performance."""
-
-    return cobmo.building_model.BuildingModel(*args, **kwargs)
 
 
 def write_figure_plotly(

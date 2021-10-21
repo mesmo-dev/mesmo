@@ -1,56 +1,81 @@
-# MESMO - Multi-Energy System Modeling and Optimization
+![](assets/mesmo_logo.png)
 
 [![](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 
 ```{important}
-**Looking for FLEDGE?** - The Flexible Distribution Grid Demonstrator (FLEDGE) is now called Multi-Energy System Modeling and Optimization (MESMO) and has moved to this shiny new repository.
+Work in progress: The repository is under active development and interfaces may change without notice. Please use [GitHub issues](https://github.com/mesmo-dev/mesmo/issues) for raising problems, questions, comments and feedback.
 ```
 
-Multi-Energy System Modeling and Optimization (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
+# What is MESMO?
 
-```{warning}
-Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/mesmo-dev/mesmo/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
-```
+MESMO stand for "Multi-Energy System Modeling and Optimization" and is an open-source Python tool for the modeling, simulation and optimization of multi-scale electric and thermal distribution systems along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS).
 
 ## Features
 
-- Electric grid models:
-    - Obtain nodal / branch admittance and incidence matrices¹.
-    - Obtain steady state power flow solution for nodal voltage / branch flows / losses via fixed-point algorithm / [OpenDSS](https://github.com/dss-extensions/OpenDSSDirect.py)¹.
-    - Obtain sensitivity matrices of global linear approximate grid model¹.
-    - ¹Fully enabled for unbalanced / multiphase grid configuration.
-- Thermal grid models:
-    - Obtain nodal / branch incidence matrices.
-    - Obtain thermal power flow solution for nodal head / branch flows / pumping losses.
-    - Obtain sensitivity matrices of global linear approximate grid model.
-- Distributed energy resource (DER) models:
-    - Time series models for fixed loads.
-    - Time series models for EV charging.
-    - Linear models for flexible building loads.
-- Optimal operation problems:
-    - Obtain numerical optimization problem for combined optimal operation for electric / thermal grids with DERs.
-    - Obtain electric / thermal optimal power flow solution.
-    - Obtain distribution locational marginal prices (DLMPs) for the electric / thermal grids.
+MESMO implements 1) non-linear models for simulation-based analysis and 2) convex models for optimization-based analysis of electric grids, thermal grids and DERs. Through high-level interfaces, MESMO enables modeling operation problems for both traditional scenario-based simulation as well as optimization-based decision support. An emphasis of MESMO is on the modeling of multi-energy systems, i.e. the coupling of multi-commodity and multi-scale energy systems.
 
-## Contents
+1. **Electric grid modelling**
+    - Simulation: Non-linear modelling of steady-state nodal voltage / branch flows / losses, for multi-phase / unbalanced AC networks.
+    - Optimization: Linear approximate modelling via global or local approximation, for multi-phase, unbalanced AC networks.
+2. **Thermal grid modelling**
+   - Simulation: Non-linear modelling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
+   - Optimization: Linear approximate modelling via global or local approximation, for radial district heating / cooling systems.
+3. **Distributed energy resource (DER) modelling**
+    - Simulation & optimization: Time series models for non-dispatchable / fixed DERs.
+    - Optimization: Linear state-space models for dispatchable / flexible DERs.
+    - Currently implemented DERs: ...
+4. **Solution interfaces**
+    - Simulation: Solution of non-linear power flow problems for electric / thermal grids.
+    - Optimization: Solution of convex optimization problems for electric / thermal grids and DERs, through third-party numerical optimization solvers.
+    - Generic optimization problem interface: Supports defining custom constraints and objective terms to augment the built-in models. Enables retrieving duals / DLMPs for the study of decomposition problems.
+    - High-level problem interface: Nominal operation problem for simulation-based studies; Optimal operation problem for optimization-based studies.
 
-```{toctree}
-:maxdepth: 2
+## Use cases
 
-getting_started
-data_reference
-api_reference
-software_architecture
-contributing
-change_log
-publications
-GitHub repository <https://github.com/mesmo-dev/mesmo>
-```
+District-scale energy systems are evolving from unidirectional, top-down structures into bidirectional, distributed and multi-commodity systems. Furthermore, the increased coupling of electric, thermal and other energy systems in terms of multi-energy systems enables additional flexibility across conventional system boundaries. MESMO is intended to support the various studies that are motivated by these recent developments for district-scale energy systems, such as the examples highlighted below:
+
+![](assets/use_cases.png)
+
+1. **Emerging energy demands**: What is the impact of EV charging deployment on distribution system operation?
+2. **Distribution automation**: How can the distribution system operator address imminent operational issues?
+3. **Peak load management**: Are transactive energy mechanisms suited to increase participation of DERs in maintaining distribution system reliability?
+4. **Distributed generation and storage**: Can energy storage systems help mitigate adverse impacts of large-scale solar PV deployment?
+5. **Expansion planing**: What are optimal investment decisions for distribution system upgrades?
 
 ## Acknowledgements
 
-- This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
+- MESMO is being developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [A*STAR Institute for High Performance Computing](https://www.a-star.edu.sg/ihpc), and the [TUM Chair of Renewable and Sustainable Energy Systems](https://www.ei.tum.de/en/ens/homepage/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modelling and approximation methodologies.
+- This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
+
+```{toctree}
+:caption: User guide
+:hidden:
+
+installation
+architecture
+examples
+```
+
+```{toctree}
+:caption: Reference
+:hidden:
+
+data_reference
+api_reference
+configuration_reference
+```
+
+```{toctree}
+:caption: About
+:hidden:
+
+contributing
+change_log
+publications
+License <https://github.com/mesmo-dev/mesmo/blob/develop/LICENSE>
+GitHub repository <https://github.com/mesmo-dev/mesmo>
+```

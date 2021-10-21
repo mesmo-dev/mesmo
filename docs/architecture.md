@@ -1,4 +1,4 @@
-# Software architecture
+# Architecture
 
 The software requirements and proposed software architecture for MESMO are discussed here to provide an overview for interested users and developers.
 
@@ -8,7 +8,7 @@ For the original publication on this topic, please refer to:
 
 ## Preliminaries
 
-![](./assets/architecture_0.png)
+![](assets/architecture_0.png)
 
 Expert users and non-expert users are distinguished as stakeholders. Expert users are assumed to be trained with the software such that they are able to define test cases and scenarios, whereas non-expert users may be interested in the result of a scenario analysis without comprehending each asset of the distribution grid.
 
@@ -49,7 +49,7 @@ To make MESMO practically and scientifically relevant, the key requirements were
 
 ## General architecture
 
-![](./assets/architecture_1.png)
+![](assets/architecture_1.png)
 
 The fundamental subsystems of MESMO are defined based on the identified requirements. The input file is the interface for expert users to define test cases and scenarios. The dashboard is the graphical user interface for non-expert users to view the scenario results. The application programming interface (API) is the interface which enables the expert user to interact with MESMO. The test cases, scenarios and results are stored in a relational database management system (RDBMS) which is integrated through the database interface. The solution functionality is bundled into the solution engine, which comprises all mathematical models and solution algorithms.
 
@@ -61,7 +61,7 @@ A RDBMS is chosen as the internal storage solution, because it enables more effi
 
 ## Solution engine architecture
 
-![](./assets/architecture_2.png)
+![](assets/architecture_2.png)
 
 The solution engine is the core subsystem of MESMO and is concerned with implementing the mathematical routines for solving planning and operation problems as above. At the top level, the classes for planning and operation problems are distinguished, as both problem types yield a different organization of the optimization problem. These classes construct the respective problem based on subordinate classes for the electric grid model and DER models as well as optimization solvers and simulation solvers. The operation problem class further considers a class for aggregators to adequately model the separated concerns between the DSO and aggregators.
 
@@ -73,6 +73,6 @@ Power flow solver classes implement solvers for the exact equations of the distr
 
 ## Use case: Optimal operation problem
 
-![](./assets/operation.png)
+![](assets/operation.png)
 
 Above figure describes the process flow for an exemplary operation problem in MESMO. The input files for defining the test case and scenario have already been imported to MESMO and the program is invoked by a call to the API seeking the solution of the scenario. First, the test case and scenario data is loaded through the database interface and an object of the operation problem class is instantiated. The test case and scenario data is passed to the operation problem during creation. Within the operation problem, the electric grid model, aggregator and DER model objects are instantiated, where each DER model object is associated with one aggregator. Once all models have been derived, the optimization problem is constructed and passed to the optimization solver. Lastly, the solution of the optimization problem is used to calculate the exact power flow. All results are stored in the database.

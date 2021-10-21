@@ -4189,17 +4189,14 @@ class LinearElectricGridModelSet(object):
             scenarios = [None]
 
         # Define DER power vector variables.
-        # - Only if these have not yet been defined within `DERModelSet`.
-        if 'der_active_power_vector' not in optimization_problem.variables.loc[:, 'name'].values:
-            optimization_problem.define_variable(
-                'der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                der=self.electric_grid_model.ders
-            )
-        if 'der_reactive_power_vector' not in optimization_problem.variables.loc[:, 'name'].values:
-            optimization_problem.define_variable(
-                'der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                der=self.electric_grid_model.ders
-            )
+        optimization_problem.define_variable(
+            'der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+            der=self.electric_grid_model.ders
+        )
+        optimization_problem.define_variable(
+            'der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+            der=self.electric_grid_model.ders
+        )
 
         # Define node voltage magnitude variable.
         optimization_problem.define_variable(
@@ -4466,10 +4463,7 @@ class LinearElectricGridModelSet(object):
             'electric_grid_active_power_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
-            * np.concatenate(
-                [np.array([np.real(self.electric_grid_model.der_power_vector_reference) ** 2])] * len(self.timesteps),
-                axis=1
-            )
+            * np.concatenate([np.real(self.electric_grid_model.der_power_vector_reference) ** 2] * len(self.timesteps))
         )
         optimization_problem.define_parameter(
             'electric_grid_reactive_power_cost',
@@ -4483,10 +4477,7 @@ class LinearElectricGridModelSet(object):
             'electric_grid_reactive_power_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
-            * np.concatenate(
-                [np.array([np.imag(self.electric_grid_model.der_power_vector_reference) ** 2])] * len(self.timesteps),
-                axis=1
-            )
+            * np.concatenate([np.imag(self.electric_grid_model.der_power_vector_reference) ** 2] * len(self.timesteps))
         )
         optimization_problem.define_parameter(
             'electric_grid_loss_active_cost',

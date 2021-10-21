@@ -1,6 +1,6 @@
 # Data reference
 
-```{warning}
+```{important}
 This reference is work in progress.
 ```
 

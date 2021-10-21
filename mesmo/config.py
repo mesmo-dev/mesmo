@@ -1,6 +1,5 @@
 """Configuration module."""
 
-import diskcache
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
@@ -66,7 +65,10 @@ def get_config() -> dict:
     # Define utility function to obtain full paths.
     # - Replace `./` with the base path and normalize paths.
     def get_full_path(path: str) -> str:
-        return os.path.normpath(path.replace('./', base_path + os.path.sep))
+        if path.startswith('./'):
+            # Replace only first occurrence.
+            path = path.replace('./', base_path + os.path.sep, 1)
+        return os.path.normpath(path)
 
     # Obtain full paths.
     complete_config['paths']['data'] = get_full_path(complete_config['paths']['data'])
@@ -115,19 +117,6 @@ def get_parallel_pool() -> multiprocessing.Pool:
     return ray.util.multiprocessing.Pool()
 
 
-def memoize(name):
-    """Wrapper for memoize decorator of cache. Invokes memoize with `expiry_time` from config,
-    but only if caching is enabled for given `name` in config.
-    """
-
-    # TODO: Move memoize to utils.
-
-    if config['caching']['enable'] and config['caching'][name]:
-        return cache.memoize(expire=config['caching']['expiry_time'])
-    else:
-        return lambda function: function  # If caching not enabled, return empty decorator (do nothing).
-
-
 # Obtain repository base directory path.
 base_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
 
@@ -143,12 +132,6 @@ gravitational_acceleration = 9.81  # [m^2/s]
 # Instantiate multiprocessing / parallel computing pool.
 # - Pool is instantiated as None and only created on first use in `mesmo.utils.starmap`.
 parallel_pool = None
-
-# Instantiate / reload cache.
-if config['caching']['enable']:
-    cache = diskcache.Cache(os.path.join(base_path, 'cache'))
-    if config['caching']['reset_cache']:
-        cache.clear()
 
 # Modify matplotlib default settings.
 plt.style.use(config['plots']['matplotlib_style'])

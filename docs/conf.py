@@ -1,6 +1,11 @@
 # Configuration file for the Sphinx documentation builder.
 # - Documentation: <http://www.sphinx-doc.org/en/master/config>
 
+# Append path to include source code.
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
 # Project information.
 project = 'MESMO'
 copyright = '2018-2021, TUMCREATE'
@@ -27,11 +32,12 @@ autodoc_default_options = {
 autodoc_typehints = 'description'
 autodoc_mock_imports = [
     # Please note: Do not remove deprecated dependencies, because these are still needed for docs of previous versions.
-    'cvxpy',
     'cobmo',
+    'cvxpy',
     'cv2',
-    'diskcache',
+    'diskcache',  # Deprecated.
     'dill',  # Deprecated.
+    'gurobipy',
     'kaleido',
     'matplotlib',
     'multimethod',
@@ -46,6 +52,7 @@ autodoc_mock_imports = [
     'pyomo',  # Deprecated.
     'ray',
     'scipy',
+    'tqdm',
 ]
 napoleon_use_ivar = True
 
@@ -67,6 +74,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 #   a list of builtin themes.
 html_theme = 'furo'
 html_title = 'MESMO'
+html_logo = 'assets/mesmo_icon.png'
 html_favicon = 'assets/favicon.ico'
 templates_path = ['templates']
 html_sidebars = {

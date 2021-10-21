@@ -1,0 +1,87 @@
+name: Maintenance
+on:
+  workflow_run:
+    workflows: ["Python tests"]
+    branches: [develop]
+    types:
+      - completed
+
+jobs:
+  get-environment:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 8
+      matrix:
+        os: [
+          windows-latest,
+          macos-latest,
+          ubuntu-latest
+        ]
+    defaults:
+      run:
+        shell: bash -l {0}  # Required for conda commands.
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Checkout submodules
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    - name: Set up Python
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniforge-version: latest
+    - name: Install dependencies
+      run: |
+        conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy
+        conda activate mesmo
+        pip install -v -e .
+    - name: Remove old environment files
+      run: |
+        rm environment-*
+    - name: Enable cache
+      uses: actions/cache@v2
+      with:
+        path: environment-${{ matrix.os }}.yml
+        key: ${{ github.sha }}-${{ matrix.os }}
+    - name: Get new environment-${{ matrix.os }}.yml
+      run: |
+        conda env export -n mesmo --no-builds | grep -v "^prefix: " > environment-${{ matrix.os }}.yml
+
+  run-maintenance:
+    needs: get-environment
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Remove old environment files
+      run: |
+        rm environment-*
+    - name: Get cached environment-windows-latest.yml
+      uses: actions/cache@v2
+      with:
+        path: environment-windows-latest.yml
+        key: ${{ github.sha }}-windows-latest
+    - name: Get cached environment-macos-latest.yml
+      uses: actions/cache@v2
+      with:
+        path: environment-macos-latest.yml
+        key: ${{ github.sha }}-macos-latest
+    - name: Get cached environment-ubuntu-latest.yml
+      uses: actions/cache@v2
+      with:
+        path: environment-ubuntu-latest.yml
+        key: ${{ github.sha }}-ubuntu-latest
+    - name: Commit changes
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: Automated maintenance for ${{ github.sha }}
+        commit_user_name: GitHub Actions
+        commit_user_email: github-actions[bot]@users.noreply.github.com

@@ -1,47 +1,53 @@
-# MESMO - Multi-Energy System Modeling and Optimization
+![](docs/assets/mesmo_logo.png)
 
-[![DOI](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
+[![](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 
-> **Looking for FLEDGE?** - The Flexible Distribution Grid Demonstrator (FLEDGE) is now called Multi-Energy System Modeling and Optimization (MESMO) and has moved to this shiny new repository.
+> Work in progress: The repository is under active development and interfaces may change without notice. Please use [GitHub issues](https://github.com/mesmo-dev/mesmo/issues) for raising problems, questions, comments and feedback.
 
-Multi-Energy System Modeling and Optimization (MESMO) is a software tool for optimal operation problems of electric and thermal distribution grids along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS). To this end, it implements 1) electric grid models, 2) thermal grid models, 3) DER models, and 4) optimal operation problems.
+# What is MESMO?
 
-> Work in progress: Please note that the repository is under active development and the interface may change without notice. Create an [issue](https://github.com/mesmo-dev/mesmo/issues) if you have ideas / comments / criticism that may help to make the tool more useful.
+MESMO stand for "Multi-Energy System Modeling and Optimization" and is an open-source Python tool for the modeling, simulation and optimization of multi-scale electric and thermal distribution systems along with distributed energy resources (DERs), such as flexible building loads, electric vehicle (EV) chargers, distributed generators (DGs) and energy storage systems (ESS).
 
 ## Features
 
-- Electric grid models:
-    - Obtain nodal / branch admittance and incidence matrices¹.
-    - Obtain steady state power flow solution for nodal voltage / branch flows / losses via fixed-point algorithm / [OpenDSS](https://github.com/dss-extensions/OpenDSSDirect.py)¹.
-    - Obtain sensitivity matrices of global linear approximate grid model¹.
-    - ¹Fully enabled for unbalanced / multiphase grid configuration.
-- Thermal grid models:
-    - Obtain nodal / branch incidence matrices.
-    - Obtain thermal power flow solution for nodal head / branch flows / pumping losses.
-    - Obtain sensitivity matrices of global linear approximate grid model.
-- Distributed energy resource (DER) models:
-    - Time series models for fixed loads.
-    - Time series models for EV charging.
-    - Linear models for flexible building loads.
-- Optimal operation problems:
-    - Obtain numerical optimization problem for combined optimal operation for electric / thermal grids with DERs.
-    - Obtain electric / thermal optimal power flow solution.
-    - Obtain distribution locational marginal prices (DLMPs) for the electric / thermal grids.
+MESMO implements 1) non-linear models for simulation-based analysis and 2) convex models for optimization-based analysis of electric grids, thermal grids and DERs. Through high-level interfaces, MESMO enables modeling operation problems for both traditional scenario-based simulation as well as optimization-based decision support. An emphasis of MESMO is on the modeling of multi-energy systems, i.e. the coupling of multi-commodity and multi-scale energy systems.
+
+1. **Electric grid modelling**
+    - Simulation: Non-linear modelling of steady-state nodal voltage / branch flows / losses, for multi-phase / unbalanced AC networks.
+    - Optimization: Linear approximate modelling via global or local approximation, for multi-phase, unbalanced AC networks.
+2. **Thermal grid modelling**
+    - Simulation: Non-linear modelling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
+    - Optimization: Linear approximate modelling via global or local approximation, for radial district heating / cooling systems.
+3. **Distributed energy resource (DER) modelling**
+    - Simulation & optimization: Time series models for non-dispatchable / fixed DERs.
+    - Optimization: Linear state-space models for dispatchable / flexible DERs.
+    - Currently implemented DERs: ...
+4. **Solution interfaces**
+    - Simulation: Solution of non-linear power flow problems for electric / thermal grids.
+    - Optimization: Solution of convex optimization problems for electric / thermal grids and DERs, through third-party numerical optimization solvers.
+    - Generic optimization problem interface: Supports defining custom constraints and objective terms to augment the built-in models. Enables retrieving duals / DLMPs for the study of decomposition problems.
+    - High-level problem interface: Nominal operation problem for simulation-based studies; Optimal operation problem for optimization-based studies.
 
 ## Documentation
 
-The preliminary documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.github.io/mesmo).
+The documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.github.io/mesmo).
 
 ## Installation
 
-1. Check requirements:
-    - Python 3.8
-    - [Gurobi Optimizer](http://www.gurobi.com/)
-2. Clone or download repository. Ensure that the `cobmo` submodule directory is loaded as well.
-3. In your Python environment, run:
-    1. `pip install -v -e path_to_repository`
+MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but can be installed in a local development environment as follows:
 
-Please also read [docs/getting_started.md](./docs/getting_started.md).
+1. Check requirements:
+    - Python distribution¹: [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
+    - Optimization solver²: [Gurobi](http://www.gurobi.com/) or [CVXPY-supported solver](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
+2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
+3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
+    - `cd path_to_mesmo_repository`
+    - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy`
+    - `conda activate mesmo`
+    - `pip install -v -e .`
+    - On Intel CPUs³: `conda install -c conda-forge "libblas=*=*mkl"`
+
+For notes ¹/²/³ and alternative installation guide, see [docs/installation.md](docs/installation.md).
 
 ## Contributing
 

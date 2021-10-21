@@ -2,3 +2,6 @@
     /*color: var(--color-problematic);*/
     font-weight: bolder;
 }
+.sidebar-logo {
+    max-width: 50%;
+}

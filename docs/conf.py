@@ -74,6 +74,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md']
 #   a list of builtin themes.
 html_theme = 'furo'
 html_title = 'MESMO'
+html_logo = 'assets/mesmo_icon.png'
 html_favicon = 'assets/favicon.ico'
 templates_path = ['templates']
 html_sidebars = {

@@ -96,7 +96,7 @@ dependencies:
   - ncurses=6.2
   - nspr=4.30
   - nss=3.69
-  - numpy=1.21.2
+  - numpy=1.21.3
   - olefile=0.46
   - openjpeg=2.4.0
   - openssl=1.1.1l
@@ -132,7 +132,7 @@ dependencies:
   - tiledb=2.3.4
   - tk=8.6.11
   - tornado=6.1
-  - tzcode=2021d
+  - tzcode=2021e
   - tzdata=2021d
   - urllib3=1.26.7
   - wheel=0.37.0
@@ -195,7 +195,7 @@ dependencies:
     - opendssdirect-py==0.6.1
     - packaging==21.0
     - panel==0.12.4
-    - param==1.11.1
+    - param==1.12.0
     - parameterized==0.8.1
     - plotly==5.3.1
     - prometheus-client==0.11.0

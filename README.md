@@ -21,7 +21,7 @@ MESMO implements 1) non-linear models for simulation-based analysis and 2) conve
 3. **Distributed energy resource (DER) modelling**
     - Simulation & optimization: Time series models for non-dispatchable / fixed DERs.
     - Optimization: Linear state-space models for dispatchable / flexible DERs.
-    - Currently implemented DERs: ...
+    - Currently implemented DER models: Conventional fixed loads, flexible building loads, non-dispatchable generators, controllable electric / thermal generators, electric / thermal energy storage systems, combined heat-and-power plants.
 4. **Solution interfaces**
     - Simulation: Solution of non-linear power flow problems for electric / thermal grids.
     - Optimization: Solution of convex optimization problems for electric / thermal grids and DERs, through third-party numerical optimization solvers.
@@ -59,8 +59,9 @@ Information on citing MESMO and a list of related publications is available at [
 
 ## Acknowledgements
 
-- This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
+- MESMO is being developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modelling and approximation methodologies.
+- This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.

@@ -18,12 +18,12 @@ MESMO implements 1) non-linear models for simulation-based analysis and 2) conve
     - Simulation: Non-linear modelling of steady-state nodal voltage / branch flows / losses, for multi-phase / unbalanced AC networks.
     - Optimization: Linear approximate modelling via global or local approximation, for multi-phase, unbalanced AC networks.
 2. **Thermal grid modelling**
-   - Simulation: Non-linear modelling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
-   - Optimization: Linear approximate modelling via global or local approximation, for radial district heating / cooling systems.
+    - Simulation: Non-linear modelling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
+    - Optimization: Linear approximate modelling via global or local approximation, for radial district heating / cooling systems.
 3. **Distributed energy resource (DER) modelling**
     - Simulation & optimization: Time series models for non-dispatchable / fixed DERs.
     - Optimization: Linear state-space models for dispatchable / flexible DERs.
-    - Currently implemented DERs: ...
+    - Currently implemented DER models: Conventional fixed loads, flexible building loads, non-dispatchable generators, controllable electric / thermal generators, electric / thermal energy storage systems, combined heat-and-power plants.
 4. **Solution interfaces**
     - Simulation: Solution of non-linear power flow problems for electric / thermal grids.
     - Optimization: Solution of convex optimization problems for electric / thermal grids and DERs, through third-party numerical optimization solvers.
@@ -44,7 +44,7 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 
 ## Acknowledgements
 
-- MESMO is being developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [A*STAR Institute for High Performance Computing](https://www.a-star.edu.sg/ihpc), and the [TUM Chair of Renewable and Sustainable Energy Systems](https://www.ei.tum.de/en/ens/homepage/).
+- MESMO is being developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.

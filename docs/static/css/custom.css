@@ -1,7 +1,22 @@
 .literal {
-    /*color: var(--color-problematic);*/
     font-weight: bolder;
 }
 .sidebar-logo {
     max-width: 50%;
+}
+body[data-theme="dark"] .invert {
+    filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) .invert {
+        filter: invert(1);
+    }
+}
+body[data-theme="dark"] .invert-gray {
+    filter: invert(1) grayscale(1);
+}
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) .invert-gray {
+        filter: invert(1) grayscale(1);
+    }
 }

@@ -10,13 +10,13 @@ The MESMO configuration is defined via `config.yml`. As an initial user, you lik
 
 An empty `config.yml` is created during the first runtime of MESMO. To define the local configuration, simply insert and modify configuration parameters from the references below.
 
-![](assets/configuration_file_structure.png)
+<img src="assets/configuration_file_structure.png" alt="" class="invert"/>
 
 **Figure: Configuration file location.**
 
 MESMO distinguishes 1) local configuration in `config.yml` and 2) default configuration in `config_default.yml`. The local configuration takes precedence over the default configuration. That means, during initialization, `get_config()` first reads the default configuration from `config_default.yml` and then redefines any parameters that have been modified in `config.yml`.
 
-![](assets/configuration_workflow.png)
+<img src="assets/configuration_workflow.png" alt="" class="invert"/>
 
 **Figure: Configuration initialization workflow.**
 

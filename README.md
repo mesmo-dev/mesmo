@@ -61,7 +61,7 @@ Information on citing MESMO and a list of related publications is available at [
 
 ## Acknowledgements
 
-- MESMO is developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
+- MESMO is developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.

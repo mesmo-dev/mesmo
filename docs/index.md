@@ -16,27 +16,35 @@ MESMO stand for "Multi-Energy System Modeling and Optimization" and is an open-s
 
 MESMO implements 1) non-linear models for simulation-based analysis and 2) convex models for optimization-based analysis of electric grids, thermal grids and DERs. Through high-level interfaces, MESMO enables modeling operation problems for both traditional scenario-based simulation as well as optimization-based decision support. An emphasis of MESMO is on the modeling of multi-energy systems, i.e. the coupling of multi-commodity and multi-scale energy systems.
 
-1. **Electric grid modelling**
-    - Simulation: Non-linear modelling of steady-state nodal voltage / branch flows / losses, for multi-phase / unbalanced AC networks.
-    - Optimization: Linear approximate modelling via global or local approximation, for multi-phase, unbalanced AC networks.
-2. **Thermal grid modelling**
-    - Simulation: Non-linear modelling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
-    - Optimization: Linear approximate modelling via global or local approximation, for radial district heating / cooling systems.
-3. **Distributed energy resource (DER) modelling**
+1. **Electric grid modeling**
+    - Simulation: Non-linear modeling of steady-state nodal voltage / branch flows / losses, for multi-phase / unbalanced AC networks.
+    - Optimization: Linear approximate modeling via global or local approximation, for multi-phase / unbalanced AC networks.
+2. **Thermal grid modeling**
+    - Simulation: Non-linear modeling of steady-state nodal pressure head / branch flow / pump losses, for radial district heating / cooling systems.
+    - Optimization: Linear approximate modeling via global or local approximation, for radial district heating / cooling systems.
+3. **Distributed energy resource (DER) modeling**
     - Simulation & optimization: Time series models for non-dispatchable / fixed DERs.
     - Optimization: Linear state-space models for dispatchable / flexible DERs.
-    - Currently implemented DER models: Conventional fixed loads, flexible building loads, non-dispatchable generators, controllable electric / thermal generators, electric / thermal energy storage systems, combined heat-and-power plants.
+    - Currently implemented DER models: Conventional fixed loads, generic flexible loads, flexible thermal building loads, non-dispatchable generators, controllable electric / thermal generators, electric / thermal energy storage systems, combined heat-and-power plants.
 4. **Solution interfaces**
     - Simulation: Solution of non-linear power flow problems for electric / thermal grids.
     - Optimization: Solution of convex optimization problems for electric / thermal grids and DERs, through third-party numerical optimization solvers.
-    - Generic optimization problem interface: Supports defining custom constraints and objective terms to augment the built-in models. Enables retrieving duals / DLMPs for the study of decomposition problems.
-    - High-level problem interface: Nominal operation problem for simulation-based studies; Optimal operation problem for optimization-based studies.
+    - Generic optimization problem interface: Supports defining custom constraints and objective terms to augment the built-in models. Enables retrieving duals / DLMPs for the study of decentralized / distributed control architectures for energy systems.
+    - High-level problem interfaces: Nominal operation problem for simulation-based studies; Optimal operation problem for optimization-based studies.
 
 ## Use cases
 
 District-scale energy systems are evolving from unidirectional, top-down structures into bidirectional, distributed and multi-commodity systems. Furthermore, the increased coupling of electric, thermal and other energy systems in terms of multi-energy systems enables additional flexibility across conventional system boundaries. MESMO is intended to support the various studies that are motivated by these recent developments for district-scale energy systems, such as the examples highlighted below:
 
-![](assets/use_cases.png)
+```{image} assets/use_cases.png
+:align: center
+:class: only-light
+```
+
+```{image} assets/use_cases_dark.png
+:align: center
+:class: only-dark
+```
 
 1. **Emerging energy demands**: What is the impact of EV charging deployment on distribution system operation?
 2. **Distribution automation**: How can the distribution system operator address imminent operational issues?
@@ -46,11 +54,11 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 
 ## Acknowledgements
 
-- MESMO is developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
+- MESMO is developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
-- Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
+- Sarmad Hanif and Kai Zhang developed the underlying electric grid modeling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
-- Mischa Grussmann developed the thermal grid modelling and approximation methodologies.
+- Mischa Grussmann developed the thermal grid modeling and approximation methodologies.
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
 
 ```{toctree}

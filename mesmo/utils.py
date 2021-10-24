@@ -1801,7 +1801,10 @@ def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
     """
 
     # Take inverse.
-    array_inverse = array ** -1
+    # - Suppress numpy runtime warning for divide by zero, because it is expected.
+    # TODO: `invalid='ignore'` to be removed once https://github.com/conda-forge/numpy-feedstock/issues/229 is fixed.
+    with np.errstate(divide='ignore', invalid='ignore'):
+        array_inverse = array ** -1
 
     # Replace inverse of zero values.
     array_inverse[array == 0.0] = array[array == 0.0]

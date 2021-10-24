@@ -1,6 +1,8 @@
 ![](assets/mesmo_logo.png)
 
 [![](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
+[![](https://img.shields.io/github/release-date/mesmo-dev/mesmo?label=last%20release)](https://github.com/mesmo-dev/mesmo/releases)
+[![](https://img.shields.io/github/last-commit/mesmo-dev/mesmo)](https://github.com/mesmo-dev/mesmo/graphs/contributors)
 
 ```{important}
 Work in progress: The repository is under active development and interfaces may change without notice. Please use [GitHub issues](https://github.com/mesmo-dev/mesmo/issues) for raising problems, questions, comments and feedback.
@@ -44,7 +46,7 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 
 ## Acknowledgements
 
-- MESMO is being developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
+- MESMO is developed in collaboration between [TUMCREATE](https://www.tum-create.edu.sg/), the [Institute for High Performance Computing, A*STAR](https://www.a-star.edu.sg/ihpc) and the [Chair of Renewable and Sustainable Energy Systems, TUM](https://www.ei.tum.de/en/ens/homepage/).
 - Sebastian Troitzsch implemented the initial version of MESMO and maintains this repository.
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modelling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.

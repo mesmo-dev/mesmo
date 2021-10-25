@@ -1,4 +1,4 @@
-<img src="assets/mesmo_logo_transparent.png" alt="" class="invert-gray align-center"/>
+<img src="assets/mesmo_logo_transparent.png" alt="" class="invert align-center"/>
 
 [![](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 [![](https://img.shields.io/github/release-date/mesmo-dev/mesmo?label=last%20release)](https://github.com/mesmo-dev/mesmo/releases)
@@ -36,7 +36,7 @@ MESMO implements 1) non-linear models for simulation-based analysis and 2) conve
 
 District-scale energy systems are evolving from unidirectional, top-down structures into bidirectional, distributed and multi-commodity systems. Furthermore, the increased coupling of electric, thermal and other energy systems in terms of multi-energy systems enables additional flexibility across conventional system boundaries. MESMO is intended to support the various studies that are motivated by these recent developments for district-scale energy systems, such as the examples highlighted below:
 
-<img src="assets/use_cases.png" alt="" class="invert-gray align-center"/>
+<img src="assets/use_cases.png" alt="" class="invert align-center"/>
 
 1. **Emerging energy demands**: What is the impact of EV charging deployment on distribution system operation?
 2. **Distribution automation**: How can the distribution system operator address imminent operational issues?

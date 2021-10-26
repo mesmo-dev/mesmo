@@ -1556,7 +1556,7 @@ def starmap(
         # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
             log_time('parallel pool setup')
-            ray.init()
+            ray.init(num_cpus=max(int(mesmo.config.config['multiprocessing']['cpu_share'] * os.cpu_count()), 1))
             mesmo.config.parallel_pool = True
             log_time('parallel pool setup')
         results = ray_starmap(function_partial, argument_sequence)

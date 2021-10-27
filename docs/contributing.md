@@ -63,9 +63,10 @@ Before pushing a new commit / release to the `master` branch, please go through 
     - `docs/change_log.md`
     - `docs/publications.md` (at example citation)
     - `docs/conf.py` (at `copyright =`)
+    - `CITATION.bib`
     - `LICENSE`
 4. After pushing a new commit / release, create a tag and publish a new release on Github: <https://github.com/mesmo-dev/mesmo/releases>
 5. After publishing a new release, edit the latest Zenodo entry: <https://doi.org/10.5281/zenodo.3562875>
     - Set title to "MESMO - Multi-Energy System Modeling and Optimization".
     - Set correct author names.
-    - Set license needs to "MIT License".
+    - Set license to "MIT License".

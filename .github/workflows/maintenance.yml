@@ -39,17 +39,15 @@ jobs:
         conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy
         conda activate mesmo
         pip install -v -e .
-    - name: Remove old environment files
-      run: |
-        rm environment-*
-    - name: Enable cache
-      uses: actions/cache@v2
-      with:
-        path: environment-${{ matrix.os }}.yml
-        key: ${{ github.sha }}-${{ matrix.os }}
     - name: Get new environment-${{ matrix.os }}.yml
       run: |
+        rm environment-*
         conda env export -n mesmo --no-builds | grep -v "^prefix: " > environment-${{ matrix.os }}.yml
+    - name: Store environment-${{ matrix.os }}.yml
+      uses: actions/upload-artifact@v2
+      with:
+        name: environment-${{ matrix.os }}.yml
+        path: environment-${{ matrix.os }}.yml
 
   run-maintenance:
     needs: get-environment
@@ -65,20 +63,17 @@ jobs:
       run: |
         rm environment-*
     - name: Get cached environment-windows-latest.yml
-      uses: actions/cache@v2
+      uses: actions/download-artifact@v2
       with:
-        path: environment-windows-latest.yml
-        key: ${{ github.sha }}-windows-latest
+        name: environment-windows-latest.yml
     - name: Get cached environment-macos-latest.yml
-      uses: actions/cache@v2
+      uses: actions/download-artifact@v2
       with:
-        path: environment-macos-latest.yml
-        key: ${{ github.sha }}-macos-latest
+        name: environment-macos-latest.yml
     - name: Get cached environment-ubuntu-latest.yml
-      uses: actions/cache@v2
+      uses: actions/download-artifact@v2
       with:
-        path: environment-ubuntu-latest.yml
-        key: ${{ github.sha }}-ubuntu-latest
+        name: environment-ubuntu-latest.yml
     - name: Commit changes
       uses: stefanzweifel/git-auto-commit-action@v4
       with:

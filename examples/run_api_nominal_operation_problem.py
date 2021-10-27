@@ -11,7 +11,7 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'singapore_6node'
 
     # High-level API call.
     mesmo.api.run_nominal_operation_problem(scenario_name)

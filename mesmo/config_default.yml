@@ -17,11 +17,11 @@ optimization:
 multiprocessing:
   run_parallel: false  # Disabled by default to avoid unexpected issues.
   cpu_share: 1.0  # Maximum share of CPU cores to use for parallel processing.
-tests:
-  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
 logs:
   level: info  # Choices: `debug`, `info`, `warn`.
   format: '%(asctime)s | %(levelname)s | %(message)s'
+tests:
+  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
 plots:
   matplotlib_style: seaborn-colorblind
   matplotlib_colormap: viridis_r

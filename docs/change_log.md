@@ -2,12 +2,12 @@
 
 Note that version numbering follows the [Semantic Versioning principle](https://semver.org/).
 
-## [v0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.5.0)
+## [v0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.5.0) (upcoming release)
 
 ### New features
 
+- Added new optimization problem object (`utils.OptimizationProblem`) as main interface for defining optimization problems with functionality to 1) export the standard form for LP / QP, 2) directly interface Gurobi for better performance with large problems.
 - Overhead line types can now be defined in terms of conductor data and geometric arrangement (Arif Ahmed).
-- Added standard form object for generating the standard form of linear optimization problems.
 - Added local-approximation variant for linear electric grid model.
 - Added linear model set for electric grid model, which enables defining separate linear models for each time step.
 - Added power flow solution set, to obtain power flow solutions more conveniently for multiple time steps.
@@ -16,6 +16,7 @@ Note that version numbering follows the [Semantic Versioning principle](https://
 ### Changes
 
 - Improved / simplified `define_optimization...()` methods for most use cases.
+- Revised `define_optimization...()` methods for new optimization problem object.
 - Switched from `multiprocess` to `ray` for parallel processing for performance reasons.
 
 ## [v0.4.1](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.1)

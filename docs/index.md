@@ -58,7 +58,6 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 :hidden:
 
 installation
-architecture
 examples
 ```
 

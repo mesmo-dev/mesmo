@@ -634,6 +634,7 @@ class OptimizationProblem(ObjectBase):
                 if (broadcast is not None) and (constant_keys is not None):
                     broadcast_len = 1
                     for broadcast_key in broadcast:
+                        # TODO: Raise error if not in keys.
                         if broadcast_key in constant_keys.keys():
                             broadcast_len *= len(constant_keys[broadcast_key])
                 else:

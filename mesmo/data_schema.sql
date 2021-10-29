@@ -180,6 +180,58 @@ CREATE TABLE electric_grids (
     is_single_phase_equivalent TEXT DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
 );
+CREATE TABLE gas_grid_ders (
+    gas_grid_name TEXT,
+    der_name TEXT,
+    node_name TEXT,
+    der_type TEXT,
+    der_model_name TEXT,
+    gas_flow_nominal TEXT,
+    in_service TEXT DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,der_name)
+);
+CREATE TABLE gas_grid_line_types (
+    line_type TEXT,
+    diameter TEXT,
+    absolute_roughness TEXT,
+    maximum_velocity TEXT,
+    PRIMARY KEY(line_type)
+);
+CREATE TABLE gas_grid_lines (
+    gas_grid_name TEXT,
+    line_name TEXT,
+    line_type TEXT,
+    node_1_name TEXT,
+    node_2_name TEXT,
+    length TEXT,
+    in_service TEXT DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,line_name)
+);
+CREATE TABLE gas_grid_nodes (
+    gas_grid_name TEXT,
+    node_name TEXT,
+    latitude TEXT,
+    longitude TEXT,
+    in_service TEXT DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,node_name)
+);
+CREATE TABLE gas_grid_operation_limit_types (
+    gas_grid_operation_limit_type TEXT,
+    node_head_per_unit_maximum TEXT,
+    pipe_flow_per_unit_maximum TEXT,
+    PRIMARY KEY(gas_grid_operation_limit_type)
+);
+CREATE TABLE gas_grids (
+    gas_grid_name TEXT,
+    source_node_name TEXT,
+    energy_transfer_station_head_loss TEXT,
+    enthalpy_difference_distribution_water TEXT,
+    gas_density TEXT,
+    gas_kinematic_viscosity TEXT,
+    source_der_type TEXT,
+    source_der_model_name TEXT,
+    PRIMARY KEY(gas_grid_name)
+);
 CREATE TABLE parameters (
     parameter_set TEXT,
     parameter_name TEXT,
@@ -263,3 +315,4 @@ CREATE TABLE thermal_grids (
     source_der_model_name TEXT,
     PRIMARY KEY(thermal_grid_name)
 );
+

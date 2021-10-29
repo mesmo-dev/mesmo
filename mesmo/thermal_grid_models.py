@@ -1012,6 +1012,8 @@ class LinearThermalGridModelSet(object):
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
         thermal_grid_head_dlmp_node_thermal_power = (
+
+
             pd.DataFrame(columns=self.thermal_grid_model.nodes, index=self.thermal_grid_model.timesteps, dtype=float)
         )
         thermal_grid_congestion_dlmp_node_thermal_power = (

@@ -1,4 +1,5 @@
 """Configuration module."""
+from typing import Any
 
 import diskcache
 import logging
@@ -173,18 +174,19 @@ except ValueError:
     pd.set_option('display.max_colwidth', 0)
 
 # Modify plotly default settings.
-pio.templates.default = go.layout.Template(pio.templates['simple_white'])
-pio.templates.default.layout.update(
-    font=go.layout.Font(
-        family=config['plots']['plotly_font_family'],
-        size=config['plots']['plotly_font_size']
-    ),
-    legend=go.layout.Legend(borderwidth=1),
-    xaxis=go.layout.XAxis(showgrid=True),
-    yaxis=go.layout.YAxis(showgrid=True)
-)
-pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots']['plotly_figure_width']
-pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']
+# pio.templates.default = go.layout.Template(pio.templates['simple_white'])
+# pio.templates.default.layout.update(
+#     font=go.layout.Font(
+#         family=config['plots']['plotly_font_family'],
+#         size=config['plots']['plotly_font_size']
+#     ),
+#     legend=go.layout.Legend(borderwidth=1),
+#     xaxis=go.layout.XAxis(showgrid=True),
+#     yaxis=go.layout.YAxis(showgrid=True)
+# )
+#
+# pio.kaleido.scope.default_width = pio.orca.config.default_width = config['plots']['plotly_figure_width']
+# pio.kaleido.scope.default_height = pio.orca.config.default_height = config['plots']['plotly_figure_height']
 
 # Modify optimization solver settings.
 if config['optimization']['solver_interface'] is None:

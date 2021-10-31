@@ -672,10 +672,12 @@ class FlexibleGeneratorModel(FlexibleDERModel):
         if self.is_electric_grid_connected:
 
             # Instantiate indexes.
-            self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in the optimization problem definition.
-            self.controls = pd.Index(['active_power'])
-            self.disturbances = pd.Index([])
-            self.outputs = pd.Index(['active_power', 'reactive_power'])
+            self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in optimization problem definition.
+            self.controls = pd.Index(['apparent_power'])
+            self.disturbances = pd.Index(['apparent_power_reference'])
+            self.outputs = (
+                pd.Index(['power_maximum_margin', 'power_minimum_margin', 'active_power', 'reactive_power'])
+            )
 
             # Instantiate initial state.
             self.state_vector_initial = (
@@ -698,42 +700,62 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.control_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
             )
-            self.control_output_matrix.at['active_power', 'active_power'] = 1.0
-            self.control_output_matrix.at['reactive_power', 'active_power'] = (
-                self.reactive_power_nominal / self.active_power_nominal
-                if self.active_power_nominal != 0.0
-                else 0.0
+            self.control_output_matrix.at['power_maximum_margin', 'apparent_power'] = -1.0
+            self.control_output_matrix.at['power_minimum_margin', 'apparent_power'] = +1.0
+            self.control_output_matrix.at['active_power', 'apparent_power'] = (
+                1.0 if self.active_power_nominal != 0.0 else 0.0
+            )
+            self.control_output_matrix.at['reactive_power', 'apparent_power'] = (
+                1.0 if self.reactive_power_nominal != 0.0 else 0.0
             )
             self.disturbance_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
+            self.disturbance_output_matrix.at['power_maximum_margin', 'apparent_power_reference'] = (
+                +1.0 * der.at['power_per_unit_maximum']
+            )
+            self.disturbance_output_matrix.at['power_minimum_margin', 'apparent_power_reference'] = (
+                -1.0 * der.at['power_per_unit_minimum']
+            )
 
             # Instantiate disturbance timeseries.
             self.disturbance_timeseries = (
-                pd.DataFrame(0.0, index=self.active_power_nominal_timeseries.index, columns=self.disturbances)
+                pd.concat([
+                    # If active power nominal time series is zero, uses reactive power nominal time series.
+                    (
+                        self.active_power_nominal_timeseries.rename('apparent_power_reference')
+                        / self.active_power_nominal  # In per-unit.
+                    ) if self.active_power_nominal != 0.0 else (
+                        self.reactive_power_nominal_timeseries.rename('apparent_power_reference')
+                        / self.reactive_power_nominal  # In per-unit.
+                    )
+                ], axis='columns')
             )
 
             # Construct output constraint timeseries
-            # TODO: Revise constraints with pu limits.
             self.output_maximum_timeseries = (
                 pd.concat([
-                    self.active_power_nominal_timeseries,
-                    self.reactive_power_nominal_timeseries
+                    pd.Series(np.inf, index=self.timesteps, name='power_maximum_margin'),
+                    pd.Series(np.inf, index=self.timesteps, name='power_minimum_margin'),
+                    pd.Series(np.inf, index=self.timesteps, name='active_power'),
+                    pd.Series(np.inf, index=self.timesteps, name='reactive_power'),
                 ], axis='columns')
             )
             self.output_minimum_timeseries = (
                 pd.concat([
-                    0.0 * self.active_power_nominal_timeseries,
-                    0.0 * self.reactive_power_nominal_timeseries
+                    pd.Series(0.0, index=self.timesteps, name='power_maximum_margin'),
+                    pd.Series(0.0, index=self.timesteps, name='power_minimum_margin'),
+                    pd.Series(0.0, index=self.timesteps, name='active_power'),
+                    pd.Series(0.0, index=self.timesteps, name='reactive_power'),
                 ], axis='columns')
             )
 
         if self.is_thermal_grid_connected:
 
             # Instantiate indexes.
-            self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in the optimization problem definition.
+            self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in optimization problem definition.
             self.controls = pd.Index(['thermal_power'])
-            self.disturbances = pd.Index([])
+            self.disturbances = pd.Index(['thermal_power_reference'])
             self.outputs = pd.Index(['thermal_power'])
 
             # Instantiate initial state.
@@ -757,37 +779,53 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.control_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
             )
+            self.control_output_matrix.at['power_maximum_margin', 'thermal_power'] = -1.0
+            self.control_output_matrix.at['power_minimum_margin', 'thermal_power'] = +1.0
             self.control_output_matrix.at['thermal_power', 'thermal_power'] = 1.0
-
             self.disturbance_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+            )
+            self.disturbance_output_matrix.at['power_maximum_margin', 'thermal_power_reference'] = (
+                +1.0 * der.at['power_per_unit_maximum']
+            )
+            self.disturbance_output_matrix.at['power_minimum_margin', 'thermal_power_reference'] = (
+                -1.0 * der.at['power_per_unit_minimum']
             )
 
             # Instantiate disturbance timeseries.
             self.disturbance_timeseries = (
-                pd.DataFrame(0.0, index=self.thermal_power_nominal_timeseries.index, columns=self.disturbances)
+                pd.concat([
+                    self.thermal_power_nominal_timeseries.rename('thermal_power_reference')
+                    / self.thermal_power_nominal  # In per-unit.
+                ], axis='columns')
             )
 
             # Construct output constraint timeseries
-            # TODO: Revise constraints with pu limits.
             self.output_maximum_timeseries = (
-                pd.DataFrame(self.thermal_power_nominal_timeseries, index=self.timesteps)
+                pd.concat([
+                    pd.Series(np.inf, index=self.timesteps, name='power_maximum_margin'),
+                    pd.Series(np.inf, index=self.timesteps, name='power_minimum_margin'),
+                    pd.Series(np.inf, index=self.timesteps, name='thermal_power'),
+                ], axis='columns')
             )
-
             self.output_minimum_timeseries = (
-                pd.DataFrame(0.0 * self.thermal_power_nominal_timeseries, index=self.timesteps)
+                pd.concat([
+                    pd.Series(0.0, index=self.timesteps, name='power_maximum_margin'),
+                    pd.Series(0.0, index=self.timesteps, name='power_minimum_margin'),
+                    pd.Series(0.0, index=self.timesteps, name='thermal_power'),
+                ], axis='columns')
             )
 
         # Define power mapping matrices.
         self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
-            self.mapping_active_power_by_output.at['active_power', 'active_power'] = 1.0
+            self.mapping_active_power_by_output.at['active_power', 'active_power'] = self.active_power_nominal
         self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
-            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = 1.0
+            self.mapping_reactive_power_by_output.at['reactive_power', 'reactive_power'] = self.reactive_power_nominal
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
-            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = 1.0
+            self.mapping_thermal_power_by_output.at['thermal_power', 'thermal_power'] = self.thermal_power_nominal
 
 
 class StorageModel(FlexibleDERModel):

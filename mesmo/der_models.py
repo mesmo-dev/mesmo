@@ -359,10 +359,10 @@ class FlexibleLoadModel(FlexibleDERModel):
                     # If active power nominal time series is zero, uses reactive power nominal time series.
                     (
                         self.active_power_nominal_timeseries.rename('apparent_power_reference')
-                        / self.active_power_nominal  # In per-unit.
-                    ) if self.active_power_nominal != 0.0 else (
+                        / self.active_power_nominal if self.active_power_nominal != 0 else 1.0  # In per-unit.
+                    ) if self.active_power_nominal_timeseries.sum() != 0.0 else (
                         self.reactive_power_nominal_timeseries.rename('apparent_power_reference')
-                        / self.reactive_power_nominal  # In per-unit.
+                        / self.reactive_power_nominal if self.reactive_power_nominal != 0 else 1.0  # In per-unit.
                     )
                 ], axis='columns')
             )
@@ -435,7 +435,9 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['power_maximum_margin', 'thermal_power'] = -1.0
             self.control_output_matrix.at['power_minimum_margin', 'thermal_power'] = +1.0
-            self.control_output_matrix.at['thermal_power', 'thermal_power'] = 1.0
+            self.control_output_matrix.at['thermal_power', 'thermal_power'] = (
+                1.0  if self.thermal_power_nominal != 0.0 else 0.0
+            )
             self.disturbance_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
@@ -450,7 +452,7 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.disturbance_timeseries = (
                 pd.concat([
                     self.thermal_power_nominal_timeseries.rename('thermal_power_reference')
-                    / self.thermal_power_nominal  # In per-unit.
+                    / self.thermal_power_nominal if self.thermal_power_nominal != 0 else 1.0  # In per-unit.
                 ], axis='columns')
             )
 
@@ -748,10 +750,10 @@ class FlexibleGeneratorModel(FlexibleDERModel):
                     # If active power nominal time series is zero, uses reactive power nominal time series.
                     (
                         self.active_power_nominal_timeseries.rename('apparent_power_reference')
-                        / self.active_power_nominal  # In per-unit.
-                    ) if self.active_power_nominal != 0.0 else (
+                        / self.active_power_nominal if self.active_power_nominal != 0 else 1.0  # In per-unit.
+                    ) if self.active_power_nominal_timeseries.sum() != 0.0 else (
                         self.reactive_power_nominal_timeseries.rename('apparent_power_reference')
-                        / self.reactive_power_nominal  # In per-unit.
+                        / self.reactive_power_nominal if self.reactive_power_nominal != 0 else 1.0  # In per-unit.
                     )
                 ], axis='columns')
             )
@@ -805,7 +807,9 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
             self.control_output_matrix.at['power_maximum_margin', 'thermal_power'] = -1.0
             self.control_output_matrix.at['power_minimum_margin', 'thermal_power'] = +1.0
-            self.control_output_matrix.at['thermal_power', 'thermal_power'] = 1.0
+            self.control_output_matrix.at['thermal_power', 'thermal_power'] = (
+                1.0 if self.thermal_power_nominal != 0.0 else 0.0
+            )
             self.disturbance_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
@@ -820,7 +824,7 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             self.disturbance_timeseries = (
                 pd.concat([
                     self.thermal_power_nominal_timeseries.rename('thermal_power_reference')
-                    / self.thermal_power_nominal  # In per-unit.
+                    / self.thermal_power_nominal if self.thermal_power_nominal != 0 else 1.0  # In per-unit.
                 ], axis='columns')
             )
 

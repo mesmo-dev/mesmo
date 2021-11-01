@@ -316,7 +316,7 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.states, columns=self.controls)
             )
             self.control_matrix.at['state_of_charge', 'apparent_power'] = (
-                -1.0
+                +1.0
                 * der_data.scenario_data.scenario.at['timestep_interval']
                 / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )
@@ -324,7 +324,7 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
             )
             self.disturbance_matrix.at['state_of_charge', 'apparent_power_reference'] = (
-                +1.0
+                -1.0
                 * der_data.scenario_data.scenario.at['timestep_interval']
                 / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )

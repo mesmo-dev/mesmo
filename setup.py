@@ -18,7 +18,7 @@ for submodule in submodules:
             f"No setup file found for submodule `{submodule}`. Please check if the submodule is loaded correctly."
         )
 
-# Add post-installation routine to install submodules.
+# Add post-installation routine to install submodules in develop mode.
 class develop_submodules(setuptools.command.develop.develop):
     def run(self):
         super().run()
@@ -26,13 +26,13 @@ class develop_submodules(setuptools.command.develop.develop):
         for submodule in submodules:
             subprocess.check_call([sys.executable, '-m' 'pip', 'install', '-e', submodule])
 
-# Add post-installation routine to install submodules.
+# Add post-installation routine to install submodules in normal mode.
 class install_submodules(setuptools.command.install.install):
     def run(self):
         super().run()
         # Install submodules. Use `pip -v` to see subprocess outputs.
         for submodule in submodules:
-            subprocess.check_call([sys.executable, '-m' 'pip', 'install', '-e', submodule])
+            subprocess.check_call([sys.executable, '-m' 'pip', 'install', submodule])
 
 setuptools.setup(
     name='mesmo',

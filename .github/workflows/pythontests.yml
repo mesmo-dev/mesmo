@@ -43,5 +43,5 @@ jobs:
     - name: Run tests
       run: |
         conda activate mesmo
-        pip install pytest
+        pip install pytest pytest-subtests
         pytest tests

@@ -650,7 +650,7 @@ class LinearThermalGridModelSet(object):
         self.define_optimization_parameters(
             optimization_problem,
             price_data,
-            scenarios=scenarios
+            scenarios=scenarios,
             **kwargs
         )
         self.define_optimization_constraints(optimization_problem, scenarios=scenarios)

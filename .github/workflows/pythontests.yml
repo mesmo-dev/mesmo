@@ -43,5 +43,9 @@ jobs:
     - name: Run tests
       run: |
         conda activate mesmo
-        pip install pytest pytest-subtests
-        pytest tests
+        pip install pytest pytest-cov pytest-subtests
+        pytest tests --cov=./ --cov-report=xml
+    - name: Report coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true

@@ -1488,10 +1488,19 @@ class ElectricGridOperationResults(ElectricGridDEROperationResults):
     electric_grid_model: ElectricGridModel
     node_voltage_magnitude_vector: pd.DataFrame
     node_voltage_magnitude_vector_per_unit: pd.DataFrame
+    node_voltage_angle_vector: pd.DataFrame
     branch_power_magnitude_vector_1: pd.DataFrame
     branch_power_magnitude_vector_1_per_unit: pd.DataFrame
+    branch_active_power_vector_1: pd.DataFrame
+    branch_active_power_vector_1_per_unit: pd.DataFrame
+    branch_reactive_power_vector_1: pd.DataFrame
+    branch_reactive_power_vector_1_per_unit: pd.DataFrame
     branch_power_magnitude_vector_2: pd.DataFrame
     branch_power_magnitude_vector_2_per_unit: pd.DataFrame
+    branch_active_power_vector_2: pd.DataFrame
+    branch_active_power_vector_2_per_unit: pd.DataFrame
+    branch_reactive_power_vector_2: pd.DataFrame
+    branch_reactive_power_vector_2_per_unit: pd.DataFrame
     loss_active: pd.DataFrame
     loss_reactive: pd.DataFrame
 
@@ -5268,6 +5277,8 @@ class LinearElectricGridModelSet(object):
                 self.electric_grid_model.timesteps, loss_reactive
             ]
         )
+
+        # TODO: Obtain voltage angle and active / reactive branch power vectors.
 
         return ElectricGridOperationResults(
             electric_grid_model=self.electric_grid_model,

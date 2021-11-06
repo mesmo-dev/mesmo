@@ -182,8 +182,13 @@ class NominalOperationProblem(Problem):
             der_active_power_vector = der_power_vector.apply(np.real)
             der_reactive_power_vector = der_power_vector.apply(np.imag)
             node_voltage_magnitude_vector = np.abs(node_voltage_vector)
+            node_voltage_angle_vector = np.angle(node_voltage_vector)
             branch_power_magnitude_vector_1 = np.abs(branch_power_vector_1)
+            branch_active_power_vector_1 = np.real(branch_power_vector_1)
+            branch_reactive_power_vector_1 = np.imag(branch_power_vector_1)
             branch_power_magnitude_vector_2 = np.abs(branch_power_vector_2)
+            branch_active_power_vector_2 = np.real(branch_power_vector_2)
+            branch_reactive_power_vector_2 = np.imag(branch_power_vector_2)
             loss_active = loss.apply(np.real)
             loss_reactive = loss.apply(np.imag)
         if self.thermal_grid_model is not None:
@@ -211,8 +216,24 @@ class NominalOperationProblem(Problem):
                 branch_power_magnitude_vector_1
                 * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
             )
+            branch_active_power_vector_1_per_unit = (
+                branch_active_power_vector_1
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+            branch_reactive_power_vector_1_per_unit = (
+                branch_reactive_power_vector_1
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
             branch_power_magnitude_vector_2_per_unit = (
                 branch_power_magnitude_vector_2
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+            branch_active_power_vector_2_per_unit = (
+                branch_active_power_vector_2
+                * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
+            )
+            branch_reactive_power_vector_2_per_unit = (
+                branch_reactive_power_vector_2
                 * mesmo.utils.get_inverse_with_zeros(self.electric_grid_model.branch_power_vector_magnitude_reference)
             )
         if self.thermal_grid_model is not None:
@@ -246,10 +267,19 @@ class NominalOperationProblem(Problem):
                     der_reactive_power_vector_per_unit=der_reactive_power_vector_per_unit,
                     node_voltage_magnitude_vector=node_voltage_magnitude_vector,
                     node_voltage_magnitude_vector_per_unit=node_voltage_magnitude_vector_per_unit,
+                    node_voltage_angle_vector=node_voltage_angle_vector,
                     branch_power_magnitude_vector_1=branch_power_magnitude_vector_1,
                     branch_power_magnitude_vector_1_per_unit=branch_power_magnitude_vector_1_per_unit,
+                    branch_active_power_vector_1=branch_active_power_vector_1,
+                    branch_active_power_vector_1_per_unit=branch_active_power_vector_1_per_unit,
+                    branch_reactive_power_vector_1=branch_reactive_power_vector_1,
+                    branch_reactive_power_vector_1_per_unit=branch_reactive_power_vector_1_per_unit,
                     branch_power_magnitude_vector_2=branch_power_magnitude_vector_2,
                     branch_power_magnitude_vector_2_per_unit=branch_power_magnitude_vector_2_per_unit,
+                    branch_active_power_vector_2=branch_active_power_vector_2,
+                    branch_active_power_vector_2_per_unit=branch_active_power_vector_2_per_unit,
+                    branch_reactive_power_vector_2=branch_reactive_power_vector_2,
+                    branch_reactive_power_vector_2_per_unit=branch_reactive_power_vector_2_per_unit,
                     loss_active=loss_active,
                     loss_reactive=loss_reactive
                 )

@@ -12,11 +12,15 @@ submodules = [
 ]
 
 # Check if submodules are loaded.
+base_path = pathlib.Path(__file__).parent.absolute()
 for submodule in submodules:
-    if not (pathlib.Path(__file__).parent.absolute() / submodule / 'setup.py').is_file():
-        raise FileNotFoundError(
-            f"No setup file found for submodule `{submodule}`. Please check if the submodule is loaded correctly."
-        )
+    if not (base_path / submodule / 'setup.py').is_file():
+        try:
+            subprocess.check_call(['git', '-C', str(base_path), 'submodule', 'update', '--init', '--recursive'])
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"No setup file found for submodule `{submodule}`. Please check if the submodule is loaded correctly."
+            )
 
 # Add post-installation routine to install submodules in develop mode.
 class develop_submodules(setuptools.command.develop.develop):

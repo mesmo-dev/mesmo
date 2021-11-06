@@ -19,7 +19,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class DERModel(object):
+class DERModel(mesmo.utils.ObjectBase):
     """DER model object."""
 
     der_type: str = None

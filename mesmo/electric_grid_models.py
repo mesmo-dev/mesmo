@@ -18,7 +18,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class ElectricGridModel(object):
+class ElectricGridModel(mesmo.utils.ObjectBase):
     """Electric grid model object.
 
     Note:
@@ -1530,7 +1530,7 @@ class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
     electric_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class PowerFlowSolution(object):
+class PowerFlowSolution(mesmo.utils.ObjectBase):
     """Power flow solution object consisting of DER power vector and the corresponding solution for
     nodal voltage vector / branch power vector and total loss (all complex valued).
     """
@@ -2404,7 +2404,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         return loss
 
 
-class PowerFlowSolutionSet(object):
+class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolution]
     electric_grid_model: ElectricGridModelDefault
@@ -2528,7 +2528,7 @@ class PowerFlowSolutionSet(object):
         )
 
 
-class LinearElectricGridModel(object):
+class LinearElectricGridModel(mesmo.utils.ObjectBase):
     """Abstract linear electric model object, consisting of the sensitivity matrices for
     voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
     nodal delta power.
@@ -4079,7 +4079,7 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
         )
 
 
-class LinearElectricGridModelSet(object):
+class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
     linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
     electric_grid_model: ElectricGridModelDefault

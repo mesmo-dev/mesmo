@@ -12,6 +12,7 @@ import typing
 
 import cobmo.data_interface
 import mesmo.config
+import mesmo.utils
 
 logger = mesmo.config.get_logger(__name__)
 
@@ -149,7 +150,7 @@ def connect_database() -> sqlite3.Connection:
     return database_connection
 
 
-class ScenarioData(object):
+class ScenarioData(mesmo.utils.ObjectBase):
     """Scenario data object."""
 
     scenario: pd.Series
@@ -350,7 +351,7 @@ class ScenarioData(object):
         return dataframe
 
 
-class DERData(object):
+class DERData(mesmo.utils.ObjectBase):
     """DER data object."""
 
     scenario_data: ScenarioData
@@ -884,7 +885,7 @@ class DERData(object):
         return der_definitions
 
 
-class ElectricGridData(object):
+class ElectricGridData(mesmo.utils.ObjectBase):
     """Electric grid data object."""
 
     scenario_data: ScenarioData
@@ -1065,7 +1066,7 @@ class ElectricGridData(object):
         )
 
 
-class ThermalGridData(object):
+class ThermalGridData(mesmo.utils.ObjectBase):
     """Thermal grid data object."""
 
     scenario_data: ScenarioData
@@ -1165,7 +1166,7 @@ class ThermalGridData(object):
         )
 
 
-class PriceData(object):
+class PriceData(mesmo.utils.ObjectBase):
     """Price data object."""
 
     price_sensitivity_coefficient: float

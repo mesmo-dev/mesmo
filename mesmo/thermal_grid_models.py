@@ -18,7 +18,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class ThermalGridModel(object):
+class ThermalGridModel(mesmo.utils.ObjectBase):
     """Thermal grid model object."""
 
     timesteps: pd.Index
@@ -174,7 +174,7 @@ class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
     thermal_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class ThermalPowerFlowSolution(object):
+class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
@@ -360,7 +360,7 @@ class ThermalPowerFlowSolution(object):
         )
 
 
-class ThermalPowerFlowSolutionSet(object):
+class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, ThermalPowerFlowSolution]
     thermal_grid_model: ThermalGridModel
@@ -413,7 +413,7 @@ class ThermalPowerFlowSolutionSet(object):
         raise NotImplementedError
 
 
-class LinearThermalGridModel(object):
+class LinearThermalGridModel(mesmo.utils.ObjectBase):
     """Linear thermal grid model object."""
 
     thermal_grid_model: ThermalGridModel
@@ -563,7 +563,7 @@ class LinearThermalGridModel(object):
 LinearThermalGridModelGlobal = LinearThermalGridModel
 
 
-class LinearThermalGridModelSet(object):
+class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
     thermal_grid_model: ThermalGridModel

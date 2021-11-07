@@ -15,7 +15,10 @@ class TestExamples(unittest.TestCase):
     def test_example(self):
         mesmo.utils.log_time("test_example", log_level='info', logger_object=logger)
         # Find example scripts.
-        example_files = list((pathlib.Path(mesmo.config.base_path) / 'examples').glob('*.py'))
+        example_files = [
+            *((pathlib.Path(mesmo.config.base_path) / 'examples').glob('*.py')),
+            *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').glob('*.py'))
+        ]
         logger.info(f"Found example script files:\n{example_files}")
         for example_file in example_files:
             with self.subTest(example=example_file.stem):

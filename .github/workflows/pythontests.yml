@@ -46,10 +46,12 @@ jobs:
         pip install pytest pytest-cov pytest-subtests
         pytest tests --cov=./ --cov-report=xml
     - name: Report coverage to Codecov
+      if: always()
       uses: codecov/codecov-action@v2
       with:
         fail_ci_if_error: true
     - name: Report coverage to Codacy
+      if: always()
       uses: codacy/codacy-coverage-reporter-action@v1
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}

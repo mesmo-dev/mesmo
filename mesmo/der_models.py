@@ -1262,11 +1262,11 @@ class CoolingPlantModel(FlexibleDERModel):
         )
 
 
-class HeatPumpModel(FlexibleDERModel):
-    """Heat pump model object."""
+class HeatingPlantModel(FlexibleDERModel):
+    """Heating plant model object."""
 
-    der_type = 'heat_pump'
-    heat_pump_efficiency: float
+    der_type = 'heating_plant'
+    thermal_efficiency: float
 
     def __init__(
             self,
@@ -1284,17 +1284,17 @@ class HeatPumpModel(FlexibleDERModel):
         # If not connected to both thermal grid and electric grid, raise error.
         if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
             raise AssertionError(
-                f"Heat pump '{self.der_name}' must be connected to both thermal grid and electric grid."
+                f"Heating plant '{self.der_name}' must be connected to both thermal grid and electric grid."
             )
 
-        # Obtain heat pump efficiency.
-        self.heat_pump_efficiency = der.at['heat_pump_efficiency']
+        # Obtain heating plant efficiency.
+        self.thermal_efficiency = der.at['thermal_efficiency']
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
 
         # Manipulate thermal power timeseries.
-        self.thermal_power_nominal_timeseries *= self.heat_pump_efficiency
+        self.thermal_power_nominal_timeseries *= self.thermal_efficiency
 
         # Instantiate indexes.
         self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in the optimization problem definition.
@@ -1340,7 +1340,7 @@ class HeatPumpModel(FlexibleDERModel):
             if self.active_power_nominal != 0.0
             else 0.0
         )
-        self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.heat_pump_efficiency
+        self.control_output_matrix.at['thermal_power', 'active_power'] = -1.0 * self.thermal_efficiency
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
         )

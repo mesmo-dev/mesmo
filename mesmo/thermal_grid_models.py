@@ -137,8 +137,8 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         # TODO: Remove temporary workaround: Obtain efficiency factors.
         if thermal_grid_data.thermal_grid.at['source_der_type'] == 'cooling_plant':
             self.plant_efficiency = self.source_der_model.cooling_plant_efficiency
-        elif thermal_grid_data.thermal_grid.at['source_der_type'] == 'heat_pump':
-            self.plant_efficiency = self.source_der_model.heat_pump_efficiency
+        elif thermal_grid_data.thermal_grid.at['source_der_type'] == 'heating_plant':
+            self.plant_efficiency = self.source_der_model.thermal_efficiency
         else:
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 

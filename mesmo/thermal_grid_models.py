@@ -18,7 +18,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class ThermalGridModel(object):
+class ThermalGridModel(mesmo.utils.ObjectBase):
     """Thermal grid model object."""
 
     timesteps: pd.Index
@@ -137,8 +137,8 @@ class ThermalGridModel(object):
         # TODO: Remove temporary workaround: Obtain efficiency factors.
         if thermal_grid_data.thermal_grid.at['source_der_type'] == 'cooling_plant':
             self.plant_efficiency = self.source_der_model.cooling_plant_efficiency
-        elif thermal_grid_data.thermal_grid.at['source_der_type'] == 'heat_pump':
-            self.plant_efficiency = self.source_der_model.heat_pump_efficiency
+        elif thermal_grid_data.thermal_grid.at['source_der_type'] == 'heating_plant':
+            self.plant_efficiency = self.source_der_model.thermal_efficiency
         else:
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
@@ -174,7 +174,7 @@ class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
     thermal_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class ThermalPowerFlowSolution(object):
+class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
@@ -360,7 +360,7 @@ class ThermalPowerFlowSolution(object):
         )
 
 
-class ThermalPowerFlowSolutionSet(object):
+class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, ThermalPowerFlowSolution]
     thermal_grid_model: ThermalGridModel
@@ -413,7 +413,7 @@ class ThermalPowerFlowSolutionSet(object):
         raise NotImplementedError
 
 
-class LinearThermalGridModel(object):
+class LinearThermalGridModel(mesmo.utils.ObjectBase):
     """Linear thermal grid model object."""
 
     thermal_grid_model: ThermalGridModel
@@ -563,7 +563,7 @@ class LinearThermalGridModel(object):
 LinearThermalGridModelGlobal = LinearThermalGridModel
 
 
-class LinearThermalGridModelSet(object):
+class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
     thermal_grid_model: ThermalGridModel
@@ -650,7 +650,7 @@ class LinearThermalGridModelSet(object):
         self.define_optimization_parameters(
             optimization_problem,
             price_data,
-            scenarios=scenarios
+            scenarios=scenarios,
             **kwargs
         )
         self.define_optimization_constraints(optimization_problem, scenarios=scenarios)

@@ -18,7 +18,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class ElectricGridModel(object):
+class ElectricGridModel(mesmo.utils.ObjectBase):
     """Electric grid model object.
 
     Note:
@@ -1488,10 +1488,19 @@ class ElectricGridOperationResults(ElectricGridDEROperationResults):
     electric_grid_model: ElectricGridModel
     node_voltage_magnitude_vector: pd.DataFrame
     node_voltage_magnitude_vector_per_unit: pd.DataFrame
+    node_voltage_angle_vector: pd.DataFrame
     branch_power_magnitude_vector_1: pd.DataFrame
     branch_power_magnitude_vector_1_per_unit: pd.DataFrame
+    branch_active_power_vector_1: pd.DataFrame
+    branch_active_power_vector_1_per_unit: pd.DataFrame
+    branch_reactive_power_vector_1: pd.DataFrame
+    branch_reactive_power_vector_1_per_unit: pd.DataFrame
     branch_power_magnitude_vector_2: pd.DataFrame
     branch_power_magnitude_vector_2_per_unit: pd.DataFrame
+    branch_active_power_vector_2: pd.DataFrame
+    branch_active_power_vector_2_per_unit: pd.DataFrame
+    branch_reactive_power_vector_2: pd.DataFrame
+    branch_reactive_power_vector_2_per_unit: pd.DataFrame
     loss_active: pd.DataFrame
     loss_reactive: pd.DataFrame
 
@@ -1521,7 +1530,7 @@ class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
     electric_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class PowerFlowSolution(object):
+class PowerFlowSolution(mesmo.utils.ObjectBase):
     """Power flow solution object consisting of DER power vector and the corresponding solution for
     nodal voltage vector / branch power vector and total loss (all complex valued).
     """
@@ -2395,7 +2404,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         return loss
 
 
-class PowerFlowSolutionSet(object):
+class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolution]
     electric_grid_model: ElectricGridModelDefault
@@ -2519,7 +2528,7 @@ class PowerFlowSolutionSet(object):
         )
 
 
-class LinearElectricGridModel(object):
+class LinearElectricGridModel(mesmo.utils.ObjectBase):
     """Abstract linear electric model object, consisting of the sensitivity matrices for
     voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
     nodal delta power.
@@ -4070,7 +4079,7 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
         )
 
 
-class LinearElectricGridModelSet(object):
+class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
     linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
     electric_grid_model: ElectricGridModelDefault
@@ -5268,6 +5277,8 @@ class LinearElectricGridModelSet(object):
                 self.electric_grid_model.timesteps, loss_reactive
             ]
         )
+
+        # TODO: Obtain voltage angle and active / reactive branch power vectors.
 
         return ElectricGridOperationResults(
             electric_grid_model=self.electric_grid_model,

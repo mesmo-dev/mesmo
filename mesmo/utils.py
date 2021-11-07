@@ -567,7 +567,7 @@ class OptimizationProblem(ObjectBase):
 
                 # Obtain variable integer index & raise error if variable or key does not exist.
                 variable_index = (
-                    tuple(mesmo.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
+                    tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
                 )
 
                 # Obtain broadcast dimension length for variable.
@@ -634,6 +634,7 @@ class OptimizationProblem(ObjectBase):
                 if (broadcast is not None) and (constant_keys is not None):
                     broadcast_len = 1
                     for broadcast_key in broadcast:
+                        # TODO: Raise error if not in keys.
                         if broadcast_key in constant_keys.keys():
                             broadcast_len *= len(constant_keys[broadcast_key])
                 else:
@@ -815,7 +816,7 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain variable index & raise error if variable or key does not exist.
             variable_index = (
-                tuple(mesmo.utils.get_index(self.variables, **variable_keys, raise_empty_index_error=True))
+                tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
             )
 
             # Obtain broadcast dimension length for variable.
@@ -880,10 +881,10 @@ class OptimizationProblem(ObjectBase):
 
             # Obtain variable index & raise error if variable or key does not exist.
             variable_1_index = (
-                tuple(mesmo.utils.get_index(self.variables, **variable_keys_1, raise_empty_index_error=True))
+                tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
             )
             variable_2_index = (
-                tuple(mesmo.utils.get_index(self.variables, **variable_keys_2, raise_empty_index_error=True))
+                tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
             )
 
             # Obtain broadcast dimension length for variable.
@@ -970,6 +971,29 @@ class OptimizationProblem(ObjectBase):
                 self.d_dict[0].append(constant_value)
             else:
                 self.d_dict[0].append((parameter_name, broadcast_len))
+
+    def get_variable_index(
+            self,
+            name: str,
+            raise_empty_index_error: bool = False,
+            **keys
+    ):
+        """Utility method for obtaining a variable integer index vector for given variable name / keys."""
+
+        return mesmo.utils.get_index(self.variables, name=name, **keys, raise_empty_index_error=raise_empty_index_error)
+
+    def get_variable_keys(
+            self,
+            name: str,
+            **keys
+    ):
+        """Utility method for obtaining a variable key dataframe for given variable name / keys.
+
+        - This intended for debugging / inspection of the key value order, e.g. such that numerical factors
+          can be constructed accordingly.
+        """
+
+        return self.variables.loc[self.get_variable_index(name, **keys)].dropna(axis='columns', how='all')
 
     def get_a_matrix(self) -> sp.csr_matrix:
         r"""Obtain :math:`\boldsymbol{A}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
@@ -1397,7 +1421,7 @@ class OptimizationProblem(ObjectBase):
 
             # Get variable dimensions.
             variable_dimensions = (
-                self.variables.iloc[mesmo.utils.get_index(self.variables, name=name), :]
+                self.variables.iloc[self.get_variable_index(name), :]
                 .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
             )
 
@@ -1406,7 +1430,7 @@ class OptimizationProblem(ObjectBase):
                 # Get results from x vector as pandas series.
                 results[name] = (
                     pd.Series(
-                        x_vector[mesmo.utils.get_index(self.variables, name=name), 0],
+                        x_vector[self.get_variable_index(name), 0],
                         index=pd.MultiIndex.from_frame(variable_dimensions)
                     )
                 )
@@ -1424,7 +1448,7 @@ class OptimizationProblem(ObjectBase):
             else:
 
                 # Scalar values are obtained as float.
-                results[name] = float(x_vector[mesmo.utils.get_index(self.variables, name=name), 0])
+                results[name] = float(x_vector[self.get_variable_index(name), 0])
 
         # Log time.
         log_time('get optimization problem results')

@@ -13,8 +13,6 @@ import mesmo
 
 def main():
 
-    # TODO: To be updated for new optimization problem interface.
-
     # Settings.
     scenario_name = 'paper_2020_troitzsch_dlmp'
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
@@ -30,8 +28,8 @@ def main():
     # Obtain models.
     electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
-    linear_electric_grid_model = (
-        mesmo.electric_grid_models.LinearElectricGridModelGlobal(
+    linear_electric_grid_model_set = (
+        mesmo.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
             power_flow_solution
         )
@@ -40,8 +38,8 @@ def main():
     thermal_grid_model.energy_transfer_station_head_loss = 0.0  # Modification for Thermal Electric DLMP paper
     thermal_grid_model.plant_efficiency = 10.0  # Modification for Thermal Electric DLMP paper.
     thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
-    linear_thermal_grid_model = (
-        mesmo.thermal_grid_models.LinearThermalGridModel(
+    linear_thermal_grid_model_set = (
+        mesmo.thermal_grid_models.LinearThermalGridModelSet(
             thermal_grid_model,
             thermal_power_flow_solution
         )
@@ -51,24 +49,19 @@ def main():
     # Instantiate optimization problem.
     optimization_problem = mesmo.utils.OptimizationProblem()
 
-    # Define linear electric grid model variables.
-    linear_electric_grid_model.define_optimization_variables(optimization_problem)
-
-    # Define linear electric grid model constraints.
+    # Define linear electric grid problem.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(power_flow_solution.node_voltage_vector)
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.node_voltage_vector)
     branch_power_magnitude_vector_maximum = 1.5 * np.abs(power_flow_solution.branch_power_vector_1)
-    linear_electric_grid_model.define_optimization_constraints(
+    linear_electric_grid_model_set.define_optimization_problem(
         optimization_problem,
+        price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
-    # Define thermal grid model variables.
-    linear_thermal_grid_model.define_optimization_variables(optimization_problem)
-
-    # Define thermal grid model constraints.
+    # Define thermal grid problem.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 1.5 * thermal_power_flow_solution.branch_flow_vector
     # Modify limits for scenarios.
@@ -80,36 +73,23 @@ def main():
         node_head_vector_minimum[thermal_grid_model.nodes.get_loc(('no_source', '15'))] *= 0.1 / 1.5
     else:
         ValueError(f"Invalid scenario: {scenario}")
-    linear_thermal_grid_model.define_optimization_constraints(
+    linear_thermal_grid_model_set.define_optimization_problem(
         optimization_problem,
+        price_data,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
 
-    # Define DER variables.
-    der_model_set.define_optimization_variables(optimization_problem)
-
-    # Define DER constraints.
-    der_model_set.define_optimization_constraints(optimization_problem)
-
-    # Define objective.
-    linear_thermal_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-    linear_electric_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
+    # Define DER problem.
+    der_model_set.define_optimization_problem(optimization_problem, price_data)
 
     # Solve optimization problem.
     optimization_problem.solve()
 
     # Obtain results.
-    in_per_unit = False
     results = mesmo.problems.Results()
-    results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
-    results.update(linear_thermal_grid_model.get_optimization_results(optimization_problem))
+    results.update(linear_electric_grid_model_set.get_optimization_results(optimization_problem))
+    results.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
     results.update(der_model_set.get_optimization_results(optimization_problem))
 
     # Print results.
@@ -120,18 +100,8 @@ def main():
 
     # Obtain DLMPs.
     dlmps = mesmo.problems.Results()
-    dlmps.update(
-        linear_electric_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
-    dlmps.update(
-        linear_thermal_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
+    dlmps.update(linear_electric_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
+    dlmps.update(linear_thermal_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
 
     # Print DLMPs.
     print(dlmps)
@@ -180,14 +150,14 @@ def main():
         ax1.set_ylabel('Price [S$/MWh]')
         ax2 = plt.twinx(ax1)
         ax2.plot(
-            results['der_thermal_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+            results['der_thermal_power_vector'].loc[:, der].abs() / 1e6,
             label='Thrm. pw.',
             drawstyle='steps-post',
             color='darkgrey',
             linewidth=3
         )
         ax2.plot(
-            results['der_active_power_vector'].loc[:, der].abs() / (1 if in_per_unit else 1e6),
+            results['der_active_power_vector'].loc[:, der].abs() / 1e6,
             label='Active pw.',
             drawstyle='steps-post',
             color='black',
@@ -196,8 +166,8 @@ def main():
         ax2.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
         ax2.set_xlim((scenario_data.timesteps[0], scenario_data.timesteps[-1]))
         ax2.set_xlabel('Time')
-        ax2.set_ylabel('Power [p.u.]') if in_per_unit else ax2.set_ylabel('Power [MW]')
-        ax2.set_ylim((0.0, 1.0)) if in_per_unit else ax2.set_ylim((0.0, 70.0))
+        ax2.set_ylabel('Power [MW]')
+        ax2.set_ylim((0.0, 70.0))
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)

@@ -303,7 +303,7 @@ DER model parameter definitions. This table incorporates the definition of vario
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `flexible_ev_charger`, `cooling_plant`, `heat_pump`, `flexible_chp`, `storage`. Note: `flexible_buildings` cannot be defined here, because it is obtained from the CoBMo submodule directly. |
+| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `flexible_ev_charger`, `cooling_plant`, `heating_plant`, `flexible_chp`, `storage`. Note: `flexible_buildings` cannot be defined here, because it is obtained from the CoBMo submodule directly. |
 | `der_model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
 | `definition_type` | | Definition type selector, because most DER types require either additional timeseries / schedule definition¹ or other supplementary parameter definitions from either of the tables `der_timeseries`, `der_schedules` or `der_cooling_plants`. Choices: `timeseries` (Defines timeseries of absolute values².) `schedule` (Defines schedule of absolute values².), `timeseries_per_unit` (Define timeseries of per unit values².), `schedule_per_unit` (Defines schedule of per unit values².), `cooling_plant` (Defines cooling plant.) |
 | `definition_name` | | Definition identifier, which corresponds to `definition_name` in either `der_timeseries`, `der_schedules` or `der_cooling_plants`. If `definition_type` is `timeseries` or `timeseries_per_unit`: defined in `der_timeseries`; if `definition_type` is `schedule` or `schedule_per_unit`: defined in `der_schedules`; if `definition_type` is `cooling_plant`: defined in `der_cooling_plants`. |
@@ -315,7 +315,7 @@ DER model parameter definitions. This table incorporates the definition of vario
 | `charging_efficiency` | - | Energy storage charging efficiency factor. |
 | `self_discharge_rate` | 1/h | Energy storage self discharge rate. |
 | `marginal_cost` | $/kWh | Marginal cost of power generation. *Currently, prices / costs are assumed to be in SGD.* |
-| `heat_pump_efficiency` | - | Efficiency factor for `heat_pump` DERs. |
+| `thermal_efficiency` | - | Efficiency factor for `heating_plant` DERs. |
 | `thermal_efficiency` | - | Efficiency factor for `flexible_chp` DERs. |
 | `electric_efficiency` | - | Efficiency factor for `flexible_chp` DERs. |
 
@@ -330,7 +330,7 @@ For most DER types, the `der_models` table is supplemented by timeseries / sched
 | `fixed_ev_charger` | Fixed EV charger, following a fixed demand timeseries. | `definition_type`, `definition_name` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `flexible_ev_charger` | Flexible EV charger, dispatchable within constraints regarding vehicle arrival, departure, availability and energy demand as defined in `der_ev_chargers`. | `definition_type`, `definition_name` | Flexible EV charger supplementary definitions according to `der_ev_chargers`. |
 | `cooling_plant` | Cooling plant, converts electric power to thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name` | Cooling plant parameters according to `der_cooling_plants`. |
-| `heat_pump` | Heat pump, converts electric power to thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost`, `heat_pump_efficiency` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
+| `heating_plant` | Heating plant, converts electric power to thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost`, `thermal_efficiency` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `flexible_chp` | Flexible combined heat and power plant, generates electric power and thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost`, `thermal_efficiency`, `electric_efficiency` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `storage` | Energy storage, can charge / discharge within given limits and based on its energy storage capacity. | `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit`, `charging_efficiency`, `self_discharge_rate` | N.A. |
 

@@ -8,8 +8,6 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 
 import mesmo
 
@@ -17,8 +15,6 @@ import mesmo
 def main(
         scenario_number=1
 ):
-
-    # TODO: To be updated for new optimization problem interface.
 
     # Settings.
     if scenario_number in [1]:
@@ -41,8 +37,8 @@ def main(
     # Obtain models.
     electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
-    linear_electric_grid_model = (
-        mesmo.electric_grid_models.LinearElectricGridModelGlobal(
+    linear_electric_grid_model_set = (
+        mesmo.electric_grid_models.LinearElectricGridModelSet(
             electric_grid_model,
             power_flow_solution
         )
@@ -50,8 +46,8 @@ def main(
     thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_grid_model.plant_efficiency = 5
     thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
-    linear_thermal_grid_model = (
-        mesmo.thermal_grid_models.LinearThermalGridModel(
+    linear_thermal_grid_model_set = (
+        mesmo.thermal_grid_models.LinearThermalGridModelSet(
             thermal_grid_model,
             thermal_power_flow_solution
         )
@@ -61,14 +57,7 @@ def main(
     # Instantiate optimization problem.
     optimization_problem = mesmo.utils.OptimizationProblem()
 
-    # Define optimization variables.
-    linear_electric_grid_model.define_optimization_variables(optimization_problem)
-    linear_thermal_grid_model.define_optimization_variables(optimization_problem)
-    der_model_set.define_optimization_variables(optimization_problem)
-
-    # Define constraints.
-
-    # Modify electric grid limits for scenarios.
+    # Define electric grid problem.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
@@ -78,15 +67,15 @@ def main(
         ] *= 1 / 10.0
     else:
         pass
-
-    linear_electric_grid_model.define_optimization_constraints(
+    linear_electric_grid_model_set.define_optimization_problem(
         optimization_problem,
+        price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
     )
 
-    # Modify thermal grid limits for scenarios.
+    # Define thermal grid problem.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector
     branch_flow_vector_maximum = 10.0 * thermal_power_flow_solution.branch_flow_vector
     if scenario_number in [2]:
@@ -95,36 +84,23 @@ def main(
         ] *= 1.14 / 10.0
     else:
         pass
-
-    linear_thermal_grid_model.define_optimization_constraints(
+    linear_thermal_grid_model_set.define_optimization_problem(
         optimization_problem,
+        price_data,
         node_head_vector_minimum=node_head_vector_minimum,
         branch_flow_vector_maximum=branch_flow_vector_maximum
     )
 
-    der_model_set.define_optimization_constraints(optimization_problem)
-
-    # Define objective.
-    linear_electric_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-    linear_thermal_grid_model.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
-    der_model_set.define_optimization_objective(
-        optimization_problem,
-        price_data
-    )
+    # Define DER problem.
+    der_model_set.define_optimization_problem(optimization_problem, price_data)
 
     # Solve optimization problem.
     optimization_problem.solve()
 
     # Obtain results.
     results = mesmo.problems.Results()
-    results.update(linear_electric_grid_model.get_optimization_results(optimization_problem))
-    results.update(linear_thermal_grid_model.get_optimization_results(optimization_problem))
+    results.update(linear_electric_grid_model_set.get_optimization_results(optimization_problem))
+    results.update(linear_thermal_grid_model_set.get_optimization_results(optimization_problem))
     results.update(der_model_set.get_optimization_results(optimization_problem))
 
     # Print results.
@@ -135,18 +111,8 @@ def main(
 
     # Obtain DLMPs.
     dlmps = mesmo.problems.Results()
-    dlmps.update(
-        linear_electric_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
-    dlmps.update(
-        linear_thermal_grid_model.get_optimization_dlmps(
-            optimization_problem,
-            price_data
-        )
-    )
+    dlmps.update(linear_electric_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
+    dlmps.update(linear_thermal_grid_model_set.get_optimization_dlmps(optimization_problem, price_data))
 
     # Print DLMPs.
     print(dlmps)

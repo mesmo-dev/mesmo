@@ -67,4 +67,6 @@ Information on citing MESMO and a list of related publications is available at [
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modeling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modeling and approximation methodologies.
+- Verena Kleinschmidt implemented several multi-energy DER models, such as the heating plant and CHP plant models. 
+- Sebastian Troitzsch and Tom Schelo implemented the optimization problem class.
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.

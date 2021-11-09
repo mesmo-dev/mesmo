@@ -1,5 +1,5 @@
 furo
-myst-parser
+myst-parser[linkify]
 recommonmark  # Deprecated, but kept here for backwards compatibility with docs.
 sphinx
 sphinx-multiversion

@@ -179,9 +179,7 @@ def main():
     mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    price_data = mesmo.data_interface.PriceData(scenario_name)
     dro_data_set = DRODataSet(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'dro_data'))
-    der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Get results path.
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -323,58 +321,6 @@ def main():
             mesmo.utils.write_figure_plotly(figure, os.path.join(
                 results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
             ))
-
-        # for control in der_model.controls:
-        #     figure = go.Figure()
-        #     for number, stochastic_scenario in enumerate(stage_1.stochastic_scenarios):
-        #         figure.add_scatter(
-        #             x=output_vector[stochastic_scenario].index,
-        #             y=output_vector[stochastic_scenario].loc[:, (der_name, control)].values,
-        #             name=f'Optimal: {stochastic_scenario}',
-        #             line=go.scatter.Line(shape='hv', width=number+3, dash='dot')
-        #         )
-        #     figure.update_layout(
-        #         title=f'DER: ({der_model.der_type}, {der_name}) / Control: {control}',
-        #         xaxis=go.layout.XAxis(tickformat='%H:%M'),
-        #         legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
-        #     )
-        #     # figure.show()
-        #     mesmo.utils.write_figure_plotly(figure, os.path.join(
-        #         results_path, f'der_{der_model.der_type}_{der_name}_control_{control}'
-        #     ))
-
-        # for disturbance in der_model.disturbances:
-        #     figure = go.Figure()
-        #     figure.add_scatter(
-        #         x=der_model.disturbance_timeseries.index,
-        #         y=der_model.disturbance_timeseries.loc[:, disturbance].values,
-        #         line=go.scatter.Line(shape='hv')
-        #     )
-        #     figure.update_layout(
-        #         title=f'DER: ({der_model.der_type}, {der_name}) / Disturbance: {disturbance}',
-        #         xaxis=go.layout.XAxis(tickformat='%H:%M'),
-        #         showlegend=False
-        #     )
-        #     # figure.show()
-        #     mesmo.utils.write_figure_plotly(figure, os.path.join(
-        #         results_path, f'der_{der_model.der_type}_{der_name}_disturbance_{disturbance}'
-        #     ))
-
-    # for commodity_type in ['active_power', 'reactive_power']:
-    #
-    #     if commodity_type in price_data.price_timeseries.columns.get_level_values('commodity_type'):
-    #         figure = go.Figure()
-    #         figure.add_scatter(
-    #             x=price_data.price_timeseries.index,
-    #             y=price_data.price_timeseries.loc[:, (commodity_type, 'source', 'source')].values,
-    #             line=go.scatter.Line(shape='hv')
-    #         )
-    #         figure.update_layout(
-    #             title=f'Price: {commodity_type}',
-    #             xaxis=go.layout.XAxis(tickformat='%H:%M')
-    #         )
-    #         # figure.show()
-    #         mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

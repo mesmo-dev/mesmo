@@ -386,7 +386,6 @@ class Stage2(object):
         )
 
         # Define objective.
-        # TODO: Review objective.
         self.optimization_problem.define_objective(
             ('variable', -1.0, dict(
                 name='energy_stage_1', timestep=self.der_model_set.timesteps

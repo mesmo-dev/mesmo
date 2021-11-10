@@ -135,5 +135,9 @@ class DROAmbiguitySet(object):
         self.epsilon_upper_bound.loc[delta_index_selected] = 16
 
 
-if __name__ == '__main__':
+def main():
     pass
+
+
+if __name__ == '__main__':
+    main()

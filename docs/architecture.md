@@ -2,17 +2,25 @@
 
 ## Overview
 
-MESMO is developed to complement the existing software in the domain of district-scale energy system simulation and optimization. Therefore, it combines 1) convex MES modeling for 2) optimization-focused studies on the operation-timescale with a focus on 3) market-clearing and DLMP-based pricing mechanisms. Essentially, MESMO is developed as a software framework for defining and solving numerical optimization problems for MES operation. It implements convex models for electric grids, thermal grids and DERs, along with a set of optimization-focused utilities.
+The following sections define the software architecture for MESMO through views of key software structures:
 
-The following sections define the software architecture for MESMO in terms of [module structures](#module-structures), [workflow structures](#workflow-structures) and [allocation structures](#allocation-structures). The [appendix](#appendix) contains supplementary information on [use case modeling](#use-case-modeling), [functional requirement development](#functional-requirements) and [quality attributes](#quality-attributes) that have aided the initial software architecture development for MESMO.
+- [Module structures](#module-structures) describe the decomposition of the software into data containers, modules, classes and functions.
+- [Workflow structures](#workflow-structures) characterize how different modules interact with one another during run time.
+- [Allocation structures](#allocation-structures) define how the module structure is reflected in the file structure of the source code and how the development tasks are organized.
+
+The [appendix section](#appendix) contains supplementary information on the requirements development process that has led to the initial software architecture for MESMO:
+
+- [Use case modeling](#use-case-modeling) captures fundamental information needed to analyze and define functional requirements.
+- [Functional requirements](#functional-requirements) define the expected concrete functionality of the software.
+- [Quality attributes](#quality-attributes) set out the expected performance characteristics of the software.
 
 ### Structures and views
 
 The notation for [module structures](#module-structures), [workflow structures](#workflow-structures) and [allocation structures](#allocation-structures) is based on the [C4 model](https://c4model.com/). Although its notation is traditionally intended for views of the module structure, the C4 model is also utilized in the workflow and allocation structures for a more consistent representation of individual elements across the different views.
 
-The different views of [module structures](#module-structures) describe the decomposition of the software system into data containers, modules, classes and functions. In line with the [C4 model](https://c4model.com/), the module structures are first introduced from a high level in the context view, which is followed by a comprehensive overview in the component view. Then, the individual modules are introduced though their respective code views. Note that code views of the `plots` and `dashboard` modules are omitted in the following because the concrete functionality has not been finalized. Similarly, the planning problem is currently not included in software architecture because this problem type has not yet been implemented in MESMO.
+The [module structures](#module-structures) are first introduced from a high level in the context view, which is followed by a comprehensive overview in the component view. Then, the individual modules are introduced though their respective code views. Note that code views of the `plots` and `dashboard` modules are omitted in the following because the concrete functionality has not been finalized. Similarly, the planning problem is currently not included in software architecture because this problem type has not yet been implemented in MESMO.
 
-The [module structures](#module-structures) are followed by the [workflow structures](#workflow-structures) for the exemplary nominal and optimal operation problems. The purpose of the workflow structures is to provide an understanding of the data and run-time event flow when executing a problem. This also serves as a template for user-developed custom workflows which utilize low-level module interfaces. Lastly, the [allocation structures](#allocation-structures) present an overview of the dependency, repository and branch structures, relevant to any developers contributing to MESMO. For the dependency structure, the container view of the [C4 model](https://c4model.com/) is utilized.
+The module structures are followed by the [workflow structures](#workflow-structures) for the exemplary nominal and optimal operation problems. The purpose of the workflow structures is to provide an understanding of the data and run-time event flow when executing a problem. This also serves as a template for user-developed custom workflows which utilize low-level module interfaces. Lastly, the [allocation structures](#allocation-structures) present an overview of the dependency, repository and branch structures, relevant to any developers contributing to MESMO. For the dependency structure, the container view of the [C4 model](https://c4model.com/) is utilized.
 
 ### Stakeholders
 

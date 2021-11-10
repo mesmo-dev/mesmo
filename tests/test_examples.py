@@ -17,7 +17,7 @@ class TestExamples(unittest.TestCase):
         # Find example scripts.
         example_files = [
             *((pathlib.Path(mesmo.config.base_path) / 'examples').glob('*.py')),
-            *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').glob('*.py'))
+            *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').rglob('*.py'))
         ]
         logger.info(f"Found example script files:\n{example_files}")
         for example_file in example_files:

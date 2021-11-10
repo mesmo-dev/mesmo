@@ -1,8 +1,9 @@
 """Test example scripts."""
 
 import gurobipy as gp
-import importlib.machinery
+import importlib.util
 import pathlib
+import sys
 import unittest
 
 import mesmo
@@ -23,12 +24,16 @@ class TestExamples(unittest.TestCase):
         for example_file in example_files:
             with self.subTest(example=example_file.stem):
                 try:
+                    if str(example_file.parent) not in sys.path:
+                        sys.path.append(str(example_file.parent))
                     # Import example script as module.
-                    example_module = (
-                        importlib.machinery.SourceFileLoader(example_file.stem, str(example_file)).load_module()
-                    )
+                    # - Reference: https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+                    spec = importlib.util.spec_from_file_location(example_file.stem, str(example_file))
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[example_file.stem] = module
+                    spec.loader.exec_module(module)
                     # Run main(), which will fail if it doesn't exist.
-                    example_module.main()
+                    module.main()
                 except gp.GurobiError as exception:
                     # Soft fail: Only raise warning on selected errors, since it may be due to solver not installed.
                     logger.warning(f"Test for example '{example_file.stem}' failed due to solver error.", exc_info=True)

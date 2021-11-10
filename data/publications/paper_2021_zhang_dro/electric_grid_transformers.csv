@@ -1,0 +1,3 @@
+electric_grid_name,transformer_name,transformer_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,apparent_power
+paper_2021_zhang_dro,1,default_transformer,2,3,1,1,1,wye-wye,10000000.0
+paper_2021_zhang_dro,2,default_transformer,2,5,1,1,1,wye-wye,1000000.0

@@ -2,17 +2,10 @@
 
 ## Citing MESMO
 
-The recommended way to cite MESMO is to refer to its latest [Zenodo record](https://doi.org/10.5281/zenodo.3523568). For example, you may use the following bibtex entry for version 0.4.1:
+The recommended way to cite MESMO is to refer to its latest [Zenodo record](https://doi.org/10.5281/zenodo.3523568). You can use the following bibtex entry:
 
-```
-@misc{mesmo,
-author = {Sebastian Troitzsch and Verena Kleinschmidt and Tom Schelo and Arif Ahmed},
-title = {{MESMO - Multi-Energy System Modeling and Optimization}},
-year = 2021,
-howpublished = {Version 0.4.1, Zenodo},
-doi = {10.5281/zenodo.3523568},
-url = {https://doi.org/10.5281/zenodo.3523568}
-}
+```{literalinclude} ../CITATION.bib
+:language: bib
 ```
 
 ## MESMO-enabled publications

@@ -2,7 +2,9 @@
 
 Note that version numbering follows the [Semantic Versioning principle](https://semver.org/).
 
-## [v0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.5.0) (upcoming release)
+## [0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/0.5.0)
+
+With this release, the Flexible Distribution Grid Demonstrator (FLEDGE) was renamed to Multi-Energy System Modeling and Optimization (MESMO).
 
 ### New features
 
@@ -18,6 +20,7 @@ Note that version numbering follows the [Semantic Versioning principle](https://
 - Improved / simplified `define_optimization...()` methods for most use cases.
 - Revised `define_optimization...()` methods for new optimization problem object.
 - Switched from `multiprocess` to `ray` for parallel processing for performance reasons.
+- Revised documentation structure, overhauled the architecture documentation and added the configuration reference.
 
 ## [v0.4.1](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.1)
 

@@ -18,12 +18,13 @@ class TestExamples(unittest.TestCase):
         # Find example scripts.
         example_files = [
             *((pathlib.Path(mesmo.config.base_path) / 'examples').glob('*.py')),
-            *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').rglob('*.py'))
+            *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').glob('*.py'))
         ]
         logger.info(f"Found example script files:\n{example_files}")
         for example_file in example_files:
             with self.subTest(example=example_file.stem):
                 try:
+                    # Add directory to path, to enable sibling imports in examples scripts.
                     if str(example_file.parent) not in sys.path:
                         sys.path.append(str(example_file.parent))
                     # Import example script as module.

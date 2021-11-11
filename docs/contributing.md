@@ -61,7 +61,6 @@ Before pushing a new commit / release to the `master` branch, please go through 
 3. Ensure that version numbers and year numbers have been updated everywhere:
     - `setup.py` (at `version=`)
     - `docs/change_log.md`
-    - `docs/publications.md` (at example citation)
     - `docs/conf.py` (at `copyright =`)
     - `CITATION.bib`
     - `LICENSE`

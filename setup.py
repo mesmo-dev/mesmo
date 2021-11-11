@@ -40,7 +40,7 @@ class install_submodules(setuptools.command.install.install):
 
 setuptools.setup(
     name='mesmo',
-    version='0.4.1',
+    version='0.5.0',
     py_modules=setuptools.find_packages(),
     cmdclass={'install': install_submodules, 'develop': develop_submodules},
     install_requires=[

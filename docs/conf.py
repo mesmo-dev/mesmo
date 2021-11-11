@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # Project information.
 project = 'MESMO'
 copyright = '2018-2021, TUMCREATE'
-author = 'TUMCREATE'
+author = 'MESMO authors'
 
 # Extensions.
 # - Add any Sphinx extension module names here, as strings. They can be

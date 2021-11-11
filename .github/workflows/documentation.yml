@@ -1,11 +1,12 @@
 name: Documentation
-
 on: [push]
 
 jobs:
   build-documentation:
-
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}  # Required for conda commands.
 
     steps:
     - name: Checkout repository
@@ -14,9 +15,9 @@ jobs:
       run: |
         git fetch --prune --unshallow
     - name: Set up Python
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: 3.7
+        python-version: 3.8
     - name: Install dependencies
       run: |
         conda install sphinx
@@ -25,10 +26,13 @@ jobs:
       run: |
         sphinx-multiversion docs docs/_build/html
         cp docs/assets/gh-pages_index.html docs/_build/html/index.html
-        find docs/_build/html -type f -name "*.html" -exec sed -i 's/<li><p>\(.*\)<\/p>\(.*\)/<li>\1\2/g' {} +
     - name: Deploy documentation HTML to Github Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: docs/_build/html/
         keep_files: false
+        force_orphan: true
+        full_commit_message: Deploy documentation for ${{ github.sha }}
+        user_name: GitHub Actions
+        user_email: github-actions[bot]@users.noreply.github.com

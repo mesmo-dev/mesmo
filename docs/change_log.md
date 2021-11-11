@@ -2,14 +2,34 @@
 
 Note that version numbering follows the [Semantic Versioning principle](https://semver.org/).
 
-## [v0.4.1](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.4.1)
+## [0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/0.5.0)
+
+With this release, the Flexible Distribution Grid Demonstrator (FLEDGE) was renamed to Multi-Energy System Modeling and Optimization (MESMO).
+
+### New features
+
+- Added new optimization problem object (`utils.OptimizationProblem`) as main interface for defining optimization problems with functionality to 1) export the standard form for LP / QP, 2) directly interface Gurobi for better performance with large problems.
+- Overhead line types can now be defined in terms of conductor data and geometric arrangement (Arif Ahmed).
+- Added local-approximation variant for linear electric grid model.
+- Added linear model set for electric grid model, which enables defining separate linear models for each time step.
+- Added power flow solution set, to obtain power flow solutions more conveniently for multiple time steps.
+- Added pre-solve method for DER model set, to obtain baseline nominal power time series for flexible DERs.
+
+### Changes
+
+- Improved / simplified `define_optimization...()` methods for most use cases.
+- Revised `define_optimization...()` methods for new optimization problem object.
+- Switched from `multiprocess` to `ray` for parallel processing for performance reasons.
+- Revised documentation structure, overhauled the architecture documentation and added the configuration reference.
+
+## [v0.4.1](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.1)
 
 ### Fixes
 
 - Updated `environment.yml`.
 - Updated version indicators.
 
-## [v0.4.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.4.0)
+## [v0.4.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.0)
 
 ### New features
 
@@ -27,13 +47,13 @@ Note that version numbering follows the [Semantic Versioning principle](https://
 
 - Moved implementation of optimization problems from Pyomo to CVXPY for performance improvements.
 - Reformulated optimization constraints to use normalized values for improved numerical performance.
-- Improved FLEDGE definition data format documentation.
+- Improved MESMO definition data format documentation.
 - Refactored DER model data definition format.
 - Refactored price data object.
 - Various fixes in linear electric grid model model and DLMP calculations.
 - Introduced various error messages for common issues.
 
-## [v0.3.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.3.0)
+## [v0.3.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.3.0)
 
 ### New features
 
@@ -45,13 +65,13 @@ Note that version numbering follows the [Semantic Versioning principle](https://
 - Added methods for defining operation limits and obtaining DLMPs for electric and thermal grids.
 - Provided various example scripts for running optimal operation problems for DERs / electric grids / thermal grids / multi-energy grids.
 
-## [v0.2.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.2.0)
+## [v0.2.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.2.0)
 
 ### Auxiliary Release
 
 - Snapshot before moving to Python as main implementation language.
 
-## [v0.1.0](https://github.com/TUMCREATE-ESTL/fledge/releases/tag/v0.1.0)
+## [v0.1.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.1.0)
 
 ### Initial release
 

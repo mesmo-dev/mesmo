@@ -1,0 +1,36 @@
+# Configuration default values.
+# - For documentation, see the configuration reference at `../docs/configuration_reference.md`.
+# - These values can be overwritten with a custom `config.yml` in the repository base directory.
+# - In the path parameters, `./` denotes the MESMO repository base directory as reference for relative path definitions.
+paths:
+  data: ./data
+  database: ./data/database.sqlite
+  results: ./results
+  additional_data: []
+  ignore_data_folders: []
+  cobmo_additional_data: []
+optimization:
+  solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY in lower caps.
+  solver_interface: direct # Choices: 'direct' or 'cvxpy'. If not defined, will use 'direct'.
+  show_solver_output: true # Choices: 'true' or 'false'. If 'true', activate verbose solver output.
+  time_limit:  # Solver time limit in seconds. If not defined, will use infinite. Only for Gurobi and CPLEX.
+multiprocessing:
+  run_parallel: false  # Disabled by default to avoid unexpected issues.
+  cpu_share: 1.0  # Maximum share of CPU cores to use for parallel processing.
+logs:
+  level: info  # Choices: `debug`, `info`, `warn`.
+  format: '%(asctime)s | %(levelname)s | %(message)s'
+tests:
+  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
+plots:
+  matplotlib_style: seaborn-colorblind
+  matplotlib_colormap: viridis_r
+  matplotlib_font_family: ['Arial', 'Helvetica']
+  matplotlib_figure_size: [7.0, 4.0]
+  plotly_font_family: Arial
+  plotly_font_size: 15
+  plotly_figure_width: 1000
+  plotly_figure_height: 500
+  file_format: png
+  add_basemap: false  # If True, add basemap layer to grid plots for orientation. Requires installation of `contextily`.
+  show_basemap_attribution: false # If True, show copyright notice for basemap.

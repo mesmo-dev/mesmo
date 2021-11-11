@@ -1,0 +1,7 @@
+electric_grid_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,voltage,latitude,longitude
+paper_2021_zhang_dro,1,1,1,1,22000.0,1.30862,103.772371
+paper_2021_zhang_dro,2,1,1,1,22000.0,1.3052,103.772152
+paper_2021_zhang_dro,3,1,1,1,6600.0,1.305,103.772152
+paper_2021_zhang_dro,4,1,1,1,6600.0,1.303762,103.773654
+paper_2021_zhang_dro,5,1,1,1,415.0,1.3051,103.772152
+paper_2021_zhang_dro,6,1,1,1,415.0,1.306261,103.773708

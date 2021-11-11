@@ -101,14 +101,15 @@ smv_remote_whitelist = r'^.*$'
 
 # MyST markdown parser settings.
 # <https://myst-parser.readthedocs.io/en/latest/using/intro.html#sphinx-configuration-options>
+myst_heading_anchors = 4
 myst_enable_extensions = [
     # 'amsmath',
-    # 'colon_fence',
+    'colon_fence',
     # 'deflist',
     # 'dollarmath',
     # 'html_admonition',
     'html_image',
-    # 'linkify',
+    'linkify',
     # 'replacements',
     # 'smartquotes',
     # 'substitution',

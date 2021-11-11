@@ -42,6 +42,7 @@ CREATE TABLE der_models (
     charging_efficiency TEXT,
     self_discharge_rate TEXT,
     marginal_cost TEXT,
+    heat_pump_efficiency TEXT,
     thermal_efficiency TEXT,
     electric_efficiency TEXT,
     PRIMARY KEY(der_type,der_model_name)

@@ -43,7 +43,7 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 2. **Distribution automation**: How can the distribution system operator address imminent operational issues?
 3. **Peak load management**: Are transactive energy mechanisms suited to increase participation of DERs in maintaining distribution system reliability?
 4. **Distributed generation and storage**: Can energy storage systems help mitigate adverse impacts of large-scale solar PV deployment?
-5. **Expansion planing**: What are optimal investment decisions for distribution system upgrades?
+5. **Expansion planning**: What are optimal investment decisions for distribution system upgrades?
 
 ## Acknowledgements
 
@@ -52,6 +52,8 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 - Sarmad Hanif and Kai Zhang developed the underlying electric grid modeling, fixed-point power flow solution and electric grid approximation methodologies.
 - Arif Ahmed implemented the implicit Z-bus power flow solution method & overhead line type definitions.
 - Mischa Grussmann developed the thermal grid modeling and approximation methodologies.
+- Verena Kleinschmidt implemented several multi-energy DER models, such as the heating plant and CHP plant models.
+- Sebastian Troitzsch and Tom Schelo implemented the optimization problem class.
 - This work was financially supported by the Singapore National Research Foundation under its Campus for Research Excellence And Technological Enterprise (CREATE) programme.
 
 ```{toctree}
@@ -60,6 +62,7 @@ District-scale energy systems are evolving from unidirectional, top-down structu
 
 installation
 examples
+architecture
 ```
 
 ```{toctree}

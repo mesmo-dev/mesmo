@@ -71,6 +71,7 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
     node_voltage_vector_reference: np.ndarray
     branch_power_vector_magnitude_reference: np.ndarray
     der_power_vector_reference: np.ndarray
+    is_single_phase_equivalent: bool
 
     def __init__(
             self,
@@ -616,6 +617,13 @@ class ElectricGridModelDefault(ElectricGridModel):
         branch_incidence_2_matrix (sp.spmatrix): Branch incidence matrix in the 'to' direction.
         der_incidence_wye_matrix (sp.spmatrix): Load incidence matrix for 'wye' DERs.
         der_incidence_delta_matrix (sp.spmatrix): Load incidence matrix for 'delta' DERs.
+        node_admittance_matrix_no_source (sp.spmatrix): Nodal admittance matrix from no-source to no-source nodes.
+        node_transformation_matrix_no_source (sp.spmatrix): Nodal admittance matrix from source to no-source nodes.
+        der_incidence_wye_matrix_no_source (sp.spmatrix): Incidence matrix from wye-conn. DERs to no-source nodes.
+        der_incidence_delta_matrix_no_source (sp.spmatrix): Incidence matrix from delta-conn. DERs to no-source nodes.
+        node_voltage_vector_reference_no_source (sp.spmatrix): Nodal reference voltage vector for no-source nodes.
+        node_voltage_vector_reference_source (sp.spmatrix): Nodal reference voltage vector for source nodes.
+        node_admittance_matrix_no_source_inverse (sp.spmatrix): Inverse of no-source nodal admittance matrix.
     """
 
     node_admittance_matrix: sp.spmatrix
@@ -626,6 +634,14 @@ class ElectricGridModelDefault(ElectricGridModel):
     branch_incidence_2_matrix: sp.spmatrix
     der_incidence_wye_matrix: sp.spmatrix
     der_incidence_delta_matrix: sp.spmatrix
+    node_admittance_matrix_no_source: sp.spmatrix
+    node_admittance_matrix_source_to_no_source: sp.spmatrix
+    node_transformation_matrix_no_source: sp.spmatrix
+    der_incidence_wye_matrix_no_source: sp.spmatrix
+    der_incidence_delta_matrix_no_source: sp.spmatrix
+    node_voltage_vector_reference_no_source: sp.spmatrix
+    node_voltage_vector_reference_source: sp.spmatrix
+    node_admittance_matrix_no_source_inverse: sp.spmatrix
 
     @multimethod
     def __init__(

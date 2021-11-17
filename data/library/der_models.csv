@@ -9,6 +9,8 @@ fixed_generator,solarthermal_generic,schedule_per_unit,solarthermal_generic,,,,,
 flexible_generator,photovoltaic_generic,schedule_per_unit,photovoltaic_generic,0,1,,,,,,0.1,,
 flexible_generator,solarthermal_generic,schedule_per_unit,solarthermal_generic,0,1,,,,,,0.1,,
 fixed_ev_charger,fixed_ev_charger_generic,schedule_per_unit,fixed_ev_charger_generic,,,,,,,,,,
+flexible_ev_charger,flexible_ev_charger_generic_night,flexible_ev_charger,flexible_ev_charger_generic_night,,,,,,1.0,,,,
+flexible_ev_charger,flexible_ev_charger_generic_day,flexible_ev_charger,flexible_ev_charger_generic_day,,,,,,1.0,,,,
 cooling_plant,cooling_plant_singapore,cooling_plant,cooling_plant_singapore,,,,,,,,,,
 heating_plant,heating_plant_generic,schedule_per_unit,heating_plant_generic,0,1,,,6,,,1,1.2,
 flexible_chp,flexible_chp_generic,schedule_per_unit,flexible_chp_generic,0,1,,,6,,,1,0.55,0.37

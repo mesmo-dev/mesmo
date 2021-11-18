@@ -188,6 +188,7 @@ class ScenarioData(mesmo.utils.ObjectBase):
                 SELECT * FROM scenarios
                 LEFT JOIN electric_grid_operation_limit_types USING (electric_grid_operation_limit_type)
                 LEFT JOIN thermal_grid_operation_limit_types USING (thermal_grid_operation_limit_type)
+                LEFT JOIN trust_region_setting_types USING (trust_region_setting_type)
                 WHERE scenario_name = ?
                 """,
                 con=database_connection,

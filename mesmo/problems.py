@@ -497,14 +497,15 @@ class OptimalOperationProblem(Problem):
 
         # Define trust-region parameters according to [2].
         # TODO: Move to configuration.
-        delta = 1.0  # 3.0 / 0.5 / range: (0, delta_max] / If too big, no power flow solution.
-        delta_max = 4.0  # 4.0 / 1.0
-        gamma = 0.25  # 0.5 / range: (0, 1)
-        eta = 0.1  # 0.1 / range: (0, 0.25]
-        tau = 0.1  # 0.1 / range: (0, 0.25]
-        epsilon = 1.0e-4  # 1e-3 / 1e-4
-        trust_region_iteration_limit = 30
-        infeasible_max = 3  # the maximum number of iterations to try to solve the optimization with different deltas
+        delta_max = self.scenario_data.scenario.at['delta_max']  # 4.0 / 1.0
+        delta = self.scenario_data.scenario.at['delta']  # 3.0 / 0.5 / range: (0, delta_max] If too big, no PF solution.
+        gamma = self.scenario_data.scenario.at['gamma']  # 0.5 / range: (0, 1)
+        eta = self.scenario_data.scenario.at['eta']  # 0.1 / range: (0, 0.25]
+        tau = self.scenario_data.scenario.at['tau']  # 0.1 / range: (0, 0.25]
+        epsilon = self.scenario_data.scenario.at['epsilon']  # 1e-3 / 1e-4
+        trust_region_iteration_limit = self.scenario_data.scenario.at['trust_region_iteration_limit']
+        infeasible_max = self.scenario_data.scenario.at['infeasible_max']
+        # the maximum number of iterations to try to solve the optimization with different deltas.
 
         print(f'Solving problem with trust-region algorithm.')
         # Ignore division by zero or nan warnings (this can happen with e.g. DERs with zero reactive power output)

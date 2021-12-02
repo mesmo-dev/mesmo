@@ -1,6 +1,8 @@
 """MESMO tutorial: Example 1."""
 
+import os
 import plotly.express as px
+
 import mesmo
 
 
@@ -39,7 +41,7 @@ def main():
 
     # Plot some results.
     figure = px.line(results.branch_power_magnitude_vector_1.loc[:, ('line', '1', 1)].rename('Line 1; phase 1'))
-    mesmo.utils.write_figure_plotly(figure, results_path / 'branch_power_line_1_phase_1')
+    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'branch_power_line_1_phase_1'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

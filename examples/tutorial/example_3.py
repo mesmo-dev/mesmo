@@ -1,6 +1,7 @@
 """MESMO tutorial: Example 3."""
 
 import numpy as np
+
 import mesmo
 
 

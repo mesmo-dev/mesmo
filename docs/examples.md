@@ -1,67 +1,84 @@
 # Examples
 
-## Tutorial 1: Solving a multi-period electric OPF
+## Overview
+
+The following introduces basic examples for using MESMO in the form of tutorials with step-by-step guidance. We address the following simple use cases:
+
+- [Tutorial 1](#tutorial-1): Setting up and solving a multi-period electric grid optimal power flow problem. (This tutorial assumes that a test case scenario has already been defined.)
+- [Tutorial 2](#tutorial-2): Defining a test case scenario for an electric distribution grid with several lines, transformers and DERs.
+- [Tutorial 3](#tutorial-3): Utilizing the optimization problem interface to define a simple optimization problem.
+
+More examples are in the `examples` directory of the repository and are listed [at the bottom of this section](#more-examples).
+
+## Tutorial 1
 
 ### Outline
 
-1. Select test case
-2. Load data & models
-3. Set up OPF problem
-4. Solve problem & get results
-5. Plot some results
+This example demonstrates the usage of MESMO for setting up and solving a multi-period optimal power flow (OPF) problem for an electric grid with several DERs. We will utilize the test case `sinagpore_6node`, which is shipped with MESMO for this tutorial. Skip to [tutorial 2](#tutorial-2) for learning how to define your own test case scenario.
 
-### Imports
+The multi-period OPF problem is an optimization problem for the maximization of overall social welfare, i.e. minimization of overall costs, for the modeled energy system. The decision variables are the dispatch decisions of DERs, subject to the operational constraints of the DERs and the electric grid.
+
+The tutorial will work through the following steps:
+
+1. Imports and settings: Getting started and selecting a test case scenario.
+2. Load data & models: Selecting the MESMO objects that are needed for this use case.
+3. Defining and solving the optimization problem: Utilizing API methods for composing the OPF problem.
+4. Retrieving and evaluating results: Where to find a results and what to do with them.
+
+### Imports and settings
 
 ```python
 import os
 import plotly.express as px
-
 import mesmo
 ```
-- Running `import mesmo` includes all submodules.
 
-### Settings
+- We will use `plotly` for plotting and `os` for path operations later on.
+- Most importantly, we need `import mesmo` to load MESMO, which always loads all submodules. Therefore, no direct submodule imports are needed, except if you want to be specific about the components that you are using.
 
 ```python
 scenario_name = 'singapore_6node'
 results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 ```
-- `scenario_name` serves as general identifier for test case definitions.
-- `get_results_path()` creates unique timestamped results_path, i.e., a new folder in `./results/`.
 
-### Loading the data & models
+- We use `scenario_name` as an identifier for selecting a test case scenario. See [tutorial 2](#tutorial-2) for more information on defining a test case scenario.
+- The `get_results_path()` utiliy function creates unique timestamped results_path, i.e., a new folder in `./results/`. Of course, you can also store your results to any other local folder.
+
+### Loading data and models
 
 ```python
 price_data = mesmo.data_interface.PriceData(scenario_name)
 linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(scenario_name)
 der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 ```
-- Data & model classes are structured into thematic submodules and objects can generally be instantiated for the current test case by simply passing `scenario_name`.
-- Data & model objects are essentially containers for numerical parameters.
 
-### Defining the optimization problem
+- We load data & model objects, which are containers for the mathematical models and parameters of the problem. The `scenario_name` is passed to the initialization of each object to identify the test case that should be loaded.
+- Data & model classes are structured into thematic submodules and objects can generally be instantiated for the current test case by simply passing `scenario_name`.
+
+### Defining and solving the optimization problem
 
 ```python
 optimization_problem = mesmo.utils.OptimizationProblem()
 ```
-- `optimization_problem` serves as container for variables / parameters / constraints / objective of the optimization problem.
+
+- We initialize the `optimization_problem` object here, which serves as container for variables / parameters / constraints / objective of the optimization problem.
 
 ```python
 linear_electric_grid_model_set.define_optimization_problem(optimization_problem, price_data)
 der_model_set.define_optimization_problem(optimization_problem, price_data)
 ```
-- Model objects provide methods for defining variables / parameters / constraints / objective. These definitions are essentially “attached” to `optimization_problem`.
-- Additional/custom definitions can be manually added to `optimization_problem`.
 
-### Solving the optimization problem
+- Model objects provide methods for defining variables / parameters / constraints / objective. These definitions are essentially “attached” to `optimization_problem`.
+- Custom definitions can be manually added to `optimization_problem`. See [tutorial 3](#tutorial-3) for more information on this.
 
 ```python
 optimization_problem.solve()
 ```
-- The `solve()` method generates the LP/QP standard form & passes the problem to the solver via solver interface (direct via `gurobipy` or indirect via `cvxpy`).
+
+- The `solve()` method generates the LP/QP standard form and passes the problem to the solver via the solver interface (direct via `gurobipy` or indirect via `cvxpy`).
 - Solutions are stored as variable / dual vector within `optimization_problem`.
 
-### Retrieving the results
+### Retrieving and evaluating results
 
 ```python
 results = mesmo.problems.Results()
@@ -84,7 +101,7 @@ mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'branch_power
 - `plotly` is recommended for quick plotting and `write_figure_plotly()` is provided for configurable output.
 - Always use relative paths and join paths using `os.path.join()`.
 
-## Tutorial 2: Defining a basic electric grid test case
+## Tutorial 2
 
 ### Outline
 
@@ -126,7 +143,7 @@ results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 ```
 - Select the scenario according to the new test case definition.
 
-### Recreate database
+### Recreate the database
 
 ```python
 mesmo.data_interface.recreate_database()
@@ -207,7 +224,7 @@ print(f"Results are stored in: {results_path}")
 ```
 - The `launch()` function opens a file explorer / finder window for the given path.
 
-## Tutorial 3: Using the optimization problem interface
+## Tutorial 3
 
 ### Outline
 
@@ -215,7 +232,7 @@ This tutorial implements the following optimization problem through the MESMO op
 
 <img src="assets/tutorial3_problem_outline.png" alt="" class="invert"/>
 
-### Imports
+### Imports and setting up
 
 ```python
 import numpy as np
@@ -223,15 +240,11 @@ import numpy as np
 import mesmo
 ```
 
-### Define random parameter matrix
-
 ```python
 dimension = 1000
 parameter_matrix = np.random.rand(dimension, dimension)
 ```
 - Accepted numerical values for parameter, constraint or variable definitions are 1) float values, 2) numpy arrays or 3) scipy sparse matrices.
-
-### Instantiate optimization problem object
 
 ```python
 optimization_problem = mesmo.utils.OptimizationProblem()
@@ -239,14 +252,14 @@ optimization_problem = mesmo.utils.OptimizationProblem()
 - The optimization problem object serves as a container for the parameters, variables, constraints and objective terms.
 - The optimization problem objects exposes methods for problem setup & solution, which utilized in the following.
 
-### Define parameters
+### Defining parameters
 
 ```python
 optimization_problem.define_parameter('parameter_matrix', parameter_matrix)
 ```
 - Defining parameters is optional. – Numerical values can also be directly passed in the constraints / objective definitions. However, using parameters allows updating the numerical values of the problem without re-defining the complete problem.
 
-### Define variables
+### Defining variables
 
 ```python
 optimization_problem.define_variable('a_vector', a_index=range(dimension))
@@ -255,7 +268,7 @@ optimization_problem.define_variable('b_vector', b_index=range(dimension))
 - Variables are defined by passing a name string and index key sets. The variable dimension is determined by the dimension of the index key sets. Accepted key set values are 1) lists, 2) tuples, 3) numpy arrays, 4) pandas index objects and 5) range objects.
 - If multiple index key sets are passed, the variable dimension is determined as the cartesian product of the key sets. However, note that variables always take the shape of column vectors in constraint and objective definitions. That means, multiple key sets are not interpreted as array dimensions.
 
-### Define constraints
+### Defining constraints
 
 ```python
 optimization_problem.define_constraint(
@@ -278,7 +291,7 @@ optimization_problem.define_constraint(
 - Constant terms are tuples in the form (‘constant’, numerical value), where the numerical value can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical value is expected to represent a column vector with appropriate size matching the constraint dimension. If a float value is given as numerical value, the value is multiplied with a column vector of ones of appropriate size.
 - Variable terms are tuples in the form (‘variable’, numerical factor, dict(name=variable name, keys…)), where the numerical factor can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected to represent a matrix of appropriate size for the multiplication. If a float value is given as numerical factor, the value is multiplied with a identity matrix of appropriate size. Keys can be optionally given to select / slice a portion of the variable vector. Note that variables always take the shape of column vectors.
 
-### Define objective terms
+### Defining objective terms
 
 ```python
 optimization_problem.define_objective(('variable', 1.0, dict(name='b_vector')))
@@ -287,7 +300,7 @@ optimization_problem.define_objective(('variable', 1.0, dict(name='b_vector')))
 - Constant terms are tuples in the form (‘constant’, numerical value), where the numerical value can be 1) float value or 2) a parameter name string.
 - Variable terms are tuples in the form (‘variable’, numerical factor, dict(name=variable name, keys…)), where the numerical factor can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected to represent a matrix of appropriate size for the multiplication, such that the multiplication evaluates to a scalar. If a float value is given as numerical factor, the value is multiplied with a row vector of ones of appropriate size. Keys can be optionally given to select / slice a portion of the variable vector. Note that variables always take the shape of column vectors.
 
-### Solve problem and obtain results
+### Solving and retrieving results
 
 ```python
 optimization_problem.solve()
@@ -304,7 +317,7 @@ b_vector = results['b_vector']
 
 ## More examples
 
-The `examples` directory contains following run scripts which demonstrate the usage of different MESMO features.
+The `examples` directory of the repository contains the following run scripts.
 
 ### API examples
 

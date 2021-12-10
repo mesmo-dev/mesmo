@@ -18,7 +18,8 @@ author = 'MESMO authors'
 extensions = [
     'myst_parser',  # Markdown parser.
     'sphinx.ext.napoleon',
-    'sphinx_multiversion'
+    'sphinx_copybutton',
+    'sphinx_multiversion',
 ]
 
 # Extension settings.

@@ -143,7 +143,7 @@ The test case definition workflow can be outlined as follows:
    - CSV files also can be based off existing test cases, e.g., `data/test_case_examples/singapore_6node/`.
    - The CSV file contents and units for numerical values are documented in the [data reference](data_reference.md).
 
-The contents of individual CSV files for this tutorial are omitted here, but the sample definition is included in `data/test_case_examples/tutorial_example` in the MESMO repository.
+The detailed contents of individual CSV files for this tutorial are omitted here, but the sample definition is included in `data/test_case_examples/tutorial_example` in the MESMO repository.
 
 ### Imports and settings
 
@@ -154,7 +154,7 @@ import plotly.graph_objects as go
 import mesmo
 ```
 
-- We will utilize `numpy` for the numerical operations in this tutorial.
+- We will utilize `numpy` for the numerical operations when constructing the peak load constraint.
 - We will use `plotly` for plotting and `os` for path operations later on.
 - The `import mesmo` call is needed to load MESMO and all its submodules.
 
@@ -171,7 +171,8 @@ results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 mesmo.data_interface.recreate_database()
 ```
 
-- The call to `recreate_database()` is needed whenever defining or changing test cases. Note that the CSV files serve as the input format, but an SQLITE database is used internally for data processing. Therefore, changes in the CSV files need to be read into the SQLITE database through the `recreate_database()` function.
+- The call to `recreate_database()` is needed whenever defining or changing test cases. The CSV files serve as the input format, but an SQLITE database is used internally for data processing. Therefore, changes in the CSV files need to be read into the SQLITE database through the `recreate_database()` function.
+- This call is recommended to be included in all run scripts, such that the latest data definitions are always loaded. However, this was omitted above in [tutorial 1](#tutorial-1) for the sake of brevity. 
 
 ### Get problem objects
 
@@ -180,9 +181,9 @@ problem_nominal = mesmo.problems.NominalOperationProblem(scenario_name)
 problem_optimal = mesmo.problems.OptimalOperationProblem(scenario_name)
 ```
 
-- The nominal operation problem represents a simulation under „nominal conditions“, i.e., all DERs are dispatched according to their nominal power timeseries.
-- The optimal operation problem represents an optimization for optimal dispatch decisions, subject to the constraints of the DERs, electric grid and thermal grid.
-- The problem classes implement the appropriate setup routines depending on the test case definition, e.g., thermal grid model is only loaded if a thermal grid is defined.
+- We will work with the `mesmo.problems` submodule in this example, as compared to using the more low-level models and data submodules in [tutorial 1](#tutorial-1). The problem classes implement the appropriate setup and solve routines for each problem type. Relevant models and data are automatically obtained depending on the test case definition, e.g., the thermal grid model is only loaded if a thermal grid is defined in the test case scenario.
+- The nominal operation problem represents a simulation under „nominal conditions“, i.e., all DERs are dispatched according to their nominal power time series. In this example, we utilize this problem type to represent the status quo, i.e., conventional operation of the energy systems.
+- The optimal operation problem represents an optimization for optimal dispatch decisions, subject to the constraints of the DERs, electric grid and thermal grid. For this example, we amend the optimal operation problem definition with a custom constraint to ensure peak load reduction compared to the nominal operation problem.
 
 ### Solve nominal operation problem and get results
 
@@ -191,6 +192,7 @@ problem_nominal.solve()
 results_nominal = problem_nominal.get_results()
 ```
 
+- Each problem object exposes `solve()` and `get_results()` methods, which are used here to obtain the solution of the nominal operation problem.
 - The `solve()` method of the nominal operation problem invokes the power flow solution classes of electric and thermal grid for non-linear simulation.
 - The `get_results()` methods obtains results from the individual models and returns a {class}`mesmo.problems.Results` object.
 
@@ -212,16 +214,17 @@ for timestep in problem_optimal.timesteps:
     )
 ```
 
-- We define a custom constraint to limit the peak DER demand to 95 % of the peak load from the nominal operation problem.
-- Please see [tutorial 3](#tutorial-3) for more details on how to interact with the optimization problem.
+- We define a custom constraint to limit the peak DER demand to 95 % of the peak load from the nominal operation problem. To this end, we compute the total peak demand via result from the nominal operation problem as `np.min(np.sum(results_nominal.der_active_power_vector, axis=1))`. Note that that `der_active_power_vector` takes a negative value for load as per convention in MESMO. Therefore, `np.min()` is needed to compute the peak.
+- The total system demand is computed by multiplying the row vector `np.array([np.real(problem_optimal.electric_grid_model.der_power_vector_reference)])` with the optimization variable vector `dict(name='der_active_power_vector', timestep=timestep)`. Note that `der_active_power_vector` in the optimization problem is defined as normalized vector, i.e., each entry is normalized by the nominal / reference active power value of the corresponding DER. In fact, most optimization variables are normalized in this fashion to enable better numerical performance of the optimization solver. Therefore, to obtain the actual active power value, we multiply with the active power reference vector `np.real(problem_optimal.electric_grid_model.der_power_vector_reference)`. Lastly, `np.array([...])` constructs a row vector, such that the resulting multiplication yields a scalar value.
+- Here, we directly interface the `optimization_problem` object that is a parameter of the `problem_optimal` object. For more details on the `optimization_problem.define_constraint()` method, please see [tutorial 3](#tutorial-3).
 
 ```python
 problem_optimal.solve()
 results_optimal = problem_optimal.get_results()
 ```
 
-- The `solve()` method of the optimal operation problem invokes the `solve()` method of the optimal operation problem.
-- The `get_results()` methods obtains results from the individual models and returns a {class}`mesmo.problems.Results` object.
+- The `solve()` method of the optimal operation problem invokes the `solve()` method of the optimal operation problem and passes the problem to the optimization solver.
+- Once the solution has terminated successfully, the `get_results()` methods obtains results from the individual models and returns a {class}`mesmo.problems.Results` object.
 
 ### Plotting and wrapping things up
 
@@ -243,7 +246,7 @@ mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'comparison')
 ```
 
 - We create a plot to compare the DER dispatch schedule between nominal and optimal operation problem.
-- Note that `plotly` can be used either via `plotly.express` or `plotly.graph_objects` interface (compare with tutorial 1).
+- Here, we use `plotly` via the `plotly.graph_objects` interface, rather than via `plotly.express` as in [tutorial 1](#tutorial-1). Typical recommendation is to use `plotly.graph_objects` when seeking more control over the output and `plotly.express` when seeking quick results.
 
 ```python
 mesmo.utils.launch(results_path)

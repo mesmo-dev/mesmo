@@ -1257,7 +1257,9 @@ class OptimizationProblem(ObjectBase):
 
         # Get results / duals.
         self.results = self.get_results()
-        self.duals = self.get_duals()
+        # Do not retrieve dual variables if mu vector cannot be retrieved. See `solve_gurobi()`.
+        if all(np.isnan(self.mu_vector)):
+            self.duals = self.get_duals()
 
         # Log time.
         log_time(f'solve optimization problem problem')

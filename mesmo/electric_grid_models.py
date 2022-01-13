@@ -4724,13 +4724,13 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
                     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.electric_grid_model.ders
                 )),
-                ('variable', 'electric_grid_active_power_cost_sensitivity', dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_grid_model.ders
-                ), dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_grid_model.ders
-                )),
+                # ('variable', 'electric_grid_active_power_cost_sensitivity', dict(
+                #     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_grid_model.ders
+                # ), dict(
+                #     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_grid_model.ders
+                # )),
                 broadcast='scenario'
             )
 
@@ -4741,13 +4741,13 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
                     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.electric_grid_model.ders
                 )),
-                ('variable', 'electric_grid_reactive_power_cost_sensitivity', dict(
-                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_grid_model.ders
-                ), dict(
-                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_grid_model.ders
-                )),
+                # ('variable', 'electric_grid_reactive_power_cost_sensitivity', dict(
+                #     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_grid_model.ders
+                # ), dict(
+                #     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_grid_model.ders
+                # )),
                 broadcast='scenario'
             )
 
@@ -4756,11 +4756,11 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             ('variable', 'electric_grid_loss_active_cost', dict(
                 name='loss_active', scenario=scenarios, timestep=self.timesteps
             )),
-            ('variable', 'electric_grid_loss_active_cost_sensitivity', dict(
-                name='loss_active', scenario=scenarios, timestep=self.timesteps
-            ), dict(
-                name='loss_active', scenario=scenarios, timestep=self.timesteps
-            )),
+            # ('variable', 'electric_grid_loss_active_cost_sensitivity', dict(
+            #     name='loss_active', scenario=scenarios, timestep=self.timesteps
+            # ), dict(
+            #     name='loss_active', scenario=scenarios, timestep=self.timesteps
+            # )),
             broadcast='scenario'
         )
 

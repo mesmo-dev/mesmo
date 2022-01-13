@@ -2051,6 +2051,7 @@ class DERModelSet(DERModelSetBase):
         # Define DER model constraints.
         # Initial state.
         # - For states which represent storage state of charge, initial state of charge is final state of charge.
+        """
         if any(self.states.isin(self.storage_states)):
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -2144,6 +2145,118 @@ class DERModelSet(DERModelSetBase):
                 )),
                 broadcast=['timestep', 'scenario']
             )
+            """
+        # ===============================================================
+        flexible_der_type = ['flexible_generator', 'flexible_load']
+
+        flexible_der_index = [(der_type, der_name) for der_type, der_name in self.electric_ders if
+                              der_type in flexible_der_type]
+        flexible_der_power_variable_map = pd.DataFrame(0.0, index=self.electric_ders, columns=flexible_der_index)
+        der_maximum_limit = pd.Series(3, index=self.electric_ders)
+        for i in der_maximum_limit.index:
+            if 'flexible_load' in i:
+                der_maximum_limit.at[i] = 1.2
+
+            elif 'flexible_generator' in i:
+                der_maximum_limit.at[i] = 0.91
+
+        der_minimum_limit = pd.Series(0, index=self.electric_ders)
+        for i in der_minimum_limit.index:
+            if 'flexible_load' in i:
+                der_minimum_limit.at[i] = 0.51
+
+        for i in flexible_der_power_variable_map.index:
+            for c in flexible_der_power_variable_map.columns:
+                if i == c:
+                    flexible_der_power_variable_map.at[i, c] = 1
+
+        optimization_problem.define_parameter(
+            'der_active_power_vector_maximum_limit',
+            np.transpose([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+        )
+        optimization_problem.define_parameter(
+            'der_reactive_power_vector_maximum_limit_transposed',
+            np.array([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+        )
+
+        optimization_problem.define_parameter(
+            'der_active_power_vector_minimum_limit',
+            np.transpose([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+        )
+        optimization_problem.define_parameter(
+            'minus_der_reactive_power_vector_minimum_limit_transposed',
+            -1.0 * np.array([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+        )
+
+        optimization_problem.define_variable(
+            'flexible_der_active_power',
+            scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+        )
+
+        optimization_problem.define_parameter(
+            'power_map_to_flexible_der_variable',
+            sp.block_diag([flexible_der_power_variable_map.values] * 1)
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.electric_ders
+            )),
+            '==',
+            ('constant', 'active_power_constant', dict(scenario=scenarios)),
+            ('variable', 'power_map_to_flexible_der_variable', dict(
+                name='flexible_der_active_power', scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+            )),
+            broadcast=['timestep', 'scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.electric_ders
+            )),
+            '==',
+            ('variable', 1.0, dict(
+                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.electric_ders
+            )),
+            broadcast='scenario'
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector',
+                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+            )),
+            '<=',
+            ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios))
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='der_reactive_power_vector',
+                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+            )),
+            '<=',
+            ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios))
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='der_active_power_vector',
+                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+            )),
+            '>=',
+            ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios))
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='der_reactive_power_vector',
+                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+            )),
+            '>=',
+            ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios))
+        )
+        # ===============================================================
         if len(self.thermal_ders) > 0:
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -2185,24 +2298,24 @@ class DERModelSet(DERModelSetBase):
                     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.electric_ders
                 )),
-                ('variable', 'der_active_power_cost_sensitivity', dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_ders
-                ), dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_ders
-                )),
+                # ('variable', 'der_active_power_cost_sensitivity', dict(
+                #     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_ders
+                # ), dict(
+                #     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_ders
+                # )),
                 ('variable', 'der_reactive_power_cost', dict(
                     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.electric_ders
                 )),
-                ('variable', 'der_reactive_power_cost_sensitivity', dict(
-                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_ders
-                ), dict(
-                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.electric_ders
-                )),
+                # ('variable', 'der_reactive_power_cost_sensitivity', dict(
+                #     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_ders
+                # ), dict(
+                # name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.electric_ders
+                # )),
                 broadcast='scenario'
             )
 
@@ -2216,13 +2329,13 @@ class DERModelSet(DERModelSetBase):
                     name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.thermal_ders
                 )),
-                ('variable', 'der_thermal_power_cost_sensitivity', dict(
-                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.thermal_ders
-                ), dict(
-                    name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.thermal_ders
-                )),
+                # ('variable', 'der_thermal_power_cost_sensitivity', dict(
+                #     name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.thermal_ders
+                # ), dict(
+                #     name='der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps,
+                #     der=self.thermal_ders
+                # )),
                 broadcast='scenario'
             )
 

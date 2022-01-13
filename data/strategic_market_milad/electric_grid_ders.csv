@@ -1,0 +1,16 @@
+electric_grid_name,der_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal,in_service
+strategic_dso_market,4_1,fixed_load,mixed_commercial_residential,4,1,1,1,wye,-100000.0,-50000.0,1
+strategic_dso_market,4_2,flexible_load,mixed_commercial_residential,4,1,1,1,wye,-300000.0,-150000.0,1
+strategic_dso_market,4_3,fixed_ev_charger,fixed_ev_charger_generic,4,1,1,1,wye,-400000.0,-200000.0,1
+strategic_dso_market,4_5,flexible_generator,photovoltaic_generic,4,1,1,1,wye,500000.0,250000,1
+strategic_dso_market,4_6,fixed_generator,photovoltaic_generic,4,1,1,1,wye,500000.0,0.0,1
+strategic_dso_market,6_1,fixed_load,mixed_commercial_residential,6,1,0,0,wye,-15000.0,-7500.0,1
+strategic_dso_market,6_2,fixed_load,mixed_commercial_residential,6,0,1,0,wye,-10000.0,-5000.0,1
+strategic_dso_market,6_3,fixed_load,mixed_commercial_residential,6,0,0,1,wye,-5000.0,-2500.0,1
+strategic_dso_market,6_4,flexible_load,mixed_commercial_residential,6,1,0,0,wye,-15000.0,-7500.0,1
+strategic_dso_market,6_5,flexible_load,mixed_commercial_residential,6,0,1,0,wye,-10000.0,-5000.0,0
+strategic_dso_market,6_6,flexible_load,mixed_commercial_residential,6,0,0,1,wye,-5000.0,-2500.0,0
+strategic_dso_market,6_7,fixed_ev_charger,fixed_ev_charger_generic,6,1,0,0,wye,-15000.0,-7500.0,0
+strategic_dso_market,6_8,fixed_ev_charger,fixed_ev_charger_generic,6,0,1,0,wye,-10000.0,-5000.0,1
+strategic_dso_market,6_9,fixed_ev_charger,fixed_ev_charger_generic,6,0,0,1,wye,-5000.0,-2500.0,1
+strategic_dso_market,6_10,flexible_generator,photovoltaic_generic,6,1,1,1,wye,500000.0,250000,1

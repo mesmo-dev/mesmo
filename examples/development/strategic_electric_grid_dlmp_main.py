@@ -76,7 +76,7 @@ def main():
             active_power_vector_maximum=active_power_vector_maximum,
             reactive_power_vector_minimum=reactive_power_vector_minimum,
             reactive_power_vector_maximum=reactive_power_vector_maximum,
-            big_m=1000,
+            big_m=100,
         )
 
     # Define DER problem.

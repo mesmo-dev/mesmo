@@ -676,46 +676,46 @@ class StrategicMarket(object):
             broadcast=['scenario']
         )
 
-        optimization_problem.define_constraint(
-            ('constant', 'der_reactive_power_marginal_cost_transposed', dict(scenario=scenarios)),
-            ('variable', 'voltage_reactive_term_transposed', dict(
-                name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                node=self.nodes
-            )),
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
-                name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            )),
-            ('variable', 'branch_power_1_reactive_term_transposed', dict(
-                name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            )),
-            ('variable', 'branch_power_2_reactive_term_transposed', dict(
-                name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            )),
-            '==',
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
-                name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            )),
-            ('variable', 'loss_active_reactive_term_transposed', dict(
-                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
-            )),
-            ('variable', 'voltage_reactive_term_transposed', dict(
-                name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                node=self.nodes
-            )),
-            ('variable', 'branch_power_1_reactive_term_transposed', dict(
-                name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            )),
-            ('variable', 'branch_power_2_reactive_term_transposed', dict(
-                name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            )),
-            broadcast=['scenario']
-        )
+        # optimization_problem.define_constraint(
+        #     ('constant', 'der_reactive_power_marginal_cost_transposed', dict(scenario=scenarios)),
+        #     ('variable', 'voltage_reactive_term_transposed', dict(
+        #         name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+        #         node=self.nodes
+        #     )),
+        #     ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+        #         name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     ('variable', 'branch_power_1_reactive_term_transposed', dict(
+        #         name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+        #         branch=self.branches
+        #     )),
+        #     ('variable', 'branch_power_2_reactive_term_transposed', dict(
+        #         name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+        #         branch=self.branches
+        #     )),
+        #     '==',
+        #     ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+        #         name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     ('variable', 'loss_active_reactive_term_transposed', dict(
+        #         name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
+        #     )),
+        #     ('variable', 'voltage_reactive_term_transposed', dict(
+        #         name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+        #         node=self.nodes
+        #     )),
+        #     ('variable', 'branch_power_1_reactive_term_transposed', dict(
+        #         name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+        #         branch=self.branches
+        #     )),
+        #     ('variable', 'branch_power_2_reactive_term_transposed', dict(
+        #         name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+        #         branch=self.branches
+        #     )),
+        #     broadcast=['scenario']
+        # )
 
         # Defining the complementary conditions:
         if len(self.nodes) >= 0:

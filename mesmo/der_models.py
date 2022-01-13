@@ -2152,7 +2152,7 @@ class DERModelSet(DERModelSetBase):
         flexible_der_index = [(der_type, der_name) for der_type, der_name in self.electric_ders if
                               der_type in flexible_der_type]
         flexible_der_power_variable_map = pd.DataFrame(0.0, index=self.electric_ders, columns=flexible_der_index)
-        der_maximum_limit = pd.Series(3, index=self.electric_ders)
+        der_maximum_limit = pd.Series(1, index=self.electric_ders)
         for i in der_maximum_limit.index:
             if 'flexible_load' in i:
                 der_maximum_limit.at[i] = 1.2

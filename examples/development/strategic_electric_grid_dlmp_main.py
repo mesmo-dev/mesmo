@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from mesmo.updated_strategic_model import StrategicMarket
+from mesmo.dso_dual_problem_validation import StrategicMarket
 import mesmo
 
 
@@ -52,14 +52,19 @@ def main():
     reactive_power_vector_minimum = 0.0 * np.imag(electric_grid_model.der_power_vector_reference)
     reactive_power_vector_maximum = 1.1 * np.imag(electric_grid_model.der_power_vector_reference)
 
-    der_model_set.define_optimization_problem(optimization_centralized, price_data)
+    der_model_set.define_optimization_problem(optimization_centralized,
+                                              price_data,
+                                              state_space_model=False,
+                                              kkt_conditions=True
+                                              )
 
     linear_electric_grid_model_set.define_optimization_problem(
         optimization_centralized,
         price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
-        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
+        kkt_conditions=True
     )
 
     # strategic_scenario = False
@@ -76,7 +81,7 @@ def main():
             active_power_vector_maximum=active_power_vector_maximum,
             reactive_power_vector_minimum=reactive_power_vector_minimum,
             reactive_power_vector_maximum=reactive_power_vector_maximum,
-            big_m=100,
+            big_m=30,
         )
 
     # Define DER problem.
@@ -89,9 +94,9 @@ def main():
     results = linear_electric_grid_model_set.get_optimization_results(optimization_centralized)
     a = results.der_active_power_vector_per_unit.transpose()
     b = results.der_reactive_power_vector_per_unit.transpose()
-    if strategic_scenario:
-        c = optimization_centralized.results['der_strategic_offer']
-        d = optimization_centralized.results['flexible_generator_strategic_offer']
+    # if strategic_scenario:
+    #     c = optimization_centralized.results['der_strategic_offer']
+    #     d = optimization_centralized.results['flexible_generator_strategic_offer']
 
 
     results_centralized = mesmo.problems.Results()

@@ -156,6 +156,9 @@ class StrategicMarket(object):
             'active_loss_mu', scenario=scenarios, timestep=self.timesteps,
         )
         optimization_problem.define_variable(
+            'reactive_loss_mu', scenario=scenarios, timestep=self.timesteps,
+        )
+        optimization_problem.define_variable(
             'der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
             der=self.ders
         )
@@ -188,10 +191,6 @@ class StrategicMarket(object):
             timestep=self.timesteps, der=self.ders
         )
 
-        # optimization_problem.define_variable(
-        #     'reactive_loss_mu', scenario=scenarios, timestep=self.timesteps,
-        # )
-
     def define_optimization_parameters(
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
@@ -208,6 +207,142 @@ class StrategicMarket(object):
     ):
         if scenarios is None:
             scenarios = [None]
+        # ===================================================
+        # flexible_der_type = ['flexible_generator', 'flexible_load']
+        #
+        # flexible_der_index = [(der_type, der_name) for der_type, der_name in self.ders if
+        #                       der_type in flexible_der_type]
+        # flexible_der_power_variable_map = pd.DataFrame(0.0, index=self.ders, columns=flexible_der_index)
+        # der_maximum_limit = pd.Series(1, index=self.ders)
+        # for i in der_maximum_limit.index:
+        #     if 'flexible_load' in i:
+        #         der_maximum_limit.at[i] = 1.2
+        #
+        #     elif 'flexible_generator' in i:
+        #         der_maximum_limit.at[i] = 0.91
+        #
+        # der_minimum_limit = pd.Series(0, index=self.ders)
+        # for i in der_minimum_limit.index:
+        #     if 'flexible_load' in i:
+        #         der_minimum_limit.at[i] = 0.51
+        #
+        # for i in flexible_der_power_variable_map.index:
+        #     for c in flexible_der_power_variable_map.columns:
+        #         if i == c:
+        #             flexible_der_power_variable_map.at[i, c] = 1
+        #
+        # optimization_problem.define_parameter(
+        #     'der_active_power_vector_maximum_limit',
+        #     np.transpose([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+        # )
+        # optimization_problem.define_parameter(
+        #     'der_reactive_power_vector_maximum_limit',
+        #     np.transpose([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+        # )
+        # optimization_problem.define_parameter(
+        #     'der_reactive_power_vector_maximum_limit_transposed',
+        #     1.0 * np.array([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+        # )
+        #
+        # optimization_problem.define_parameter(
+        #     'der_active_power_vector_minimum_limit',
+        #     np.transpose([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+        # )
+        # optimization_problem.define_parameter(
+        #     'der_reactive_power_vector_minimum_limit',
+        #     np.transpose([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+        # )
+        # optimization_problem.define_parameter(
+        #     'minus_der_reactive_power_vector_minimum_limit_transposed',
+        #     - 1.0 * np.array([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+        # )
+        #
+        # optimization_problem.define_variable(
+        #     'flexible_der_active_power',
+        #     scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+        # )
+        # optimization_problem.define_variable(
+        #     'flexible_der_reactive_power',
+        #     scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+        # )
+        #
+        # optimization_problem.define_parameter(
+        #     'power_map_to_flexible_der_variable',
+        #     sp.block_diag([flexible_der_power_variable_map.values] * 1)
+        # )
+
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     '==',
+        #     ('constant', 'active_power_constant', dict(scenario=scenarios)),
+        #     ('variable', 'power_map_to_flexible_der_variable', dict(
+        #         name='flexible_der_active_power', scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+        #     )),
+        #     broadcast=['timestep', 'scenario']
+        # )
+
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     '==',
+        #     ('constant', 'reactive_power_constant', dict(scenario=scenarios)),
+        #     ('variable', 'power_map_to_flexible_der_variable', dict(
+        #         name='flexible_der_reactive_power', scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+        #     )),
+        #     broadcast=['timestep', 'scenario']
+        # )
+
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     '==',
+        #     ('variable', 1.0, dict(
+        #         name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     broadcast='scenario'
+        # )
+
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='der_active_power_vector',
+        #         scenario=scenarios, timestep=self.timesteps, der=self.ders
+        #     )),
+        #     '<=',
+        #     ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios))
+        # )
+        # optimization_problem.define_constraint(
+        #     ('variable', 1, dict(
+        #         name='der_reactive_power_vector',
+        #         scenario=scenarios, timestep=self.timesteps, der=self.ders
+        #     )),
+        #     '<=',
+        #     ('constant', 'der_reactive_power_vector_maximum_limit', dict(scenario=scenarios))
+        # )
+        # optimization_problem.define_constraint(
+        #     ('variable', 1, dict(
+        #         name='der_active_power_vector',
+        #         scenario=scenarios, timestep=self.timesteps, der=self.ders
+        #     )),
+        #     '>=',
+        #     ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios))
+        # )
+        # optimization_problem.define_constraint(
+        #     ('variable', 1, dict(
+        #         name='der_reactive_power_vector',
+        #         scenario=scenarios, timestep=self.timesteps, der=self.ders
+        #     )),
+        #     '>=',
+        #     ('constant', 'der_reactive_power_vector_minimum_limit', dict(scenario=scenarios))
+        # )
+        # ===============================================================
 
         optimization_problem.define_parameter(
             'flexible_generator_mapping_matrix',
@@ -218,6 +353,30 @@ class StrategicMarket(object):
             'non_flexible_der_variable_set_to_zero',
             sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
         )
+        # =====================================
+        optimization_problem.define_parameter(
+            'minus_electric_grid_active_power_cost_flexible_der',
+            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            @ np.transpose(np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
+                           * -1.0 * self.timestep_interval_hours  # In Wh.
+                           @ sp.block_diag(
+                [np.array([np.real(
+                    self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(
+                    self.timesteps)
+            ))
+        )
+        optimization_problem.define_parameter(
+            'minus_electric_grid_reactive_power_cost_flexible_der',
+            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            @ np.transpose(np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
+                           * -1.0 * self.timestep_interval_hours  # In Wh.
+                           @ sp.block_diag(
+                [np.array([np.imag(
+                    self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(
+                    self.timesteps)
+            ))
+        )
+        # =====================================
 
         optimization_problem.define_parameter(
             'loss_active_active_term_transposed',
@@ -265,8 +424,9 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'voltage_active_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
                 @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -278,8 +438,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'voltage_reactive_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
                 @ linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -291,8 +452,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_1_active_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -304,8 +466,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_1_reactive_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -316,8 +479,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_2_active_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -329,8 +493,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_2_reactive_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
@@ -397,7 +562,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_voltage_constant_plus_voltage_maximum_limit',
-            np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 node_voltage_magnitude_vector_maximum.ravel()
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in
@@ -417,7 +582,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'voltage_constant_minus_voltage_limit_minimum',
-            np.transpose(-1.0 * np.transpose([np.concatenate([
+            1.0 * np.transpose(-1.0 * np.transpose([np.concatenate([
                 node_voltage_magnitude_vector_minimum.ravel()
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in
@@ -437,7 +602,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_branch_power_1_constant_plus_branch_power_maximum',
-            np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
@@ -457,7 +622,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_1_constant_minus_branch_power_minimum',
-            np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
@@ -477,7 +642,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_branch_power_2_constant_plus_branch_power_maximum',
-            np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
@@ -497,7 +662,7 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_2_constant_minus_branch_power_minimum',
-            np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
@@ -518,7 +683,7 @@ class StrategicMarket(object):
         optimization_problem.define_parameter(
             'non_strategic_der_active_power_marginal_cost',
             sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([self.strategic_generator_set_to_zero_map.values] * len(self.der_model_set.timesteps))
+            # @ sp.block_diag([self.strategic_generator_set_to_zero_map.values] * len(self.der_model_set.timesteps))
             @ np.transpose(np.concatenate([[[
                                                 self.der_model_set.der_models[der_name].marginal_cost
                                                 * self.timestep_interval_hours  # In Wh.
@@ -526,50 +691,6 @@ class StrategicMarket(object):
                                                 for der_type, der_name in self.der_model_set.electric_ders
                                             ] * len(self.der_model_set.timesteps)]], axis=1))
         )
-
-        # optimization_problem.define_parameter(
-        #     'non_strategic_der_active_power_marginal_cost',
-        #     sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-        #     @ sp.block_diag([self.strategic_generator_set_to_zero_map.values] * len(self.der_model_set.timesteps))
-        #     @ np.transpose([(
-        #                       (
-        #                           price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
-        #                               price_data.price_timeseries.columns,
-        #                               commodity_type='active_power',
-        #                               der_name=self.der_model_set.electric_ders.get_level_values('der_name')
-        #                           )].values
-        #                       )
-        #                       * 1.0 * self.timestep_interval_hours  # In Wh.
-        #                       @ sp.block_diag(self.der_model_set.der_active_power_vector_reference)
-        #               ).ravel()])
-        # )
-
-        # optimization_problem.define_parameter(
-        #     'strategic_offer_minimum_limit',
-        #     sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-        #     @ np.transpose(np.concatenate([[[
-        #                                         self.der_model_set.der_models[der_name].marginal_cost
-        #                                         * self.timestep_interval_hours  # In Wh.
-        #                                         * self.der_model_set.der_models[der_name].active_power_nominal
-        #                                         for der_type, der_name in self.der_model_set.electric_ders
-        #                                     ] * len(self.der_model_set.timesteps)]], axis=1))
-        # )
-        # optimization_problem.define_parameter(
-        #     'non_strategic_der_active_power_marginal_cost',
-        #     sp.block_diag([self.non_flexible_der_map.values] * len(self.timesteps))
-        #     @ sp.block_diag([self.non_flexible_generator_map.values] * len(self.der_model_set.timesteps))
-        #     @ np.array([(
-        #                     (
-        #                         price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
-        #                             price_data.price_timeseries.columns,
-        #                             commodity_type='active_power',
-        #                             der_name=self.der_model_set.electric_ders.get_level_values('der_name')
-        #                         )].values
-        #                     )
-        #                     * 1.0 * self.timestep_interval_hours  # In Wh.
-        #                     @ sp.block_diag(self.der_model_set.der_active_power_vector_reference)
-        #                 ).ravel()]).transpose()
-        # )
 
         optimization_problem.define_parameter(
             'der_reactive_power_marginal_cost_transposed',
@@ -590,19 +711,8 @@ class StrategicMarket(object):
         if scenarios is None:
             scenarios = [None]
 
-        # optimization_problem.define_constraint(
-        #     ('variable', 1.0, dict(
-        #         name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.ders
-        #     )),
-        #     '==',
-        #     ('variable', 1.0, dict(
-        #         name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.ders
-        #     )),
-        #     broadcast='scenario'
-        # )
-
         optimization_problem.define_constraint(
-            ('variable', -1.0, dict(
+            ('variable', 1.0, dict(
                 name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             '==',
@@ -611,43 +721,41 @@ class StrategicMarket(object):
         )
         optimization_problem.define_constraint(
             ('variable', 1.0, dict(
-                name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
+                name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             '==',
+            ('constant', 'electric_grid_loss_reactive_cost', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
+        #         der=self.ders
+        #     )),
+        #     '==',
+        #     ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
+        #     # ('variable', 'flexible_generator_mapping_matrix', dict(
+        #     #     name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
+        #     #     fg=self.strategic_generator_index
+        #     # )),
+        #     broadcast=['scenario']
+        # )
+
+        optimization_problem.define_constraint(
+            # ('variable', 1.0, dict(
+            #     name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
+            #     der=self.ders
+            # )),
             ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
-            ('variable', 'flexible_generator_mapping_matrix', dict(
-                name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
-                fg=self.strategic_generator_index
-            )),
-            broadcast=['scenario']
-        )
-
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='flexible_generator_strategic_offer', scenario=scenarios, timestep=self.timesteps,
-                fg=self.strategic_generator_index
-            )),
-            '>=',
-            ('constant', 'offer_zeros', dict(scenario=scenarios)),
-            broadcast=['scenario']
-        )
-
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            )),
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
-                name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            )),
+            ('constant', 'minus_electric_grid_active_power_cost_flexible_der', dict(scenario=scenarios)),
             ('variable', 'non_flexible_der_variable_set_to_zero', dict(
                 name='active_equal_to_reactive_power_mu', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
-            ('variable', 'der_ones', dict(
-                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
+            # -----------------------------------
+            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+                name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
             )),
             ('variable', 'voltage_active_term_transposed', dict(
                 name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
@@ -661,13 +769,17 @@ class StrategicMarket(object):
                 name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 branch=self.branches
             )),
+            ('variable', 'loss_active_active_term_transposed', dict(
+                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
+            )),
+            ('variable', 'loss_reactive_active_term_transposed', dict(
+                name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
+            )),
             '==',
+            # ------------------
             ('variable', 'non_flexible_der_variable_set_to_zero', dict(
                 name='der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
-            )),
-            ('variable', 'loss_active_active_term_transposed', dict(
-                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             ('variable', 'voltage_active_term_transposed', dict(
                 name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
@@ -686,13 +798,15 @@ class StrategicMarket(object):
 
         optimization_problem.define_constraint(
             ('constant', 'der_reactive_power_marginal_cost_transposed', dict(scenario=scenarios)),
-            ('variable', 'voltage_reactive_term_transposed', dict(
-                name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                node=self.nodes
-            )),
+            ('constant', 'minus_electric_grid_reactive_power_cost_flexible_der', dict(scenario=scenarios)),
+            # -------------------------------------
             ('variable', 'non_flexible_der_variable_set_to_zero', dict(
                 name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
+            )),
+            ('variable', 'voltage_reactive_term_transposed', dict(
+                name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
             )),
             ('variable', 'branch_power_1_reactive_term_transposed', dict(
                 name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
@@ -702,17 +816,21 @@ class StrategicMarket(object):
                 name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 branch=self.branches
             )),
-            '==',
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
-                name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
+            ('variable', 'loss_active_reactive_term_transposed', dict(
+                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
+            ('variable', 'loss_reactive_reactive_term_transposed', dict(
+                name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
+            )),
+            '==',
             ('variable', 'non_flexible_der_variable_set_to_zero', dict(
                 name='active_equal_to_reactive_power_mu', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
-            ('variable', 'loss_active_reactive_term_transposed', dict(
-                name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
+            # ---------------------------------
+            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+                name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
             )),
             ('variable', 'voltage_reactive_term_transposed', dict(
                 name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
@@ -740,32 +858,6 @@ class StrategicMarket(object):
                 ('constant', 'node_voltage_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('constant', 'voltage_limit_maximum', dict(scenario=scenarios)),
-                ('variable', -1.0, dict(
-                    name='node_voltage_magnitude_vector', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                '<=',
-                ('variable', 'voltage_big_m', dict(
-                    name='node_voltage_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                ('variable', 'voltage_big_m', dict(
-                    name='node_voltage_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                '<=',
-                ('constant', 'voltage_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -776,32 +868,6 @@ class StrategicMarket(object):
                 ('constant', 'node_voltage_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='node_voltage_magnitude_vector', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                '<=',
-                ('constant', 'voltage_limit_minimum', dict(scenario=scenarios)),
-                ('variable', 'voltage_big_m', dict(
-                    name='node_voltage_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                ('variable', 'voltage_big_m', dict(
-                    name='node_voltage_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    node=self.nodes
-                )),
-                '<=',
-                ('constant', 'voltage_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
         if len(self.branches) >= 0:
             optimization_problem.define_constraint(
@@ -813,32 +879,6 @@ class StrategicMarket(object):
                 ('constant', 'branch_power_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('constant', 'branch_power_maximum', dict(scenario=scenarios)),
-                ('variable', -1.0, dict(
-                    name='branch_power_magnitude_vector_1', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_1_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1, dict(
-                    name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_1_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -847,32 +887,6 @@ class StrategicMarket(object):
                 )),
                 '>=',
                 ('constant', 'branch_power_mu_zeros', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', -1.0, dict(
-                    name='branch_power_magnitude_vector_1', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_minimum', dict(scenario=scenarios)),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_1_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1, dict(
-                    name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_1_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
 
@@ -886,32 +900,6 @@ class StrategicMarket(object):
                 ('constant', 'branch_power_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('constant', 'branch_power_maximum', dict(scenario=scenarios)),
-                ('variable', -1.0, dict(
-                    name='branch_power_magnitude_vector_2', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_2_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1, dict(
-                    name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_2_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -922,69 +910,16 @@ class StrategicMarket(object):
                 ('constant', 'branch_power_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='branch_power_magnitude_vector_2', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_minimum', dict(scenario=scenarios)),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_2_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1, dict(
-                    name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                ('variable', 'branch_power_big_m', dict(
-                    name='branch_2_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    branch=self.branches
-                )),
-                '<=',
-                ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
-        # Todo Add DER Active & Reactive Complimentary conditions:
         # """
         if len(self.ders) >= 0:
             optimization_problem.define_constraint(
-                ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
-                ('variable', -1.0, dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_active_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
                     name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                     der=self.ders
                 )),
                 '>=',
                 ('constant', 'power_vector_mu_zeros', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_active_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
 
@@ -995,32 +930,6 @@ class StrategicMarket(object):
                 )),
                 '>=',
                 ('constant', 'power_vector_mu_zeros', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_active_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_active_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
             # --------------------------------------------------------
@@ -1033,32 +942,6 @@ class StrategicMarket(object):
                 ('constant', 'power_vector_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
-                ('variable', -1.0, dict(
-                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_reactive_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_reactive_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
 
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
@@ -1069,33 +952,280 @@ class StrategicMarket(object):
                 ('constant', 'power_vector_mu_zeros', dict(scenario=scenarios)),
                 broadcast=['scenario']
             )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_reactive_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                broadcast=['scenario']
-            )
-            optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                ('variable', 'power_vector_big_m', dict(
-                    name='der_reactive_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
-                    der=self.ders
-                )),
-                '<=',
-                ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
-                broadcast=['scenario']
-            )
+
         # """
+        # Complementarities
+        """
+        optimization_problem.define_constraint(
+            ('constant', 'voltage_limit_maximum', dict(scenario=scenarios)),
+            ('variable', -1.0, dict(
+                name='node_voltage_magnitude_vector', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            '<=',
+            ('variable', 'voltage_big_m', dict(
+                name='node_voltage_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            ('variable', 'voltage_big_m', dict(
+                name='node_voltage_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            '<=',
+            ('constant', 'voltage_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='node_voltage_magnitude_vector', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            '<=',
+            ('constant', 'voltage_limit_minimum', dict(scenario=scenarios)),
+            ('variable', 'voltage_big_m', dict(
+                name='node_voltage_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            ('variable', 'voltage_big_m', dict(
+                name='node_voltage_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                node=self.nodes
+            )),
+            '<=',
+            ('constant', 'voltage_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('constant', 'branch_power_maximum', dict(scenario=scenarios)),
+            ('variable', -1.0, dict(
+                name='branch_power_magnitude_vector_1', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_1_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_1_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', -1.0, dict(
+                name='branch_power_magnitude_vector_1', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_minimum', dict(scenario=scenarios)),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_1_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_1_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('constant', 'branch_power_maximum', dict(scenario=scenarios)),
+            ('variable', -1.0, dict(
+                name='branch_power_magnitude_vector_2', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_2_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_2_power_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='branch_power_magnitude_vector_2', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_minimum', dict(scenario=scenarios)),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_2_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1, dict(
+                name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            ('variable', 'branch_power_big_m', dict(
+                name='branch_2_power_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                branch=self.branches
+            )),
+            '<=',
+            ('constant', 'branch_power_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+    #     _____________________________________---
+        optimization_problem.define_constraint(
+            ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
+            ('variable', -1.0, dict(
+                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('variable', 'power_vector_big_m', dict(
+                name='der_active_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_active_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_active_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_active_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('constant', 'der_reactive_power_vector_maximum_limit', dict(scenario=scenarios)),
+            ('variable', -1.0, dict(
+                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('variable', 'power_vector_big_m', dict(
+                name='der_reactive_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_reactive_power_vector_mu_maximum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'der_reactive_power_vector_minimum_limit', dict(scenario=scenarios)),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_reactive_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            broadcast=['scenario']
+        )
+        optimization_problem.define_constraint(
+            ('variable', 1.0, dict(
+                name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            ('variable', 'power_vector_big_m', dict(
+                name='der_reactive_power_vector_mu_minimum_binary', scenario=scenarios, timestep=self.timesteps,
+                der=self.ders
+            )),
+            '<=',
+            ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
+            broadcast=['scenario']
+        )
+        """
 
     def define_objective_function(
             self,
@@ -1105,51 +1235,81 @@ class StrategicMarket(object):
         if scenarios is None:
             scenarios = [None]
         # Defining strategic objective function:
-        optimization_problem.define_objective(
-            ('variable', 'minus_voltage_constant_plus_voltage_maximum_limit', dict(
-                name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                node=self.nodes
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'voltage_constant_minus_voltage_limit_minimum', dict(
-                name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                node=self.nodes
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'minus_branch_power_1_constant_plus_branch_power_maximum', dict(
-                name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'minus_branch_power_2_constant_plus_branch_power_maximum', dict(
-                name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'branch_power_1_constant_minus_branch_power_minimum', dict(
-                name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'branch_power_2_constant_minus_branch_power_minimum', dict(
-                name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                branch=self.branches
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'minus_der_reactive_power_vector_minimum_limit_transposed', dict(
-                name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            ))
-        )
-        optimization_problem.define_objective(
-            ('variable', 'der_reactive_power_vector_maximum_limit_transposed', dict(
-                name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            ))
-        )
+        kkt = True
+        if not kkt:
+            optimization_problem.define_objective(
+                ('variable', 'minus_voltage_constant_plus_voltage_maximum_limit', dict(
+                    name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                    node=self.nodes
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'voltage_constant_minus_voltage_limit_minimum', dict(
+                    name='node_voltage_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                    node=self.nodes
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'minus_branch_power_1_constant_plus_branch_power_maximum', dict(
+                    name='branch_1_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                    branch=self.branches
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'minus_branch_power_2_constant_plus_branch_power_maximum', dict(
+                    name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                    branch=self.branches
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'branch_power_1_constant_minus_branch_power_minimum', dict(
+                    name='branch_1_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                    branch=self.branches
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'branch_power_2_constant_minus_branch_power_minimum', dict(
+                    name='branch_2_power_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                    branch=self.branches
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'minus_der_reactive_power_vector_minimum_limit_transposed', dict(
+                    name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'der_reactive_power_vector_maximum_limit_transposed', dict(
+                    name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                ))
+            )
+
+            optimization_problem.define_objective(
+                ('variable', 'minus_der_reactive_power_vector_minimum_limit_transposed', dict(
+                    name='der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                ))
+            )
+            optimization_problem.define_objective(
+                ('variable', 'der_reactive_power_vector_maximum_limit_transposed', dict(
+                    name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                ))
+            )
+        else:
+            optimization_problem.define_variable(
+                'kkt_objective', scenario=scenarios
+            )
+            optimization_problem.define_parameter(
+                'kkt_value', 1
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1, dict(name='kkt_objective', scenario=scenarios)),
+                '==',
+                ('constant', 'kkt_value', dict())
+            )
+            optimization_problem.define_objective(
+                ('variable', 1, dict(name='kkt_objective', scenario=scenarios))
+            )

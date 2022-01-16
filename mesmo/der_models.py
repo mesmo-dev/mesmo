@@ -1686,14 +1686,17 @@ class DERModelSet(DERModelSetBase):
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
             price_data: mesmo.data_interface.PriceData,
-            scenarios: typing.Union[list, pd.Index] = None
+            scenarios: typing.Union[list, pd.Index] = None,
+            state_space_model: bool = True,
+            kkt_conditions: bool = False
     ):
 
         # Define optimization problem definitions through respective sub-methods.
         self.define_optimization_variables(optimization_problem, scenarios=scenarios)
         self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios)
-        self.define_optimization_constraints(optimization_problem, scenarios=scenarios)
-        self.define_optimization_objective(optimization_problem, scenarios=scenarios)
+        self.define_optimization_constraints(optimization_problem, state_space_model=state_space_model, scenarios=scenarios)
+        if not kkt_conditions:
+            self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
     def define_optimization_variables(
             self,
@@ -2041,6 +2044,7 @@ class DERModelSet(DERModelSetBase):
     def define_optimization_constraints(
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
+            state_space_model: bool = True,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
@@ -2051,76 +2055,157 @@ class DERModelSet(DERModelSetBase):
         # Define DER model constraints.
         # Initial state.
         # - For states which represent storage state of charge, initial state of charge is final state of charge.
-        """
-        if any(self.states.isin(self.storage_states)):
+        # """
+        # state_space_model = True
+        if state_space_model:
+            if any(self.states.isin(self.storage_states)):
+                optimization_problem.define_constraint(
+                    ('variable', 1.0, dict(
+                        name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
+                        state=self.states[self.states.isin(self.storage_states)]
+                    )),
+                    '==',
+                    ('variable', 1.0, dict(
+                        name='state_vector', scenario=scenarios, timestep=self.timesteps[-1],
+                        state=self.states[self.states.isin(self.storage_states)]
+                    )),
+                    broadcast='scenario'
+                )
+            # - For other states, set initial state according to the initial state vector.
+            if any(~self.states.isin(self.storage_states)):
+                optimization_problem.define_constraint(
+                    ('constant', 'state_vector_initial', dict(scenario=scenarios)),
+                    '==',
+                    ('variable', 1.0, dict(
+                        name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
+                        state=self.states[~self.states.isin(self.storage_states)]
+                    )),
+                    broadcast='scenario'
+                )
+
+            # State equation.
             optimization_problem.define_constraint(
-                ('variable', 1.0, dict(
-                    name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
-                    state=self.states[self.states.isin(self.storage_states)]
-                )),
+                ('variable', 1.0, dict(name='state_vector', scenario=scenarios, timestep=self.timesteps[1:])),
                 '==',
-                ('variable', 1.0, dict(
-                    name='state_vector', scenario=scenarios, timestep=self.timesteps[-1],
-                    state=self.states[self.states.isin(self.storage_states)]
+                ('variable', 'state_matrix', dict(
+                    name='state_vector', scenario=scenarios, timestep=self.timesteps[:-1]
                 )),
-                broadcast='scenario'
+                ('variable', 'control_matrix', dict(
+                    name='control_vector', scenario=scenarios, timestep=self.timesteps[:-1]
+                )),
+                ('constant', 'disturbance_state_equation', dict(scenario=scenarios)),
+                broadcast=['timestep', 'scenario']
             )
-        # - For other states, set initial state according to the initial state vector.
-        if any(~self.states.isin(self.storage_states)):
+
+            # Output equation.
             optimization_problem.define_constraint(
-                ('constant', 'state_vector_initial', dict(scenario=scenarios)),
+                ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
                 '==',
-                ('variable', 1.0, dict(
-                    name='state_vector', scenario=scenarios, timestep=self.timesteps[0],
-                    state=self.states[~self.states.isin(self.storage_states)]
+                ('variable', 'state_output_matrix', dict(
+                    name='state_vector', scenario=scenarios, timestep=self.timesteps
                 )),
-                broadcast='scenario'
+                ('variable', 'control_output_matrix', dict(
+                    name='control_vector', scenario=scenarios, timestep=self.timesteps
+                )),
+                ('constant', 'disturbance_output_equation', dict(scenario=scenarios)),
+                broadcast=['timestep', 'scenario']
             )
 
-        # State equation.
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='state_vector', scenario=scenarios, timestep=self.timesteps[1:])),
-            '==',
-            ('variable', 'state_matrix', dict(
-                name='state_vector', scenario=scenarios, timestep=self.timesteps[:-1]
-            )),
-            ('variable', 'control_matrix', dict(
-                name='control_vector', scenario=scenarios, timestep=self.timesteps[:-1]
-            )),
-            ('constant', 'disturbance_state_equation', dict(scenario=scenarios)),
-            broadcast=['timestep', 'scenario']
-        )
+            # Output limits.
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
+                '>=',
+                ('constant', 'output_minimum_timeseries', dict(scenario=scenarios)),
+                broadcast=['timestep', 'scenario']
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
+                '<=',
+                ('constant', 'output_maximum_timeseries', dict(scenario=scenarios)),
+                broadcast=['timestep', 'scenario']
+            )
 
-        # Output equation.
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
-            '==',
-            ('variable', 'state_output_matrix', dict(
-                name='state_vector', scenario=scenarios, timestep=self.timesteps
-            )),
-            ('variable', 'control_output_matrix', dict(
-                name='control_vector', scenario=scenarios, timestep=self.timesteps
-            )),
-            ('constant', 'disturbance_output_equation', dict(scenario=scenarios)),
-            broadcast=['timestep', 'scenario']
-        )
+            # Define connection constraints.
+            if len(self.electric_ders) > 0:
+                optimization_problem.define_constraint(
+                    ('variable', 1.0, dict(
+                        name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                        der=self.electric_ders
+                    )),
+                    '==',
+                    ('constant', 'active_power_constant', dict(scenario=scenarios)),
+                    ('variable', 'mapping_active_power_by_output', dict(
+                        name='output_vector', scenario=scenarios, timestep=self.timesteps
+                    )),
+                    broadcast=['timestep', 'scenario']
+                )
+                optimization_problem.define_constraint(
+                    ('variable', 1.0, dict(
+                        name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
+                        der=self.electric_ders
+                    )),
+                    '==',
+                    ('constant', 'reactive_power_constant', dict(scenario=scenarios)),
+                    ('variable', 'mapping_reactive_power_by_output', dict(
+                        name='output_vector', scenario=scenarios, timestep=self.timesteps
+                    )),
+                    broadcast=['timestep', 'scenario']
+                )
+            # """
+        # ===============================================================
 
-        # Output limits.
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
-            '>=',
-            ('constant', 'output_minimum_timeseries', dict(scenario=scenarios)),
-            broadcast=['timestep', 'scenario']
-        )
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
-            '<=',
-            ('constant', 'output_maximum_timeseries', dict(scenario=scenarios)),
-            broadcast=['timestep', 'scenario']
-        )
+        if not state_space_model:
+            flexible_der_type = ['flexible_generator', 'flexible_load']
 
-        # Define connection constraints.
-        if len(self.electric_ders) > 0:
+            flexible_der_index = [(der_type, der_name) for der_type, der_name in self.electric_ders if
+                                  der_type in flexible_der_type]
+            flexible_der_power_variable_map = pd.DataFrame(0.0, index=self.electric_ders, columns=flexible_der_index)
+            der_maximum_limit = pd.Series(1, index=self.electric_ders)
+            for i in der_maximum_limit.index:
+                if 'flexible_load' in i:
+                    der_maximum_limit.at[i] = 1.2
+
+                elif 'flexible_generator' in i:
+                    der_maximum_limit.at[i] = 0.91
+
+            der_minimum_limit = pd.Series(0, index=self.electric_ders)
+            for i in der_minimum_limit.index:
+                if 'flexible_load' in i:
+                    der_minimum_limit.at[i] = 0.51
+
+            for i in flexible_der_power_variable_map.index:
+                for c in flexible_der_power_variable_map.columns:
+                    if i == c:
+                        flexible_der_power_variable_map.at[i, c] = 1
+
+            optimization_problem.define_parameter(
+                'der_active_power_vector_maximum_limit',
+                np.transpose([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+            )
+            optimization_problem.define_parameter(
+                'der_reactive_power_vector_maximum_limit_transposed',
+                np.array([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
+            )
+
+            optimization_problem.define_parameter(
+                'der_active_power_vector_minimum_limit',
+                np.transpose([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+            )
+            optimization_problem.define_parameter(
+                'minus_der_reactive_power_vector_minimum_limit_transposed',
+                -1.0 * np.array([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
+            )
+
+            optimization_problem.define_variable(
+                'flexible_der_active_power',
+                scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
+            )
+
+            optimization_problem.define_parameter(
+                'power_map_to_flexible_der_variable',
+                sp.block_diag([flexible_der_power_variable_map.values] * 1)
+            )
+
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(
                     name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
@@ -2128,134 +2213,73 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '==',
                 ('constant', 'active_power_constant', dict(scenario=scenarios)),
-                ('variable', 'mapping_active_power_by_output', dict(
-                    name='output_vector', scenario=scenarios, timestep=self.timesteps
+                ('variable', 'power_map_to_flexible_der_variable', dict(
+                    name='flexible_der_active_power', scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
                 )),
                 broadcast=['timestep', 'scenario']
             )
+
             optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.electric_ders
+                )),
+                '==',
                 ('variable', 1.0, dict(
                     name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
                     der=self.electric_ders
                 )),
-                '==',
-                ('constant', 'reactive_power_constant', dict(scenario=scenarios)),
-                ('variable', 'mapping_reactive_power_by_output', dict(
-                    name='output_vector', scenario=scenarios, timestep=self.timesteps
-                )),
-                broadcast=['timestep', 'scenario']
+                broadcast='scenario'
             )
-            """
-        # ===============================================================
-        flexible_der_type = ['flexible_generator', 'flexible_load']
 
-        flexible_der_index = [(der_type, der_name) for der_type, der_name in self.electric_ders if
-                              der_type in flexible_der_type]
-        flexible_der_power_variable_map = pd.DataFrame(0.0, index=self.electric_ders, columns=flexible_der_index)
-        der_maximum_limit = pd.Series(1, index=self.electric_ders)
-        for i in der_maximum_limit.index:
-            if 'flexible_load' in i:
-                der_maximum_limit.at[i] = 1.2
-
-            elif 'flexible_generator' in i:
-                der_maximum_limit.at[i] = 0.91
-
-        der_minimum_limit = pd.Series(0, index=self.electric_ders)
-        for i in der_minimum_limit.index:
-            if 'flexible_load' in i:
-                der_minimum_limit.at[i] = 0.51
-
-        for i in flexible_der_power_variable_map.index:
-            for c in flexible_der_power_variable_map.columns:
-                if i == c:
-                    flexible_der_power_variable_map.at[i, c] = 1
-
-        optimization_problem.define_parameter(
-            'der_active_power_vector_maximum_limit',
-            np.transpose([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
-        )
-        optimization_problem.define_parameter(
-            'der_reactive_power_vector_maximum_limit_transposed',
-            np.array([np.concatenate([der_maximum_limit.values] * len(self.timesteps))])
-        )
-
-        optimization_problem.define_parameter(
-            'der_active_power_vector_minimum_limit',
-            np.transpose([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
-        )
-        optimization_problem.define_parameter(
-            'minus_der_reactive_power_vector_minimum_limit_transposed',
-            -1.0 * np.array([np.concatenate([der_minimum_limit.values] * len(self.timesteps))])
-        )
-
-        optimization_problem.define_variable(
-            'flexible_der_active_power',
-            scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
-        )
-
-        optimization_problem.define_parameter(
-            'power_map_to_flexible_der_variable',
-            sp.block_diag([flexible_der_power_variable_map.values] * 1)
-        )
-
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                der=self.electric_ders
-            )),
-            '==',
-            ('constant', 'active_power_constant', dict(scenario=scenarios)),
-            ('variable', 'power_map_to_flexible_der_variable', dict(
-                name='flexible_der_active_power', scenario=scenarios, timestep=self.timesteps, fd=flexible_der_index
-            )),
-            broadcast=['timestep', 'scenario']
-        )
-
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='der_active_power_vector', scenario=scenarios, timestep=self.timesteps,
-                der=self.electric_ders
-            )),
-            '==',
-            ('variable', 1.0, dict(
-                name='der_reactive_power_vector', scenario=scenarios, timestep=self.timesteps,
-                der=self.electric_ders
-            )),
-            broadcast='scenario'
-        )
-
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='der_active_power_vector',
-                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
-            )),
-            '<=',
-            ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios))
-        )
-        optimization_problem.define_constraint(
-            ('variable', 1, dict(
-                name='der_reactive_power_vector',
-                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
-            )),
-            '<=',
-            ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios))
-        )
-        optimization_problem.define_constraint(
-            ('variable', 1, dict(
-                name='der_active_power_vector',
-                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
-            )),
-            '>=',
-            ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios))
-        )
-        optimization_problem.define_constraint(
-            ('variable', 1, dict(
-                name='der_reactive_power_vector',
-                scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
-            )),
-            '>=',
-            ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios))
-        )
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='der_active_power_vector',
+                    scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+                )),
+                '<=',
+                ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='active_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1, dict(
+                    name='der_reactive_power_vector',
+                    scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+                )),
+                '<=',
+                ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='reactive_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1, dict(
+                    name='der_active_power_vector',
+                    scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+                )),
+                '>=',
+                ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='active_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
+            )
+            optimization_problem.define_constraint(
+                ('variable', 1, dict(
+                    name='der_reactive_power_vector',
+                    scenario=scenarios, timestep=self.timesteps, der=self.electric_ders
+                )),
+                '>=',
+                ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='reactive_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
+            )
         # ===============================================================
         if len(self.thermal_ders) > 0:
             optimization_problem.define_constraint(

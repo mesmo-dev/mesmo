@@ -4180,6 +4180,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             optimization_problem: mesmo.utils.OptimizationProblem,
             price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None,
+            kkt_conditions: bool = False,
             **kwargs
     ):
 
@@ -4192,7 +4193,8 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             **kwargs
         )
         self.define_optimization_constraints(optimization_problem, scenarios=scenarios)
-        self.define_optimization_objective(optimization_problem, scenarios=scenarios)
+        if not kkt_conditions:
+            self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
     def define_optimization_variables(
             self,
@@ -4505,6 +4507,11 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             * timestep_interval_hours  # In Wh.
         )
         optimization_problem.define_parameter(
+            'electric_grid_loss_reactive_cost',
+            price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values
+            * timestep_interval_hours  # In Wh.
+        )
+        optimization_problem.define_parameter(
             'electric_grid_loss_active_cost_sensitivity',
             price_data.price_sensitivity_coefficient
             * timestep_interval_hours  # In Wh.
@@ -4753,6 +4760,17 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem.define_objective(
             ('variable', 'electric_grid_loss_active_cost', dict(
                 name='loss_active', scenario=scenarios, timestep=self.timesteps
+            )),
+            # ('variable', 'electric_grid_loss_active_cost_sensitivity', dict(
+            #     name='loss_active', scenario=scenarios, timestep=self.timesteps
+            # ), dict(
+            #     name='loss_active', scenario=scenarios, timestep=self.timesteps
+            # )),
+            broadcast='scenario'
+        )
+        optimization_problem.define_objective(
+            ('variable', 'electric_grid_loss_reactive_cost', dict(
+                name='loss_reactive', scenario=scenarios, timestep=self.timesteps
             )),
             # ('variable', 'electric_grid_loss_active_cost_sensitivity', dict(
             #     name='loss_active', scenario=scenarios, timestep=self.timesteps

@@ -4719,9 +4719,8 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         # - Defined as cost of electric supply at electric grid source node.
         # - Only defined here, if not yet defined as cost of electric power supply at the DER node
         #   in `mesmo.der_models.DERModel.define_optimization_objective`.
-        # if not optimization_problem.flags.get('has_der_objective'):
-        a = True
-        if a:
+        if not optimization_problem.flags.get('has_der_objective'):
+
             # Active power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
             optimization_problem.define_objective(

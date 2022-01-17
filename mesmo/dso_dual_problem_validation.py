@@ -436,6 +436,7 @@ class StrategicMarket(object):
             ]).transpose()
         )
 
+
         optimization_problem.define_parameter(
             'voltage_reactive_term_transposed',
             # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
@@ -554,11 +555,11 @@ class StrategicMarket(object):
             big_m * np.ones([len(self.branches) * len(self.timesteps), 1])
         )
 
-        optimization_problem.define_parameter(
-            'der_ones',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([np.ones([len(self.ders), 1])] * len(self.timesteps))
-        )
+        # optimization_problem.define_parameter(
+        #     'der_ones',
+        #     sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+        #     @ sp.block_diag([np.ones([len(self.ders), 1])] * len(self.timesteps))
+        # )
 
         optimization_problem.define_parameter(
             'minus_voltage_constant_plus_voltage_maximum_limit',
@@ -712,7 +713,7 @@ class StrategicMarket(object):
             scenarios = [None]
 
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
+            ('variable', - 1.0, dict(
                 name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             '==',
@@ -720,7 +721,7 @@ class StrategicMarket(object):
             broadcast=['scenario']
         )
         optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
+            ('variable', - 1.0, dict(
                 name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             '==',
@@ -748,12 +749,12 @@ class StrategicMarket(object):
             # )),
             ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
             ('constant', 'minus_electric_grid_active_power_cost_flexible_der', dict(scenario=scenarios)),
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+            ('variable', 1.0, dict(
                 name='active_equal_to_reactive_power_mu', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
             # -----------------------------------
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+            ('variable', 1.0, dict(
                 name='der_active_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
@@ -769,15 +770,15 @@ class StrategicMarket(object):
                 name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 branch=self.branches
             )),
+            '==',
             ('variable', 'loss_active_active_term_transposed', dict(
                 name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             ('variable', 'loss_reactive_active_term_transposed', dict(
                 name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
-            '==',
             # ------------------
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+            ('variable', 1.0, dict(
                 name='der_active_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
@@ -800,7 +801,7 @@ class StrategicMarket(object):
             ('constant', 'der_reactive_power_marginal_cost_transposed', dict(scenario=scenarios)),
             ('constant', 'minus_electric_grid_reactive_power_cost_flexible_der', dict(scenario=scenarios)),
             # -------------------------------------
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+            ('variable', 1.0, dict(
                 name='der_reactive_power_vector_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
@@ -816,19 +817,19 @@ class StrategicMarket(object):
                 name='branch_2_power_mu_maximum', scenario=scenarios, timestep=self.timesteps,
                 branch=self.branches
             )),
+            '==',
             ('variable', 'loss_active_reactive_term_transposed', dict(
                 name='active_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
             ('variable', 'loss_reactive_reactive_term_transposed', dict(
                 name='reactive_loss_mu', scenario=scenarios, timestep=self.timesteps
             )),
-            '==',
             ('variable', 'non_flexible_der_variable_set_to_zero', dict(
                 name='active_equal_to_reactive_power_mu', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
             # ---------------------------------
-            ('variable', 'non_flexible_der_variable_set_to_zero', dict(
+            ('variable', 1.0, dict(
                 name='der_reactive_power_vector_mu_minimum', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
@@ -955,7 +956,7 @@ class StrategicMarket(object):
 
         # """
         # Complementarities
-        """
+        # """
         optimization_problem.define_constraint(
             ('constant', 'voltage_limit_maximum', dict(scenario=scenarios)),
             ('variable', -1.0, dict(
@@ -1225,7 +1226,7 @@ class StrategicMarket(object):
             ('constant', 'power_vector_big_m_ones', dict(scenario=scenarios)),
             broadcast=['scenario']
         )
-        """
+        # """
 
     def define_objective_function(
             self,

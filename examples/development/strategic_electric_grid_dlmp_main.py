@@ -55,7 +55,7 @@ def main():
     der_model_set.define_optimization_problem(optimization_centralized,
                                               price_data,
                                               state_space_model=False,
-                                              kkt_conditions=True
+                                              kkt_conditions=False
                                               )
 
     linear_electric_grid_model_set.define_optimization_problem(
@@ -64,11 +64,11 @@ def main():
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-        kkt_conditions=True
+        kkt_conditions=False
     )
 
     # strategic_scenario = False
-    strategic_scenario = True
+    strategic_scenario = False
     if strategic_scenario:
         strategic_der_model_set = StrategicMarket(scenario_name)
         strategic_der_model_set.strategic_optimization_problem(
@@ -81,7 +81,7 @@ def main():
             active_power_vector_maximum=active_power_vector_maximum,
             reactive_power_vector_minimum=reactive_power_vector_minimum,
             reactive_power_vector_maximum=reactive_power_vector_maximum,
-            big_m=30,
+            big_m=100,
         )
 
     # Define DER problem.

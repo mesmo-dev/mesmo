@@ -1957,7 +1957,7 @@ class DERModelSet(DERModelSetBase):
                             der_name=self.electric_ders.get_level_values('der_name')
                         )].values
                     )
-                    * -1.0 * timestep_interval_hours  # In Wh.
+                    * -0.12 * timestep_interval_hours  # In Wh.
                     @ sp.block_diag(self.der_active_power_vector_reference)
                 ).ravel()])
             )
@@ -2172,6 +2172,8 @@ class DERModelSet(DERModelSetBase):
             for i in der_minimum_limit.index:
                 if 'flexible_load' in i:
                     der_minimum_limit.at[i] = 0.51
+                elif 'flexible_generator' in i:
+                    der_minimum_limit.at[i] = 0
 
             for i in flexible_der_power_variable_map.index:
                 for c in flexible_der_power_variable_map.columns:
@@ -2247,10 +2249,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '<=',
                 ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
-                keys=dict(
-                    name='active_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-                    node=self.electric_ders
-                )
+                # keys=dict(
+                #     name='active_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2259,10 +2261,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '<=',
                 ('constant', 'der_reactive_power_vector_maximum_limit', dict(scenario=scenarios)),
-                keys=dict(
-                    name='reactive_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-                    node=self.electric_ders
-                )
+                # keys=dict(
+                #     name='reactive_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2271,10 +2273,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '>=',
                 ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
-                keys=dict(
-                    name='active_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-                    node=self.electric_ders
-                )
+                # keys=dict(
+                #     name='active_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2283,10 +2285,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '>=',
                 ('constant', 'der_reactive_power_vector_minimum_limit', dict(scenario=scenarios)),
-                keys=dict(
-                    name='reactive_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-                    node=self.electric_ders
-                )
+                # keys=dict(
+                #     name='reactive_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     node=self.electric_ders
+                # )
             )
         # ===============================================================
         if len(self.thermal_ders) > 0:

@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from mesmo.dso_dual_problem_validation import StrategicMarket
+from mesmo.updated_strategic_model import StrategicMarket
 import mesmo
 
 
@@ -16,6 +16,7 @@ def main():
 
     # scenarios = [None]
     scenario_name = "strategic_dso_market"
+    # scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -68,7 +69,7 @@ def main():
     )
 
     # strategic_scenario = False
-    strategic_scenario = False
+    strategic_scenario = True
     if strategic_scenario:
         strategic_der_model_set = StrategicMarket(scenario_name)
         strategic_der_model_set.strategic_optimization_problem(
@@ -94,9 +95,9 @@ def main():
     results = linear_electric_grid_model_set.get_optimization_results(optimization_centralized)
     a = results.der_active_power_vector_per_unit.transpose()
     b = results.der_reactive_power_vector_per_unit.transpose()
-    # if strategic_scenario:
-    #     c = optimization_centralized.results['der_strategic_offer']
-    #     d = optimization_centralized.results['flexible_generator_strategic_offer']
+    if strategic_scenario:
+        c = optimization_centralized.results['der_strategic_offer']
+        d = optimization_centralized.results['flexible_generator_strategic_offer']
 
 
     results_centralized = mesmo.problems.Results()

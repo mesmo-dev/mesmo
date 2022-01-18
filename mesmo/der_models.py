@@ -1957,7 +1957,7 @@ class DERModelSet(DERModelSetBase):
                             der_name=self.electric_ders.get_level_values('der_name')
                         )].values
                     )
-                    * -0.12 * timestep_interval_hours  # In Wh.
+                    * -0.15 * timestep_interval_hours  # In Wh.
                     @ sp.block_diag(self.der_active_power_vector_reference)
                 ).ravel()])
             )

@@ -28,7 +28,7 @@ class StrategicMarket(object):
                                                                 columns=self.der_model_set.electric_ders)
         for i in self.strategic_generator_set_to_zero_map.index:
             for c in self.strategic_generator_set_to_zero_map.columns:
-                if i == c and '4_5' not in i:
+                if i == c and 'flexible_generator' not in i:
                 # if i == c and '01_13' not in i:
                     self.strategic_generator_set_to_zero_map.at[i, c] = 1
 
@@ -43,7 +43,7 @@ class StrategicMarket(object):
                 if i == c:
                     self.flexible_load_map.at[i, c] = 1
 
-        self.strategic_generator_index = [der for der in self.ders if '4_5' in der]
+        self.strategic_generator_index = [der for der in self.ders if 'flexible_generator' in der]
         # self.strategic_generator_index = [der for der in self.ders if '01_13' in der]
         self.flexible_generator_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
         for i in self.flexible_generator_map.index:
@@ -360,7 +360,7 @@ class StrategicMarket(object):
             'minus_electric_grid_active_power_cost_flexible_der',
             sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
             @ np.transpose(np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-                           * -0.12 * self.timestep_interval_hours  # In Wh.
+                           * -0.15 * self.timestep_interval_hours  # In Wh.
                            @ sp.block_diag(
                 [np.array([np.real(
                     self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(

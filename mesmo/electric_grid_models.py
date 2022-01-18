@@ -4476,7 +4476,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem.define_parameter(
             'electric_grid_active_power_cost',
             np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-            * -0.12 * timestep_interval_hours  # In Wh.
+            * -0.15 * timestep_interval_hours  # In Wh.
             @ sp.block_diag(
                 [np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)
             )

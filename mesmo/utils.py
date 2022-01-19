@@ -299,7 +299,7 @@ class OptimizationProblem(ObjectBase):
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
         # - Constraints are instantiated with 'name', 'timestep' and 'constraint_type' keys,
         #   but more may be added in ``define_constraint()``.
-        self.variables = pd.DataFrame(columns=['name', 'timestep'])
+        self.variables = pd.DataFrame(columns=['name', 'timestep', 'variable_type'])
         self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
         self.constraints_len = 0
 
@@ -321,7 +321,8 @@ class OptimizationProblem(ObjectBase):
     def define_variable(
             self,
             name: str,
-            **keys
+            variable_type: str = 'continuous',
+            **keys,
     ):
         """Define decision variable with given name and key set.
 
@@ -331,17 +332,27 @@ class OptimizationProblem(ObjectBase):
         - If multiple index key sets are passed, the variable dimension is determined as the cartesian product of
           the key sets. However, note that variables always take the shape of column vectors in constraint and
           objective definitions. That means, multiple key sets are not interpreted as array dimensions.
+        - The variable type can be defined with the keyword argument `variable_type` as either 'continuous', 'integer'
+          or 'binary'. The variable type defaults to 'continuous'.
         """
+
+        # Validate variable type.
+        variable_types = ['continuous', 'integer', 'binary']
+        if variable_type not in ['continuous', 'integer', 'binary']:
+            raise ValueError(
+                f"For variable definitions, the key `variable_type` is reserved and must be a valid variable type."
+                f"Valid variable types are {variable_types}."
+            )
 
         # Obtain new variables based on ``keys``.
         # - Variable dimensions are constructed based by taking the product of the given key sets.
         new_variables = (
-            pd.DataFrame(itertools.product([name], *[
+            pd.DataFrame(itertools.product([name], [variable_type], *[
                 list(value)
                 if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple, range]
                 else [value]
                 for value in keys.values()
-            ]), columns=['name', *keys.keys()])
+            ]), columns=['name', 'variable_type', *keys.keys()])
         )
         # Add new variables to index.
         # - Duplicate definitions are automatically removed.
@@ -1246,7 +1257,9 @@ class OptimizationProblem(ObjectBase):
 
         # Get results / duals.
         self.results = self.get_results()
-        self.duals = self.get_duals()
+        # Do not retrieve dual variables if mu vector cannot be retrieved. See `solve_gurobi()`.
+        if not all(np.isnan(self.mu_vector)):
+            self.duals = self.get_duals()
 
         # Log time.
         log_time(f'solve optimization problem problem')
@@ -1275,6 +1288,10 @@ class OptimizationProblem(ObjectBase):
                 name='x_vector'
             )
         )
+        if (self.variables.loc[:, 'variable_type'] == 'integer').any():
+            x_vector[self.variables.loc[:, 'variable_type'] == 'integer'].setAttr('vtype', gp.GRB.INTEGER)
+        if (self.variables.loc[:, 'variable_type'] == 'binary').any():
+            x_vector[self.variables.loc[:, 'variable_type'] == 'binary'].setAttr('vtype', gp.GRB.BINARY)
 
         # Define constraints.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
@@ -1326,13 +1343,18 @@ class OptimizationProblem(ObjectBase):
 
         # Store results.
         self.x_vector = np.transpose([x_vector.getAttr('x')])
-        if gurobipy_problem.getAttr('NumQCNZs') == 0:
+        if (
+                (gurobipy_problem.getAttr('NumQCNZs') == 0)
+                and not ((self.variables.loc[:, 'variable_type'] == 'integer').any())
+                and not ((self.variables.loc[:, 'variable_type'] == 'binary').any())
+        ):
             self.mu_vector = np.transpose([constraints.getAttr('Pi')])
         else:
             # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
             logger.warning(
                 f"Duals of the optimization problem's constraints are not retrieved,"
-                f" because quadratic or SOC constraints have been added to the problem."
+                f" because either variables have been defined as non-continuous"
+                f" or quadratic / SOC constraints have been added to the problem."
                 f"\nPlease retrieve the duals manually."
             )
             self.mu_vector = np.nan * np.zeros(constraints.shape)
@@ -1344,7 +1366,24 @@ class OptimizationProblem(ObjectBase):
         """Obtain standard-form problem via CVXPY interface."""
 
         # Define variables.
-        x_vector = cp.Variable(shape=(len(self.variables), 1), name='x_vector')
+        x_vector = (
+            cp.Variable(
+                shape=(len(self.variables), 1),
+                name='x_vector',
+                integer=(
+                    (index, 0)
+                    for index, is_integer
+                    in enumerate(self.variables.loc[:, 'variable_type'] == 'integer')
+                    if is_integer
+                ) if (self.variables.loc[:, 'variable_type'] == 'integer').any() else False,
+                boolean=(
+                    (index, 0)
+                    for index, is_binary
+                    in enumerate(self.variables.loc[:, 'variable_type'] == 'binary')
+                    if is_binary
+                ) if (self.variables.loc[:, 'variable_type'] == 'binary').any() else False
+            )
+        )
 
         # Define constraints.
         constraints = [self.get_a_matrix() @ x_vector <= self.get_b_vector()]
@@ -1422,7 +1461,7 @@ class OptimizationProblem(ObjectBase):
             # Get variable dimensions.
             variable_dimensions = (
                 self.variables.iloc[self.get_variable_index(name), :]
-                .drop(['name'], axis=1).drop_duplicates().dropna(axis=1)
+                .drop(['name', 'variable_type'], axis=1).drop_duplicates().dropna(axis=1)
             )
 
             if len(variable_dimensions.columns) > 0:

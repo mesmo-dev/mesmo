@@ -18,7 +18,8 @@ author = 'MESMO authors'
 extensions = [
     'myst_parser',  # Markdown parser.
     'sphinx.ext.napoleon',
-    'sphinx_multiversion'
+    'sphinx_copybutton',
+    'sphinx_multiversion',
 ]
 
 # Extension settings.
@@ -89,8 +90,6 @@ html_sidebars = {
 }
 html_static_path = ['static']
 html_css_files = ['css/custom.css']
-pygments_style = 'default'  # Color scheme for code blocks in light mode.
-pygments_dark_style = 'native'  # Color scheme for code blocks in dark mode.
 
 # Sphinx multiversion settings.
 # <https://holzhaus.github.io/sphinx-multiversion/master/configuration.html>

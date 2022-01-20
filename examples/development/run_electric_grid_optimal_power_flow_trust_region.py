@@ -91,7 +91,7 @@ def run_optimal_operation_problem_trust_region(
     tau = 0.1  # 0.1 / range: (0, 0.25]
     epsilon = 1.0e-4  # 1e-3 / 1e-4
     trust_region_iteration_limit = 30
-    infeasible_max = 3  # the maximum number of iterations to try to solve the optimization with different deltas
+    infeasible_iteration_limit = 3  # the maximum number of iterations to try to solve the optimization with different deltas
 
     print(f'Solving problem with trust-region algorithm.')
     # Ignore division by zero or nan warnings (this can happen with e.g. DERs with zero reactive power output)
@@ -241,7 +241,7 @@ def run_optimal_operation_problem_trust_region(
         feasible = problem.solve()
         if not feasible:
             infeasible_count += 1
-            if delta >= delta_max or infeasible_count > infeasible_max:
+            if delta >= delta_max or infeasible_count > infeasible_iteration_limit:
                 print(f'Optimization problem for scenario {scenario_name} infeasible')
                 return [None, None, problem.linear_electric_grid_model_set]
             else:

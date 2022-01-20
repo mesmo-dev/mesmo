@@ -273,6 +273,6 @@ CREATE TABLE trust_region_setting_types (
     tau REAL,
     epsilon REAL,
     trust_region_iteration_limit INTEGER,
-    infeasible_max INTEGER,
+    infeasible_iteration_limit INTEGER,
     PRIMARY KEY(trust_region_setting_type)
 );

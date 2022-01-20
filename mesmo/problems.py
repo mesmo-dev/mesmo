@@ -314,8 +314,15 @@ class OptimalOperationProblem(Problem):
       subject to the model constraints of all DERs and grids.
     - The problem formulation is able to consider combined as well as individual operation of
       thermal and electric grids.
+
+    Keyword Arguments:
+        solve_method (str): Solve method for the optimization problem. If `None` or 'default', it will use the default
+            method of solving a single-shot optimization using the global approximation method. If 'trust_region', it
+            will solve iteratively via trust-region method using the local approximation method.
+            Choices: 'default', 'trust_region', `None`. Default: `None`.
     """
 
+    solve_method: str
     scenario_name: str
     scenario_data: mesmo.data_interface.ScenarioData
     timesteps: pd.Index
@@ -336,8 +343,17 @@ class OptimalOperationProblem(Problem):
             scenario_name: str,
             electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
             thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
-            der_model_set: mesmo.der_models.DERModelSet = None
+            der_model_set: mesmo.der_models.DERModelSet = None,
+            solve_method: str = None
     ):
+
+        # Obtain solve method.
+        if solve_method in [None, 'default']:
+            self.solve_method = 'default'
+        elif solve_method == 'trust_region':
+            self.solve_method = 'trust_region'
+        else:
+            raise ValueError(f"Unknown solve method for optimal operation problem: {solve_method}")
 
         # Obtain and store data.
         self.scenario_name = scenario_name
@@ -454,39 +470,64 @@ class OptimalOperationProblem(Problem):
         self.der_model_set.define_optimization_constraints(self.optimization_problem)
         self.der_model_set.define_optimization_objective(self.optimization_problem)
 
-    def solve(self, raise_runtime_error: bool = True) -> bool:
+    def solve(self):
 
-        # Solve optimization problem.
-        # - Catch potential error so that simulation does not stop.
-        # TODO: Only do this for trust-region solve.
+        # Select solve method depending on `solve_method` attribute.
+        if self.solve_method == 'default':
+            self.solve_default()
+        elif self.solve_method == 'trust_region':
+            self.solve_trust_region()
+        else:
+            raise ValueError(f"Unknown solve method for optimal operation problem: {self.solve_method}")
+
+    def solve_default(
+            self,
+            do_raise_runtime_error: bool = True
+    ) -> bool:
+
+        # If `do_raise_runtime_error`, solve optimization problem and raise any exceptions.
+        if do_raise_runtime_error:
+            self.optimization_problem.solve()
+            return True
+
+        # If not `do_raise_runtime_error`, try to solve optimization problem and catch `RuntimeError`.
+        # - Returns `False` instead of raising `RuntimeError`, which is needed to iteratively attempt solutions
+        #   in `solve_trust_region()`.
         try:
             self.optimization_problem.solve()
+            return True
         except RuntimeError:
-            if raise_runtime_error:
-                raise
-            print('######### COULD NOT SOLVE OPTIMIZATION #########')
-            # Return false if solution was not found.
+            logger.debug('Optimization problem was not solved successfully.')
             return False
 
-        # Return true if solution could be found.
-        return True
-
     def solve_trust_region(self):
-        """
-        Formulates and runs an optimal operation problem. If an electric_grid_model is passed, it runs an optmal power
-        flow using the trust region algorithm.
-        In general, trust-region based algorithm mitigates the approximation inaccuracy. The algorithm improve the approximate
-        solution of the approximated quadratic program in an iterative manner.
-        The algorithm is based on the works in:
-        [1] Hanif et al. “Decomposition and Equilibrium Achieving Distribution Locational Marginal Prices using Trust-Region Method”
-        IEEE Transactions on Smart Grid, pp. 1–1, 2018, doi: 10.1109/TSG.2018.2822766.
-        Trust-Region parameters are based on the works in:
-        [2] A. M. Giacomoni and B. F. Wollenberg, “Linear programming optimal power flow utilizing a trust region method”
-        in North American Power Symposium 2010, Arlington, TX, USA, Sep. 2010, pp. 1–6, doi: 10.1109/NAPS.2010.5619970.
-        [3] J. Nocedal and S. J. Wright, "Numerical Optimization", Chapter 4, 2nd ed., New York: Springer, 2006.
+        """Solves the optimal operation problem via trust-region method.
+        In general, the trust-region based algorithm mitigates the approximation
+        inaccuracy of the underlying linear approximate models. The algorithm improves the approximate solution of the
+        underlying optimization problem in an iterative manner.
+
+        Trust-region algorithm is based on the work:
+
+        - [1] Hanif et al. “Decomposition and Equilibrium Achieving Distribution Locational Marginal Prices
+          using the Trust-Region Method” IEEE Transactions on Smart Grid, pp. 1–1, 2018,
+          doi: `10.1109/TSG.2018.2822766`.
+
+        Trust-region parameters are based on the works:
+
+        - [2] A. M. Giacomoni and B. F. Wollenberg, “Linear programming optimal power flow utilizing a trust region
+          method” in North American Power Symposium 2010, Arlington, TX, USA, Sep. 2010, pp. 1–6,
+          doi: `10.1109/NAPS.2010.5619970`.
+        - [3] J. Nocedal and S. J. Wright, "Numerical Optimization", Chapter 4, 2nd ed., New York: Springer, 2006.
         """
 
-        # Instantiate iteration variables.
+        # TODO: Remove warning once trust-region method has been tested properly.
+        logger.warning(
+            f"Experimental feature:"
+            f" Please note that the trust-region method is experimental and has not yet been extensively tested."
+        )
+
+        # Instantiate trust-region iteration variables.
+        logger.debug(f'Solving problem with trust-region algorithm.')
         sigma = 0.0
         error_control = np.inf
         trust_region_iteration_count = 0
@@ -496,7 +537,7 @@ class OptimalOperationProblem(Problem):
         objective_power_flows_iter = []
 
         # Define trust-region parameters according to [2].
-        # TODO: Move to configuration.
+        # TODO: Document parameters.
         delta_max = self.scenario_data.scenario.at['delta_max']  # 4.0 / 1.0
         delta = self.scenario_data.scenario.at['delta']  # 3.0 / 0.5 / range: (0, delta_max] If too big, no PF solution.
         gamma = self.scenario_data.scenario.at['gamma']  # 0.5 / range: (0, 1)
@@ -504,17 +545,11 @@ class OptimalOperationProblem(Problem):
         tau = self.scenario_data.scenario.at['tau']  # 0.1 / range: (0, 0.25]
         epsilon = self.scenario_data.scenario.at['epsilon']  # 1e-3 / 1e-4
         trust_region_iteration_limit = self.scenario_data.scenario.at['trust_region_iteration_limit']
-        infeasible_max = self.scenario_data.scenario.at['infeasible_max']
-        # the maximum number of iterations to try to solve the optimization with different deltas.
+        infeasible_iteration_limit = self.scenario_data.scenario.at['infeasible_iteration_limit']
 
-        print(f'Solving problem with trust-region algorithm.')
-        # Ignore division by zero or nan warnings (this can happen with e.g. DERs with zero reactive power output)
-        # np.seterr(divide='ignore', invalid='ignore')
-
-        # ---------------------------------------------------------------------------------------------------------
         # Obtain the base case power flow, using the active_power_nominal values given as input as initial dispatch
         # quantities. This represents the initial solution candidate.
-        print('Obtaining first best guess for optimal power flow...', end='\r')
+        logger.debug('Obtaining first best guess for optimal power flow...')
 
         # Obtain DER pre-solve results.
         pre_solve_results = self.der_model_set.pre_solve(self.price_data)
@@ -534,17 +569,17 @@ class OptimalOperationProblem(Problem):
             )
         )
 
-        # Formulate problem and solve
-        feasible = self.solve(raise_runtime_error=False)
+        # Formulate problem and solve.
+        feasible = self.solve_default(do_raise_runtime_error=False)
         if feasible:
             best_guess_results = self.get_results()
-            print('Calculating power flow based on first best guess results')
+            logger.debug('Calculating power flow based on first best guess results')
             pre_solve_results = best_guess_results
         else:
-            # If problem infeasible, use DER pre-solve results and start trust region algorithm.
+            # If problem infeasible, use DER pre-solve results and start trust-region algorithm.
             pass
 
-        print('Obtaining initial power flow solution set candidate...', end='\r')
+        logger.debug('Obtaining initial power flow solution set candidate...')
         # Obtain updated power flow solution set as initial candidate.
         power_flow_solution_set_candidate = (
             mesmo.electric_grid_models.PowerFlowSolutionSet(
@@ -553,22 +588,18 @@ class OptimalOperationProblem(Problem):
             )
         )
 
-        # ---------------------------------------------------------------------------------------------------------
-        # Start trust-region iterations
-        start_time = datetime.now()
-        first_iter = True
-
-        print('----------------------------------------------------------------------------------------')
+        # Start trust-region iterations.
+        first_iteration = True
         while (
                 (trust_region_accepted_iteration_count < trust_region_iteration_limit)
-                # and (error_control > epsilon)
+                and (error_control > epsilon)
         ):
-            iter_start_time = datetime.now()
-            # Print progress.
-            print(f'Starting trust-region iteration #{trust_region_iteration_count}')
-            print(f'Accepted iterations: {trust_region_accepted_iteration_count}')
 
-            # Define / update delta parameter for trust region constraints.
+            # Print progress.
+            logger.debug(f'Starting trust-region iteration #{trust_region_iteration_count}')
+            logger.debug(f'Accepted iterations: {trust_region_accepted_iteration_count}')
+
+            # Define / update delta parameter for trust-region constraints.
             self.optimization_problem.define_parameter(
                 name='delta_positive',
                 value=delta
@@ -579,11 +610,11 @@ class OptimalOperationProblem(Problem):
             )
 
             # Check trust-region solution acceptance conditions.
-            if first_iter or (sigma > tau):
-                print('Setting new states.')
+            if first_iteration or (sigma > tau):
+                logger.debug('Setting new states.')
                 # Check if a satisfactory solution was already found
                 if error_control <= epsilon:
-                    # If so, break and leave the trust region iterations
+                    # If so, break and leave the trust-region iterations
                     break
 
                 # Accept der power vector and power flow solution candidate.
@@ -610,7 +641,7 @@ class OptimalOperationProblem(Problem):
                 branch_power_magnitude_vector_2_reference = power_flow_results.branch_power_magnitude_vector_2_per_unit
 
                 # Get linear electric grid model for all timesteps
-                print('Obtaining linear electric grid model set...', end='\r')
+                logger.debug('Obtaining linear electric grid model set...')
                 self.linear_electric_grid_model_set = (
                     mesmo.electric_grid_models.LinearElectricGridModelSet(
                         self.electric_grid_model,
@@ -657,7 +688,7 @@ class OptimalOperationProblem(Problem):
                     )
                 )
 
-                # Define / update parameters for trust region iteration
+                # Define / update parameters for trust-region iteration
                 self.optimization_problem.define_parameter(
                     name='node_voltage_vector_reference',
                     value=(-1) * node_voltage_vector_reference.to_numpy().ravel()
@@ -678,16 +709,15 @@ class OptimalOperationProblem(Problem):
                     name='der_reactive_power_vector_reference',
                     value=(-1) * der_reactive_power_vector_reference.ravel()
                 )
-                if first_iter:  # This is only done on this first iteration
 
-                    # Define trust region constraints.
+                # Define trust-region constraints.
+                if first_iteration:
                     # The trust-region permissible value for variables to move is determined by radius delta, which is included
                     # in all inequality constraints [1].
                     # -> Branch flow and voltage limits
                     # -> DER power output limits
                     # We redefine the approximate state and dispatch quantities as the measure of change in their
                     # operating state at the current iteration.
-
                     self.optimization_problem.define_constraint(
                         ('variable', 1.0, dict(name='node_voltage_magnitude_vector', timestep=self.timesteps)),
                         ('constant', 'node_voltage_vector_reference', dict(timestep=self.timesteps)),
@@ -749,36 +779,35 @@ class OptimalOperationProblem(Problem):
                         ('constant', 'delta_negative', dict(timestep=self.timesteps)),
                     )
 
-                # After first iteration, set to False
-                first_iter = False
+                # After first iteration, set to False.
+                first_iteration = False
 
             # Solve the optimization problem
-            feasible = self.solve(raise_runtime_error=False)
+            feasible = self.solve_default(do_raise_runtime_error=False)
             if not feasible:
                 infeasible_count += 1
-                if delta >= delta_max or infeasible_count > infeasible_max:
-                    print(f'Optimization problem for scenario {self.scenario_name} infeasible')
+                if delta >= delta_max or infeasible_count > infeasible_iteration_limit:
+                    logger.debug(f'Optimization problem for scenario {self.scenario_name} infeasible')
                     return [None, None, self.linear_electric_grid_model_set]
                 else:
-                    print(f'Optimization problem infeasible, increasing delta to maximum')
-                    print(f'Trying to solve again #{infeasible_count}')
+                    logger.debug(f'Optimization problem infeasible, increasing delta to maximum')
+                    logger.debug(f'Trying to solve again #{infeasible_count}')
                     # delta = min(2 * delta, delta_max)
-                    print(f"new delta = {delta}")
+                    logger.debug(f"new delta = {delta}")
                     delta = delta_max
                     continue
 
             # Obtain results.
             optimization_results = self.get_results()
 
-            # ---------------------------------------------------------------------------------------------------------
             # Trust-region evaluation and update.
-            print('Trust-region evaluation and update...', end='\r')
+            logger.debug('Trust-region evaluation and update...')
             # Obtain der power change value.
             der_active_power_vector_change_per_unit = (
-                    optimization_results.der_active_power_vector_per_unit - der_active_power_vector_reference
+                optimization_results.der_active_power_vector_per_unit - der_active_power_vector_reference
             ).to_numpy()
             der_reactive_power_vector_change_per_unit = (
-                    optimization_results.der_reactive_power_vector_per_unit - der_reactive_power_vector_reference
+                optimization_results.der_reactive_power_vector_per_unit - der_reactive_power_vector_reference
             ).to_numpy()
 
             der_power_vector_change_per_unit_max = (
@@ -789,12 +818,12 @@ class OptimalOperationProblem(Problem):
             )
             error_control = der_power_vector_change_per_unit_max
 
-            # ---------------------------------------------------------------------------------------------------------
-            # Check trust-region conditions and obtain DER power vector / power flow solution candidates for next iteration.
+            # Check trust-region conditions and obtain DER power vector / power flow solution candidates
+            # for next iteration.
             # - Only if termination condition is not met, otherwise risk of division by zero.
             # if der_power_vector_change_per_unit_max > epsilon:x
             # Get new power flow solution candidate
-            print('Obtaining power flow solution set candidate...', end='\r')
+            logger.debug('Obtaining power flow solution set candidate...')
             power_flow_solution_set_candidate = (
                 mesmo.electric_grid_models.PowerFlowSolutionSet(
                     self.electric_grid_model,
@@ -824,6 +853,7 @@ class OptimalOperationProblem(Problem):
             # Calculate objective function error
             error_obj_function = np.abs(objective_power_flow - objective_linear_model)
 
+            # TODO: Check if the following is needed.
             # Check if power flow of candidate is violating line limits, to then increase the radius delta
             # This is only to save some iterations
             # pf_violation_flag_1 = (
@@ -833,7 +863,6 @@ class OptimalOperationProblem(Problem):
             #         np.abs(branch_power_magnitude_vector_maximum
             #                - power_flow_results_candidate.branch_power_magnitude_vector_2) < 0).any(axis=None)
 
-            # ---------------------------------------------------------------------------------------------------------
             # Evaluate solution progress.
             # sigma represents the ratio between the cost improvement of approximated system to the actual one. A
             # smaller value of sigma shows that the current approximation does not represent the actual system and hence
@@ -845,9 +874,9 @@ class OptimalOperationProblem(Problem):
                     / (objective_power_flows_iter[-1] - objective_linear_model)
                 )
                 # TODO: there are cases when sigma repeats itself every second iteration causing and endless loop until
-                #  the max number of iterations is reached. This should probably be checked and if true, what then?
+                # the max number of iterations is reached. This should probably be checked and if true, what then?
             except ZeroDivisionError:
-                print('ZeroDivisionError in calculating sigma value.')
+                logger.debug('ZeroDivisionError in calculating sigma value.')
                 sigma_numerator = (objective_power_flows_iter[-1] - objective_power_flow)
                 if sigma_numerator == 0:  # TODO: does this case really exist? should it evaluate to zero or 1?
                     sigma = 0  # this means, no progress has been done, so something should happen --> decrease delta
@@ -855,59 +884,64 @@ class OptimalOperationProblem(Problem):
                     sigma = (-1) * np.inf
                 else:
                     sigma = np.inf
-                print(f'Evaluated numerator, falling back to sigma = {sigma}')
+                logger.debug(f'Evaluated numerator, falling back to sigma = {sigma}')
 
             # Print trust-region progress
-            print(f'objective_power_flow = {objective_power_flow}')
-            print(f'objective_linear_model = {objective_linear_model}')
-            print(f'control error = {error_control}')
-            print(f'objective error = {error_obj_function}')
-            print(f'sigma = {sigma}')
+            logger.debug(f'objective_power_flow = {objective_power_flow}')
+            logger.debug(f'objective_linear_model = {objective_linear_model}')
+            logger.debug(f'control error = {error_control}')
+            logger.debug(f'objective error = {error_obj_function}')
+            logger.debug(f'sigma = {sigma}')
 
+            # TODO: Check if the following is needed.
             # if pf_violation_flag_1 or pf_violation_flag_2:  # first check if there are any line flow violations
-            #     print('Found line flow violation, decreasing delta.')
+            #     logger.debug('Found line flow violation, decreasing delta.')
             #     delta *= gamma
             # If the new objective value is greater than the current value ([-1]), the step must be rejected, see [4]
             # elif (objective_power_flows_iter[-1] - objective_linear_model) <= 0:
-            #     print('New objective larger than objective[-1]')
+            #     logger.debug('New objective larger than objective[-1]')
             #     delta *= gamma
             if sigma < eta:
-                print('sigma < eta, linearized model is a bad approximation of the nonlinear model, decreasing delta')
+                logger.debug(
+                    'sigma < eta, linearized model is a bad approximation of the nonlinear model, decreasing delta'
+                )
                 delta *= gamma
-                print(f'new delta = {delta}')
+                logger.debug(f'new delta = {delta}')
             elif sigma > (1.0 - eta) and np.abs(der_power_vector_change_per_unit_max - delta) <= epsilon:
                 # elif sigma > (1.0 - eta) and np.abs(voltage_magnitude_change - delta) <= epsilon:
-                print('sigma > (1.0 - eta), linearized model is a good approximation of the nonlinear model, increasing delta')
+                logger.debug(
+                    'sigma > (1.0 - eta), linearized model is a good approximation of the nonlinear model,'
+                    ' increasing delta'
+                )
                 delta = min(2 * delta, delta_max)
-                print(f'new delta = {delta}')
+                logger.debug(f'new delta = {delta}')
             else:
                 # If the step stays strictly inside the region, we infer that the current value of delta is not
                 # interfering with the progress of the algorithm, so we leave its value unchanged for the next iteration
                 # see [3]
-                print('linearized model is a satisfactory approximation of the nonlinear model, delta remains unchanged.')
-                print(f'delta = {delta}')
+                logger.debug(
+                    'linearized model is a satisfactory approximation of the nonlinear model, delta remains unchanged.'
+                )
+                logger.debug(f'delta = {delta}')
 
             if sigma > tau:
-                print('sigma > tau -> the solution to the current iteration makes satisfactory progress toward the '
-                      'optimal solution')
-                print('Accepting iteration.')
+                logger.debug(
+                    'sigma > tau -> the solution to the current iteration makes satisfactory progress toward the'
+                    ' optimal solution'
+                )
+                logger.debug('Accepting iteration.')
                 # Increase counter
                 trust_region_accepted_iteration_count += 1
 
             else:
-                print('sigma <= tau -> Rejecting iteration. Repeating iteration using the modified region (delta).')
+                logger.debug(
+                    'sigma <= tau -> Rejecting iteration. Repeating iteration using the modified region (delta).'
+                )
 
             trust_region_iteration_count += 1
-            print(f'Time elapsed for iteration: {datetime.now()-iter_start_time}')
-            print('----------------------------------------------------------------------------------------')
 
-        # ---------------------------------------------------------------------------------------------------------
-        end_time = datetime.now()
-        print('Found solution, exiting the trust region iterations.')
-        print('----------------------------------------------------------------------------------------')
-        print('----------------------------------------------------------------------------------------')
-        print(f'Trust region iterations: {trust_region_iteration_count}')
-        print(f'Total time elapsed for trust region algorithm: {(end_time - start_time)}')
+        logger.debug('Found solution, exiting the trust-region iterations.')
+        logger.debug(f'Trust-region iterations: {trust_region_iteration_count}')
 
     def get_results(self) -> Results:
 

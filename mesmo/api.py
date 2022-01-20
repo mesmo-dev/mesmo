@@ -1,7 +1,5 @@
 """Application programming interface (API) module for high-level interface functions to run MESMO."""
 
-import os
-
 import mesmo.config
 import mesmo.data_interface
 import mesmo.problems
@@ -53,7 +51,8 @@ def run_optimal_operation_problem(
         recreate_database: bool = True,
         print_results: bool = False,
         store_results: bool = True,
-        results_path: str = None
+        results_path: str = None,
+        solve_method: str = None
 ) -> mesmo.problems.Results:
     """Set up and solve an optimal operation problem for the given scenario."""
 
@@ -66,7 +65,7 @@ def run_optimal_operation_problem(
         mesmo.data_interface.recreate_database()
 
     # Obtain operation problem.
-    operation_problem = mesmo.problems.OptimalOperationProblem(scenario_name)
+    operation_problem = mesmo.problems.OptimalOperationProblem(scenario_name, solve_method=solve_method)
 
     # Solve operation problem.
     operation_problem.solve()

@@ -69,6 +69,11 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: environment-ubuntu-latest.yml
+    - name: Run automatic code formatting
+      uses: psf/black@stable
+      with:
+        options: "--line-length 120"
+        src: "./mesmo"
     - name: Commit changes
       uses: stefanzweifel/git-auto-commit-action@v4
       with:

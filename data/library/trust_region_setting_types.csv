@@ -1,0 +1,2 @@
+trust_region_setting_type,delta,delta_max,gamma,eta,tau,epsilon,trust_region_iteration_limit,infeasible_iteration_limit
+trust_region_setting_default,1.0,4.0,0.25,0.1,0.1,1.0e-4,30,3

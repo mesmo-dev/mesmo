@@ -207,6 +207,7 @@ CREATE TABLE scenarios (
     base_apparent_power REAL DEFAULT 1,
     base_voltage REAL DEFAULT 1,
     base_thermal_power REAL DEFAULT 1,
+    trust_region_setting_type TEXT,
     PRIMARY KEY(scenario_name)
 );
 CREATE TABLE thermal_grid_ders (
@@ -262,4 +263,16 @@ CREATE TABLE thermal_grids (
     source_der_type TEXT,
     source_der_model_name TEXT,
     PRIMARY KEY(thermal_grid_name)
+);
+CREATE TABLE trust_region_setting_types (
+    trust_region_setting_type TEXT,
+    delta REAL,
+    delta_max REAL,
+    gamma REAL,
+    eta REAL,
+    tau REAL,
+    epsilon REAL,
+    trust_region_iteration_limit INTEGER,
+    infeasible_iteration_limit INTEGER,
+    PRIMARY KEY(trust_region_setting_type)
 );

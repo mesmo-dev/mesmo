@@ -6,14 +6,17 @@ If you are keen to contribute to this project, please follow these guidelines:
 - Development is based on Python 3.8.
 - Git branches follow the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/).
 - Release versioning follows the [Semantic Versioning principle](https://semver.org/).
+- Code style follows the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and [Common Coding Conventions](https://github.com/tum-esi/common-coding-conventions), unless stated otherwise [below](#style-guide).
 
 ## Git branches
 
 Based on the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/) there are the following branches:
 
 1. `master` - Contains stable release versions of the repository. Only admins should send pull requests / commits to `master` when 1) fixing a critical bug or 2) publishing a new release.
-2. `develop` - This branch is intended as the main branch for development or improvement of features. Anyone can send pull requests to `develop`.
+2. `develop` - This branch is intended as the main branch for development or improvement of features. Anyone can send pull requests to `develop`. Pull requests must be discussed and approved by the administrators of this repository before merging into `develop`.
 3. `feature/xxx` - This branch is dedicated to developing feature `xxx`. The idea is to keep development or improvement works separate from the main `develop` branch. Once the work is finished, a pull request is created for feature `xxx` to be merged back into the `develop` branch.
+
+If in doubt, your code should be committed to a `feature/xxx` branch first.
 
 ## Release versioning
 
@@ -24,7 +27,7 @@ Every time the `master` branch changes, a new version number is defined accordin
 
 ## Style guide
 
-- Follow the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and check [this PEP8 Explainer](https://realpython.com/python-pep8/).
+- Follow the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and [Common Coding Conventions](https://github.com/tum-esi/common-coding-conventions). Also check [this PEP8 Explainer](https://realpython.com/python-pep8/).
 - Variable / function / object / class / module names:
     - Names are verbose and avoid abbreviations.
     - Variable / function / object names are in lowercase and underscore_case (all letters are lowercase and all words are separated by underscores).

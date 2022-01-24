@@ -1,2 +1,2 @@
 scenario_name,electric_grid_name,thermal_grid_name,price_type,price_sensitivity_coefficient,parameter_set,timestep_start,timestep_end,timestep_interval,base_apparent_power,base_voltage
-strategic_dso_market,strategic_dso_market,,singapore_wholesale,1e-9,,2017-01-02T13:00:00,2017-01-02T14:00:00,01:00:00,10e3,10e3
+strategic_dso_market,strategic_dso_market,,singapore_wholesale,1e-9,,2017-01-02T00:00:00,2017-01-03T00:00:00,01:00:00,10e3,10e3

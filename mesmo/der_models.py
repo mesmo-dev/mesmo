@@ -105,17 +105,17 @@ class DERModel(mesmo.utils.ObjectBase):
                 self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(self.active_power_nominal)
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        np.sign(self.active_power_nominal)
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(self.reactive_power_nominal)
-                    * (
-                        self.reactive_power_nominal / self.active_power_nominal
-                        if self.active_power_nominal != 0.0
-                        else 1.0
-                    )
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        np.sign(self.reactive_power_nominal)
+                        * (
+                            self.reactive_power_nominal / self.active_power_nominal
+                            if self.active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
         else:
             self.active_power_nominal_timeseries = (
@@ -143,8 +143,8 @@ class DERModel(mesmo.utils.ObjectBase):
                 self.thermal_power_nominal_timeseries *= self.thermal_power_nominal
             else:
                 self.thermal_power_nominal_timeseries *= (
-                    np.sign(self.thermal_power_nominal)
-                    / der_data.scenario_data.scenario.at['base_thermal_power']
+                        np.sign(self.thermal_power_nominal)
+                        / der_data.scenario_data.scenario.at['base_thermal_power']
                 )
         else:
             self.thermal_power_nominal_timeseries = (
@@ -156,7 +156,6 @@ class DERModel(mesmo.utils.ObjectBase):
 
 
 class DERModelOperationResults(mesmo.utils.ResultsBase):
-
     der_model: DERModel
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame
@@ -225,7 +224,6 @@ class FixedGeneratorModel(FixedDERModel):
             der_name: str,
             **kwargs
     ):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -288,7 +286,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
 
         if self.is_electric_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(['state_of_charge'])
             self.storage_states = pd.Index(['state_of_charge'])
@@ -316,17 +313,17 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.states, columns=self.controls)
             )
             self.control_matrix.at['state_of_charge', 'apparent_power'] = (
-                +1.0
-                * der_data.scenario_data.scenario.at['timestep_interval']
-                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                    +1.0
+                    * der_data.scenario_data.scenario.at['timestep_interval']
+                    / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )
             self.disturbance_matrix = (
                 pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
             )
             self.disturbance_matrix.at['state_of_charge', 'apparent_power_reference'] = (
-                -1.0
-                * der_data.scenario_data.scenario.at['timestep_interval']
-                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                    -1.0
+                    * der_data.scenario_data.scenario.at['timestep_interval']
+                    / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )
             self.state_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.states)
@@ -347,10 +344,10 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
             self.disturbance_output_matrix.at['power_maximum_margin', 'apparent_power_reference'] = (
-                +1.0 * der.at['power_per_unit_maximum']
+                    +1.0 * der.at['power_per_unit_maximum']
             )
             self.disturbance_output_matrix.at['power_minimum_margin', 'apparent_power_reference'] = (
-                -1.0 * der.at['power_per_unit_minimum']
+                    -1.0 * der.at['power_per_unit_minimum']
             )
 
             # Instantiate disturbance timeseries.
@@ -388,7 +385,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
 
         if self.is_thermal_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(['state_of_charge'])
             self.storage_states = pd.Index(['state_of_charge'])
@@ -414,17 +410,17 @@ class FlexibleLoadModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.states, columns=self.controls)
             )
             self.control_matrix.at['state_of_charge', 'thermal_power'] = (
-                -1.0
-                * der_data.scenario_data.scenario.at['timestep_interval']
-                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                    -1.0
+                    * der_data.scenario_data.scenario.at['timestep_interval']
+                    / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )
             self.disturbance_matrix = (
                 pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
             )
             self.disturbance_matrix.at['state_of_charge', 'thermal_power_reference'] = (
-                +1.0
-                * der_data.scenario_data.scenario.at['timestep_interval']
-                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                    +1.0
+                    * der_data.scenario_data.scenario.at['timestep_interval']
+                    / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
             )
             self.state_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.states)
@@ -436,16 +432,16 @@ class FlexibleLoadModel(FlexibleDERModel):
             self.control_output_matrix.at['power_maximum_margin', 'thermal_power'] = -1.0
             self.control_output_matrix.at['power_minimum_margin', 'thermal_power'] = +1.0
             self.control_output_matrix.at['thermal_power', 'thermal_power'] = (
-                1.0  if self.thermal_power_nominal != 0.0 else 0.0
+                1.0 if self.thermal_power_nominal != 0.0 else 0.0
             )
             self.disturbance_output_matrix = (
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
             self.disturbance_output_matrix.at['power_maximum_margin', 'thermal_power_reference'] = (
-                +1.0 * der.at['power_per_unit_maximum']
+                    +1.0 * der.at['power_per_unit_maximum']
             )
             self.disturbance_output_matrix.at['power_minimum_margin', 'thermal_power_reference'] = (
-                -1.0 * der.at['power_per_unit_minimum']
+                    -1.0 * der.at['power_per_unit_minimum']
             )
 
             # Instantiate disturbance timeseries.
@@ -516,9 +512,9 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         if (
                 pd.notnull(der.at['nominal_charging_definition_type'])
                 and (
-                    ('schedule' in der.at['nominal_charging_definition_type'])
-                    or ('timeseries' in der.at['nominal_charging_definition_type'])
-                )
+                ('schedule' in der.at['nominal_charging_definition_type'])
+                or ('timeseries' in der.at['nominal_charging_definition_type'])
+        )
                 and self.is_electric_grid_connected
         ):
             self.active_power_nominal_timeseries = (
@@ -537,17 +533,17 @@ class FlexibleEVChargerModel(FlexibleDERModel):
                 self.reactive_power_nominal_timeseries *= self.reactive_power_nominal
             else:
                 self.active_power_nominal_timeseries *= (
-                    np.sign(self.active_power_nominal)
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        np.sign(self.active_power_nominal)
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
                 self.reactive_power_nominal_timeseries *= (
-                    np.sign(self.reactive_power_nominal)
-                    * (
-                        self.reactive_power_nominal / self.active_power_nominal
-                        if self.active_power_nominal != 0.0
-                        else 1.0
-                    )
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        np.sign(self.reactive_power_nominal)
+                        * (
+                            self.reactive_power_nominal / self.active_power_nominal
+                            if self.active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 )
         else:
             self.active_power_nominal_timeseries = (
@@ -594,12 +590,12 @@ class FlexibleEVChargerModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['charged_energy', 'active_power_charge'] = (
-            der['charging_efficiency']
-            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+                der['charging_efficiency']
+                * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
         )
         self.control_matrix.at['charged_energy', 'active_power_discharge'] = (
-            -1.0
-            * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
+                -1.0
+                * (der_data.scenario_data.scenario.at['timestep_interval'] / pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
@@ -634,8 +630,8 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.disturbance_timeseries = (
             pd.concat([
                 pd.Series((
-                    der_data.der_definitions[der.at['departing_energy_definition_index']].loc[:, 'value'].copy()
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        der_data.der_definitions[der.at['departing_energy_definition_index']].loc[:, 'value'].copy()
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 ), index=self.timesteps, name='departing_energy')
             ], axis='columns')
         )
@@ -644,16 +640,16 @@ class FlexibleEVChargerModel(FlexibleDERModel):
         self.output_maximum_timeseries = (
             pd.concat([
                 pd.Series((
-                    der_data.der_definitions[der.at['maximum_energy_definition_index']].loc[:, 'value'].copy()
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        der_data.der_definitions[der.at['maximum_energy_definition_index']].loc[:, 'value'].copy()
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 ), index=self.timesteps, name='charged_energy'),
                 pd.Series((
-                    der_data.der_definitions[der.at['maximum_charging_definition_index']].loc[:, 'value'].copy()
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        der_data.der_definitions[der.at['maximum_charging_definition_index']].loc[:, 'value'].copy()
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 ), index=self.timesteps, name='active_power_charge'),
                 pd.Series((
-                    der_data.der_definitions[der.at['maximum_discharging_definition_index']].loc[:, 'value'].copy()
-                    / der_data.scenario_data.scenario.at['base_apparent_power']
+                        der_data.der_definitions[der.at['maximum_discharging_definition_index']].loc[:, 'value'].copy()
+                        / der_data.scenario_data.scenario.at['base_apparent_power']
                 ), index=self.timesteps, name='active_power_discharge'),
                 pd.Series(+np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
                 pd.Series(+np.inf, index=self.timesteps, name='reactive_power')
@@ -696,7 +692,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
 
         if self.is_electric_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in optimization problem definition.
             self.controls = pd.Index(['apparent_power'])
@@ -738,10 +733,10 @@ class FlexibleGeneratorModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
             self.disturbance_output_matrix.at['power_maximum_margin', 'apparent_power_reference'] = (
-                +1.0 * der.at['power_per_unit_maximum']
+                    +1.0 * der.at['power_per_unit_maximum']
             )
             self.disturbance_output_matrix.at['power_minimum_margin', 'apparent_power_reference'] = (
-                -1.0 * der.at['power_per_unit_minimum']
+                    -1.0 * der.at['power_per_unit_minimum']
             )
 
             # Instantiate disturbance timeseries.
@@ -777,7 +772,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
 
         if self.is_thermal_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(['_'])  # Define placeholder '_' to avoid issues in optimization problem definition.
             self.controls = pd.Index(['thermal_power'])
@@ -814,10 +808,10 @@ class FlexibleGeneratorModel(FlexibleDERModel):
                 pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
             )
             self.disturbance_output_matrix.at['power_maximum_margin', 'thermal_power_reference'] = (
-                +1.0 * der.at['power_per_unit_maximum']
+                    +1.0 * der.at['power_per_unit_maximum']
             )
             self.disturbance_output_matrix.at['power_minimum_margin', 'thermal_power_reference'] = (
-                -1.0 * der.at['power_per_unit_minimum']
+                    -1.0 * der.at['power_per_unit_minimum']
             )
 
             # Instantiate disturbance timeseries.
@@ -912,24 +906,24 @@ class StorageModel(FlexibleDERModel):
             pd.DataFrame(0.0, index=self.states, columns=self.states)
         )
         self.state_matrix.at['state_of_charge', 'state_of_charge'] = (
-            1.0
-            - der['self_discharge_rate']
-            * (der_data.scenario_data.scenario.at['timestep_interval'].seconds / 3600.0)
+                1.0
+                - der['self_discharge_rate']
+                * (der_data.scenario_data.scenario.at['timestep_interval'].seconds / 3600.0)
         )
         self.control_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.controls)
         )
         self.control_matrix.at['state_of_charge', 'active_power_charge'] = (
-            der['charging_efficiency']
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                der['charging_efficiency']
+                * der_data.scenario_data.scenario.at['timestep_interval']
+                / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
+                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.control_matrix.at['state_of_charge', 'active_power_discharge'] = (
-            -1.0
-            * der_data.scenario_data.scenario.at['timestep_interval']
-            / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
-            / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
+                -1.0
+                * der_data.scenario_data.scenario.at['timestep_interval']
+                / (der['active_power_nominal'] if der['active_power_nominal'] != 0.0 else 1.0)
+                / (der['energy_storage_capacity_per_unit'] * pd.Timedelta('1h'))
         )
         self.disturbance_matrix = (
             pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
@@ -969,14 +963,15 @@ class StorageModel(FlexibleDERModel):
             pd.concat([
                 pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='state_of_charge'),
                 (
-                    der['power_per_unit_maximum']
-                    * der['active_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge')
+                        der['power_per_unit_maximum']
+                        * der['active_power_nominal']
+                        * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power_charge')
                 ),
                 (
-                    der['power_per_unit_maximum']
-                    * der['active_power_nominal']
-                    * pd.Series(1.0, index=self.active_power_nominal_timeseries.index, name='active_power_discharge')
+                        der['power_per_unit_maximum']
+                        * der['active_power_nominal']
+                        * pd.Series(1.0, index=self.active_power_nominal_timeseries.index,
+                                    name='active_power_discharge')
                 ),
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='active_power'),
                 pd.Series(np.inf, index=self.active_power_nominal_timeseries.index, name='reactive_power')
@@ -1051,24 +1046,24 @@ class FlexibleBuildingModel(FlexibleDERModel):
         self.mapping_active_power_by_output = pd.DataFrame(0.0, index=['active_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
             self.mapping_active_power_by_output.at['active_power', 'grid_electric_power'] = (
-                -1.0
-                * flexible_building_model.zone_area_total
-                / der_data.scenario_data.scenario.at['base_apparent_power']
+                    -1.0
+                    * flexible_building_model.zone_area_total
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
             )
         self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=['reactive_power'], columns=self.outputs)
         if self.is_electric_grid_connected:
             self.mapping_reactive_power_by_output.at['reactive_power', 'grid_electric_power'] = (
-                -1.0
-                * np.tan(np.arccos(power_factor_nominal))
-                * flexible_building_model.zone_area_total
-                / der_data.scenario_data.scenario.at['base_apparent_power']
+                    -1.0
+                    * np.tan(np.arccos(power_factor_nominal))
+                    * flexible_building_model.zone_area_total
+                    / der_data.scenario_data.scenario.at['base_apparent_power']
             )
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=['thermal_power'], columns=self.outputs)
         if self.is_thermal_grid_connected:
             self.mapping_thermal_power_by_output.at['thermal_power', 'grid_thermal_power_cooling'] = (
-                -1.0
-                * flexible_building_model.zone_area_total
-                / der_data.scenario_data.scenario.at['base_thermal_power']
+                    -1.0
+                    * flexible_building_model.zone_area_total
+                    / der_data.scenario_data.scenario.at['base_thermal_power']
             )
 
         # Obtain initial state.
@@ -1113,7 +1108,8 @@ class CoolingPlantModel(FlexibleDERModel):
 
         # Cooling plant must be connected to both thermal grid and electric grid.
         if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
-            raise ValueError(f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
+            raise ValueError(
+                f"Cooling plant '{self.der_name}' must be connected to both thermal grid and electric grid")
 
         # Obtain cooling plant efficiency.
         # TODO: Enable consideration for dynamic wet bulb temperature.
@@ -1121,66 +1117,66 @@ class CoolingPlantModel(FlexibleDERModel):
             der.at['cooling_tower_set_reference_temperature_wet_bulb']
         )
         condensation_temperature = (
-            der.at['cooling_tower_set_reference_temperature_condenser_water']
-            + (
-                der.at['cooling_tower_set_reference_temperature_slope']
-                * (
-                    ambient_air_wet_bulb_temperature
-                    - der.at['cooling_tower_set_reference_temperature_wet_bulb']
+                der.at['cooling_tower_set_reference_temperature_condenser_water']
+                + (
+                        der.at['cooling_tower_set_reference_temperature_slope']
+                        * (
+                                ambient_air_wet_bulb_temperature
+                                - der.at['cooling_tower_set_reference_temperature_wet_bulb']
+                        )
                 )
-            )
-            + der.at['condenser_water_temperature_difference']
-            + der.at['chiller_set_condenser_minimum_temperature_difference']
-            + 273.15
+                + der.at['condenser_water_temperature_difference']
+                + der.at['chiller_set_condenser_minimum_temperature_difference']
+                + 273.15
         )
         chiller_inverse_coefficient_of_performance = (
-            (
                 (
-                    condensation_temperature
-                    / der.at['chiller_set_evaporation_temperature']
+                        (
+                                condensation_temperature
+                                / der.at['chiller_set_evaporation_temperature']
+                        )
+                        - 1.0
                 )
-                - 1.0
-            )
-            * (
-                der.at['chiller_set_beta']
-                + 1.0
-            )
+                * (
+                        der.at['chiller_set_beta']
+                        + 1.0
+                )
         )
         evaporator_pump_specific_electric_power = (
-            (1.0 / der.at['plant_pump_efficiency'])
-            * scipy.constants.value('standard acceleration of gravity')
-            * der.at['water_density']
-            * der.at['evaporator_pump_head']
-            / (
-                der.at['water_density']
-                * der.at['enthalpy_difference_distribution_water']
-            )
+                (1.0 / der.at['plant_pump_efficiency'])
+                * scipy.constants.value('standard acceleration of gravity')
+                * der.at['water_density']
+                * der.at['evaporator_pump_head']
+                / (
+                        der.at['water_density']
+                        * der.at['enthalpy_difference_distribution_water']
+                )
         )
         condenser_specific_thermal_power = (
-            1.0 + chiller_inverse_coefficient_of_performance
+                1.0 + chiller_inverse_coefficient_of_performance
         )
         condenser_pump_specific_electric_power = (
-            (1.0 / der.at['plant_pump_efficiency'])
-            * scipy.constants.value('standard acceleration of gravity')
-            * der.at['water_density']
-            * der.at['condenser_pump_head']
-            * condenser_specific_thermal_power
-            / (
-                der.at['water_density']
-                * der.at['condenser_water_enthalpy_difference']
-            )
+                (1.0 / der.at['plant_pump_efficiency'])
+                * scipy.constants.value('standard acceleration of gravity')
+                * der.at['water_density']
+                * der.at['condenser_pump_head']
+                * condenser_specific_thermal_power
+                / (
+                        der.at['water_density']
+                        * der.at['condenser_water_enthalpy_difference']
+                )
         )
         cooling_tower_ventilation_specific_electric_power = (
-            der.at['cooling_tower_set_ventilation_factor']
-            * condenser_specific_thermal_power
+                der.at['cooling_tower_set_ventilation_factor']
+                * condenser_specific_thermal_power
         )
         self.cooling_plant_efficiency = (
-            1.0 / sum([
-                chiller_inverse_coefficient_of_performance,
-                evaporator_pump_specific_electric_power,
-                condenser_pump_specific_electric_power,
-                cooling_tower_ventilation_specific_electric_power
-            ])
+                1.0 / sum([
+            chiller_inverse_coefficient_of_performance,
+            evaporator_pump_specific_electric_power,
+            condenser_pump_specific_electric_power,
+            cooling_tower_ventilation_specific_electric_power
+        ])
         )
 
         # Store timesteps index.
@@ -1231,10 +1227,10 @@ class CoolingPlantModel(FlexibleDERModel):
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
-            -1.0
-            * self.cooling_plant_efficiency
-            * der_data.scenario_data.scenario.at['base_apparent_power']
-            / der_data.scenario_data.scenario.at['base_thermal_power']
+                -1.0
+                * self.cooling_plant_efficiency
+                * der_data.scenario_data.scenario.at['base_apparent_power']
+                / der_data.scenario_data.scenario.at['base_thermal_power']
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -1355,39 +1351,38 @@ class HeatingPlantModel(FlexibleDERModel):
         self.output_maximum_timeseries = (
             pd.concat([
                 (
-                    der['power_per_unit_minimum']  # Take minimum, because load is negative power.
-                    * self.active_power_nominal_timeseries
+                        der['power_per_unit_minimum']  # Take minimum, because load is negative power.
+                        * self.active_power_nominal_timeseries
                 ),
                 (
-                    der['power_per_unit_minimum']  # Take minimum, because load is negative power.
-                    * self.reactive_power_nominal_timeseries
+                        der['power_per_unit_minimum']  # Take minimum, because load is negative power.
+                        * self.reactive_power_nominal_timeseries
                 ),
                 (
-                    self.thermal_power_nominal
-                    * self.thermal_power_nominal_timeseries
+                        self.thermal_power_nominal
+                        * self.thermal_power_nominal_timeseries
                 )
-            ], axis ='columns')
+            ], axis='columns')
         )
         self.output_minimum_timeseries = (
             pd.concat([
                 (
-                    der['power_per_unit_maximum']  # Take maximum, because load is negative power.
-                    * self.active_power_nominal_timeseries
+                        der['power_per_unit_maximum']  # Take maximum, because load is negative power.
+                        * self.active_power_nominal_timeseries
                 ),
                 (
-                    der['power_per_unit_maximum']  # Take maximum, because load is negative power.
-                    * self.reactive_power_nominal_timeseries
+                        der['power_per_unit_maximum']  # Take maximum, because load is negative power.
+                        * self.reactive_power_nominal_timeseries
                 ),
                 (
-                    0.0
-                    * self.thermal_power_nominal_timeseries
+                        0.0
+                        * self.thermal_power_nominal_timeseries
                 )
             ], axis='columns')
         )
 
 
 class FlexibleCHP(FlexibleDERModel):
-
     der_type = 'flexible_chp'
     marginal_cost: float
     thermal_efficiency: float
@@ -1468,7 +1463,7 @@ class FlexibleCHP(FlexibleDERModel):
             else 0.0
         )
         self.control_output_matrix.at['thermal_power', 'active_power'] = (
-            1.0 * (self.thermal_efficiency / self.electric_efficiency)
+                1.0 * (self.thermal_efficiency / self.electric_efficiency)
         )
         self.disturbance_output_matrix = (
             pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
@@ -1498,7 +1493,6 @@ class FlexibleCHP(FlexibleDERModel):
 
 
 class DERModelSetBase:
-
     timesteps: pd.Index
     ders: pd.Index
     electric_ders: pd.Index
@@ -1519,7 +1513,6 @@ class DERModelSetBase:
 
 
 class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
-
     der_model_set: DERModelSetBase
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame
@@ -1688,13 +1681,17 @@ class DERModelSet(DERModelSetBase):
             price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None,
             state_space_model: bool = True,
-            kkt_conditions: bool = False
+            kkt_conditions: bool = False,
+            grid_cost_coefficient: float = 1
     ):
 
         # Define optimization problem definitions through respective sub-methods.
         self.define_optimization_variables(optimization_problem, scenarios=scenarios)
-        self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios)
-        self.define_optimization_constraints(optimization_problem, state_space_model=state_space_model, scenarios=scenarios)
+        self.define_optimization_parameters(optimization_problem, price_data,
+                                            grid_cost_coefficient=grid_cost_coefficient,
+                                            scenarios=scenarios)
+        self.define_optimization_constraints(optimization_problem, state_space_model=state_space_model,
+                                             scenarios=scenarios)
         if not kkt_conditions:
             self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
@@ -1736,12 +1733,15 @@ class DERModelSet(DERModelSetBase):
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
             price_data: mesmo.data_interface.PriceData,
+            grid_cost_coefficient: float = 1,
             scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
+
+
 
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
@@ -1754,6 +1754,25 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ])[~self.states.isin(self.storage_states)]
         )
+        # {
+        scale_map_initial_state_vector_to_state_vector_size = pd.DataFrame(
+            0, index=self.states, columns=self.states[~self.states.isin(self.storage_states)]
+        )
+        for i in scale_map_initial_state_vector_to_state_vector_size.index:
+            for c in scale_map_initial_state_vector_to_state_vector_size.columns:
+                if i == c:
+                    scale_map_initial_state_vector_to_state_vector_size.at[i, c] = 1
+
+        optimization_problem.define_parameter(
+            'state_vector_initial_transposed',
+            np.transpose(
+                scale_map_initial_state_vector_to_state_vector_size.values
+                @ np.concatenate([
+                    self.flexible_der_models[der_name].state_vector_initial.values
+                    for der_name in self.flexible_der_names
+                ])[~self.states.isin(self.storage_states)])
+        )
+        # }
         optimization_problem.define_parameter(
             'state_matrix',
             sp.block_diag([
@@ -1761,6 +1780,36 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ])
         )
+        # {
+        optimization_problem.define_parameter(
+            'state_matrix_transposed',
+            np.transpose(sp.block_diag([
+                self.flexible_der_models[der_name].state_matrix.values
+                for der_name in self.flexible_der_names
+            ]))
+        )
+        # ============================
+        # state_non_storage_set_to_zero_map = pd.DataFrame(0, index=self.states, columns=self.states)
+        # for i in state_non_storage_set_to_zero_map.index:
+        #     for c in state_non_storage_set_to_zero_map.columns:
+        #         if c == i and i in self.states[self.states.isin(self.storage_states)]:
+        #             state_non_storage_set_to_zero_map.at[i, c] = 1
+        #
+        # state_storage_set_to_zero_map = pd.DataFrame(0, index=self.states, columns=self.states)
+        # for i in state_storage_set_to_zero_map.index:
+        #     for c in state_storage_set_to_zero_map.columns:
+        #         if c == i and i in self.states[~self.states.isin(self.storage_states)]:
+        #             state_storage_set_to_zero_map.at[i, c] = 1
+        # # ============================
+        # optimization_problem.define_parameter(
+        #     'storage_state_matrix_transposed',
+        #     state_non_storage_set_to_zero_map.values
+        #     @ np.transpose(sp.block_diag([
+        #         self.flexible_der_models[der_name].state_matrix.values
+        #         for der_name in self.flexible_der_names
+        #     ]))
+        # )
+        # }
         optimization_problem.define_parameter(
             'control_matrix',
             sp.block_diag([
@@ -1768,19 +1817,43 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ])
         )
+        # {
+        optimization_problem.define_parameter(
+            'control_matrix_transposed',
+            np.transpose(sp.block_diag([
+                self.flexible_der_models[der_name].control_matrix.values
+                for der_name in self.flexible_der_names
+            ]))
+        )
+        # }
         optimization_problem.define_parameter(
             'disturbance_state_equation',
             (
-                sp.block_diag([
-                    self.flexible_der_models[der_name].disturbance_matrix.values
-                    for der_name in self.flexible_der_names
-                ])
-                @ pd.concat([
-                    self.flexible_der_models[der_name].disturbance_timeseries
-                    for der_name in self.flexible_der_names
-                ], axis='columns').iloc[:-1, :].T.values
+                    sp.block_diag([
+                        self.flexible_der_models[der_name].disturbance_matrix.values
+                        for der_name in self.flexible_der_names
+                    ])
+                    @ pd.concat([
+                self.flexible_der_models[der_name].disturbance_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').iloc[:-1, :].T.values
             ).T.ravel()
         )
+        # {
+        optimization_problem.define_parameter(
+            'disturbance_state_equation_transposed',
+            np.array([(
+                              sp.block_diag([
+                                  self.flexible_der_models[der_name].disturbance_matrix.values
+                                  for der_name in self.flexible_der_names
+                              ])
+                              @ pd.concat([
+                          self.flexible_der_models[der_name].disturbance_timeseries
+                          for der_name in self.flexible_der_names
+                      ], axis='columns').iloc[:-1, :].T.values
+                      ).T.ravel()])
+        )
+        # }
         optimization_problem.define_parameter(
             'state_output_matrix',
             sp.block_diag([
@@ -1788,6 +1861,23 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ])
         )
+        # {
+        optimization_problem.define_parameter(
+            'state_output_matrix_transposed',
+            np.transpose(sp.block_diag([
+                self.flexible_der_models[der_name].state_output_matrix.values
+                for der_name in self.flexible_der_names
+            ]))
+        )
+        # optimization_problem.define_parameter(
+        #     'storage_state_output_matrix_transposed',
+        #     state_non_storage_set_to_zero_map.values
+        #     @ np.transpose(sp.block_diag([
+        #         self.flexible_der_models[der_name].state_output_matrix.values
+        #         for der_name in self.flexible_der_names
+        #     ]))
+        # )
+        # }
         optimization_problem.define_parameter(
             'control_output_matrix',
             sp.block_diag([
@@ -1795,19 +1885,43 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ])
         )
+        # {
+        optimization_problem.define_parameter(
+            'minus_control_output_matrix_transposed',
+            -1.0 * np.transpose(sp.block_diag([
+                self.flexible_der_models[der_name].control_output_matrix.values
+                for der_name in self.flexible_der_names
+            ]))
+        )
+        # }
         optimization_problem.define_parameter(
             'disturbance_output_equation',
             (
-                sp.block_diag([
-                    self.flexible_der_models[der_name].disturbance_output_matrix.values
-                    for der_name in self.flexible_der_names
-                ])
-                @ pd.concat([
-                    self.flexible_der_models[der_name].disturbance_timeseries
-                    for der_name in self.flexible_der_names
-                ], axis='columns').T.values
+                    sp.block_diag([
+                        self.flexible_der_models[der_name].disturbance_output_matrix.values
+                        for der_name in self.flexible_der_names
+                    ])
+                    @ pd.concat([
+                self.flexible_der_models[der_name].disturbance_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').T.values
             ).T.ravel()
         )
+        # {
+        optimization_problem.define_parameter(
+            'disturbance_output_equation_transposed',
+            np.array([(
+                              sp.block_diag([
+                                  self.flexible_der_models[der_name].disturbance_output_matrix.values
+                                  for der_name in self.flexible_der_names
+                              ])
+                              @ pd.concat([
+                          self.flexible_der_models[der_name].disturbance_timeseries
+                          for der_name in self.flexible_der_names
+                      ], axis='columns').T.values
+                      ).T.ravel()])
+        )
+        # }
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
                 'active_power_constant',
@@ -1827,6 +1941,26 @@ class DERModelSet(DERModelSetBase):
                     for der_type, der_name in self.electric_ders
                 ], axis=1).ravel()
             )
+            # {
+            optimization_problem.define_parameter(
+                'active_power_constant_transposed',
+                np.array([np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].active_power_nominal
+                            if self.fixed_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()])
+            )
+            # }
             optimization_problem.define_parameter(
                 'mapping_active_power_by_output',
                 sp.block_diag([
@@ -1849,6 +1983,30 @@ class DERModelSet(DERModelSetBase):
                     for der_type, der_name in self.ders
                 ])
             )
+            # {
+            optimization_problem.define_parameter(
+                'mapping_active_power_by_output_transposed',
+                np.transpose(sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_active_power_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].active_power_nominal
+                            if self.flexible_der_models[der_name].active_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                    )
+                    if der_name in self.flexible_der_names
+                    else (
+                        np.zeros((1, 0))
+                        if self.der_models[der_name].is_electric_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
+                ]))
+            )
+            # }
             optimization_problem.define_parameter(
                 'reactive_power_constant',
                 np.concatenate([
@@ -1867,6 +2025,26 @@ class DERModelSet(DERModelSetBase):
                     for der_type, der_name in self.electric_ders
                 ], axis=1).ravel()
             )
+            # {
+            optimization_problem.define_parameter(
+                'reactive_power_constant_transposed',
+                np.array([np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].reactive_power_nominal
+                            if self.fixed_der_models[der_name].reactive_power_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_electric_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].reactive_power_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.electric_ders
+                ], axis=1).ravel()])
+            )
+            # }
             optimization_problem.define_parameter(
                 'mapping_reactive_power_by_output',
                 sp.block_diag([
@@ -1889,6 +2067,30 @@ class DERModelSet(DERModelSetBase):
                     for der_type, der_name in self.ders
                 ])
             )
+        # {
+        optimization_problem.define_parameter(
+            'mapping_reactive_power_by_output_transposed',
+            np.transpose(sp.block_diag([
+                (
+                    self.flexible_der_models[der_name].mapping_reactive_power_by_output.values
+                    / (
+                        self.flexible_der_models[der_name].reactive_power_nominal
+                        if self.flexible_der_models[der_name].reactive_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if self.flexible_der_models[der_name].is_electric_grid_connected
+                    else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                )
+                if der_name in self.flexible_der_names
+                else (
+                    np.zeros((1, 0))
+                    if self.der_models[der_name].is_electric_grid_connected
+                    else np.zeros((0, 0))
+                )
+                for der_type, der_name in self.ders
+            ]))
+        )
+        # }
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
                 'thermal_power_constant',
@@ -1937,6 +2139,15 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ], axis='columns').values.ravel()
         )
+        # {
+        optimization_problem.define_parameter(
+            'minus_output_minimum_timeseries_transposed',
+            -1.0 * np.transpose(pd.concat([
+                self.flexible_der_models[der_name].output_minimum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel())
+        )
+        # }
         optimization_problem.define_parameter(
             'output_maximum_timeseries',
             pd.concat([
@@ -1944,22 +2155,31 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ], axis='columns').values.ravel()
         )
+        # {
+        optimization_problem.define_parameter(
+            'output_maximum_timeseries_transposed',
+            np.transpose(pd.concat([
+                self.flexible_der_models[der_name].output_maximum_timeseries
+                for der_name in self.flexible_der_names
+            ], axis='columns').values.ravel())
+        )
+        # }
 
         # Define objective parameters.
         if len(self.electric_ders) > 0:
             optimization_problem.define_parameter(
                 'der_active_power_cost',
                 np.array([(
-                    (
-                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
-                            price_data.price_timeseries.columns,
-                            commodity_type='active_power',
-                            der_name=self.electric_ders.get_level_values('der_name')
-                        )].values
-                    )
-                    * -0.15 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag(self.der_active_power_vector_reference)
-                ).ravel()])
+                                  (
+                                     price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
+                                          price_data.price_timeseries.columns,
+                                          commodity_type='active_power',
+                                          der_name=self.electric_ders.get_level_values('der_name')
+                                      )].values
+                                  )
+                                  * -grid_cost_coefficient * timestep_interval_hours  # In Wh.
+                                  @ sp.block_diag(self.der_active_power_vector_reference)
+                          ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_active_power_cost_sensitivity',
@@ -1970,16 +2190,16 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_parameter(
                 'der_reactive_power_cost',
                 np.array([(
-                    (
-                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
-                            price_data.price_timeseries.columns,
-                            commodity_type='reactive_power',
-                            der_name=self.electric_ders.get_level_values('der_name')
-                        )].values
-                    )
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag(self.der_reactive_power_vector_reference)
-                ).ravel()])
+                                  (
+                                      price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
+                                          price_data.price_timeseries.columns,
+                                          commodity_type='reactive_power',
+                                          der_name=self.electric_ders.get_level_values('der_name')
+                                      )].values
+                                  )
+                                  * -1.0 * timestep_interval_hours  # In Wh.
+                                  @ sp.block_diag(self.der_reactive_power_vector_reference)
+                          ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_cost_sensitivity',
@@ -1991,16 +2211,16 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_parameter(
                 'der_thermal_power_cost',
                 np.array([(
-                    (
-                        price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
-                            price_data.price_timeseries.columns,
-                            commodity_type='thermal_power',
-                            der_name=self.thermal_ders.get_level_values('der_name')
-                        )].values
-                    )
-                    * -1.0 * timestep_interval_hours  # In Wh.
-                    @ sp.block_diag(self.der_thermal_power_vector_reference)
-                ).ravel()])
+                                  (
+                                      price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
+                                          price_data.price_timeseries.columns,
+                                          commodity_type='thermal_power',
+                                          der_name=self.thermal_ders.get_level_values('der_name')
+                                      )].values
+                                  )
+                                  * -1.0 * timestep_interval_hours  # In Wh.
+                                  @ sp.block_diag(self.der_thermal_power_vector_reference)
+                          ).ravel()])
             )
             optimization_problem.define_parameter(
                 'der_thermal_power_cost_sensitivity',
@@ -2014,31 +2234,31 @@ class DERModelSet(DERModelSetBase):
             optimization_problem.define_parameter(
                 'der_active_power_marginal_cost',
                 np.concatenate([[[
-                    self.der_models[der_name].marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    * self.der_models[der_name].active_power_nominal
-                    for der_type, der_name in self.electric_ders
-                ] * len(self.timesteps)]], axis=1)
+                                     self.der_models[der_name].marginal_cost
+                                     * timestep_interval_hours  # In Wh.
+                                     * self.der_models[der_name].active_power_nominal
+                                     for der_type, der_name in self.electric_ders
+                                 ] * len(self.timesteps)]], axis=1)
             )
             optimization_problem.define_parameter(
                 'der_reactive_power_marginal_cost',
                 np.concatenate([[[
-                    0.0
-                    # self.der_models[der_name].marginal_cost
-                    # * timestep_interval_hours  # In Wh.
-                    # * self.der_models[der_name].reactive_power_nominal
-                    for der_type, der_name in self.electric_ders
-                ] * len(self.timesteps)]], axis=1)
+                                     0.0
+                                     # self.der_models[der_name].marginal_cost
+                                     # * timestep_interval_hours  # In Wh.
+                                     # * self.der_models[der_name].reactive_power_nominal
+                                     for der_type, der_name in self.electric_ders
+                                 ] * len(self.timesteps)]], axis=1)
             )
         if len(self.thermal_ders) > 0:
             optimization_problem.define_parameter(
                 'der_thermal_power_marginal_cost',
                 np.concatenate([[[
-                    self.der_models[der_name].marginal_cost
-                    * timestep_interval_hours  # In Wh.
-                    * self.der_models[der_name].thermal_power_nominal
-                    for der_type, der_name in self.thermal_ders
-                ] * len(self.timesteps)]], axis=1)
+                                     self.der_models[der_name].marginal_cost
+                                     * timestep_interval_hours  # In Wh.
+                                     * self.der_models[der_name].thermal_power_nominal
+                                     for der_type, der_name in self.thermal_ders
+                                 ] * len(self.timesteps)]], axis=1)
             )
 
     def define_optimization_constraints(
@@ -2116,12 +2336,20 @@ class DERModelSet(DERModelSetBase):
                 ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
                 '>=',
                 ('constant', 'output_minimum_timeseries', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='output_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     output=self.outputs
+                # ),
                 broadcast=['timestep', 'scenario']
             )
             optimization_problem.define_constraint(
                 ('variable', 1.0, dict(name='output_vector', scenario=scenarios, timestep=self.timesteps)),
                 '<=',
                 ('constant', 'output_maximum_timeseries', dict(scenario=scenarios)),
+                # keys=dict(
+                #     name='output_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                #     output=self.outputs
+                # ),
                 broadcast=['timestep', 'scenario']
             )
 
@@ -2556,7 +2784,6 @@ def make_der_models(
         der_names: typing.List[str],
         der_data: mesmo.data_interface.DERData
 ) -> typing.Dict[str, DERModel]:
-
     der_models = dict.fromkeys(der_names)
 
     for der_name in der_names:

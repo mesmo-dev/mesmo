@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from mesmo.updated_strategic_model import StrategicMarket
+from mesmo.kkt_conditions_with_state_space import StrategicMarket
 import mesmo
 
 
@@ -15,8 +15,8 @@ def main():
     # TODO: Currently not working. Review limits below.
 
     # scenarios = [None]
-    scenario_name = "strategic_dso_market"
-    # scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'
+    # scenario_name = "strategic_dso_market"
+    scenario_name = 'strategic_market_19_node'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -53,10 +53,13 @@ def main():
     reactive_power_vector_minimum = 0.0 * np.imag(electric_grid_model.der_power_vector_reference)
     reactive_power_vector_maximum = 1.1 * np.imag(electric_grid_model.der_power_vector_reference)
 
+    grid_cost_coefficient = 3.0
+
     der_model_set.define_optimization_problem(optimization_centralized,
                                               price_data,
-                                              state_space_model=False,
-                                              kkt_conditions=False
+                                              state_space_model=True,
+                                              kkt_conditions=False,
+                                              grid_cost_coefficient=grid_cost_coefficient
                                               )
 
     linear_electric_grid_model_set.define_optimization_problem(
@@ -65,10 +68,10 @@ def main():
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
         branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-        kkt_conditions=False
+        kkt_conditions=False,
+        grid_cost_coefficient=grid_cost_coefficient
     )
 
-    # strategic_scenario = False
     strategic_scenario = True
     if strategic_scenario:
         strategic_der_model_set = StrategicMarket(scenario_name)
@@ -83,6 +86,7 @@ def main():
             reactive_power_vector_minimum=reactive_power_vector_minimum,
             reactive_power_vector_maximum=reactive_power_vector_maximum,
             big_m=100,
+            grid_cost_coefficient=grid_cost_coefficient
         )
 
     # Define DER problem.
@@ -92,11 +96,13 @@ def main():
 
 
     # Obtain results.
+    flexible_der_type = ['flexible_generator', 'flexible_load']
+
     results = linear_electric_grid_model_set.get_optimization_results(optimization_centralized)
-    a = results.der_active_power_vector_per_unit.transpose()
-    b = results.der_reactive_power_vector_per_unit.transpose()
+    a = results.der_active_power_vector_per_unit[flexible_der_type]
+    b = results.der_reactive_power_vector_per_unit[flexible_der_type]
     if strategic_scenario:
-        c = optimization_centralized.results['der_strategic_offer']
+        c = optimization_centralized.results['der_strategic_offer'].transpose()
         d = optimization_centralized.results['flexible_generator_strategic_offer']
 
 

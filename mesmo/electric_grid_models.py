@@ -4181,6 +4181,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             price_data: mesmo.data_interface.PriceData,
             scenarios: typing.Union[list, pd.Index] = None,
             kkt_conditions: bool = False,
+            grid_cost_coefficient: float = 1,
             **kwargs
     ):
 
@@ -4190,6 +4191,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             optimization_problem,
             price_data,
             scenarios=scenarios,
+            grid_cost_coefficient=grid_cost_coefficient,
             **kwargs
         )
         self.define_optimization_constraints(optimization_problem, scenarios=scenarios)
@@ -4247,7 +4249,8 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None,
-            scenarios: typing.Union[list, pd.Index] = None
+            scenarios: typing.Union[list, pd.Index] = None,
+            grid_cost_coefficient: float = 1
     ):
 
         # If no scenarios given, obtain default value.
@@ -4476,7 +4479,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem.define_parameter(
             'electric_grid_active_power_cost',
             np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-            * -0.15 * timestep_interval_hours  # In Wh.
+            * -grid_cost_coefficient * timestep_interval_hours  # In Wh.
             @ sp.block_diag(
                 [np.array([np.real(self.electric_grid_model.der_power_vector_reference)])] * len(self.timesteps)
             )

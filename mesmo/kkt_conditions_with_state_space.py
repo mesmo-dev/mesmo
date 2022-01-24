@@ -33,7 +33,7 @@ class StrategicMarket(object):
         for i in self.strategic_generator_set_to_zero_map.index:
             for c in self.strategic_generator_set_to_zero_map.columns:
                 # if i == c and '4_5' not in i:
-                if i == c and '6_10' not in i:
+                if i == c and '01_10' not in i:
                     self.strategic_generator_set_to_zero_map.at[i, c] = 1
 
         self.timesteps = self.linear_electric_grid_model_set.timesteps
@@ -48,7 +48,7 @@ class StrategicMarket(object):
                     self.flexible_load_map.at[i, c] = 1
 
         # self.strategic_generator_index = [der for der in self.ders if '4_5' in der]
-        self.strategic_generator_index = [der for der in self.ders if '6_10' in der]
+        self.strategic_generator_index = [der for der in self.ders if '01_10' in der]
         self.flexible_generator_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
         for i in self.flexible_generator_map.index:
             for c in self.flexible_generator_map.columns:

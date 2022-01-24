@@ -2171,7 +2171,7 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_cost',
                 np.array([(
                                   (
-                                      price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
+                                     price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
                                           price_data.price_timeseries.columns,
                                           commodity_type='active_power',
                                           der_name=self.electric_ders.get_level_values('der_name')

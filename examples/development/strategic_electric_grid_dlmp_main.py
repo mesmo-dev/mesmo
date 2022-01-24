@@ -15,8 +15,8 @@ def main():
     # TODO: Currently not working. Review limits below.
 
     # scenarios = [None]
-    scenario_name = "strategic_dso_market"
-    # scenario_name = 'paper_2021_kleinschmidt_isgt_scenario_1'
+    # scenario_name = "strategic_dso_market"
+    scenario_name = 'strategic_market_19_node'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -53,7 +53,7 @@ def main():
     reactive_power_vector_minimum = 0.0 * np.imag(electric_grid_model.der_power_vector_reference)
     reactive_power_vector_maximum = 1.1 * np.imag(electric_grid_model.der_power_vector_reference)
 
-    grid_cost_coefficient = 0.15
+    grid_cost_coefficient = 3.0
 
     der_model_set.define_optimization_problem(optimization_centralized,
                                               price_data,
@@ -72,7 +72,6 @@ def main():
         grid_cost_coefficient=grid_cost_coefficient
     )
 
-    # strategic_scenario = False
     strategic_scenario = True
     if strategic_scenario:
         strategic_der_model_set = StrategicMarket(scenario_name)
@@ -103,7 +102,7 @@ def main():
     a = results.der_active_power_vector_per_unit[flexible_der_type]
     b = results.der_reactive_power_vector_per_unit[flexible_der_type]
     if strategic_scenario:
-        c = optimization_centralized.results['der_strategic_offer']
+        c = optimization_centralized.results['der_strategic_offer'].transpose()
         d = optimization_centralized.results['flexible_generator_strategic_offer']
 
 

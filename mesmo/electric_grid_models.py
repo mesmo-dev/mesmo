@@ -4630,10 +4630,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '>=',
             ('constant', 'voltage_limit_minimum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='voltage_magnitude_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     node=self.electric_grid_model.nodes
-            # ),
+            keys=dict(
+                name='voltage_magnitude_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            ),
             broadcast='scenario'
         )
         optimization_problem.define_constraint(
@@ -4643,10 +4643,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '<=',
             ('constant', 'voltage_limit_maximum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='voltage_magnitude_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     node=self.electric_grid_model.nodes
-            # ),
+            keys=dict(
+                name='voltage_magnitude_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                node=self.electric_grid_model.nodes
+            ),
             broadcast='scenario'
         )
 
@@ -4659,10 +4659,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '>=',
             ('constant', 'branch_power_minimum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='branch_power_magnitude_vector_1_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     branch=self.electric_grid_model.branches
-            # ),
+            keys=dict(
+                name='branch_power_magnitude_vector_1_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            ),
             broadcast='scenario'
         )
         optimization_problem.define_constraint(
@@ -4672,10 +4672,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '<=',
             ('constant', 'branch_power_maximum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='branch_power_magnitude_vector_1_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     branch=self.electric_grid_model.branches
-            # ),
+            keys=dict(
+                name='branch_power_magnitude_vector_1_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            ),
             broadcast='scenario'
         )
         optimization_problem.define_constraint(
@@ -4685,10 +4685,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '>=',
             ('constant', 'branch_power_minimum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='branch_power_magnitude_vector_2_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     branch=self.electric_grid_model.branches
-            # ),
+            keys=dict(
+                name='branch_power_magnitude_vector_2_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            ),
             broadcast='scenario'
         )
         optimization_problem.define_constraint(
@@ -4698,10 +4698,10 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             )),
             '<=',
             ('constant', 'branch_power_maximum', dict(scenario=scenarios, timestep=self.timesteps)),
-            # keys=dict(
-            #     name='branch_power_magnitude_vector_2_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-            #     branch=self.electric_grid_model.branches
-            # ),
+            keys=dict(
+                name='branch_power_magnitude_vector_2_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                branch=self.electric_grid_model.branches
+            ),
             broadcast='scenario'
         )
 

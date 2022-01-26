@@ -49,10 +49,6 @@ def main():
     node_voltage_magnitude_vector_minimum = 0.91 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 1.2 * electric_grid_model.branch_power_vector_magnitude_reference
-    # active_power_vector_minimum = 0.0 * np.real(electric_grid_model.der_power_vector_reference)
-    # active_power_vector_maximum = 1.3 * np.real(electric_grid_model.der_power_vector_reference)
-    # reactive_power_vector_minimum = 0.0 * np.imag(electric_grid_model.der_power_vector_reference)
-    # reactive_power_vector_maximum = 1.1 * np.imag(electric_grid_model.der_power_vector_reference)
 
     grid_cost_coefficient = 1.0
 
@@ -99,10 +95,6 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            # active_power_vector_minimum=active_power_vector_minimum,
-            # active_power_vector_maximum=active_power_vector_maximum,
-            # reactive_power_vector_minimum=reactive_power_vector_minimum,
-            # reactive_power_vector_maximum=reactive_power_vector_maximum,
             big_m=100,
             grid_cost_coefficient=grid_cost_coefficient
         )

@@ -4507,7 +4507,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem.define_parameter(
             'electric_grid_loss_active_cost',
             price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values
-            * timestep_interval_hours  # In Wh.
+            * timestep_interval_hours *grid_cost_coefficient  # In Wh.
         )
         optimization_problem.define_parameter(
             'electric_grid_loss_reactive_cost',

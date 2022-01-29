@@ -746,6 +746,16 @@ class StrategicMarket(object):
             )),
             broadcast=['scenario']
         )
+        # optimization_problem.define_constraint(
+        #     ('variable', 1.0, dict(
+        #         name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
+        #         fg=self.strategic_generator_index
+        #     )),
+        #     '>=',
+        #     ('constant', 'offer_zeros', dict(scenario=scenarios)),
+        #     broadcast=['scenario']
+        # )
+
 
         optimization_problem.define_constraint(
             ('variable', 1.0, dict(
@@ -1307,16 +1317,16 @@ class StrategicMarket(object):
                 ))
             )
 
-            optimization_problem.define_objective(
-                ('variable', 'minus_strategic_generator_maximum_active_power', dict(
-                    name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
-                    output=self.der_model_set.outputs
-                )),
-                ('variable', 'strategic_generator_minimum_active_power', dict(
-                  name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
-                  output=self.der_model_set.outputs
-                ))
-            )
+            # optimization_problem.define_objective(
+            #     ('variable', 'minus_strategic_generator_maximum_active_power', dict(
+            #         name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
+            #         output=self.der_model_set.outputs
+            #     )),
+            #     ('variable', 'strategic_generator_minimum_active_power', dict(
+            #       name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
+            #       output=self.der_model_set.outputs
+            #     ))
+            # )
             # optimization_problem.define_objective(
             #     ('variable', 'active_power_constant_transposed', dict(
             #         name='output_to_active_power_mapping_equation_mu', scenario=scenarios, der=self.ders
@@ -1325,12 +1335,12 @@ class StrategicMarket(object):
             #         name='output_to_reactive_power_mapping_equation_mu', scenario=scenarios, der=self.ders
             #     )),
             # )
-            optimization_problem.define_objective(
-                ('variable', 'minus_output_minimum_timeseries_transposed', dict(
-                    name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
-                    output=self.der_model_set.outputs
-                ))
-            )
+            # optimization_problem.define_objective(
+            #     ('variable', 'minus_output_minimum_timeseries_transposed', dict(
+            #         name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,
+            #         output=self.der_model_set.outputs
+            #     ))
+            # )
             optimization_problem.define_objective(
                 ('variable', 'disturbance_state_equation_transposed', dict(
                     name='state_equation_mu', scenario=scenarios, timestep=self.timesteps[0:-1],

@@ -16,6 +16,7 @@ def main():
 
     # Settings.
     scenario_name = mesmo.config.config['tests']['scenario_name']
+    # scenario_name = 'strategic_market_19_node'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -23,7 +24,9 @@ def main():
 
     # Obtain data.
     scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
-    price_data = mesmo.data_interface.PriceData(scenario_name, price_type='singapore_wholesale')
+    price_data = mesmo.data_interface.PriceData(scenario_name,
+                                                # price_type='singapore_wholesale'
+                                                )
     price_data.price_sensitivity_coefficient = 1e-6
 
     # Obtain models.
@@ -42,12 +45,12 @@ def main():
 
     # Define electric grid problem.
     # TODO: Review limits.
-    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_minimum = 0.95 * np.abs(electric_grid_model.node_voltage_vector_reference)
     # node_voltage_magnitude_vector_minimum[
     #     mesmo.utils.get_index(electric_grid_model.nodes, node_name='4')
     # ] *= 0.95 / 0.5
-    node_voltage_magnitude_vector_maximum = 1.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 10.0 * electric_grid_model.branch_power_vector_magnitude_reference
+    node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 1.2 * electric_grid_model.branch_power_vector_magnitude_reference
     # branch_power_magnitude_vector_maximum[
     #     mesmo.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
     # ] *= 1.2 / 10.0
@@ -74,7 +77,7 @@ def main():
     print(results_centralized)
 
     # Store results to CSV.
-    results_centralized.save(results_path)
+    # results_centralized.save(results_path)
 
     # Obtain DLMPs.
     dlmps = linear_electric_grid_model_set.get_optimization_dlmps(optimization_centralized, price_data)
@@ -83,7 +86,7 @@ def main():
     print(dlmps)
 
     # Store DLMPs as CSV.
-    dlmps.save(results_path)
+    # dlmps.save(results_path)
 
     # Validate DLMPs.
     der_name = '4_2'

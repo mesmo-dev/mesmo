@@ -29,7 +29,12 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     nodes: pd.Index
     branches: pd.Index
     ders: pd.Index
-    branch_node_incidence_matrix: sp.spmatrix
+    branch_incidence_1_matrix: sp.spmatrix
+    branch_incidence_2_matrix: sp.spmatrix
+    branch_incidence_matrix: sp.spmatrix
+    branch_incidence_matrix_no_source_no_loop: sp.spmatrix
+    branch_incidence_matrix_no_source_loop: sp.spmatrix
+    branch_loop_incidence_matrix: sp.spmatrix
     der_node_incidence_matrix: sp.spmatrix
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
@@ -78,26 +83,126 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         self.branches = self.line_names.rename('branch_name')
         self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
-        # Define branch to node incidence matrix.
-        self.branch_node_incidence_matrix = (
-            sp.dok_matrix((len(self.nodes), len(self.branches)), dtype=int)
+        # Instantiate branch-to-node incidence matrices.
+        self.branch_incidence_1_matrix = (
+            sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
         )
-        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
-            for branch_index, branch in enumerate(self.branches):
-                if node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_1_name']:
-                    self.branch_node_incidence_matrix[node_index, branch_index] += +1.0
-                elif node_name == thermal_grid_data.thermal_grid_lines.at[branch, 'node_2_name']:
-                    self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
-        self.branch_node_incidence_matrix = self.branch_node_incidence_matrix.tocsr()
+        self.branch_incidence_2_matrix = (
+            sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
+        )
 
-        # Define DER to node incidence matrix.
+        # Add lines to branch incidence matrices and identify any loops.
+        # - Uses temporary node tree variable to track construction of the network and identify any loops / cycles.
+        branches_loop_types = pd.Series(['no_loop'] * len(self.branches), index=self.branches, name='loop_type')
+        node_trees = []
+        for line_index, line in thermal_grid_data.thermal_grid_lines.iterrows():
+
+            # Obtain indexes for positioning the line in the incidence matrices.
+            node_index_1 = mesmo.utils.get_index(self.nodes, node_name=line['node_1_name'])
+            node_index_2 = mesmo.utils.get_index(self.nodes, node_name=line['node_2_name'])
+            branch_index = mesmo.utils.get_index(self.branches, branch_name=line['line_name'])
+
+            # Insert connection indicators into incidence matrices.
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += 1
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += 1
+
+            # Check if node 1 or node 2 are in any node trees.
+            is_loop = False
+            node_tree_index_1 = []
+            node_tree_index_2 = []
+            for node_tree_index, node_tree in enumerate(node_trees):
+                if line['node_1_name'] in node_tree:
+                    node_tree_index_1.append(node_tree_index)
+                if line['node_2_name'] in node_tree:
+                    node_tree_index_2.append(node_tree_index)
+            if (len(node_tree_index_1) == 0) and (len(node_tree_index_2) == 0):
+                # Create new tree, if no node is on any tree.
+                node_trees.append([line['node_1_name'], line['node_2_name']])
+            elif (len(node_tree_index_1) == 1) and (len(node_tree_index_2) == 0):
+                # Add node to tree, if other node is on any tree.
+                node_trees[node_tree_index_1[0]].append(line['node_2_name'])
+            elif (len(node_tree_index_1) == 0) and (len(node_tree_index_2) == 1):
+                # Add node to tree, if other node is on any tree.
+                node_trees[node_tree_index_2[0]].append(line['node_1_name'])
+            elif (len(node_tree_index_1) == 1) and (len(node_tree_index_2) == 1):
+                if node_tree_index_1[0] == node_tree_index_2[0]:
+                    # Mark as loop, if both nodes are in the same tree.
+                    is_loop = True
+                else:
+                    # Merge trees, if the branch connects nodes on different trees.
+                    node_trees[node_tree_index_1[0]].extend(node_trees[node_tree_index_2[0]])
+                    node_trees[node_tree_index_2[0]] = []
+            else:
+                raise ValueError(f"Something went wrong in the node tree validation algorithm.")
+
+            # Set loop type.
+            if is_loop:
+                branches_loop_types.iloc[branch_index] = 'loop'
+
+        # Update branch index.
+        self.branches = pd.MultiIndex.from_frame(
+            pd.concat([self.branches.to_frame(), branches_loop_types], axis='columns')
+        )
+        # Create branch loop index.
+        self.branch_loops = pd.Index(np.arange(sum(branches_loop_types == 'loop')), name='branch_loop')
+
+        # Raise errors on invalid network configurations.
+        node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
+        if len(node_trees) > 1:
+            raise ValueError(
+                f"The thermal grid contains several disjoint sections:"
+                f"\nSection {node_tree_index}: {node_tree}" for node_tree_index, node_tree in enumerate(node_trees)
+            )
+        elif len(node_trees[0]) != len(self.node_names):
+            raise ValueError(
+                f"The thermal grid contains disconnected nodes:\n"
+                f"{[node_name for node_name in self.node_names if node_name not in node_trees[0]]}"
+            )
+
+        # Obtained combined branch incidence matrix.
+        self.branch_incidence_matrix = self.branch_incidence_1_matrix - self.branch_incidence_2_matrix
+
+        # Convert DOK matrices to CSR matrices.
+        self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr()
+        self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
+        # TODO: Transpose branch incidence matrix everywhere else.
+        self.branch_incidence_matrix = self.branch_incidence_matrix.tocsr().transpose()
+
+        # Obtain shorthand definitions.
+        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix.transpose()[np.ix_(
+            mesmo.utils.get_index(self.branches, loop_type='no_loop'),
+            mesmo.utils.get_index(self.nodes, node_type='no_source')
+        )]
+        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix.transpose()[np.ix_(
+            mesmo.utils.get_index(self.branches, loop_type='loop'),
+            mesmo.utils.get_index(self.nodes, node_type='no_source')
+        )]
+
+        # Obtain branch-to-loop incidence matrix.
+        self.branch_loop_incidence_matrix = sp.vstack([
+            -1.0
+            * sp.linalg.inv(self.branch_incidence_matrix_no_source_no_loop.transpose())
+            # Using `sp.linalg.inv()` instead of `sp.linalg.spsolve()` to preserve dimensions in all cases.
+            @ self.branch_incidence_matrix_no_source_loop.transpose(),
+            sp.eye(len(self.branch_loops))
+        ]).tocsr()
+
+        # Instantiate DER-to-node incidence matrix.
         self.der_node_incidence_matrix = (
             sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
         )
-        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
-            for der_index, der_name in enumerate(self.der_names):
-                if node_name == thermal_grid_data.thermal_grid_ders.at[der_name, 'node_name']:
-                    self.der_node_incidence_matrix[node_index, der_index] = 1.0
+
+        # Add DERs into DER incidence matrix.
+        for der_name, der in thermal_grid_data.thermal_grid_ders.iterrows():
+
+            # Obtain indexes for positioning the DER in the incidence matrix.
+            node_index = mesmo.utils.get_index(self.nodes, node_name=der['node_name'])
+            der_index = mesmo.utils.get_index(self.ders, der_name=der['der_name'])
+
+            # Insert connection indicator into incidence matrices.
+            self.der_node_incidence_matrix[node_index, der_index] = 1
+
+        # Convert DOK matrices to CSR matrices.
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
 
         # Obtain DER nominal thermal power vector.
@@ -249,7 +354,7 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         # Obtain branch volume flow vector.
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
-                thermal_grid_model.branch_node_incidence_matrix[
+                thermal_grid_model.branch_incidence_matrix[
                     mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                     :
                 ],
@@ -334,7 +439,7 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         node_head_vector_no_source = (
             scipy.sparse.linalg.spsolve(
                 np.transpose(
-                    thermal_grid_model.branch_node_incidence_matrix[
+                    thermal_grid_model.branch_incidence_matrix[
                         mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                         :
                     ]
@@ -491,7 +596,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             node_index_no_source
         )] = (
             scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_node_incidence_matrix[node_index_no_source, :].tocsc()
+                self.thermal_grid_model.branch_incidence_matrix[node_index_no_source, :].tocsc()
             )
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
@@ -506,7 +611,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             range(len(self.thermal_grid_model.branches))
         )] = (
             scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_node_incidence_matrix[node_index_no_source, :].transpose()
+                self.thermal_grid_model.branch_incidence_matrix[node_index_no_source, :].transpose()
             )
         )
         branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()

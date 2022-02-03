@@ -28,12 +28,21 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
-    ders = pd.Index
+    ders: pd.Index
     branch_node_incidence_matrix: sp.spmatrix
     der_node_incidence_matrix: sp.spmatrix
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
+    # TODO: Revise / reduce use of parameter attributes if possible.
+    line_length_vector: np.ndarray
+    line_diameter_vector: np.ndarray
+    line_roughness_vector: np.ndarray
+    energy_transfer_station_head_loss: float
+    enthalpy_difference_distribution_water: float
+    distribution_pump_efficiency: float
+    source_der_model: mesmo.der_models.DERModel
+    plant_efficiency: float
 
     def __init__(
             self,

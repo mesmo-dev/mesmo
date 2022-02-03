@@ -1045,7 +1045,7 @@ class ElectricGridModelDefault(ElectricGridModel):
             # Add node transformation matrix to full transformation matrix.
             self.node_transformation_matrix[np.ix_(node_index, node_index)] = transformation_matrix
 
-        # Add DERs to der incidence matrix.
+        # Add DERs to DER incidence matrix.
         for der_name, der in electric_grid_data.electric_grid_ders.iterrows():
             # Obtain der connection type.
             connection = der['connection']

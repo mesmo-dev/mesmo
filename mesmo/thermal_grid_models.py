@@ -248,6 +248,74 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         else:
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
+    def get_branch_loss_coefficient_vector(self, branch_flow_vector: np.ndarray):
+
+        # Obtain branch velocity vector.
+        branch_velocity_vector = (
+            4.0 * branch_flow_vector
+            / (np.pi * self.line_parameters.loc[:, 'diameter'].values ** 2)
+        )
+
+        # Obtain branch Reynolds coefficient vector.
+        branch_reynold_vector = (
+            np.abs(branch_velocity_vector)
+            * self.line_parameters.loc[:, 'diameter'].values
+            / mesmo.config.water_kinematic_viscosity
+        )
+
+        # Obtain branch friction factor vector.
+        @np.vectorize
+        def branch_friction_factor_vector(
+                reynold,
+                absolute_roughness,
+                diameter
+        ):
+
+            # No flow.
+            if reynold == 0:
+                friction_factor = 0
+
+            # Laminar Flow, based on Hagen-Poiseuille velocity profile, analytical correlation.
+            elif 0 < reynold < 4000:
+                friction_factor = 64 / reynold
+
+            # Turbulent flow, Swamee-Jain formula, approximating correlation of Colebrook-White equation.
+            elif 4000 <= reynold:
+                if not (reynold <= 100000000 and 0.000001 <= ((absolute_roughness / 1000) / diameter) <= 0.01):
+                    logger.warning(
+                        "Exceeding validity range of Swamee-Jain formula for calculation of friction factor."
+                    )
+                friction_factor = 1.325 / (
+                    np.log(
+                        (absolute_roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold ** 0.9)
+                    )
+                ) ** 2
+
+            else:
+                raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
+
+            # Convert from 1/m to 1/km.
+            friction_factor *= 1.0e3
+
+            return friction_factor
+
+        # Obtain branch head loss coefficient vector.
+        branch_loss_coefficient_vector = (
+            branch_friction_factor_vector(
+                branch_reynold_vector,
+                self.line_parameters.loc[:, 'absolute_roughness'].values,
+                self.line_parameters.loc[:, 'diameter'].values
+            )
+            * 8.0 * self.line_parameters.loc[:, 'length'].values
+            / (
+                mesmo.config.gravitational_acceleration
+                * self.line_parameters.loc[:, 'diameter'].values ** 5
+                * np.pi ** 2
+            )
+        )
+
+        return branch_loss_coefficient_vector
+
 
 class ThermalGridDEROperationResults(mesmo.utils.ResultsBase):
 
@@ -284,17 +352,10 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
-    der_flow_vector: np.ndarray
-    source_flow: float
     branch_flow_vector: np.ndarray
-    branch_velocity_vector: np.ndarray
-    branch_reynold_vector: np.ndarray
-    branch_friction_factor_vector: np.ndarray
     branch_head_vector: np.ndarray
-    source_head: float
     node_head_vector: np.ndarray
     pump_power: float
-    source_thermal_power_cooling_plant: float
 
     @multimethod
     def __init__(
@@ -332,15 +393,11 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
 
         # Obtain DER thermal power vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
-
-        # Obtain DER / source volume flow vector.
-        self.der_flow_vector = (
+        # Define shorthand for DER volume flow vector.
+        der_flow_vector = (
             self.der_thermal_power_vector
             / mesmo.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
-        )
-        self.source_flow = (
-            -1.0 * np.sum(self.der_flow_vector)
         )
 
         # Obtain branch volume flow vector.
@@ -354,113 +411,36 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
                     mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                     :
                 ]
-                @ np.transpose([self.der_flow_vector])
+                @ np.transpose([der_flow_vector])
             )
         ).ravel()
 
-        # Obtain branch velocity vector.
-        self.branch_velocity_vector = (
-            4.0 * self.branch_flow_vector
-            / (np.pi * thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 2)
-        )
-
-        # Obtain branch Reynolds coefficient vector.
-        self.branch_reynold_vector = (
-            np.abs(self.branch_velocity_vector)
-            * thermal_grid_model.line_parameters.loc[:, 'diameter'].values
-            / mesmo.config.water_kinematic_viscosity
-        )
-
-        # Obtain branch friction factor vector.
-        @np.vectorize
-        def get_friction_factor(
-                reynold,
-                roughness,
-                diameter
-        ):
-
-            # No flow.
-            if reynold == 0:
-                friction_factor = 0
-
-            # Laminar Flow, based on Hagen-Poiseuille velocity profile, analytical correlation.
-            elif 0 < reynold < 4000:
-                friction_factor = 64 / reynold
-
-            # Turbulent flow, Swamee-Jain formula, approximating correlation of Colebrook-White equation.
-            elif 4000 <= reynold:
-                if not (reynold <= 100000000 and 0.000001 <= ((roughness / 1000) / diameter) <= 0.01):
-                    logger.warning("Exceeding validity range of Swamee-Jain formula for calculation of friction factor.")
-                friction_factor = 1.325 / (
-                    np.log(
-                        (roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold ** 0.9)
-                    )
-                ) ** 2
-
-            else:
-                raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
-
-            # Convert from 1/m to 1/km.
-            friction_factor *= 1.0e3
-
-            return friction_factor
-
-        self.branch_friction_factor_vector = (
-            get_friction_factor(
-                self.branch_reynold_vector,
-                thermal_grid_model.line_parameters.loc[:, 'absolute_roughness'].values,
-                thermal_grid_model.line_parameters.loc[:, 'diameter'].values
-            )
-        )
-
-        # Obtain branch head loss vector.
-        # - Darcy-Weisbach Equation.
-        self.branch_head_vector = (
-            self.branch_friction_factor_vector
-            * self.branch_flow_vector
-            * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
-            * 8.0 * thermal_grid_model.line_parameters.loc[:, 'length'].values
-            / (
-                mesmo.config.gravitational_acceleration
-                * thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 5
-                * np.pi ** 2
-            )
-        )
-
-        # Obtain node / source head vector.
-        node_head_vector_no_source = (
+        # Obtain node head vector.
+        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
+        self.node_head_vector[mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
             scipy.sparse.linalg.spsolve(
                 thermal_grid_model.branch_incidence_matrix[
                     :,
                     mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')
                 ].tocsc(),
-                self.branch_head_vector
+                (
+                    thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
+                    * self.branch_flow_vector
+                    * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
+                )
             )
-        )
-        self.source_head = (
-            np.max(np.abs(node_head_vector_no_source))
-        )
-        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
-        self.node_head_vector[mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
-            node_head_vector_no_source
         )
 
-        # Obtain secondary pump / cooling plant thermal power.
+        # Obtain pump power loss.
         self.pump_power = (
             (
-                2.0 * self.source_head
+                2.0 * np.max(np.abs(self.node_head_vector))
                 + thermal_grid_model.energy_transfer_station_head_loss
             )
-            * self.source_flow
+            * -1.0 * np.sum(der_flow_vector)  # Source volume flow.
             * mesmo.config.water_density
             * mesmo.config.gravitational_acceleration
             / thermal_grid_model.distribution_pump_efficiency
-        )
-        self.source_thermal_power_cooling_plant = (
-            self.source_flow
-            * thermal_grid_model.enthalpy_difference_distribution_water
-            * mesmo.config.water_density
-            / thermal_grid_model.plant_efficiency
         )
 
 
@@ -624,13 +604,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             branch_node_incidence_matrix_transpose_inverse
             @ sp.diags(
                 np.abs(thermal_power_flow_solution.branch_flow_vector)
-                * thermal_power_flow_solution.branch_friction_factor_vector
-                * 8.0 * self.thermal_grid_model.line_parameters.loc[:, 'length'].values
-                / (
-                    mesmo.config.gravitational_acceleration
-                    * self.thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 5
-                    * np.pi ** 2
-                )
+                * thermal_grid_model.get_branch_loss_coefficient_vector(thermal_power_flow_solution.branch_flow_vector)
             )
             @ self.sensitivity_branch_flow_by_node_power
         )
@@ -640,7 +614,12 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         )
         self.sensitivity_pump_power_by_node_power = (
             (
-                (-1.0 * thermal_power_flow_solution.der_flow_vector)
+                (
+                    -1.0
+                    * thermal_power_flow_solution.der_thermal_power_vector
+                    / mesmo.config.water_density
+                    / thermal_grid_model.enthalpy_difference_distribution_water
+                )  # DER volume flow vector.
                 @ (-2.0 * der_node_incidence_matrix_transpose)
                 @ self.sensitivity_node_head_by_node_power
                 * mesmo.config.water_density

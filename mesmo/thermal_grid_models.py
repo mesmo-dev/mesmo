@@ -41,9 +41,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
     # TODO: Revise / reduce use of parameter attributes if possible.
-    line_length_vector: np.ndarray
-    line_diameter_vector: np.ndarray
-    line_roughness_vector: np.ndarray
+    line_parameters: pd.DataFrame
     energy_transfer_station_head_loss: float
     enthalpy_difference_distribution_water: float
     distribution_pump_efficiency: float
@@ -228,9 +226,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         )
 
         # Obtain line parameters.
-        self.line_length_vector = thermal_grid_data.thermal_grid_lines['length'].values
-        self.line_diameter_vector = thermal_grid_data.thermal_grid_lines['diameter'].values
-        self.line_roughness_vector = thermal_grid_data.thermal_grid_lines['absolute_roughness'].values
+        self.line_parameters = thermal_grid_data.thermal_grid_lines.loc[:, ['length', 'diameter', 'absolute_roughness']]
 
         # Obtain other system parameters.
         self.energy_transfer_station_head_loss = (
@@ -373,13 +369,13 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         # Obtain branch velocity vector.
         self.branch_velocity_vector = (
             4.0 * self.branch_flow_vector
-            / (np.pi * thermal_grid_model.line_diameter_vector ** 2)
+            / (np.pi * thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 2)
         )
 
         # Obtain branch Reynolds coefficient vector.
         self.branch_reynold_vector = (
             np.abs(self.branch_velocity_vector)
-            * thermal_grid_model.line_diameter_vector
+            * thermal_grid_model.line_parameters.loc[:, 'diameter'].values
             / mesmo.config.water_kinematic_viscosity
         )
 
@@ -420,8 +416,8 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         self.branch_friction_factor_vector = (
             get_friction_factor(
                 self.branch_reynold_vector,
-                thermal_grid_model.line_roughness_vector,
-                thermal_grid_model.line_diameter_vector
+                thermal_grid_model.line_parameters.loc[:, 'absolute_roughness'].values,
+                thermal_grid_model.line_parameters.loc[:, 'diameter'].values
             )
         )
 
@@ -431,10 +427,10 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
             self.branch_friction_factor_vector
             * self.branch_flow_vector
             * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
-            * 8.0 * thermal_grid_model.line_length_vector
+            * 8.0 * thermal_grid_model.line_parameters.loc[:, 'length'].values
             / (
                 mesmo.config.gravitational_acceleration
-                * thermal_grid_model.line_diameter_vector ** 5
+                * thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 5
                 * np.pi ** 2
             )
         )
@@ -637,10 +633,10 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             @ sp.diags(
                 np.abs(thermal_power_flow_solution.branch_flow_vector)
                 * thermal_power_flow_solution.branch_friction_factor_vector
-                * 8.0 * self.thermal_grid_model.line_length_vector
+                * 8.0 * self.thermal_grid_model.line_parameters.loc[:, 'length'].values
                 / (
                     mesmo.config.gravitational_acceleration
-                    * self.thermal_grid_model.line_diameter_vector ** 5
+                    * self.thermal_grid_model.line_parameters.loc[:, 'diameter'].values ** 5
                     * np.pi ** 2
                 )
             )

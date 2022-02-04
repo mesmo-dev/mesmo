@@ -107,43 +107,35 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += 1
 
             # Check if node 1 or node 2 are in any node trees.
-            is_loop = False
-            node_tree_index_1 = []
-            node_tree_index_2 = []
+            node_tree_index_1 = None
+            node_tree_index_2 = None
             for node_tree_index, node_tree in enumerate(node_trees):
                 if line['node_1_name'] in node_tree:
-                    node_tree_index_1.append(node_tree_index)
+                    node_tree_index_1 = node_tree_index
                 if line['node_2_name'] in node_tree:
-                    node_tree_index_2.append(node_tree_index)
-            if (len(node_tree_index_1) == 0) and (len(node_tree_index_2) == 0):
-                # Create new tree, if no node is on any tree.
+                    node_tree_index_2 = node_tree_index
+            if (node_tree_index_1 is None) and (node_tree_index_2 is None):
+                # Create new tree, if neither node is on any tree.
                 node_trees.append([line['node_1_name'], line['node_2_name']])
-            elif (len(node_tree_index_1) == 1) and (len(node_tree_index_2) == 0):
+            elif (node_tree_index_1 is not None) and (node_tree_index_2 is None):
                 # Add node to tree, if other node is on any tree.
-                node_trees[node_tree_index_1[0]].append(line['node_2_name'])
-            elif (len(node_tree_index_1) == 0) and (len(node_tree_index_2) == 1):
+                node_trees[node_tree_index_1].append(line['node_2_name'])
+            elif (node_tree_index_1 is None) and (node_tree_index_2 is not None):
                 # Add node to tree, if other node is on any tree.
-                node_trees[node_tree_index_2[0]].append(line['node_1_name'])
-            elif (len(node_tree_index_1) == 1) and (len(node_tree_index_2) == 1):
-                if node_tree_index_1[0] == node_tree_index_2[0]:
-                    # Mark as loop, if both nodes are in the same tree.
-                    is_loop = True
+                node_trees[node_tree_index_2].append(line['node_1_name'])
+            else:
+                if node_tree_index_1 == node_tree_index_2:
+                    # Mark branch as loop, if both nodes are in the same tree.
+                    branches_loops.at[self.branches[branch_index], 'loop_type'] = 'loop'
                 else:
                     # Merge trees, if the branch connects nodes on different trees.
-                    node_trees[node_tree_index_1[0]].extend(node_trees[node_tree_index_2[0]])
-                    node_trees[node_tree_index_2[0]] = []
-            else:
-                raise ValueError(f"Something went wrong in the node tree validation algorithm.")
-            print("".join(f"{node_tree}\n" for node_tree in node_trees))
-
-            # Set loop type.
-            if is_loop:
-                branches_loops.at[self.branches[branch_index], 'loop_type'] = 'loop'
+                    node_trees[node_tree_index_1].extend(node_trees[node_tree_index_2])
+                    node_trees[node_tree_index_2] = []
 
         # Update branch / loop indexes.
         self.branches = pd.MultiIndex.from_frame(branches_loops)
         self.branch_loops = pd.MultiIndex.from_frame(pd.concat([
-            pd.Series(range(sum(branches_loops.loc[:, 'loop_type'] == 'loop')), name='loop_id'),
+            pd.Series(range(sum(branches_loops.loc[:, 'loop_type'] == 'loop')), name='loop_id', dtype=int),
             branches_loops.loc[branches_loops.loc[:, 'loop_type'] == 'loop', 'branch_name'].reset_index(drop=True)
         ], axis='columns'))
 

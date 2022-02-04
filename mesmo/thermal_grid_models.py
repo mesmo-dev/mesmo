@@ -28,6 +28,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
+    branch_loops: pd.Index
     ders: pd.Index
     branch_incidence_1_matrix: sp.spmatrix
     branch_incidence_2_matrix: sp.spmatrix
@@ -80,7 +81,8 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             ], axis='columns')
         )
         self.nodes = pd.MultiIndex.from_frame(nodes)
-        self.branches = self.line_names.rename('branch_name')
+        self.branches = pd.MultiIndex.from_product([self.line_names, ['no_loop']], names=['branch_name', 'loop_type'])
+        self.branch_loops = pd.MultiIndex.from_tuples([], names=['loop_id', 'branch_name'])  # Values are filled below.
         self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
 
         # Instantiate branch-to-node incidence matrices.
@@ -93,7 +95,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
         # Add lines to branch incidence matrices and identify any loops.
         # - Uses temporary node tree variable to track construction of the network and identify any loops / cycles.
-        branches_loop_types = pd.Series(['no_loop'] * len(self.branches), index=self.branches, name='loop_type')
+        branches_loops = self.branches.to_frame()
         node_trees = []
         for line_index, line in thermal_grid_data.thermal_grid_lines.iterrows():
 
@@ -134,24 +136,27 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
                     node_trees[node_tree_index_2[0]] = []
             else:
                 raise ValueError(f"Something went wrong in the node tree validation algorithm.")
+            print("".join(f"{node_tree}\n" for node_tree in node_trees))
 
             # Set loop type.
             if is_loop:
-                branches_loop_types.iloc[branch_index] = 'loop'
+                branches_loops.at[self.branches[branch_index], 'loop_type'] = 'loop'
 
-        # Update branch index.
-        self.branches = pd.MultiIndex.from_frame(
-            pd.concat([self.branches.to_frame(), branches_loop_types], axis='columns')
-        )
-        # Create branch loop index.
-        self.branch_loops = pd.Index(np.arange(sum(branches_loop_types == 'loop')), name='branch_loop')
+        # Update branch / loop indexes.
+        self.branches = pd.MultiIndex.from_frame(branches_loops)
+        self.branch_loops = pd.MultiIndex.from_frame(pd.concat([
+            pd.Series(range(sum(branches_loops.loc[:, 'loop_type'] == 'loop')), name='loop_id'),
+            branches_loops.loc[branches_loops.loc[:, 'loop_type'] == 'loop', 'branch_name'].reset_index(drop=True)
+        ], axis='columns'))
 
         # Raise errors on invalid network configurations.
         node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
         if len(node_trees) > 1:
             raise ValueError(
-                f"The thermal grid contains several disjoint sections:"
-                f"\nSection {node_tree_index}: {node_tree}" for node_tree_index, node_tree in enumerate(node_trees)
+                f"The thermal grid contains disjoint sections of nodes:"
+                + "".join([
+                    f"\nSection {node_tree_index}: {node_tree}" for node_tree_index, node_tree in enumerate(node_trees)
+                ])
             )
         elif len(node_trees[0]) != len(self.node_names):
             raise ValueError(
@@ -174,7 +179,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             mesmo.utils.get_index(self.nodes, node_type='no_source')
         )]
         self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix.transpose()[np.ix_(
-            mesmo.utils.get_index(self.branches, loop_type='loop'),
+            mesmo.utils.get_index(self.branches, loop_type='loop', raise_empty_index_error=False),
             mesmo.utils.get_index(self.nodes, node_type='no_source')
         )]
 

@@ -348,7 +348,7 @@ class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
     thermal_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
+class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
@@ -357,34 +357,9 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
     node_head_vector: np.ndarray
     pump_power: float
 
-    @multimethod
-    def __init__(
-            self,
-            scenario_name: str
-    ):
 
-        # Obtain thermal grid model.
-        thermal_grid_model = ThermalGridModel(scenario_name)
+class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
 
-        self.__init__(
-            thermal_grid_model
-        )
-
-    @multimethod
-    def __init__(
-            self,
-            thermal_grid_model: ThermalGridModel
-    ):
-
-        # Obtain DER thermal power vector.
-        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
-
-        self.__init__(
-            thermal_grid_model,
-            der_thermal_power_vector
-        )
-
-    @multimethod
     def __init__(
             self,
             thermal_grid_model: ThermalGridModel,
@@ -442,6 +417,51 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
             * mesmo.config.gravitational_acceleration
             / thermal_grid_model.distribution_pump_efficiency
         )
+
+
+class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
+    """Thermal grid power flow solution object."""
+
+    @multimethod
+    def __init__(
+            self,
+            scenario_name: str
+    ):
+
+        # Obtain thermal grid model.
+        thermal_grid_model = ThermalGridModel(scenario_name)
+
+        self.__init__(
+            thermal_grid_model
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            thermal_grid_model: ThermalGridModel
+    ):
+
+        # Obtain DER thermal power vector.
+        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
+
+        self.__init__(
+            thermal_grid_model,
+            der_thermal_power_vector
+        )
+
+    @multimethod
+    def __init__(
+            self,
+            thermal_grid_model: ThermalGridModel,
+            der_thermal_power_vector: np.ndarray
+    ):
+
+        # Select power flow solution method, depending on whether network is radial or meshed.
+        if len(thermal_grid_model.branch_loops) == 0:
+            # Use explicit thermal power flow solution method.
+            ThermalPowerFlowSolutionExplicit.__init__(self, thermal_grid_model, der_thermal_power_vector)
+        else:
+            raise NotImplementedError("Thermal power flow solution for meshed networks has not yet been implemented.")
 
 
 class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):

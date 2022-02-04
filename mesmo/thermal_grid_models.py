@@ -170,15 +170,14 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         # Convert DOK matrices to CSR matrices.
         self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr()
         self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
-        # TODO: Transpose branch incidence matrix everywhere else.
-        self.branch_incidence_matrix = self.branch_incidence_matrix.tocsr().transpose()
+        self.branch_incidence_matrix = self.branch_incidence_matrix.tocsr()
 
         # Obtain shorthand definitions.
-        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix.transpose()[np.ix_(
+        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix[np.ix_(
             mesmo.utils.get_index(self.branches, loop_type='no_loop'),
             mesmo.utils.get_index(self.nodes, node_type='no_source')
         )]
-        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix.transpose()[np.ix_(
+        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix[np.ix_(
             mesmo.utils.get_index(self.branches, loop_type='loop', raise_empty_index_error=False),
             mesmo.utils.get_index(self.nodes, node_type='no_source')
         )]
@@ -360,9 +359,9 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
                 thermal_grid_model.branch_incidence_matrix[
-                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
-                    :
-                ],
+                    :,
+                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')
+                ].transpose(),
                 thermal_grid_model.der_node_incidence_matrix[
                     mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
                     :
@@ -443,12 +442,10 @@ class ThermalPowerFlowSolution(mesmo.utils.ObjectBase):
         # Obtain node / source head vector.
         node_head_vector_no_source = (
             scipy.sparse.linalg.spsolve(
-                np.transpose(
-                    thermal_grid_model.branch_incidence_matrix[
-                        mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source'),
-                        :
-                    ]
-                ),
+                thermal_grid_model.branch_incidence_matrix[
+                    :,
+                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')
+                ].tocsc(),
                 self.branch_head_vector
             )
         )
@@ -601,7 +598,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             node_index_no_source
         )] = (
             scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_incidence_matrix[node_index_no_source, :].tocsc()
+                self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].transpose()
             )
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
@@ -616,7 +613,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             range(len(self.thermal_grid_model.branches))
         )] = (
             scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_incidence_matrix[node_index_no_source, :].transpose()
+                self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].tocsc()
             )
         )
         branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()

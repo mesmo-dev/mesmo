@@ -8,7 +8,7 @@ on:
 
 jobs:
   get-environment:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ (github.event.workflow_run.conclusion == 'success') && !startsWith(github.event.workflow_run.head_commit.message, 'Automated maintenance') }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 8

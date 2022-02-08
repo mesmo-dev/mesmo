@@ -60,7 +60,8 @@ class ObjectBase(object):
         if not (attribute_name in typing.get_type_hints(type(self))):
             logger.warning(
                 f"Setting undefined attribute '{attribute_name}'. "
-                f"Please ensure that the attribute has been defined by a type declaration in the class definition."
+                f"Please ensure that the attribute has been defined by a type declaration "
+                f"in the class definition of {type(self)}."
             )
 
         # Set attribute value.

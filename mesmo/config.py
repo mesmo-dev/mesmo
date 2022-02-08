@@ -20,13 +20,13 @@ def get_config() -> dict:
     """
 
     # Load default configuration values.
-    with open(os.path.join(base_path, 'mesmo', 'config_default.yml'), 'r') as file:
+    with open(os.path.join(base_path, "mesmo", "config_default.yml"), "r") as file:
         default_config = yaml.safe_load(file)
 
     # Create local `config.yml` for custom configuration in base directory, if not existing.
     # - The additional data paths setting is added for reference.
-    if not os.path.isfile(os.path.join(base_path, 'config.yml')):
-        with open(os.path.join(base_path, 'config.yml'), 'w') as file:
+    if not os.path.isfile(os.path.join(base_path, "config.yml")):
+        with open(os.path.join(base_path, "config.yml"), "w") as file:
             file.write(
                 "# Local configuration parameters.\n"
                 "# - Configuration parameters and their defaults are defined in `mesmo/config_default.yml`\n"
@@ -36,24 +36,26 @@ def get_config() -> dict:
             )
 
     # Load custom configuration values, overwriting the default values.
-    with open(os.path.join(base_path, 'config.yml'), 'r') as file:
+    with open(os.path.join(base_path, "config.yml"), "r") as file:
         custom_config = yaml.safe_load(file)
 
     # Define utility function to recursively merge default and custom configuration.
     def merge_config(default_values: dict, custom_values: dict) -> dict:
         full_values = default_values.copy()
-        full_values.update({
-            key: (
-                merge_config(default_values[key], custom_values[key])
-                if (
-                    (key in default_values)
-                    and isinstance(default_values[key], dict)
-                    and isinstance(custom_values[key], dict)
+        full_values.update(
+            {
+                key: (
+                    merge_config(default_values[key], custom_values[key])
+                    if (
+                        (key in default_values)
+                        and isinstance(default_values[key], dict)
+                        and isinstance(custom_values[key], dict)
+                    )
+                    else custom_values[key]
                 )
-                else custom_values[key]
-            )
-            for key in custom_values.keys()
-        })
+                for key in custom_values.keys()
+            }
+        )
         return full_values
 
     # Obtain complete configuration.
@@ -65,40 +67,38 @@ def get_config() -> dict:
     # Define utility function to obtain full paths.
     # - Replace `./` with the base path and normalize paths.
     def get_full_path(path: str) -> str:
-        if path.startswith('./'):
+        if path.startswith("./"):
             # Replace only first occurrence.
-            path = path.replace('./', base_path + os.path.sep, 1)
+            path = path.replace("./", base_path + os.path.sep, 1)
         return os.path.normpath(path)
 
     # Obtain full paths.
-    complete_config['paths']['data'] = get_full_path(complete_config['paths']['data'])
-    complete_config['paths']['additional_data'] = (
-        [get_full_path(path) for path in complete_config['paths']['additional_data']]
-    )
-    complete_config['paths']['database'] = get_full_path(complete_config['paths']['database'])
-    complete_config['paths']['results'] = get_full_path(complete_config['paths']['results'])
+    complete_config["paths"]["data"] = get_full_path(complete_config["paths"]["data"])
+    complete_config["paths"]["additional_data"] = [
+        get_full_path(path) for path in complete_config["paths"]["additional_data"]
+    ]
+    complete_config["paths"]["database"] = get_full_path(complete_config["paths"]["database"])
+    complete_config["paths"]["results"] = get_full_path(complete_config["paths"]["results"])
 
     return complete_config
 
 
-def get_logger(
-        name: str
-) -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     """Generate logger with given name."""
 
     logger = logging.getLogger(name)
 
     logging_handler = logging.StreamHandler()
-    logging_handler.setFormatter(logging.Formatter(config['logs']['format']))
+    logging_handler.setFormatter(logging.Formatter(config["logs"]["format"]))
     logger.addHandler(logging_handler)
 
-    if config['logs']['level'] == 'debug':
+    if config["logs"]["level"] == "debug":
         logger.setLevel(logging.DEBUG)
-    elif config['logs']['level'] == 'info':
+    elif config["logs"]["level"] == "info":
         logger.setLevel(logging.INFO)
-    elif config['logs']['level'] == 'warn':
+    elif config["logs"]["level"] == "warn":
         logger.setLevel(logging.WARN)
-    elif config['logs']['level'] == 'error':
+    elif config["logs"]["level"] == "error":
         logger.setLevel(logging.ERROR)
     else:
         raise ValueError(f"Unknown logging level: {config['logs']['level']}")
@@ -114,6 +114,7 @@ def get_parallel_pool() -> multiprocessing.Pool:
 
     # Obtain multiprocessing pool.
     import ray.util.multiprocessing
+
     return ray.util.multiprocessing.Pool()
 
 
@@ -134,56 +135,53 @@ gravitational_acceleration = 9.81  # [m^2/s]
 parallel_pool = None
 
 # Modify matplotlib default settings.
-plt.style.use(config['plots']['matplotlib_style'])
-matplotlib.rc('axes', axisbelow=True)  # Ensure that axis grid is behind plot elements.
-matplotlib.rc('figure', figsize=config['plots']['matplotlib_figure_size'])
-matplotlib.rc('font', family=config['plots']['matplotlib_font_family'])
-matplotlib.rc('image', cmap=config['plots']['matplotlib_colormap'])
-matplotlib.rc('pdf', fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
-matplotlib.rc('ps', fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
-matplotlib.rc('savefig', format=config['plots']['file_format'])
+plt.style.use(config["plots"]["matplotlib_style"])
+matplotlib.rc("axes", axisbelow=True)  # Ensure that axis grid is behind plot elements.
+matplotlib.rc("figure", figsize=config["plots"]["matplotlib_figure_size"])
+matplotlib.rc("font", family=config["plots"]["matplotlib_font_family"])
+matplotlib.rc("image", cmap=config["plots"]["matplotlib_colormap"])
+matplotlib.rc("pdf", fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better compatibility.
+matplotlib.rc("ps", fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
+matplotlib.rc("savefig", format=config["plots"]["file_format"])
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
 
 # Modify pandas default settings.
 # - These settings ensure that that data frames are always printed in full, rather than cropped.
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', int(9e9))
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", int(9e9))
 try:
-    pd.set_option('display.max_colwidth', None)
+    pd.set_option("display.max_colwidth", None)
 except ValueError:
     # For compatibility with older versions of pandas.
-    pd.set_option('display.max_colwidth', 0)
+    pd.set_option("display.max_colwidth", 0)
 
 # Modify plotly default settings.
-pio.templates.default = go.layout.Template(pio.templates['simple_white'])
+pio.templates.default = go.layout.Template(pio.templates["simple_white"])
 pio.templates.default.layout.update(
-    font=go.layout.Font(
-        family=config['plots']['plotly_font_family'],
-        size=config['plots']['plotly_font_size']
-    ),
+    font=go.layout.Font(family=config["plots"]["plotly_font_family"], size=config["plots"]["plotly_font_size"]),
     legend=go.layout.Legend(borderwidth=1),
     xaxis=go.layout.XAxis(showgrid=True),
-    yaxis=go.layout.YAxis(showgrid=True)
+    yaxis=go.layout.YAxis(showgrid=True),
 )
 if pio.kaleido.scope is not None:
-    pio.kaleido.scope.default_width = config['plots']['plotly_figure_width']
-    pio.kaleido.scope.default_height = config['plots']['plotly_figure_height']
-pio.orca.config.default_width = config['plots']['plotly_figure_width']
-pio.orca.config.default_height = config['plots']['plotly_figure_height']
+    pio.kaleido.scope.default_width = config["plots"]["plotly_figure_width"]
+    pio.kaleido.scope.default_height = config["plots"]["plotly_figure_height"]
+pio.orca.config.default_width = config["plots"]["plotly_figure_width"]
+pio.orca.config.default_height = config["plots"]["plotly_figure_height"]
 
 # Modify optimization solver settings.
-if config['optimization']['solver_interface'] is None:
-    config['optimization']['solver_interface'] = 'direct'
-if config['optimization']['solver_name'] == 'cplex':
+if config["optimization"]["solver_interface"] is None:
+    config["optimization"]["solver_interface"] = "direct"
+if config["optimization"]["solver_name"] == "cplex":
     solver_parameters = dict(cplex_params=dict())
-    if config['optimization']['time_limit'] is not None:
-        solver_parameters['cplex_params']['timelimit'] = config['optimization']['time_limit']
-elif config['optimization']['solver_name'] == 'gurobi':
+    if config["optimization"]["time_limit"] is not None:
+        solver_parameters["cplex_params"]["timelimit"] = config["optimization"]["time_limit"]
+elif config["optimization"]["solver_name"] == "gurobi":
     solver_parameters = dict()
-    if config['optimization']['time_limit'] is not None:
-        solver_parameters['TimeLimit'] = config['optimization']['time_limit']
-elif config['optimization']['solver_name'] == 'osqp':
+    if config["optimization"]["time_limit"] is not None:
+        solver_parameters["TimeLimit"] = config["optimization"]["time_limit"]
+elif config["optimization"]["solver_name"] == "osqp":
     solver_parameters = dict(max_iter=1000000)
 else:
     solver_parameters = dict()

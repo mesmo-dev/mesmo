@@ -62,15 +62,15 @@ CREATE TABLE der_timeseries (
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,
-    der_type TEXT,
+    der_type TEXT DEFAULT 'constant_power',
     der_model_name TEXT,
     node_name TEXT,
     is_phase_1_connected TEXT,
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     connection TEXT,
-    active_power_nominal TEXT,
-    reactive_power_nominal TEXT,
+    active_power_nominal TEXT DEFAULT '0.0',
+    reactive_power_nominal TEXT DEFAULT '0.0',
     in_service TEXT DEFAULT 1,
     PRIMARY KEY(electric_grid_name,der_name)
 );
@@ -214,9 +214,9 @@ CREATE TABLE thermal_grid_ders (
     thermal_grid_name TEXT,
     der_name TEXT,
     node_name TEXT,
-    der_type TEXT,
+    der_type TEXT DEFAULT 'constant_power',
     der_model_name TEXT,
-    thermal_power_nominal TEXT,
+    thermal_power_nominal TEXT DEFAULT '0.0',
     in_service TEXT DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)
 );

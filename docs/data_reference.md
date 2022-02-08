@@ -74,15 +74,15 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
+| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. Defaults to `constant_power` if not explicitly defined. |
 | `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
-| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
-| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
+| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
 | `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_line_types`
@@ -243,9 +243,9 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `thermal_grid_name` | | Thermal grid identifier as defined in `thermal_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
-| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
+| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. Defaults to `constant_power` if not explicitly defined. |
 | `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
-| `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
+| `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
 | `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_line_types`

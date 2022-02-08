@@ -79,17 +79,13 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             axis="columns",
         )
         self.nodes = pd.MultiIndex.from_frame(nodes)
-        self.branches = pd.MultiIndex.from_product([self.line_names, ['no_loop']], names=['branch_name', 'loop_type'])
-        self.branch_loops = pd.MultiIndex.from_tuples([], names=['loop_id', 'branch_name'])  # Values are filled below.
-        self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[['der_type', 'der_name']])
+        self.branches = pd.MultiIndex.from_product([self.line_names, ["no_loop"]], names=["branch_name", "loop_type"])
+        self.branch_loops = pd.MultiIndex.from_tuples([], names=["loop_id", "branch_name"])  # Values are filled below.
+        self.ders = pd.MultiIndex.from_frame(thermal_grid_data.thermal_grid_ders[["der_type", "der_name"]])
 
         # Instantiate branch-to-node incidence matrices.
-        self.branch_incidence_1_matrix = (
-            sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
-        )
-        self.branch_incidence_2_matrix = (
-            sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
-        )
+        self.branch_incidence_1_matrix = sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
+        self.branch_incidence_2_matrix = sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
 
         # Add lines to branch incidence matrices and identify any loops.
         # - Uses temporary node tree variable to track construction of the network and identify any loops / cycles.
@@ -98,9 +94,9 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         for line_index, line in thermal_grid_data.thermal_grid_lines.iterrows():
 
             # Obtain indexes for positioning the line in the incidence matrices.
-            node_index_1 = mesmo.utils.get_index(self.nodes, node_name=line['node_1_name'])
-            node_index_2 = mesmo.utils.get_index(self.nodes, node_name=line['node_2_name'])
-            branch_index = mesmo.utils.get_index(self.branches, branch_name=line['line_name'])
+            node_index_1 = mesmo.utils.get_index(self.nodes, node_name=line["node_1_name"])
+            node_index_2 = mesmo.utils.get_index(self.nodes, node_name=line["node_2_name"])
+            branch_index = mesmo.utils.get_index(self.branches, branch_name=line["line_name"])
 
             # Insert connection indicators into incidence matrices.
             self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += 1
@@ -110,23 +106,23 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             node_tree_index_1 = None
             node_tree_index_2 = None
             for node_tree_index, node_tree in enumerate(node_trees):
-                if line['node_1_name'] in node_tree:
+                if line["node_1_name"] in node_tree:
                     node_tree_index_1 = node_tree_index
-                if line['node_2_name'] in node_tree:
+                if line["node_2_name"] in node_tree:
                     node_tree_index_2 = node_tree_index
             if (node_tree_index_1 is None) and (node_tree_index_2 is None):
                 # Create new tree, if neither node is on any tree.
-                node_trees.append([line['node_1_name'], line['node_2_name']])
+                node_trees.append([line["node_1_name"], line["node_2_name"]])
             elif (node_tree_index_1 is not None) and (node_tree_index_2 is None):
                 # Add node to tree, if other node is on any tree.
-                node_trees[node_tree_index_1].append(line['node_2_name'])
+                node_trees[node_tree_index_1].append(line["node_2_name"])
             elif (node_tree_index_1 is None) and (node_tree_index_2 is not None):
                 # Add node to tree, if other node is on any tree.
-                node_trees[node_tree_index_2].append(line['node_1_name'])
+                node_trees[node_tree_index_2].append(line["node_1_name"])
             else:
                 if node_tree_index_1 == node_tree_index_2:
                     # Mark branch as loop, if both nodes are in the same tree.
-                    branches_loops.at[self.branches[branch_index], 'loop_type'] = 'loop'
+                    branches_loops.at[self.branches[branch_index], "loop_type"] = "loop"
                 else:
                     # Merge trees, if the branch connects nodes on different trees.
                     node_trees[node_tree_index_1].extend(node_trees[node_tree_index_2])
@@ -134,19 +130,29 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
         # Update branch / loop indexes.
         self.branches = pd.MultiIndex.from_frame(branches_loops)
-        self.branch_loops = pd.MultiIndex.from_frame(pd.concat([
-            pd.Series(range(sum(branches_loops.loc[:, 'loop_type'] == 'loop')), name='loop_id', dtype=int),
-            branches_loops.loc[branches_loops.loc[:, 'loop_type'] == 'loop', 'branch_name'].reset_index(drop=True)
-        ], axis='columns'))
+        self.branch_loops = pd.MultiIndex.from_frame(
+            pd.concat(
+                [
+                    pd.Series(range(sum(branches_loops.loc[:, "loop_type"] == "loop")), name="loop_id", dtype=int),
+                    branches_loops.loc[branches_loops.loc[:, "loop_type"] == "loop", "branch_name"].reset_index(
+                        drop=True
+                    ),
+                ],
+                axis="columns",
+            )
+        )
 
         # Raise errors on invalid network configurations.
         node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
         if len(node_trees) > 1:
             raise ValueError(
                 f"The thermal grid contains disjoint sections of nodes:"
-                + "".join([
-                    f"\nSection {node_tree_index}: {node_tree}" for node_tree_index, node_tree in enumerate(node_trees)
-                ])
+                + "".join(
+                    [
+                        f"\nSection {node_tree_index}: {node_tree}"
+                        for node_tree_index, node_tree in enumerate(node_trees)
+                    ]
+                )
             )
         elif len(node_trees[0]) != len(self.node_names):
             raise ValueError(
@@ -163,35 +169,38 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         self.branch_incidence_matrix = self.branch_incidence_matrix.tocsr()
 
         # Obtain shorthand definitions.
-        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix[np.ix_(
-            mesmo.utils.get_index(self.branches, loop_type='no_loop'),
-            mesmo.utils.get_index(self.nodes, node_type='no_source')
-        )]
-        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix[np.ix_(
-            mesmo.utils.get_index(self.branches, loop_type='loop', raise_empty_index_error=False),
-            mesmo.utils.get_index(self.nodes, node_type='no_source')
-        )]
+        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix[
+            np.ix_(
+                mesmo.utils.get_index(self.branches, loop_type="no_loop"),
+                mesmo.utils.get_index(self.nodes, node_type="no_source"),
+            )
+        ]
+        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix[
+            np.ix_(
+                mesmo.utils.get_index(self.branches, loop_type="loop", raise_empty_index_error=False),
+                mesmo.utils.get_index(self.nodes, node_type="no_source"),
+            )
+        ]
 
         # Obtain branch-to-loop incidence matrix.
-        self.branch_loop_incidence_matrix = sp.vstack([
-            -1.0
-            * sp.linalg.inv(self.branch_incidence_matrix_no_source_no_loop.transpose())
-            # Using `sp.linalg.inv()` instead of `sp.linalg.spsolve()` to preserve dimensions in all cases.
-            @ self.branch_incidence_matrix_no_source_loop.transpose(),
-            sp.eye(len(self.branch_loops))
-        ]).tocsr()
+        self.branch_loop_incidence_matrix = sp.vstack(
+            [
+                -1.0 * sp.linalg.inv(self.branch_incidence_matrix_no_source_no_loop.transpose())
+                # Using `sp.linalg.inv()` instead of `sp.linalg.spsolve()` to preserve dimensions in all cases.
+                @ self.branch_incidence_matrix_no_source_loop.transpose(),
+                sp.eye(len(self.branch_loops)),
+            ]
+        ).tocsr()
 
         # Instantiate DER-to-node incidence matrix.
-        self.der_node_incidence_matrix = (
-            sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
-        )
+        self.der_node_incidence_matrix = sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
 
         # Add DERs into DER incidence matrix.
         for der_name, der in thermal_grid_data.thermal_grid_ders.iterrows():
 
             # Obtain indexes for positioning the DER in the incidence matrix.
-            node_index = mesmo.utils.get_index(self.nodes, node_name=der['node_name'])
-            der_index = mesmo.utils.get_index(self.ders, der_name=der['der_name'])
+            node_index = mesmo.utils.get_index(self.nodes, node_name=der["node_name"])
+            der_index = mesmo.utils.get_index(self.ders, der_name=der["der_name"])
 
             # Insert connection indicator into incidence matrices.
             self.der_node_incidence_matrix[node_index, der_index] = 1
@@ -216,7 +225,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         self.node_head_vector_reference = np.ones(len(self.nodes))
 
         # Obtain line parameters.
-        self.line_parameters = thermal_grid_data.thermal_grid_lines.loc[:, ['length', 'diameter', 'absolute_roughness']]
+        self.line_parameters = thermal_grid_data.thermal_grid_lines.loc[:, ["length", "diameter", "absolute_roughness"]]
 
         # Obtain other system parameters.
         self.energy_transfer_station_head_loss = float(
@@ -244,24 +253,19 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
         # Obtain branch velocity vector.
         branch_velocity_vector = (
-            4.0 * branch_flow_vector
-            / (np.pi * self.line_parameters.loc[:, 'diameter'].values ** 2)
+            4.0 * branch_flow_vector / (np.pi * self.line_parameters.loc[:, "diameter"].values ** 2)
         )
 
         # Obtain branch Reynolds coefficient vector.
         branch_reynold_vector = (
             np.abs(branch_velocity_vector)
-            * self.line_parameters.loc[:, 'diameter'].values
+            * self.line_parameters.loc[:, "diameter"].values
             / mesmo.config.water_kinematic_viscosity
         )
 
         # Obtain branch friction factor vector.
         @np.vectorize
-        def branch_friction_factor_vector(
-                reynold,
-                absolute_roughness,
-                diameter
-        ):
+        def branch_friction_factor_vector(reynold, absolute_roughness, diameter):
 
             # No flow.
             if reynold == 0:
@@ -277,11 +281,9 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
                     logger.warning(
                         "Exceeding validity range of Swamee-Jain formula for calculation of friction factor."
                     )
-                friction_factor = 1.325 / (
-                    np.log(
-                        (absolute_roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold ** 0.9)
-                    )
-                ) ** 2
+                friction_factor = (
+                    1.325 / (np.log((absolute_roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold**0.9))) ** 2
+                )
 
             else:
                 raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
@@ -295,14 +297,15 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         branch_loss_coefficient_vector = (
             branch_friction_factor_vector(
                 branch_reynold_vector,
-                self.line_parameters.loc[:, 'absolute_roughness'].values,
-                self.line_parameters.loc[:, 'diameter'].values
+                self.line_parameters.loc[:, "absolute_roughness"].values,
+                self.line_parameters.loc[:, "diameter"].values,
             )
-            * 8.0 * self.line_parameters.loc[:, 'length'].values
+            * 8.0
+            * self.line_parameters.loc[:, "length"].values
             / (
                 mesmo.config.gravitational_acceleration
-                * self.line_parameters.loc[:, 'diameter'].values ** 5
-                * np.pi ** 2
+                * self.line_parameters.loc[:, "diameter"].values ** 5
+                * np.pi**2
             )
         )
 
@@ -351,12 +354,7 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
 
 
 class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
-
-    def __init__(
-            self,
-            thermal_grid_model: ThermalGridModel,
-            der_thermal_power_vector: np.ndarray
-    ):
+    def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
 
         # Obtain DER thermal power vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
@@ -371,39 +369,35 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
                 thermal_grid_model.branch_incidence_matrix[
-                    :,
-                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')
+                    :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
                 ].transpose(),
                 thermal_grid_model.der_node_incidence_matrix[
                     mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"), :
                 ]
-                @ np.transpose([der_flow_vector])
+                @ np.transpose([der_flow_vector]),
             )
         ).ravel()
 
         # Obtain node head vector.
         self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
-        self.node_head_vector[mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')] = (
-            scipy.sparse.linalg.spsolve(
-                thermal_grid_model.branch_incidence_matrix[
-                    :,
-                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type='no_source')
-                ].tocsc(),
-                (
-                    thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
-                    * self.branch_flow_vector
-                    * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
-                )
-            )
+        self.node_head_vector[
+            mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
+        ] = scipy.sparse.linalg.spsolve(
+            thermal_grid_model.branch_incidence_matrix[
+                :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
+            ].tocsc(),
+            (
+                thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
+                * self.branch_flow_vector
+                * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
+            ),
         )
 
         # Obtain pump power loss.
         self.pump_power = (
-            (
-                2.0 * np.max(np.abs(self.node_head_vector))
-                + thermal_grid_model.energy_transfer_station_head_loss
-            )
-            * -1.0 * np.sum(der_flow_vector)  # Source volume flow.
+            (2.0 * np.max(np.abs(self.node_head_vector)) + thermal_grid_model.energy_transfer_station_head_loss)
+            * -1.0
+            * np.sum(der_flow_vector)  # Source volume flow.
             * mesmo.config.water_density
             * mesmo.config.gravitational_acceleration
             / thermal_grid_model.distribution_pump_efficiency
@@ -414,38 +408,23 @@ class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
     """Thermal grid power flow solution object."""
 
     @multimethod
-    def __init__(
-            self,
-            scenario_name: str
-    ):
+    def __init__(self, scenario_name: str):
 
         # Obtain thermal grid model.
         thermal_grid_model = ThermalGridModel(scenario_name)
 
-        self.__init__(
-            thermal_grid_model
-        )
+        self.__init__(thermal_grid_model)
 
     @multimethod
-    def __init__(
-            self,
-            thermal_grid_model: ThermalGridModel
-    ):
+    def __init__(self, thermal_grid_model: ThermalGridModel):
 
         # Obtain DER thermal power vector.
         der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
 
-        self.__init__(
-            thermal_grid_model,
-            der_thermal_power_vector
-        )
+        self.__init__(thermal_grid_model, der_thermal_power_vector)
 
     @multimethod
-    def __init__(
-            self,
-            thermal_grid_model: ThermalGridModel,
-            der_thermal_power_vector: np.ndarray
-    ):
+    def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
 
         # Select power flow solution method, depending on whether network is radial or meshed.
         if len(thermal_grid_model.branch_loops) == 0:
@@ -544,32 +523,21 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         branch_node_incidence_matrix_inverse = sp.dok_matrix(
             (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)), dtype=float
         )
-        branch_node_incidence_matrix_inverse = (
-            sp.dok_matrix(
-                (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)),
-                dtype=float
-            )
+        branch_node_incidence_matrix_inverse = sp.dok_matrix(
+            (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)), dtype=float
         )
-        branch_node_incidence_matrix_inverse[np.ix_(
-            range(len(self.thermal_grid_model.branches)),
-            node_index_no_source
-        )] = (
-            scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].transpose()
-            )
+        branch_node_incidence_matrix_inverse[
+            np.ix_(range(len(self.thermal_grid_model.branches)), node_index_no_source)
+        ] = scipy.sparse.linalg.inv(
+            self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].transpose()
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
         branch_node_incidence_matrix_transpose_inverse = sp.dok_matrix(
             (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)), dtype=float
         )
-        branch_node_incidence_matrix_transpose_inverse[np.ix_(
-            node_index_no_source,
-            range(len(self.thermal_grid_model.branches))
-        )] = (
-            scipy.sparse.linalg.inv(
-                self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].tocsc()
-            )
-        )
+        branch_node_incidence_matrix_transpose_inverse[
+            np.ix_(node_index_no_source, range(len(self.thermal_grid_model.branches)))
+        ] = scipy.sparse.linalg.inv(self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].tocsc())
         branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()
         der_node_incidence_matrix_transpose = np.transpose(self.thermal_grid_model.der_node_incidence_matrix)
 
@@ -596,25 +564,22 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         )
         self.sensitivity_pump_power_by_node_power = (
             (
-                (
-                    -1.0
-                    * thermal_power_flow_solution.der_thermal_power_vector
-                    / mesmo.config.water_density
-                    / thermal_grid_model.enthalpy_difference_distribution_water
-                )  # DER volume flow vector.
-                @ (-2.0 * der_node_incidence_matrix_transpose)
-                @ self.sensitivity_node_head_by_node_power
-                * mesmo.config.water_density
-                * mesmo.config.gravitational_acceleration
-                / self.thermal_grid_model.distribution_pump_efficiency
-            )
-            + (
                 -1.0
-                * self.thermal_grid_model.energy_transfer_station_head_loss
-                * mesmo.config.gravitational_acceleration
-                / self.thermal_grid_model.enthalpy_difference_distribution_water
-                / self.thermal_grid_model.distribution_pump_efficiency
-            )
+                * thermal_power_flow_solution.der_thermal_power_vector
+                / mesmo.config.water_density
+                / thermal_grid_model.enthalpy_difference_distribution_water
+            )  # DER volume flow vector.
+            @ (-2.0 * der_node_incidence_matrix_transpose)
+            @ self.sensitivity_node_head_by_node_power
+            * mesmo.config.water_density
+            * mesmo.config.gravitational_acceleration
+            / self.thermal_grid_model.distribution_pump_efficiency
+        ) + (
+            -1.0
+            * self.thermal_grid_model.energy_transfer_station_head_loss
+            * mesmo.config.gravitational_acceleration
+            / self.thermal_grid_model.enthalpy_difference_distribution_water
+            / self.thermal_grid_model.distribution_pump_efficiency
         )
         self.sensitivity_pump_power_by_der_power = np.array(
             [self.sensitivity_pump_power_by_node_power @ self.sensitivity_node_power_by_der_power]

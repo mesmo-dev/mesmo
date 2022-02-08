@@ -35,5 +35,5 @@ jobs:
         keep_files: false
         force_orphan: true
         full_commit_message: Deploy documentation for ${{ github.sha }}
-        user_name: GitHub Actions
-        user_email: github-actions[bot]@users.noreply.github.com
+        user_name: MESMO Bot
+        user_email: bot@mesmo.dev

@@ -53,11 +53,7 @@ class ObjectBase(object):
         In this case, ``example_attribute1`` and ``example_attribute2`` are valid attributes of the class.
     """
 
-    def __setattr__(
-            self,
-            attribute_name,
-            value
-    ):
+    def __setattr__(self, attribute_name, value):
 
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
@@ -95,10 +91,7 @@ class ObjectBase(object):
 class ResultsBase(ObjectBase):
     """Results object base class."""
 
-    def __init__(
-            self,
-            **kwargs
-    ):
+    def __init__(self, **kwargs):
 
         # Set all keyword arguments as attributes.
         for attribute_name in kwargs:
@@ -112,10 +105,7 @@ class ResultsBase(ObjectBase):
         # Enable dict-like attribute setting.
         self.__setattr__(key, value)
 
-    def update(
-            self,
-            other_results
-    ):
+    def update(self, other_results):
 
         # Obtain attributes of other results object.
         attributes = vars(other_results)
@@ -126,10 +116,7 @@ class ResultsBase(ObjectBase):
             if attributes[attribute_name] is not None:
                 self.__setattr__(attribute_name, attributes[attribute_name])
 
-    def save(
-            self,
-            results_path: str
-    ):
+    def save(self, results_path: str):
         """Store results to files at given results path.
 
         - Each results variable / attribute will be stored as separate file with the attribute name as file name.
@@ -144,20 +131,17 @@ class ResultsBase(ObjectBase):
         for attribute_name in attributes:
             if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
                 # Pandas Series / DataFrame are stored to CSV.
-                attributes[attribute_name].to_csv(os.path.join(results_path, f'{attribute_name}.csv'))
+                attributes[attribute_name].to_csv(os.path.join(results_path, f"{attribute_name}.csv"))
             else:
                 # Other objects are stored to pickle binary file (PKL).
-                with open(os.path.join(results_path, f'{attribute_name}.pkl'), 'wb') as output_file:
+                with open(os.path.join(results_path, f"{attribute_name}.pkl"), "wb") as output_file:
                     pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
-    def load(
-            self,
-            results_path: str
-    ):
+    def load(self, results_path: str):
         """Load results from given path."""
 
         # Obtain all CSV and PKL files at results path.
-        files = glob.glob(os.path.join(results_path, '*.csv')) + glob.glob(os.path.join(results_path, '*.pkl'))
+        files = glob.glob(os.path.join(results_path, "*.csv")) + glob.glob(os.path.join(results_path, "*.pkl"))
 
         # Load all files which correspond to valid attributes.
         for file in files:
@@ -168,10 +152,10 @@ class ResultsBase(ObjectBase):
 
             # Load file and set attribute value.
             if attribute_name in typing.get_type_hints(type(self)):
-                if file_extension.lower() == '.csv':
+                if file_extension.lower() == ".csv":
                     value = pd.read_csv(file)
                 else:
-                    with open(file, 'rb') as input_file:
+                    with open(file, "rb") as input_file:
                         value = pickle.load(input_file)
                 self.__setattr__(attribute_name, value)
             else:
@@ -300,8 +284,8 @@ class OptimizationProblem(ObjectBase):
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
         # - Constraints are instantiated with 'name', 'timestep' and 'constraint_type' keys,
         #   but more may be added in ``define_constraint()``.
-        self.variables = pd.DataFrame(columns=['name', 'timestep', 'variable_type'])
-        self.constraints = pd.DataFrame(columns=['name', 'timestep', 'constraint_type'])
+        self.variables = pd.DataFrame(columns=["name", "timestep", "variable_type"])
+        self.constraints = pd.DataFrame(columns=["name", "timestep", "constraint_type"])
         self.constraints_len = 0
 
         # Instantiate parameters / flags dictionary.
@@ -320,10 +304,10 @@ class OptimizationProblem(ObjectBase):
         self.d_dict = collections.defaultdict(list)
 
     def define_variable(
-            self,
-            name: str,
-            variable_type: str = 'continuous',
-            **keys,
+        self,
+        name: str,
+        variable_type: str = "continuous",
+        **keys,
     ):
         """Define decision variable with given name and key set.
 
@@ -338,8 +322,8 @@ class OptimizationProblem(ObjectBase):
         """
 
         # Validate variable type.
-        variable_types = ['continuous', 'integer', 'binary']
-        if variable_type not in ['continuous', 'integer', 'binary']:
+        variable_types = ["continuous", "integer", "binary"]
+        if variable_type not in ["continuous", "integer", "binary"]:
             raise ValueError(
                 f"For variable definitions, the key `variable_type` is reserved and must be a valid variable type."
                 f"Valid variable types are {variable_types}."
@@ -347,25 +331,26 @@ class OptimizationProblem(ObjectBase):
 
         # Obtain new variables based on ``keys``.
         # - Variable dimensions are constructed based by taking the product of the given key sets.
-        new_variables = (
-            pd.DataFrame(itertools.product([name], [variable_type], *[
-                list(value)
-                if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple, range]
-                else [value]
-                for value in keys.values()
-            ]), columns=['name', 'variable_type', *keys.keys()])
+        new_variables = pd.DataFrame(
+            itertools.product(
+                [name],
+                [variable_type],
+                *[
+                    list(value)
+                    if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple, range]
+                    else [value]
+                    for value in keys.values()
+                ],
+            ),
+            columns=["name", "variable_type", *keys.keys()],
         )
         # Add new variables to index.
         # - Duplicate definitions are automatically removed.
-        self.variables = (
-            pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates(ignore_index=True)
+        self.variables = pd.concat([self.variables, new_variables], ignore_index=True).drop_duplicates(
+            ignore_index=True
         )
 
-    def define_parameter(
-            self,
-            name: str,
-            value: typing.Union[float, np.ndarray, sp.spmatrix]
-    ):
+    def define_parameter(self, name: str, value: typing.Union[float, np.ndarray, sp.spmatrix]):
         """Define constant parameters with given name and numerical value.
 
         - Numerical values can be numerical value can be real-valued 1) float, 2) numpy array and
@@ -384,13 +369,13 @@ class OptimizationProblem(ObjectBase):
         self.parameters[name] = value
 
     def define_constraint(
-            self,
-            *elements: typing.Union[
-                str,
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
-            ],
-            **kwargs
+        self,
+        *elements: typing.Union[
+            str,
+            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
+        ],
+        **kwargs,
     ):
         """Define linear constraint for given list of constraint elements.
 
@@ -417,7 +402,7 @@ class OptimizationProblem(ObjectBase):
         operator = None
 
         # Instantiate left-hand / right-hand side indicator. Starting from left-hand side.
-        side = 'left'
+        side = "left"
 
         # Aggregate constraint elements.
         for element in elements:
@@ -431,10 +416,10 @@ class OptimizationProblem(ObjectBase):
                 element_keys = element[2] if len(element) > 2 else None
 
                 # Identify variables.
-                if element_type in ('variable', 'var', 'v'):
+                if element_type in ("variable", "var", "v"):
 
                     # Move right-hand variables to left-hand side.
-                    if side == 'right':
+                    if side == "right":
                         factor = -1.0
                     else:
                         factor = 1.0
@@ -447,10 +432,10 @@ class OptimizationProblem(ObjectBase):
                     variables.append((factor, element_value, element_keys))
 
                 # Identify constants.
-                elif element_type in ('constant', 'con', 'c'):
+                elif element_type in ("constant", "con", "c"):
 
                     # Move left-hand constants to right-hand side.
-                    if side == 'left':
+                    if side == "left":
                         factor = -1.0
                     else:
                         factor = 1.0
@@ -463,7 +448,7 @@ class OptimizationProblem(ObjectBase):
                     raise ValueError(f"Invalid constraint element type: {element_type}")
 
             # Strings are operators.
-            elif element in ['==', '<=', '>=']:
+            elif element in ["==", "<=", ">="]:
 
                 # Raise error if operator is first element.
                 if element == elements[0]:
@@ -481,7 +466,7 @@ class OptimizationProblem(ObjectBase):
                 operator = element
 
                 # Update left-hand / right-hand side indicator. Moving to right-hand side.
-                side = 'right'
+                side = "right"
 
             # Raise error if element type cannot be identified.
             else:
@@ -491,24 +476,15 @@ class OptimizationProblem(ObjectBase):
         if operator is None:
             raise ValueError("Cannot define constraint without operator (==, <= or >=).")
 
-        self.define_constraint_low_level(
-            variables,
-            operator,
-            constants,
-            **kwargs
-        )
+        self.define_constraint_low_level(variables, operator, constants, **kwargs)
 
     def define_constraint_low_level(
-            self,
-            variables: typing.List[
-                typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
-            ],
-            operator: str,
-            constants: typing.List[
-                typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
-            ],
-            keys: dict = None,
-            broadcast: typing.Union[str, list, tuple] = None
+        self,
+        variables: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+        operator: str,
+        constants: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+        keys: dict = None,
+        broadcast: typing.Union[str, list, tuple] = None,
     ):
 
         # Raise error if no variables in constraint.
@@ -523,7 +499,7 @@ class OptimizationProblem(ObjectBase):
                 raise TypeError(f"Constraint `keys` parameter must be a dictionary, but instead is: {type(keys)}")
 
             # Raise error if no 'name' key was defined.
-            if 'name' not in keys.keys():
+            if "name" not in keys.keys():
                 raise ValueError(f"'name' key is required in constraint `keys` dictionary. Only found: {keys.keys()}")
 
             # TODO: Raise error if using reserved 'constraint_type' key.
@@ -536,31 +512,31 @@ class OptimizationProblem(ObjectBase):
                 raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
 
         # For equality constraint, define separate upper / lower inequality.
-        if operator in ['==']:
+        if operator in ["=="]:
 
             # Define upper inequality.
             self.define_constraint_low_level(
                 variables,
-                '>=',
+                ">=",
                 constants,
-                keys=dict(keys, constraint_type='==>=') if keys is not None else None,
-                broadcast=broadcast
+                keys=dict(keys, constraint_type="==>=") if keys is not None else None,
+                broadcast=broadcast,
             )
 
             # Define lower inequality.
             self.define_constraint_low_level(
                 variables,
-                '<=',
+                "<=",
                 constants,
-                keys=dict(keys, constraint_type='==<=') if keys is not None else None,
-                broadcast=broadcast
+                keys=dict(keys, constraint_type="==<=") if keys is not None else None,
+                broadcast=broadcast,
             )
 
         # For inequality constraint, add into A matrix / b vector dictionaries.
-        elif operator in ['<=', '>=']:
+        elif operator in ["<=", ">="]:
 
             # If greater-than-equal, invert signs.
-            if operator == '>=':
+            if operator == ">=":
                 operator_factor = -1.0
             else:
                 operator_factor = 1.0
@@ -578,9 +554,7 @@ class OptimizationProblem(ObjectBase):
                             continue  # Skip variable & go to next iteration.
 
                 # Obtain variable integer index & raise error if variable or key does not exist.
-                variable_index = (
-                    tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
-                )
+                variable_index = tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
 
                 # Obtain broadcast dimension length for variable.
                 if broadcast is not None:
@@ -613,8 +587,8 @@ class OptimizationProblem(ObjectBase):
 
                 # If not yet defined, obtain constraint index based on dimension of first variable.
                 if constraint_index is None:
-                    constraint_index = (
-                        tuple(range(self.constraints_len, self.constraints_len + np.shape(variable_value)[0]))
+                    constraint_index = tuple(
+                        range(self.constraints_len, self.constraints_len + np.shape(variable_value)[0])
                     )
 
                 # Raise error if variable dimensions are inconsistent.
@@ -678,9 +652,7 @@ class OptimizationProblem(ObjectBase):
 
                 # Append b vector entry.
                 if parameter_name is None:
-                    self.b_dict[constraint_index].append(
-                        operator_factor * constant_factor * constant_value
-                    )
+                    self.b_dict[constraint_index].append(operator_factor * constant_factor * constant_value)
                 else:
                     self.b_dict[constraint_index].append(
                         (operator_factor * constant_factor, parameter_name, broadcast_len)
@@ -689,20 +661,23 @@ class OptimizationProblem(ObjectBase):
             # Append constraints index entries.
             if keys is not None:
                 # Set constraint type:
-                if 'constraint_type' in keys.keys():
-                    if keys['constraint_type'] not in ('==>=', '==<='):
-                        keys['constraint_type'] = operator
+                if "constraint_type" in keys.keys():
+                    if keys["constraint_type"] not in ("==>=", "==<="):
+                        keys["constraint_type"] = operator
                 else:
-                    keys['constraint_type'] = operator
+                    keys["constraint_type"] = operator
                 # Obtain new constraints based on ``keys``.
                 # - Constraint dimensions are constructed based by taking the product of the given key sets.
-                new_constraints = (
-                    pd.DataFrame(itertools.product(*[
-                        list(value)
-                        if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple]
-                        else [value]
-                        for value in keys.values()
-                    ]), columns=keys.keys())
+                new_constraints = pd.DataFrame(
+                    itertools.product(
+                        *[
+                            list(value)
+                            if type(value) in [pd.MultiIndex, pd.Index, pd.DatetimeIndex, np.ndarray, list, tuple]
+                            else [value]
+                            for value in keys.values()
+                        ]
+                    ),
+                    columns=keys.keys(),
                 )
                 # Raise error if key set dimension does not align with constant dimension.
                 if len(new_constraints) != len(constraint_index):
@@ -724,14 +699,14 @@ class OptimizationProblem(ObjectBase):
             ValueError(f"Invalid constraint operator: {operator}")
 
     def define_objective(
-            self,
-            *elements: typing.Union[
-                str,
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
-                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]
-            ],
-            **kwargs
+        self,
+        *elements: typing.Union[
+            str,
+            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
+            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict],
+        ],
+        **kwargs,
     ):
         """Define objective terms for the given list of objective elements.
 
@@ -767,7 +742,7 @@ class OptimizationProblem(ObjectBase):
                 element_keys_2 = element[3] if len(element) > 3 else None
 
                 # Identify variables.
-                if element_type in ('variable', 'var', 'v'):
+                if element_type in ("variable", "var", "v"):
 
                     # Append element to variables / quadratic variables.
                     if element_keys_2 is None:
@@ -776,7 +751,7 @@ class OptimizationProblem(ObjectBase):
                         variables_quadratic.append((element_value, element_keys_1, element_keys_2))
 
                 # Identify constants.
-                elif element_type in ('constant', 'con', 'c'):
+                elif element_type in ("constant", "con", "c"):
 
                     # Add element to constant.
                     constants.append((element_value, element_keys_1))
@@ -789,25 +764,14 @@ class OptimizationProblem(ObjectBase):
             else:
                 raise ValueError(f"Invalid objective element: \n{element}")
 
-        self.define_objective_low_level(
-            variables,
-            variables_quadratic,
-            constants,
-            **kwargs
-        )
+        self.define_objective_low_level(variables, variables_quadratic, constants, **kwargs)
 
     def define_objective_low_level(
-            self,
-            variables: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
-            ],
-            variables_quadratic: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]
-            ],
-            constants: typing.List[
-                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]
-            ],
-            broadcast: typing.Union[str, list, tuple] = None
+        self,
+        variables: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+        variables_quadratic: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]],
+        constants: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+        broadcast: typing.Union[str, list, tuple] = None,
     ):
 
         # Run type checks for broadcast argument.
@@ -827,9 +791,7 @@ class OptimizationProblem(ObjectBase):
                         continue  # Skip variable & go to next iteration.
 
             # Obtain variable index & raise error if variable or key does not exist.
-            variable_index = (
-                tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
-            )
+            variable_index = tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
 
             # Obtain broadcast dimension length for variable.
             if broadcast is not None:
@@ -869,9 +831,9 @@ class OptimizationProblem(ObjectBase):
 
             # Raise error if variable dimensions are inconsistent.
             if (
-                    np.shape(variable_value)[1] != len(variable_index)
-                    if len(np.shape(variable_value)) > 1
-                    else np.shape(variable_value)[0] != len(variable_index)
+                np.shape(variable_value)[1] != len(variable_index)
+                if len(np.shape(variable_value)) > 1
+                else np.shape(variable_value)[0] != len(variable_index)
             ):
                 raise ValueError(f"Objective factor dimension mismatch at variable: \n{variable_keys}")
 
@@ -892,12 +854,8 @@ class OptimizationProblem(ObjectBase):
                         continue  # Skip variable & go to next iteration.
 
             # Obtain variable index & raise error if variable or key does not exist.
-            variable_1_index = (
-                tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
-            )
-            variable_2_index = (
-                tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
-            )
+            variable_1_index = tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
+            variable_2_index = tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
 
             # Obtain broadcast dimension length for variable.
             if broadcast is not None:
@@ -971,7 +929,7 @@ class OptimizationProblem(ObjectBase):
 
             # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
             if type(constant_value) is not float:
-                if np.shape(constant_value) not in [(1, ), (1, 1)]:
+                if np.shape(constant_value) not in [(1,), (1, 1)]:
                     raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
 
             # If broadcasting, value is repeated along broadcast dimension.
@@ -984,34 +942,25 @@ class OptimizationProblem(ObjectBase):
             else:
                 self.d_dict[0].append((parameter_name, broadcast_len))
 
-    def get_variable_index(
-            self,
-            name: str,
-            raise_empty_index_error: bool = False,
-            **keys
-    ):
+    def get_variable_index(self, name: str, raise_empty_index_error: bool = False, **keys):
         """Utility method for obtaining a variable integer index vector for given variable name / keys."""
 
         return mesmo.utils.get_index(self.variables, name=name, **keys, raise_empty_index_error=raise_empty_index_error)
 
-    def get_variable_keys(
-            self,
-            name: str,
-            **keys
-    ):
+    def get_variable_keys(self, name: str, **keys):
         """Utility method for obtaining a variable key dataframe for given variable name / keys.
 
         - This intended for debugging / inspection of the key value order, e.g. such that numerical factors
           can be constructed accordingly.
         """
 
-        return self.variables.loc[self.get_variable_index(name, **keys)].dropna(axis='columns', how='all')
+        return self.variables.loc[self.get_variable_index(name, **keys)].dropna(axis="columns", how="all")
 
     def get_a_matrix(self) -> sp.csr_matrix:
         r"""Obtain :math:`\boldsymbol{A}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
-        log_time('get optimization problem A matrix')
+        log_time("get optimization problem A matrix")
 
         # Instantiate collections.
         values_list = list()
@@ -1044,15 +993,13 @@ class OptimizationProblem(ObjectBase):
                 columns_list.append(columns)
 
         # Instantiate A matrix.
-        a_matrix = (
-            sp.coo_matrix(
-                (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
-                shape=(self.constraints_len, len(self.variables))
-            ).tocsr()
-        )
+        a_matrix = sp.coo_matrix(
+            (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
+            shape=(self.constraints_len, len(self.variables)),
+        ).tocsr()
 
         # Log time.
-        log_time('get optimization problem A matrix')
+        log_time("get optimization problem A matrix")
 
         return a_matrix
 
@@ -1060,7 +1007,7 @@ class OptimizationProblem(ObjectBase):
         r"""Obtain :math:`\boldsymbol{b}` vector for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
-        log_time('get optimization problem b vector')
+        log_time("get optimization problem b vector")
 
         # Instantiate array.
         b_vector = np.zeros((self.constraints_len, 1))
@@ -1081,7 +1028,7 @@ class OptimizationProblem(ObjectBase):
                 b_vector[constraint_index, 0] += values.ravel()
 
         # Log time.
-        log_time('get optimization problem b vector')
+        log_time("get optimization problem b vector")
 
         return b_vector
 
@@ -1089,7 +1036,7 @@ class OptimizationProblem(ObjectBase):
         r"""Obtain :math:`\boldsymbol{c}` vector for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
-        log_time('get optimization problem c vector')
+        log_time("get optimization problem c vector")
 
         # Instantiate array.
         c_vector = np.zeros((1, len(self.variables)))
@@ -1112,7 +1059,7 @@ class OptimizationProblem(ObjectBase):
                 c_vector[0, variable_index] += values.ravel()
 
         # Log time.
-        log_time('get optimization problem c vector')
+        log_time("get optimization problem c vector")
 
         return c_vector
 
@@ -1120,7 +1067,7 @@ class OptimizationProblem(ObjectBase):
         r"""Obtain :math:`\boldsymbol{Q}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
-        log_time('get optimization problem Q matrix')
+        log_time("get optimization problem Q matrix")
 
         # Instantiate collections.
         values_list = list()
@@ -1155,13 +1102,14 @@ class OptimizationProblem(ObjectBase):
         q_matrix = (
             sp.coo_matrix(
                 (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
-                shape=(len(self.variables), len(self.variables))
+                shape=(len(self.variables), len(self.variables)),
             ).tocsr()
-            if len(self.q_dict) > 0 else sp.csr_matrix((len(self.variables), len(self.variables)))
+            if len(self.q_dict) > 0
+            else sp.csr_matrix((len(self.variables), len(self.variables)))
         )
 
         # Log time.
-        log_time('get optimization problem Q matrix')
+        log_time("get optimization problem Q matrix")
 
         return q_matrix
 
@@ -1169,7 +1117,7 @@ class OptimizationProblem(ObjectBase):
         r"""Obtain :math:`d` value for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
-        log_time('get optimization problem d constant')
+        log_time("get optimization problem d constant")
 
         # Instantiate array.
         d_constant = 0.0
@@ -1186,7 +1134,7 @@ class OptimizationProblem(ObjectBase):
             d_constant += float(values)
 
         # Log time.
-        log_time('get optimization problem d constant')
+        log_time("get optimization problem d constant")
 
         return d_constant
 
@@ -1231,7 +1179,7 @@ class OptimizationProblem(ObjectBase):
         # TODO: Add example for low-level customization solve workflow.
 
         # Log time.
-        log_time(f'solve optimization problem problem')
+        log_time(f"solve optimization problem problem")
         logger.debug(
             f"Solver name: {mesmo.config.config['optimization']['solver_name']};"
             f" Solver interface: {mesmo.config.config['optimization']['solver_interface']};"
@@ -1239,11 +1187,11 @@ class OptimizationProblem(ObjectBase):
         )
 
         # Use CVXPY solver interface, if selected.
-        if mesmo.config.config['optimization']['solver_interface'] == 'cvxpy':
+        if mesmo.config.config["optimization"]["solver_interface"] == "cvxpy":
             self.solve_cvxpy(*self.get_cvxpy_problem())
         # Use direct solver interfaces, if selected.
-        elif mesmo.config.config['optimization']['solver_interface'] == 'direct':
-            if mesmo.config.config['optimization']['solver_name'] == 'gurobi':
+        elif mesmo.config.config["optimization"]["solver_interface"] == "direct":
+            if mesmo.config.config["optimization"]["solver_name"] == "gurobi":
                 self.solve_gurobi(*self.get_gurobi_problem())
             # If no direct solver interface found, fall back to CVXPY interface.
             else:
@@ -1263,7 +1211,7 @@ class OptimizationProblem(ObjectBase):
             self.duals = self.get_duals()
 
         # Log time.
-        log_time(f'solve optimization problem problem')
+        log_time(f"solve optimization problem problem")
 
     def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
         """Obtain standard-form problem via Gurobi direct interface."""
@@ -1273,31 +1221,25 @@ class OptimizationProblem(ObjectBase):
         #   and the associated attributes.
         gurobipy_problem = gp.Model()
         # Set solver parameters.
-        gurobipy_problem.setParam('OutputFlag', int(mesmo.config.config['optimization']['show_solver_output']))
+        gurobipy_problem.setParam("OutputFlag", int(mesmo.config.config["optimization"]["show_solver_output"]))
         for key, value in mesmo.config.solver_parameters.items():
             gurobipy_problem.setParam(key, value)
 
         # Define variables.
         # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).
         # - Lower bound defaults to 0 and needs to be explicitly overwritten.
-        x_vector = (
-            gurobipy_problem.addMVar(
-                shape=(len(self.variables), ),
-                lb=-np.inf,
-                ub=np.inf,
-                vtype=gp.GRB.CONTINUOUS,
-                name='x_vector'
-            )
+        x_vector = gurobipy_problem.addMVar(
+            shape=(len(self.variables),), lb=-np.inf, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="x_vector"
         )
-        if (self.variables.loc[:, 'variable_type'] == 'integer').any():
-            x_vector[self.variables.loc[:, 'variable_type'] == 'integer'].setAttr('vtype', gp.GRB.INTEGER)
-        if (self.variables.loc[:, 'variable_type'] == 'binary').any():
-            x_vector[self.variables.loc[:, 'variable_type'] == 'binary'].setAttr('vtype', gp.GRB.BINARY)
+        if (self.variables.loc[:, "variable_type"] == "integer").any():
+            x_vector[self.variables.loc[:, "variable_type"] == "integer"].setAttr("vtype", gp.GRB.INTEGER)
+        if (self.variables.loc[:, "variable_type"] == "binary").any():
+            x_vector[self.variables.loc[:, "variable_type"] == "binary"].setAttr("vtype", gp.GRB.BINARY)
 
         # Define constraints.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
         constraints = self.get_a_matrix() @ x_vector <= self.get_b_vector().ravel()
-        constraints = gurobipy_problem.addConstr(constraints, name='constraints')
+        constraints = gurobipy_problem.addConstr(constraints, name="constraints")
 
         # Define objective.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
@@ -1308,19 +1250,10 @@ class OptimizationProblem(ObjectBase):
         )
         gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
 
-        return (
-            gurobipy_problem,
-            x_vector,
-            constraints,
-            objective
-        )
+        return (gurobipy_problem, x_vector, constraints, objective)
 
     def solve_gurobi(
-            self,
-            gurobipy_problem: gp.Model,
-            x_vector: gp.MVar,
-            constraints: gp.MConstr,
-            objective: gp.MQuadExpr
+        self, gurobipy_problem: gp.Model, x_vector: gp.MVar, constraints: gp.MConstr, objective: gp.MQuadExpr
     ) -> gp.Model:
         """Solve optimization problem via Gurobi direct interface."""
 
@@ -1332,9 +1265,9 @@ class OptimizationProblem(ObjectBase):
             gp.GRB.INFEASIBLE: "Infeasible",
             gp.GRB.INF_OR_UNBD: "Infeasible or Unbounded",
             gp.GRB.UNBOUNDED: "Unbounded",
-            gp.GRB.SUBOPTIMAL: "Suboptimal"
+            gp.GRB.SUBOPTIMAL: "Suboptimal",
         }
-        status = gurobipy_problem.getAttr('Status')
+        status = gurobipy_problem.getAttr("Status")
         if status not in [gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL]:
             status = status_labels[status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
             raise RuntimeError(f"Gurobi exited with non-optimal solution status: {status}")
@@ -1343,13 +1276,13 @@ class OptimizationProblem(ObjectBase):
             logger.warning(f"Gurobi exited with non-optimal solution status: {status}")
 
         # Store results.
-        self.x_vector = np.transpose([x_vector.getAttr('x')])
+        self.x_vector = np.transpose([x_vector.getAttr("x")])
         if (
-                (gurobipy_problem.getAttr('NumQCNZs') == 0)
-                and not ((self.variables.loc[:, 'variable_type'] == 'integer').any())
-                and not ((self.variables.loc[:, 'variable_type'] == 'binary').any())
+            (gurobipy_problem.getAttr("NumQCNZs") == 0)
+            and not ((self.variables.loc[:, "variable_type"] == "integer").any())
+            and not ((self.variables.loc[:, "variable_type"] == "binary").any())
         ):
-            self.mu_vector = np.transpose([constraints.getAttr('Pi')])
+            self.mu_vector = np.transpose([constraints.getAttr("Pi")])
         else:
             # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
             logger.warning(
@@ -1363,27 +1296,29 @@ class OptimizationProblem(ObjectBase):
 
         return gurobipy_problem
 
-    def get_cvxpy_problem(self) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
+    def get_cvxpy_problem(
+        self,
+    ) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
         """Obtain standard-form problem via CVXPY interface."""
 
         # Define variables.
-        x_vector = (
-            cp.Variable(
-                shape=(len(self.variables), 1),
-                name='x_vector',
-                integer=(
-                    (index, 0)
-                    for index, is_integer
-                    in enumerate(self.variables.loc[:, 'variable_type'] == 'integer')
-                    if is_integer
-                ) if (self.variables.loc[:, 'variable_type'] == 'integer').any() else False,
-                boolean=(
-                    (index, 0)
-                    for index, is_binary
-                    in enumerate(self.variables.loc[:, 'variable_type'] == 'binary')
-                    if is_binary
-                ) if (self.variables.loc[:, 'variable_type'] == 'binary').any() else False
+        x_vector = cp.Variable(
+            shape=(len(self.variables), 1),
+            name="x_vector",
+            integer=(
+                (index, 0)
+                for index, is_integer in enumerate(self.variables.loc[:, "variable_type"] == "integer")
+                if is_integer
             )
+            if (self.variables.loc[:, "variable_type"] == "integer").any()
+            else False,
+            boolean=(
+                (index, 0)
+                for index, is_binary in enumerate(self.variables.loc[:, "variable_type"] == "binary")
+                if is_binary
+            )
+            if (self.variables.loc[:, "variable_type"] == "binary").any()
+            else False,
         )
 
         # Define constraints.
@@ -1391,22 +1326,16 @@ class OptimizationProblem(ObjectBase):
 
         # Define objective.
         objective = (
-            self.get_c_vector() @ x_vector
-            + cp.quad_form(x_vector, 0.5 * self.get_q_matrix())
-            + self.get_d_constant()
+            self.get_c_vector() @ x_vector + cp.quad_form(x_vector, 0.5 * self.get_q_matrix()) + self.get_d_constant()
         )
 
-        return (
-            x_vector,
-            constraints,
-            objective
-        )
+        return (x_vector, constraints, objective)
 
     def solve_cvxpy(
-            self,
-            x_vector: cp.Variable,
-            constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
-            objective: cp.Expression
+        self,
+        x_vector: cp.Variable,
+        constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
+        objective: cp.Expression,
     ) -> cp.Problem:
         """Solve optimization problem via CVXPY interface."""
 
@@ -1416,12 +1345,12 @@ class OptimizationProblem(ObjectBase):
         # Solve optimization problem.
         cvxpy_problem.solve(
             solver=(
-                mesmo.config.config['optimization']['solver_name'].upper()
-                if mesmo.config.config['optimization']['solver_name'] is not None
+                mesmo.config.config["optimization"]["solver_name"].upper()
+                if mesmo.config.config["optimization"]["solver_name"] is not None
                 else None
             ),
-            verbose=mesmo.config.config['optimization']['show_solver_output'],
-            **mesmo.config.solver_parameters
+            verbose=mesmo.config.config["optimization"]["show_solver_output"],
+            **mesmo.config.solver_parameters,
         )
 
         # Assert that solver exited with an optimal solution. If not, raise an error.
@@ -1435,17 +1364,14 @@ class OptimizationProblem(ObjectBase):
 
         return cvxpy_problem
 
-    def get_results(
-        self,
-        x_vector: typing.Union[cp.Variable, np.ndarray] = None
-    ) -> dict:
+    def get_results(self, x_vector: typing.Union[cp.Variable, np.ndarray] = None) -> dict:
         """Obtain results for decisions variables.
 
         - Results are returned as dictionary with keys corresponding to the variable names that have been defined.
         """
 
         # Log time.
-        log_time('get optimization problem results')
+        log_time("get optimization problem results")
 
         # Obtain x vector.
         if x_vector is None:
@@ -1454,7 +1380,7 @@ class OptimizationProblem(ObjectBase):
             x_vector = x_vector.value
 
         # Instantiate results object.
-        results = dict.fromkeys(self.variables.loc[:, 'name'].unique())
+        results = dict.fromkeys(self.variables.loc[:, "name"].unique())
 
         # Obtain results for each variable.
         for name in results:
@@ -1462,23 +1388,22 @@ class OptimizationProblem(ObjectBase):
             # Get variable dimensions.
             variable_dimensions = (
                 self.variables.iloc[self.get_variable_index(name), :]
-                .drop(['name', 'variable_type'], axis=1).drop_duplicates().dropna(axis=1)
+                .drop(["name", "variable_type"], axis=1)
+                .drop_duplicates()
+                .dropna(axis=1)
             )
 
             if len(variable_dimensions.columns) > 0:
 
                 # Get results from x vector as pandas series.
-                results[name] = (
-                    pd.Series(
-                        x_vector[self.get_variable_index(name), 0],
-                        index=pd.MultiIndex.from_frame(variable_dimensions)
-                    )
+                results[name] = pd.Series(
+                    x_vector[self.get_variable_index(name), 0], index=pd.MultiIndex.from_frame(variable_dimensions)
                 )
 
                 # Reshape to dataframe with timesteps as index and other variable dimensions as columns.
-                if 'timestep' in variable_dimensions.columns:
-                    results[name] = (
-                        results[name].unstack(level=[key for key in variable_dimensions.columns if key != 'timestep'])
+                if "timestep" in variable_dimensions.columns:
+                    results[name] = results[name].unstack(
+                        level=[key for key in variable_dimensions.columns if key != "timestep"]
                     )
 
                 # If results are obtained as series, convert to dataframe with variable name as column.
@@ -1491,7 +1416,7 @@ class OptimizationProblem(ObjectBase):
                 results[name] = float(x_vector[self.get_variable_index(name), 0])
 
         # Log time.
-        log_time('get optimization problem results')
+        log_time("get optimization problem results")
 
         return results
 
@@ -1502,93 +1427,92 @@ class OptimizationProblem(ObjectBase):
         """
 
         # Log time.
-        log_time('get optimization problem duals')
+        log_time("get optimization problem duals")
 
         # Instantiate results object.
-        results = dict.fromkeys(self.constraints.loc[:, 'name'].unique())
+        results = dict.fromkeys(self.constraints.loc[:, "name"].unique())
 
         # Obtain results for each constraint.
         for name in results:
 
             # Get constraint dimensions & constraint type.
             # TODO: Check if this works for scalar constraints without timesteps.
-            constraint_dimensions = (
-                pd.MultiIndex.from_frame(
-                    self.constraints.iloc[mesmo.utils.get_index(self.constraints, name=name), :]
-                    .drop(['name', 'constraint_type'], axis=1).drop_duplicates().dropna(axis=1)
-                )
+            constraint_dimensions = pd.MultiIndex.from_frame(
+                self.constraints.iloc[mesmo.utils.get_index(self.constraints, name=name), :]
+                .drop(["name", "constraint_type"], axis=1)
+                .drop_duplicates()
+                .dropna(axis=1)
             )
-            constraint_type = (
-                pd.Series(self.constraints.loc[self.constraints.loc[:, 'name'] == name, 'constraint_type'].unique())
+            constraint_type = pd.Series(
+                self.constraints.loc[self.constraints.loc[:, "name"] == name, "constraint_type"].unique()
             )
 
             # Get results from x vector as pandas series.
-            if constraint_type.str.contains('==').any():
-                results[name] = (
-                    pd.Series(
-                        0.0
-                        - self.mu_vector[self.constraints.index[
-                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='==>=')
-                        ], 0]
-                        - self.mu_vector[self.constraints.index[
-                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='==<=')
-                        ], 0],
-                        index=constraint_dimensions
-                    )
+            if constraint_type.str.contains("==").any():
+                results[name] = pd.Series(
+                    0.0
+                    - self.mu_vector[
+                        self.constraints.index[
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type="==>=")
+                        ],
+                        0,
+                    ]
+                    - self.mu_vector[
+                        self.constraints.index[
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type="==<=")
+                        ],
+                        0,
+                    ],
+                    index=constraint_dimensions,
                 )
-            elif constraint_type.str.contains('>=').any():
-                results[name] = (
-                    pd.Series(
-                        0.0
-                        - self.mu_vector[self.constraints.index[
-                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='>=')
-                        ], 0],
-                        index=constraint_dimensions
-                    )
+            elif constraint_type.str.contains(">=").any():
+                results[name] = pd.Series(
+                    0.0
+                    - self.mu_vector[
+                        self.constraints.index[
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type=">=")
+                        ],
+                        0,
+                    ],
+                    index=constraint_dimensions,
                 )
-            elif constraint_type.str.contains('<=').any():
-                results[name] = (
-                    pd.Series(
-                        0.0
-                        - self.mu_vector[self.constraints.index[
-                            mesmo.utils.get_index(self.constraints, name=name, constraint_type='<=')
-                        ], 0],
-                        index=constraint_dimensions
-                    )
+            elif constraint_type.str.contains("<=").any():
+                results[name] = pd.Series(
+                    0.0
+                    - self.mu_vector[
+                        self.constraints.index[
+                            mesmo.utils.get_index(self.constraints, name=name, constraint_type="<=")
+                        ],
+                        0,
+                    ],
+                    index=constraint_dimensions,
                 )
 
             # Reshape to dataframe with timesteps as index and other constraint dimensions as columns.
-            results[name] = (
-                results[name].unstack(level=[key for key in constraint_dimensions.names if key != 'timestep'])
+            results[name] = results[name].unstack(
+                level=[key for key in constraint_dimensions.names if key != "timestep"]
             )
             # If no other dimensions, e.g. for scalar constraints, convert to dataframe with constraint name as column.
             if type(results[name]) is pd.Series:
                 results[name] = pd.DataFrame(results[name], columns=[name])
 
         # Log time.
-        log_time('get optimization problem duals')
+        log_time("get optimization problem duals")
 
         return results
 
-    def evaluate_objective(
-            self,
-            x_vector: np.ndarray
-    ) -> float:
+    def evaluate_objective(self, x_vector: np.ndarray) -> float:
         r"""Utility function for evaluating the objective value for a given :math:`x` vector value."""
 
         objective = float(
-            self.get_c_vector() @ x_vector
-            + x_vector.T @ (0.5 * self.get_q_matrix()) @ x_vector
-            + self.get_d_constant()
+            self.get_c_vector() @ x_vector + x_vector.T @ (0.5 * self.get_q_matrix()) @ x_vector + self.get_d_constant()
         )
 
         return objective
 
 
 def starmap(
-        function: typing.Callable,
-        argument_sequence: typing.Iterable[tuple],
-        keyword_arguments: dict = None
+    function: typing.Callable, argument_sequence: typing.Iterable[tuple], keyword_arguments: dict = None
 ) -> list:
     """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
@@ -1607,7 +1531,7 @@ def starmap(
     # Ensure that argument sequence is list.
     argument_sequence = list(argument_sequence)
 
-    if mesmo.config.config['multiprocessing']['run_parallel']:
+    if mesmo.config.config["multiprocessing"]["run_parallel"]:
         # TODO: Remove old parallel pool traces.
         # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
         # if mesmo.config.parallel_pool is None:
@@ -1619,52 +1543,43 @@ def starmap(
 
         # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
-            log_time('parallel pool setup')
-            ray.init(num_cpus=max(int(mesmo.config.config['multiprocessing']['cpu_share'] * os.cpu_count()), 1))
+            log_time("parallel pool setup")
+            ray.init(num_cpus=max(int(mesmo.config.config["multiprocessing"]["cpu_share"] * os.cpu_count()), 1))
             mesmo.config.parallel_pool = True
-            log_time('parallel pool setup')
+            log_time("parallel pool setup")
         results = ray_starmap(function_partial, argument_sequence)
     else:
         # If not `run_parallel`, use for loop for sequential execution.
         results = [
-            function_partial(*arguments) for arguments in tqdm.tqdm(
+            function_partial(*arguments)
+            for arguments in tqdm.tqdm(
                 argument_sequence,
                 total=len(argument_sequence),
-                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+                disable=(mesmo.config.config["logs"]["level"] != "debug"),  # Progress bar only shown in debug mode.
             )
         ]
 
     return results
 
 
-def chunk_dict(
-        dict_in: dict,
-        chunk_count: int = os.cpu_count()
-):
+def chunk_dict(dict_in: dict, chunk_count: int = os.cpu_count()):
     """Divide dictionary into equally sized chunks."""
 
     chunk_size = int(np.ceil(len(dict_in) / chunk_count))
     dict_iter = iter(dict_in)
 
     return [
-        {j: dict_in[j] for j in itertools.islice(dict_iter, chunk_size)}
-        for i in range(0, len(dict_in), chunk_size)
+        {j: dict_in[j] for j in itertools.islice(dict_iter, chunk_size)} for i in range(0, len(dict_in), chunk_size)
     ]
 
 
-def chunk_list(
-        list_in: typing.Union[typing.Iterable, typing.Sized],
-        chunk_count: int = os.cpu_count()
-):
+def chunk_list(list_in: typing.Union[typing.Iterable, typing.Sized], chunk_count: int = os.cpu_count()):
     """Divide list into equally sized chunks."""
 
     chunk_size = int(np.ceil(len(list_in) / chunk_count))
     list_iter = iter(list_in)
 
-    return [
-        [j for j in itertools.islice(list_iter, chunk_size)]
-        for i in range(0, len(list_in), chunk_size)
-    ]
+    return [[j for j in itertools.islice(list_iter, chunk_size)] for i in range(0, len(list_in), chunk_size)]
 
 
 def ray_iterator(objects: list):
@@ -1686,9 +1601,9 @@ def ray_get(objects: list):
 
     try:
         for _ in tqdm.tqdm(
-                ray_iterator(objects),
-                total=len(objects),
-                disable=(mesmo.config.config['logs']['level'] != 'debug')  # Progress bar only shown in debug mode.
+            ray_iterator(objects),
+            total=len(objects),
+            disable=(mesmo.config.config["logs"]["level"] != "debug"),  # Progress bar only shown in debug mode.
         ):
             pass
     except TypeError:
@@ -1696,27 +1611,19 @@ def ray_get(objects: list):
     return ray.get(objects)
 
 
-def ray_starmap(
-        function_handle: typing.Callable,
-        argument_sequence: list
-):
+def ray_starmap(function_handle: typing.Callable, argument_sequence: list):
     """Utility function to provide an interface similar to ``itertools.starmap`` for ``ray``.
 
     - This replicates the ``starmap`` interface of the ``multiprocessing`` API, which ray also supports,
       but allows for additional modifications, e.g. progress reporting via :func:`ray_get`.
     """
 
-    return ray_get([
-        ray.remote(lambda *args: function_handle(*args)).remote(*arguments)
-        for arguments in argument_sequence
-    ])
+    return ray_get(
+        [ray.remote(lambda *args: function_handle(*args)).remote(*arguments) for arguments in argument_sequence]
+    )
 
 
-def log_time(
-        label: str,
-        log_level: str = 'debug',
-        logger_object: logging.Logger = logger
-):
+def log_time(label: str, log_level: str = "debug", logger_object: logging.Logger = logger):
     """Log start / end message and time duration for given label.
 
     - When called with given label for the first time, will log start message.
@@ -1740,9 +1647,9 @@ def log_time(
 
     time_now = time.time()
 
-    if log_level == 'debug':
+    if log_level == "debug":
         logger_handle = lambda message: logger_object.debug(message)
-    elif log_level == 'info':
+    elif log_level == "info":
         logger_handle = lambda message: logger_object.info(message)
     else:
         raise ValueError(f"Invalid log level: '{log_level}'")
@@ -1754,11 +1661,7 @@ def log_time(
         logger_handle(f"Starting {label}.")
 
 
-def get_index(
-        index_set: typing.Union[pd.Index, pd.DataFrame],
-        raise_empty_index_error: bool = True,
-        **levels_values
-):
+def get_index(index_set: typing.Union[pd.Index, pd.DataFrame], raise_empty_index_error: bool = True, **levels_values):
     """Utility function for obtaining the integer index array for given index set / level / value list combination.
 
     :syntax:
@@ -1830,13 +1733,13 @@ def get_element_phases_array(element: pd.Series):
     """Utility function for obtaining the list of connected phases for given element data."""
 
     # Obtain list of connected phases.
-    phases_array = (
-        np.flatnonzero([
+    phases_array = np.flatnonzero(
+        [
             False,  # Ground / '0' phase connection is not considered.
-            element.at['is_phase_1_connected'] == 1,
-            element.at['is_phase_2_connected'] == 1,
-            element.at['is_phase_3_connected'] == 1
-        ])
+            element.at["is_phase_1_connected"] == 1,
+            element.at["is_phase_2_connected"] == 1,
+            element.at["is_phase_3_connected"] == 1,
+        ]
     )
 
     return phases_array
@@ -1847,11 +1750,11 @@ def get_element_phases_string(element: pd.Series):
 
     # Obtain string of connected phases.
     phases_string = ""
-    if element.at['is_phase_1_connected'] == 1:
+    if element.at["is_phase_1_connected"] == 1:
         phases_string += ".1"
-    if element.at['is_phase_2_connected'] == 1:
+    if element.at["is_phase_2_connected"] == 1:
         phases_string += ".2"
-    if element.at['is_phase_3_connected'] == 1:
+    if element.at["is_phase_3_connected"] == 1:
         phases_string += ".3"
 
     return phases_string
@@ -1867,8 +1770,8 @@ def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
     # Take inverse.
     # - Suppress numpy runtime warning for divide by zero, because it is expected.
     # TODO: `invalid='ignore'` to be removed once https://github.com/conda-forge/numpy-feedstock/issues/229 is fixed.
-    with np.errstate(divide='ignore', invalid='ignore'):
-        array_inverse = array ** -1
+    with np.errstate(divide="ignore", invalid="ignore"):
+        array_inverse = array**-1
 
     # Replace inverse of zero values.
     array_inverse[array == 0.0] = array[array == 0.0]
@@ -1876,21 +1779,16 @@ def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
     return array_inverse
 
 
-def get_timestamp(
-        time: datetime.datetime = None
-) -> str:
+def get_timestamp(time: datetime.datetime = None) -> str:
     """Generate formatted timestamp string, e.g., for saving results with timestamp."""
 
     if time is None:
         time = datetime.datetime.now()
 
-    return time.strftime('%Y-%m-%d_%H-%M-%S')
+    return time.strftime("%Y-%m-%d_%H-%M-%S")
 
 
-def get_results_path(
-        base_name: str,
-        scenario_name: str = None
-) -> str:
+def get_results_path(base_name: str, scenario_name: str = None) -> str:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
     created on disk along with this.
@@ -1901,12 +1799,12 @@ def get_results_path(
     """
 
     # Preprocess results path name components, including removing non-alphanumeric characters.
-    base_name = re.sub(r'\W-+', '', os.path.basename(os.path.splitext(base_name)[0])) + '_'
-    scenario_name = '' if scenario_name is None else re.sub(r'\W-+', '', scenario_name) + '_'
+    base_name = re.sub(r"\W-+", "", os.path.basename(os.path.splitext(base_name)[0])) + "_"
+    scenario_name = "" if scenario_name is None else re.sub(r"\W-+", "", scenario_name) + "_"
     timestamp = mesmo.utils.get_timestamp()
 
     # Obtain results path.
-    results_path = os.path.join(mesmo.config.config['paths']['results'], f'{base_name}{scenario_name}{timestamp}')
+    results_path = os.path.join(mesmo.config.config["paths"]["results"], f"{base_name}{scenario_name}{timestamp}")
 
     # Instantiate results directory.
     # TODO: Catch error if dir exists.
@@ -1915,33 +1813,27 @@ def get_results_path(
     return results_path
 
 
-def get_alphanumeric_string(
-        string: str
-):
+def get_alphanumeric_string(string: str):
     """Create lowercase alphanumeric string from given string, replacing non-alphanumeric characters with underscore."""
 
-    return re.sub(r'[^0-9a-zA-Z_]+', '_', string).strip('_').lower()
+    return re.sub(r"[^0-9a-zA-Z_]+", "_", string).strip("_").lower()
 
 
 def launch(path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
     if not os.path.exists(path):
-        raise FileNotFoundError(f'Cannot launch file or directory that does not exist: {path}')
+        raise FileNotFoundError(f"Cannot launch file or directory that does not exist: {path}")
 
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         os.startfile(path)
-    elif sys.platform == 'darwin':
-        subprocess.Popen(['open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
-        subprocess.Popen(['xdg-open', path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["xdg-open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-def write_figure_plotly(
-        figure: go.Figure,
-        results_path: str,
-        file_format=mesmo.config.config['plots']['file_format']
-):
+def write_figure_plotly(figure: go.Figure, results_path: str, file_format=mesmo.config.config["plots"]["file_format"]):
     """Utility function for writing / storing plotly figure to output file. File format can be given with
     `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.
 
@@ -1950,16 +1842,16 @@ def write_figure_plotly(
     - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'
     """
 
-    if file_format in ['png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf']:
+    if file_format in ["png", "jpg", "jpeg", "webp", "svg", "pdf"]:
         pio.write_image(
             figure,
             f"{results_path}.{file_format}",
-            width=mesmo.config.config['plots']['plotly_figure_width'],
-            height=mesmo.config.config['plots']['plotly_figure_height']
+            width=mesmo.config.config["plots"]["plotly_figure_width"],
+            height=mesmo.config.config["plots"]["plotly_figure_height"],
         )
-    elif file_format in ['html']:
+    elif file_format in ["html"]:
         pio.write_html(figure, f"{results_path}.{file_format}")
-    elif file_format in ['json']:
+    elif file_format in ["json"]:
         pio.write_json(figure, f"{results_path}.{file_format}")
     else:
         raise ValueError(

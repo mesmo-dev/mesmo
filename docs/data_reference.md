@@ -74,15 +74,15 @@ Distributed energy resources (DERs) in the electric grid. Can define both loads 
 | --- |:---:| --- |
 | `electric_grid_name` | | Electric grid identifier as defined in `electric_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated electric grid). |
-| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. |
+| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `fixed_load`, `flexible_load`, `fixed_ev_charger`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. Defaults to `constant_power` if not explicitly defined. |
 | `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
 | `node_name` | | Node identifier as defined in `electric_grid_nodes`. |
 | `is_phase_1_connected` | | Selector for connection at phase 1. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_2_connected` | | Selector for connection at phase 2. Choices: `0` (connected), `1` (not connected). |
 | `is_phase_3_connected` | | Selector for connection at phase 3. Choices: `0` (connected), `1` (not connected). |
 | `connection` | | Selector for Wye / Delta connection. Choices: `wye`, `delta`. |
-| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. |
-| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. |
+| `active_power_nominal` | W | Nominal active power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
+| `reactive_power_nominal` | VAr | Nominal reactive power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
 | `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `electric_grid_line_types`
@@ -243,9 +243,9 @@ Distributed energy resources (DERs) in the thermal grid. Can define both loads (
 | `thermal_grid_name` | | Thermal grid identifier as defined in `thermal_grids`. |
 | `der_name` | | Unique DER identifier (must only be unique within the associated thermal grid). |
 | `node_name` | | Node identifier as defined in `thermal_grid_nodes`. |
-| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`.  |
+| `der_type` | | DER type selector, which determines the type of DER model to be used. Choices: `constant_power`, `flexible_building`, `fixed_generator`, `flexible_generator`, `cooling_plant`. Defaults to `constant_power` if not explicitly defined. |
 | `der_model_name` | | DER model identifier as defined in `der_models`. For `flexible_building`, this defines the CoBMo the scenario name. |
-| `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. |
+| `thermal_power_nominal` | W | Nominal thermal power, where loads are negative and generations are positive. Defaults to `0.0` if not explicitly defined. |
 | `in_service` | | In-service selector. Not-in-service grid elements are ignored and not loaded into the model. Choices: `1` (in service) or `0` (not in service). Optional column, which defaults to `1` if not explicitly defined. |
 
 ### `thermal_grid_line_types`
@@ -303,7 +303,7 @@ DER model parameter definitions. This table incorporates the definition of vario
 
 | Column | Unit | Description |
 | --- |:---:| --- |
-| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `flexible_ev_charger`, `cooling_plant`, `heating_plant`, `flexible_chp`, `storage`. Note: `flexible_buildings` cannot be defined here, because it is obtained from the CoBMo submodule directly. |
+| `der_type` | | DER type selector. Choices: `fixed_load`, `flexible_load`, `fixed_generator`, `flexible_generator`, `fixed_ev_charger`, `flexible_ev_charger`, `cooling_plant`, `heating_plant`, `flexible_chp`, `storage`. Note: `constant_power`, `flexible_buildings` cannot be defined here³. |
 | `der_model_name` | | Unique DER model identifier (must only be unique within the associated DER type). |
 | `definition_type` | | Definition type selector, because most DER types require either additional timeseries / schedule definition¹ or other supplementary parameter definitions from either of the tables `der_timeseries`, `der_schedules` or `der_cooling_plants`. Choices: `timeseries` (Defines timeseries of absolute values².) `schedule` (Defines schedule of absolute values².), `timeseries_per_unit` (Define timeseries of per unit values².), `schedule_per_unit` (Defines schedule of per unit values².), `cooling_plant` (Defines cooling plant.) |
 | `definition_name` | | Definition identifier, which corresponds to `definition_name` in either `der_timeseries`, `der_schedules` or `der_cooling_plants`. If `definition_type` is `timeseries` or `timeseries_per_unit`: defined in `der_timeseries`; if `definition_type` is `schedule` or `schedule_per_unit`: defined in `der_schedules`; if `definition_type` is `cooling_plant`: defined in `der_cooling_plants`. |
@@ -323,6 +323,7 @@ For most DER types, the `der_models` table is supplemented by timeseries / sched
 
 | DER type | Description | Required columns | Required supplementary definitions |
 | --- | --- | --- | --- |
+| `constant_power` | Constant power DER model, applying a fixed constant load or generation power value. | No definition in `der_models` is needed³, instead it is sufficient to declare the DER type as `constant_power` in `electric_grid_ders` / `thermal_grid_ders`. | N.A. |
 | `fixed_load` | Fixed load, following a fixed demand timeseries. | `definition_type`, `definition_name` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `flexible_load` | Flexible load, following a demand timeseries, but able shift a share of its nominal load, limited by its energy storage capacity. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `fixed_generator` | Fixed generator, following a fixed generation timeseries. | `definition_type`, `definition_name`, `marginal_cost` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
@@ -333,14 +334,15 @@ For most DER types, the `der_models` table is supplemented by timeseries / sched
 | `heating_plant` | Heating plant, converts electric power to thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost`, `thermal_efficiency` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `flexible_chp` | Flexible combined heat and power plant, generates electric power and thermal power, dispatchable with nominal power limits. | `definition_type`, `definition_name`, `power_per_unit_minimum`, `power_per_unit_maximum`, `marginal_cost`, `thermal_efficiency`, `electric_efficiency` | Timeseries / schedule¹ for nominal active / reactive / thermal power². |
 | `storage` | Energy storage, can charge / discharge within given limits and based on its energy storage capacity. | `power_per_unit_minimum`, `power_per_unit_maximum`, `energy_storage_capacity_per_unit`, `charging_efficiency`, `self_discharge_rate` | N.A. |
+| `flexible_buildings` | Flexible building model, represented via the Control-oriented Building Model (CoBMo) submodule. | No definition in `der_models` is needed³, instead the model definition is obtained from the CoBMo submodule. | CoBMo scenario definitions. |
 
-The selection of DER types will be extended in the future. Note that the DER type `flexible_buildings` is not defined here, instead the model definition is obtained from the Control-oriented Building Model (CoBMo) submodule.
-
-Not all DER types can be connected to all grid types, e.g. `fixed_ev_charger` is only available in the electric grid. Refer to `electric_grid_ders` / `thermal_grid_ders` to check which DER types can be connected respectively.
+The selection of DER types will be extended in the future. Note that not all DER types can be connected to all grid types, e.g. `fixed_ev_charger` is only available in the electric grid. Refer to `electric_grid_ders` / `thermal_grid_ders` to check which DER types can be connected respectively.
 
 ¹ For DER types which require the definition of timeseries values, these can be defined either directly as a timeseries in `der_timeseries` or as a schedule in `der_schedules`, where the latter describes recurring schedules based on weekday / time of day (see `der_schedules`).
 
 ² Active / reactive / thermal power values can be defined as absolute values or in per unit values. Per unit values are assumed to be in per unit of the nominal active / reactive power as defined `electric_grid_ders` / `thermal_grid_ders`. Note that the sign of the active / reactive / thermal power values in the timeseries / schedule definition are ignored and superseded by the sign of the nominal active / reactive / thermal power value as defined in `electric_grid_ders` / `thermal_grid_ders`, where positive values are interpreted as generation and negative values as consumption. Additionally, note that `der_timeseries` / `der_schedules` only define a single power value for each timestep. Thus, for electric DERs the active power is derived directly based on the value in `der_timeseries` / `der_schedules` and the reactive power is calculated from the active power assuming a fixed power factor according to the nominal active / reactive power in `electric_grid_ders`.
+
+³ The DER types `constant_power`, `flexible_buildings` are not defined in `der_models`: The DER type `constant_power` only needs to be defined in `electric_grid_ders` / `thermal_grid_ders`, as not additional input data is needed. The DER type `flexible_buildings` is not defined here, instead the model definition is obtained from the Control-oriented Building Model (CoBMo) submodule.
 
 ### `der_timeseries`
 

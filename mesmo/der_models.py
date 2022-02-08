@@ -167,6 +167,43 @@ class FixedDERModel(DERModel):
     """Fixed DER model object."""
 
 
+class ConstantPowerModel(FixedDERModel):
+    """Constant power DER model object, representing `der_type="constant_power"`.
+
+    - The constant power model is a basic placeholder DER model that only requires minimum DER definition input.
+    - The nominal active / reactive / thermal power of this DER is applied as constant value in its nominal power
+      timeseries.
+    - This is the fallback DER model for DERs that are defined with missing / empty `der_type` value.
+    """
+
+    der_type = "constant_power"
+
+    def __init__(
+            self,
+            der_data: mesmo.data_interface.DERData,
+            der_name: str,
+            **kwargs
+    ):
+
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name, **kwargs)
+
+        # Redefine nominal active and reactive power timeseries.
+        if self.is_electric_grid_connected:
+            self.active_power_nominal_timeseries = (
+                pd.Series(self.active_power_nominal, index=self.timesteps, name='active_power')
+            )
+            self.reactive_power_nominal_timeseries = (
+                pd.Series(self.reactive_power_nominal, index=self.timesteps, name='reactive_power')
+            )
+
+        # Redefine nominal thermal power timeseries.
+        if self.is_thermal_grid_connected:
+            self.thermal_power_nominal_timeseries = (
+                pd.Series(self.thermal_power_nominal, index=self.timesteps, name='thermal_power')
+            )
+
+
 class FixedLoadModel(FixedDERModel):
     """Fixed load model object."""
 

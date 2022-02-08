@@ -526,7 +526,7 @@ class DERData(mesmo.utils.ObjectBase):
         # TODO: Output DER model names.
         if (
                 ~ders.loc[:, 'der_model_name'].isin(der_models.loc[:, 'der_model_name'])
-                & ~ders.loc[:, 'der_type'].isin(['flexible_building'])  # CoBMo models
+                & ~ders.loc[:, 'der_type'].isin(['constant_power', 'flexible_building'])  # CoBMo models
         ).any():
             raise ValueError(
                 "Some `der_model_name` in `electric_grid_ders` or `thermal_grid_ders` are not defined in `der_models`."

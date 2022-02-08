@@ -11,6 +11,19 @@ class TestDERModels(unittest.TestCase):
 
     # TODO: Add tests for new DER ode types.
 
+    def test_constant_power_model(self):
+        # Obtain test data.
+        der_data = mesmo.data_interface.DERData(mesmo.config.config['tests']['scenario_name'])
+
+        # Get result.
+        mesmo.utils.log_time(self._testMethodName, log_level='info', logger_object=logger)
+        mesmo.der_models.ConstantPowerModel(
+            der_data,
+            # Take first DER of this type. Test will fail if no DERs of this type defined in the test scenario.
+            der_data.ders.loc[der_data.ders.loc[:, 'der_type'] == 'fixed_load', 'der_name'].iat[0]
+        )
+        mesmo.utils.log_time(self._testMethodName, log_level='info', logger_object=logger)
+
     def test_fixed_load_model(self):
         # Obtain test data.
         der_data = mesmo.data_interface.DERData(mesmo.config.config['tests']['scenario_name'])

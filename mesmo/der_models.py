@@ -1325,6 +1325,9 @@ class DERModelSetBase:
     der_active_power_vector_reference: np.array
     der_reactive_power_vector_reference: np.array
     der_thermal_power_vector_reference: np.array
+    der_active_power_nominal_timeseries: pd.DataFrame
+    der_reactive_power_nominal_timeseries: pd.DataFrame
+    der_thermal_power_nominal_timeseries: pd.DataFrame
 
 
 class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
@@ -1478,6 +1481,25 @@ class DERModelSet(DERModelSetBase):
             self.der_thermal_power_vector_reference = np.array(
                 [self.der_models[der_name].thermal_power_nominal for der_type, der_name in self.thermal_ders]
             )
+
+        # Obtain nominal power timeseries.
+        if len(self.electric_ders) > 0:
+            self.der_active_power_nominal_timeseries = pd.concat([
+                self.der_models[der_name].active_power_nominal_timeseries
+                for der_type, der_name in self.electric_ders
+            ], axis='columns')
+            self.der_active_power_nominal_timeseries.columns = self.electric_ders
+            self.der_reactive_power_nominal_timeseries = pd.concat([
+                self.der_models[der_name].reactive_power_nominal_timeseries
+                for der_type, der_name in self.electric_ders
+            ], axis='columns')
+            self.der_reactive_power_nominal_timeseries.columns = self.electric_ders
+        if len(self.thermal_ders) > 0:
+            self.der_thermal_power_nominal_timeseries = pd.concat([
+                self.der_models[der_name].thermal_power_nominal_timeseries
+                for der_type, der_name in self.thermal_ders
+            ], axis='columns')
+            self.der_thermal_power_nominal_timeseries.columns = self.thermal_ders
 
     def define_optimization_problem(
         self,

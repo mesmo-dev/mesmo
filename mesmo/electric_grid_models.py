@@ -4755,3 +4755,90 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             loss_active=loss_active,
             loss_reactive=loss_reactive,
         )
+
+    def get_der_power_limit_timeseries(
+            self,
+            der: tuple,
+            der_active_power_vector: pd.DataFrame,
+            der_reactive_power_vector: pd.DataFrame,
+            node_voltage_magnitude_vector_minimum: np.ndarray = None,
+            node_voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_magnitude_vector_maximum: np.ndarray = None
+    ) -> pd.DataFrame:
+        """Calculate power limits for given DER through maximum loadability calculation, subject to nodal voltage
+        and/or branch power limits as well as the dispatch quantities of other DERs.
+
+        Methodology (work in progress):
+            1. Linear electric grid model equation:
+                - 𝒔^𝑏=𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^𝑑 ) 𝒔^𝑑=𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)+𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)
+                - 𝒔^𝑏 - Branch power vector
+                - 𝒔^𝑑 - DER power vector; 𝒔^(𝑑,1) - DER power vector of group 1; 𝒔^(𝑑,2) - DER power vector of group 2
+                - 𝑴^(𝑠^𝑏,𝑠^𝑑 ),𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ),𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)- Sensitivity matrices
+                - ()^𝑟𝑒𝑓 - Reference value / approximation point
+            2. Loadability constraint:
+                - 𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)+𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)≤𝒔^(𝑏,𝑚𝑎𝑥)
+                - 𝒔^(𝑏,𝑚𝑎𝑥) - Branch power limit / loading limit
+            3. Reformulation for DER maximum power value:
+                - 𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)≤𝒔^(𝑏,𝑚𝑎𝑥)−𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)
+                - Assume: 𝒔^(𝑑,2)∈ℝ^(1×1); Then: 𝑴^(𝑠^𝑏,𝑠^(𝑑,2) )∈ℝ^(𝑏×1)
+                - 𝒔^(𝑑,2,𝑙𝑎𝑥)=diag(𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) )^(−1) (𝒔^(𝑏,𝑚𝑎𝑥)−𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1) )
+                - With: 𝒔^(𝑑,2,𝑙𝑎𝑥)∈ℝ^(𝑏×1)
+                - max((𝒔^(𝑑,2,𝑙𝑎𝑥) )^− )=𝒔^(𝑑,2,𝑚𝑖𝑛)≤𝒔^(𝑑,2)≤𝒔^(𝑑,2,𝑚𝑎𝑥)=min((𝒔^(𝑑,2,𝑙𝑎𝑥) )^+ )
+
+        Arguments:
+            ders (tuple): Index identifier of selected DER. Must be valid entry of `electric_grid_model.ders`.
+            der_active_power_vector (pd.DataFrame): DER active power vector as dataframe with timesteps as index
+                and DERs as columns. Must contain all other DERs aside from the selected.
+            der_reactive_power_vector (pd.DataFrame): DER reactive power vector as dataframe with timesteps as index
+                and DERs as columns. Must contain all other DERs aside from the selected.
+
+        Keyword arguments:
+            node_voltage_magnitude_vector_minimum (np.ndarray): Minimum nodal voltage limit vector.
+            node_voltage_magnitude_vector_maximum (np.ndarray): Maximum nodal voltage limit vector.
+            branch_power_magnitude_vector_maximum (np.ndarray): Maximum branch power limit vector.
+        """
+
+        # Raise error for not yet implemented functionality.
+        if (node_voltage_magnitude_vector_minimum is not None) or (node_voltage_magnitude_vector_maximum is not None):
+            raise NotImplementedError(
+                "Maximum loadability calculation has not yet been implemented for nodal voltage limits."
+            )
+
+        # Define shorthands.
+        der_index_flexible = np.array([self.electric_grid_model.ders.get_loc(der)])
+        der_index_fixed = np.array([
+            index
+            for index in range(len(self.electric_grid_model.ders))
+            if index not in der_index_flexible
+        ])
+
+        # Obtain branch power limit, if not set.
+        if branch_power_magnitude_vector_maximum is None:
+            branch_power_magnitude_vector_maximum = self.electric_grid_model.branch_power_vector_magnitude_reference
+
+        # Calculate DER power limits.
+        der_power_limit_timeseries = pd.DataFrame(np.nan, index=self.timesteps, columns=['minimum', 'maximum'])
+        for timestep in self.timesteps:
+            linear_model = self.linear_electric_grid_models[timestep]
+            der_power_laxity = (
+                sp.diags(
+                    linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_flexible]
+                    .toarray().ravel() ** -1
+                )
+                @ (
+                    # TODO: Revise equation to use reference power flow solution.
+                    np.transpose([branch_power_magnitude_vector_maximum])
+                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_fixed]
+                    @ np.transpose([der_active_power_vector.loc[timestep, :].values[der_index_fixed]])
+                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive[:, der_index_fixed]
+                    @ np.transpose([der_reactive_power_vector.loc[timestep, :].values[der_index_fixed]])
+                )
+            )
+            der_power_limit_timeseries.at[timestep, 'minimum'] = np.max(
+                der_power_laxity[der_power_laxity < 0.0], initial=-np.inf
+            )
+            der_power_limit_timeseries.at[timestep, 'maximum'] = np.min(
+                der_power_laxity[der_power_laxity > 0.0], initial=+np.inf
+            )
+
+        return der_power_limit_timeseries

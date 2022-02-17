@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # Project information.
 project = 'MESMO'
-copyright = '2018-2021, TUMCREATE'
+copyright = '2018-2022, TUMCREATE'
 author = 'MESMO authors'
 
 # Extensions.

@@ -1,6 +1,28 @@
 # Change log
 
-Note that version numbering follows the [Semantic Versioning principle](https://semver.org/).
+Version numbering follows the [Semantic Versioning principle](https://semver.org/).
+
+## Next release
+
+### New features
+
+- Added constant power DER model, which is intended as the most simplistic placeholder DER type. The constant power DER model now acts as default value if no DER model is defined in the scenario definition.
+- Work-in-progress: Added trust-region algorithm as solve method for the optimal operation problem.
+- Work-in-progress: Added support for meshed thermal grid models.
+
+### Changes
+
+- Revised "Examples" section in the documentation and added three tutorials.
+- Work-in-progress: Revised `thermal_grid_models` module structure:
+    - Revised `ThermalGridModel` attributes and added method `get_branch_loss_coefficient_vector()` method.
+    - The implementation of `ThermalPowerFlowSolution` is split into `ThermalPowerFlowSolutionBase` as base class and `ThermalPowerFlowSolutionExplicit` for the power flow solution algorithm.
+    - `ThermalPowerFlowSolution` now serves as high-level interface which passes calls to `ThermalPowerFlowSolutionExplicit` for radial grids and raises `NotImplementedError` for meshed grids.
+- Added aggregated attributes in `DERModels`: `der_active_power_nominal_timeseries`, `der_reactive_power_nominal_timeseries`, `der_thermal_power_nominal_timeseries`
+- Refactored `data` directory, to separate data items for default-type library definitions, template definitions, test-case scenario definitions and cobmo-related definitions.
+
+### Fixes
+
+- `OptimizationProblem.solve()` does not try to retrieve duals for non-convex problems anymore.
 
 ## [0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/0.5.0)
 

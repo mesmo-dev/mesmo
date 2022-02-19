@@ -1,0 +1,5 @@
+line_type,n_phases,maximum_current
+al_150,3,260
+al_185,3,320
+cu_80,3,280
+cu_95,3,300

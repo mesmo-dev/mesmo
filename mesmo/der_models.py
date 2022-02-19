@@ -153,8 +153,9 @@ class DERModel(mesmo.utils.ObjectBase):
                 pd.Series(0.0, index=self.timesteps, name='thermal_power')
             )
 
-        # Obtain marginal cost.
-        self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
+        # Obtain marginal cost. in kWh
+        self.marginal_cost = der.at['marginal_cost'] * der_data.scenario_data.scenario.at['base_apparent_power'] / 1e3 \
+            if pd.notnull(der.at['marginal_cost']) else 0.0
 
 
 class DERModelOperationResults(mesmo.utils.ResultsBase):
@@ -1685,7 +1686,8 @@ class DERModelSet(DERModelSetBase):
             scenarios: typing.Union[list, pd.Index] = None,
             state_space_model: bool = True,
             kkt_conditions: bool = False,
-            grid_cost_coefficient: float = 1
+            grid_cost_coefficient: float = 1,
+            **kwargs
     ):
 
         # Define optimization problem definitions through respective sub-methods.
@@ -1737,7 +1739,8 @@ class DERModelSet(DERModelSetBase):
             optimization_problem: mesmo.utils.OptimizationProblem,
             price_data: mesmo.data_interface.PriceData,
             grid_cost_coefficient: float = 1,
-            scenarios: typing.Union[list, pd.Index] = None
+            scenarios: typing.Union[list, pd.Index] = None,
+            **kwargs
     ):
 
         # If no scenarios given, obtain default value.
@@ -2248,7 +2251,7 @@ class DERModelSet(DERModelSetBase):
                 'der_active_power_marginal_cost',
                 np.concatenate([[[
                                      self.der_models[der_name].marginal_cost
-                                     * timestep_interval_hours  # In Wh.
+                                     * timestep_interval_hours  # In kWh.
                                      * self.der_models[der_name].active_power_nominal
                                      for der_type, der_name in self.electric_ders
                                  ] * len(self.timesteps)]], axis=1)

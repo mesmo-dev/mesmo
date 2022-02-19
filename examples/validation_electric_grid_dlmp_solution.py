@@ -15,8 +15,8 @@ def main():
     # TODO: Currently not working. Review limits below.
 
     # Settings.
-    scenario_name = mesmo.config.config['tests']['scenario_name']
-    # scenario_name = 'strategic_market_19_node'
+    # scenario_name = mesmo.config.config['tests']['scenario_name']
+    scenario_name = 'strategic_market_19_node'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -50,7 +50,7 @@ def main():
     #     mesmo.utils.get_index(electric_grid_model.nodes, node_name='4')
     # ] *= 0.95 / 0.5
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 1.2 * electric_grid_model.branch_power_vector_magnitude_reference
+    branch_power_magnitude_vector_maximum = 1.05 * electric_grid_model.branch_power_vector_magnitude_reference
     # branch_power_magnitude_vector_maximum[
     #     mesmo.utils.get_index(electric_grid_model.branches, branch_type='line', branch_name='2')
     # ] *= 1.2 / 10.0
@@ -74,7 +74,7 @@ def main():
     results_centralized.update(der_model_set.get_optimization_results(optimization_centralized))
 
     # Print results.
-    print(results_centralized)
+    # print(results_centralized)
 
     # Store results to CSV.
     # results_centralized.save(results_path)

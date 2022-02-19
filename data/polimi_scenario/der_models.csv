@@ -1,0 +1,8 @@
+der_type,der_model_name,definition_type,definition_name,power_per_unit_minimum,power_per_unit_maximum,power_factor_minimum,power_factor_maximum,energy_storage_capacity_per_unit,charging_efficiency,self_discharge_rate,marginal_cost,thermal_efficiency,electric_efficiency
+fixed_load,industrial_load,schedule_per_unit,profile2,,,,,,,,,,
+flexible_load,commercial_load,schedule_per_unit,profile1,0.85,1.1,,,6,,,,,
+flexible_load,residential_load,schedule_per_unit,profile3,0.7,1.1,,,6,,,,,
+fixed_generator,oganda_pv,schedule_per_unit,oganda_pv_profile,,,,,,,,,,
+flexible_generator,oganda_pv,schedule_per_unit,oganda_pv_profile,0,1,,,,,,0.1,,
+fixed_load,commercial_load,schedule_per_unit,profile1,,,,,,,,,,
+fixed_load,residential_load,schedule_per_unit,profile3,,,,,,,,,,

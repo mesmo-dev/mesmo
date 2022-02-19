@@ -11,11 +11,12 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar'
+    scenario_name = 'polimi_test_case'
 
     # High-level API call.
-    mesmo.api.run_optimal_operation_problem(scenario_name)
+    a=mesmo.api.run_optimal_operation_problem(scenario_name, store_results=False)
 
+    print(1)
 
 if __name__ == '__main__':
     main()

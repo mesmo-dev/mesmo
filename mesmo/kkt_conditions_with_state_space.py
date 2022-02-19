@@ -37,11 +37,11 @@ class StrategicElectricGridDLMPResults(mesmo.utils.ResultsBase):
     strategic_der_marginal_price_offers: pd.DataFrame
 
 
-
 class StrategicMarket(object):
     def __init__(
             self,
-            scenario_name: str
+            scenario_name: str,
+            strategic_der: str
     ):
 
         # Obtain electric grid model & reference power flow solution.
@@ -60,7 +60,7 @@ class StrategicMarket(object):
         for i in self.strategic_generator_set_to_zero_map.index:
             for c in self.strategic_generator_set_to_zero_map.columns:
                 # if i == c and '4_5' not in i:
-                if i == c and '01_10' not in i:
+                if i == c and strategic_der not in i:  # todo: set strategic der name
                     self.strategic_generator_set_to_zero_map.at[i, c] = 1
 
         self.timesteps = self.linear_electric_grid_model_set.timesteps
@@ -75,7 +75,8 @@ class StrategicMarket(object):
                     self.flexible_load_map.at[i, c] = 1
 
         # self.strategic_generator_index = [der for der in self.ders if '4_5' in der]
-        self.strategic_generator_index = [der for der in self.ders if '01_10' in der]
+        self.strategic_generator_index = [der for der in self.ders if
+                                          strategic_der in der]  # todo: set strategic der name
         self.flexible_generator_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
         for i in self.flexible_generator_map.index:
             for c in self.flexible_generator_map.columns:
@@ -102,16 +103,15 @@ class StrategicMarket(object):
                                                                              columns=self.der_model_set.outputs)
         for i in self.set_output_strategic_generator_maximum_limit_map.index:
             for c in self.set_output_strategic_generator_maximum_limit_map.columns:
-                if i == c and i==('01_10', 'power_maximum_margin'):
+                if i == c and i == ('01_10', 'power_maximum_margin'):
                     self.set_output_strategic_generator_maximum_limit_map.at[i, c] = -1
 
         self.set_output_strategic_generator_minimum_limit_map = pd.DataFrame(0, index=self.der_model_set.outputs,
                                                                              columns=self.der_model_set.outputs)
         for i in self.set_output_strategic_generator_minimum_limit_map.index:
             for c in self.set_output_strategic_generator_minimum_limit_map.columns:
-                if i == c and i==('01_10', 'power_minimum_margin'):
+                if i == c and i == ('01_10', 'power_minimum_margin'):
                     self.set_output_strategic_generator_minimum_limit_map.at[i, c] = -1
-
 
     def strategic_optimization_problem(
             self,
@@ -119,6 +119,7 @@ class StrategicMarket(object):
             price_data,
             scenarios: typing.Union[list, pd.Index] = None,
             grid_cost_coefficient: float = 1,
+            kkt_conditions: bool = False,
             **kwargs
     ):
         self.define_optimization_variables(optimization_problem, scenarios)
@@ -129,8 +130,8 @@ class StrategicMarket(object):
             grid_cost_coefficient=grid_cost_coefficient,
             **kwargs
         )
-        self.define_optimization_constraints(optimization_problem, scenarios)
-        self.define_objective_function(optimization_problem, scenarios)
+        self.define_optimization_constraints(optimization_problem, scenarios, kkt_conditions=kkt_conditions)
+        self.define_objective_function(optimization_problem, scenarios, kkt_conditions=kkt_conditions)
 
     def define_optimization_variables(
             self,
@@ -307,8 +308,8 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_strategic_generator_maximum_active_power',
-            sp.block_diag([self.set_output_strategic_generator_maximum_limit_map.values]*len(self.timesteps))
-                @ (
+            sp.block_diag([self.set_output_strategic_generator_maximum_limit_map.values] * len(self.timesteps))
+            @ (
                     sp.block_diag([
                         self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
                         for der_name in self.der_model_set.flexible_der_names
@@ -322,11 +323,11 @@ class StrategicMarket(object):
         optimization_problem.define_parameter(
             'strategic_generator_minimum_active_power',
             sp.block_diag([self.set_output_strategic_generator_minimum_limit_map.values] * len(self.timesteps))
-                @ (
+            @ (
                     sp.block_diag([
-                self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
-                for der_name in self.der_model_set.flexible_der_names
-            ])
+                        self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
+                        for der_name in self.der_model_set.flexible_der_names
+                    ])
                     @ pd.concat([
                 self.der_model_set.flexible_der_models[der_name].disturbance_timeseries
                 for der_name in self.der_model_set.flexible_der_names
@@ -545,19 +546,19 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'voltage_big_m',
-            big_m * sp.diags(np.ones(len(self.nodes) * len(self.timesteps)))
+            big_m * 20 * sp.diags(np.ones(len(self.nodes) * len(self.timesteps)))
         )
         optimization_problem.define_parameter(
             'voltage_big_m_ones',
-            big_m * np.ones([len(self.nodes) * len(self.timesteps), 1])
+            big_m * 20 * np.ones([len(self.nodes) * len(self.timesteps), 1])
         )
         optimization_problem.define_parameter(
             'branch_power_big_m',
-            big_m * sp.diags(np.ones(len(self.branches) * len(self.timesteps)))
+            big_m * 30 * sp.diags(np.ones(len(self.branches) * len(self.timesteps)))
         )
         optimization_problem.define_parameter(
             'branch_power_big_m_ones',
-            big_m * np.ones([len(self.branches) * len(self.timesteps), 1])
+            big_m * 30 * np.ones([len(self.branches) * len(self.timesteps), 1])
         )
 
         # optimization_problem.define_parameter(
@@ -687,6 +688,15 @@ class StrategicMarket(object):
         )
 
         optimization_problem.define_parameter(
+            'der_active_power_marginal_cost_transposed',
+            np.concatenate([[[
+                                 self.der_model_set.der_models[der_name].marginal_cost
+                                 * self.timestep_interval_hours  # In Wh.
+                                 * self.der_model_set.der_models[der_name].active_power_nominal
+                                 for der_type, der_name in self.der_model_set.electric_ders
+                             ] * len(self.timesteps)]], axis=1).transpose()
+        )
+        optimization_problem.define_parameter(
             'non_strategic_der_active_power_marginal_cost',
             sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
             @ sp.block_diag([self.strategic_generator_set_to_zero_map.values] * len(self.der_model_set.timesteps))
@@ -712,7 +722,8 @@ class StrategicMarket(object):
     def define_optimization_constraints(
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
-            scenarios: typing.Union[list, pd.Index] = None
+            scenarios: typing.Union[list, pd.Index] = None,
+            kkt_conditions: bool = False,
     ):
         if scenarios is None:
             scenarios = [None]
@@ -733,19 +744,30 @@ class StrategicMarket(object):
             ('constant', 'electric_grid_loss_reactive_cost', dict(scenario=scenarios)),
             broadcast=['scenario']
         )
-        optimization_problem.define_constraint(
-            ('variable', 1.0, dict(
-                name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
-                der=self.ders
-            )),
-            '==',
-            ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
-            ('variable', 'flexible_generator_mapping_matrix', dict(
-                name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
-                fg=self.strategic_generator_index
-            )),
-            broadcast=['scenario']
-        )
+        if kkt_conditions:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                )),
+                '==',
+                ('constant', 'der_active_power_marginal_cost_transposed', dict(scenario=scenarios)),
+                broadcast=['scenario']
+            )
+        else:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
+                    der=self.ders
+                )),
+                '==',
+                ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
+                ('variable', 'flexible_generator_mapping_matrix', dict(
+                    name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
+                    fg=self.strategic_generator_index
+                )),
+                broadcast=['scenario']
+            )
         # optimization_problem.define_constraint(
         #     ('variable', 1.0, dict(
         #         name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
@@ -756,13 +778,11 @@ class StrategicMarket(object):
         #     broadcast=['scenario']
         # )
 
-
         optimization_problem.define_constraint(
             ('variable', 1.0, dict(
                 name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
-            # ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
             ('constant', 'minus_electric_grid_active_power_cost_flexible_der', dict(scenario=scenarios)),
             ('variable', 1.0, dict(
                 name='output_to_active_power_mapping_mu', scenario=scenarios, timestep=self.timesteps,
@@ -1273,13 +1293,13 @@ class StrategicMarket(object):
     def define_objective_function(
             self,
             optimization_problem: mesmo.utils.OptimizationProblem,
-            scenarios: typing.Union[list, pd.Index] = None
+            scenarios: typing.Union[list, pd.Index] = None,
+            kkt_conditions: bool = False,
     ):
         if scenarios is None:
             scenarios = [None]
         # Defining strategic objective function:
-        kkt = False
-        if not kkt:
+        if not kkt_conditions:
             optimization_problem.define_objective(
                 ('variable', 'minus_voltage_constant_plus_voltage_maximum_limit', dict(
                     name='node_voltage_mu_maximum', scenario=scenarios, timestep=self.timesteps,
@@ -1408,37 +1428,49 @@ class StrategicMarket(object):
                 optimization_problem.results['node_voltage_mu_minimum'].loc[
                     self.timesteps, nodes
                 ]
-                / np.concatenate([np.abs(self.linear_electric_grid_model_set.electric_grid_model.node_voltage_vector_reference)] * len(scenarios))
+                / np.concatenate(
+            [np.abs(self.linear_electric_grid_model_set.electric_grid_model.node_voltage_vector_reference)] * len(
+                scenarios))
         )
         voltage_magnitude_vector_maximum_dual = (
                 -1.0 * optimization_problem.results['node_voltage_mu_maximum'].loc[
             self.linear_electric_grid_model_set.electric_grid_model.timesteps, nodes
         ]
-                / np.concatenate([np.abs(self.linear_electric_grid_model_set.electric_grid_model.node_voltage_vector_reference)] * len(scenarios))
+                / np.concatenate(
+            [np.abs(self.linear_electric_grid_model_set.electric_grid_model.node_voltage_vector_reference)] * len(
+                scenarios))
         )
         branch_power_magnitude_vector_1_minimum_dual = (
                 optimization_problem.results['branch_1_power_mu_minimum'].loc[
                     self.linear_electric_grid_model_set.electric_grid_model.timesteps, branches
                 ]
-                / np.concatenate([self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(scenarios))
+                / np.concatenate(
+            [self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(
+                scenarios))
         )
         branch_power_magnitude_vector_1_maximum_dual = (
                 -1.0 * optimization_problem.results['branch_1_power_mu_maximum'].loc[
             self.linear_electric_grid_model_set.electric_grid_model.timesteps, branches
         ]
-                / np.concatenate([self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(scenarios))
+                / np.concatenate(
+            [self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(
+                scenarios))
         )
         branch_power_magnitude_vector_2_minimum_dual = (
                 optimization_problem.results['branch_2_power_mu_minimum'].loc[
                     self.linear_electric_grid_model_set.electric_grid_model.timesteps, branches
                 ]
-                / np.concatenate([self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(scenarios))
+                / np.concatenate(
+            [self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(
+                scenarios))
         )
         branch_power_magnitude_vector_2_maximum_dual = (
                 -1.0 * optimization_problem.results['branch_2_power_mu_maximum'].loc[
             self.linear_electric_grid_model_set.electric_grid_model.timesteps, branches
         ]
-                / np.concatenate([self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(scenarios))
+                / np.concatenate(
+            [self.linear_electric_grid_model_set.electric_grid_model.branch_power_vector_magnitude_reference] * len(
+                scenarios))
         )
 
         # Instantiate DLMP variables.
@@ -1827,5 +1859,3 @@ class StrategicMarket(object):
             strategic_der_marginal_price_offers=strategic_der_marginal_price_offers
 
         )
-
-

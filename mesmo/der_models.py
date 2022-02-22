@@ -156,6 +156,7 @@ class DERModel(mesmo.utils.ObjectBase):
         # Obtain marginal cost. in kWh
         self.marginal_cost = der.at['marginal_cost'] * der_data.scenario_data.scenario.at['base_apparent_power'] / 1e3 \
             if pd.notnull(der.at['marginal_cost']) else 0.0
+        # self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
 
 
 class DERModelOperationResults(mesmo.utils.ResultsBase):
@@ -1913,11 +1914,11 @@ class DERModelSet(DERModelSetBase):
             ], axis='columns').T.values
             ).T.ravel()
         )
-        # {
+        # { Todo set the name of strategic generator
         set_strategic_der_disturbance_factor_to_zero_map = pd.DataFrame(0, index=self.outputs, columns=self.outputs)
         for i in set_strategic_der_disturbance_factor_to_zero_map.index:
             for c in set_strategic_der_disturbance_factor_to_zero_map.columns:
-                if i == c and '01_10' not in i:
+                if i == c and 'pv_b10_strategic' not in i:
                     set_strategic_der_disturbance_factor_to_zero_map.at[i, c] = 1
 
         set_strategic_der_disturbance_factor_to_zero_map = \
@@ -2193,7 +2194,7 @@ class DERModelSet(DERModelSetBase):
                                           der_name=self.electric_ders.get_level_values('der_name')
                                       )].values
                                   )
-                                  * -grid_cost_coefficient * timestep_interval_hours  # In Wh.
+                                  * -1.0 * grid_cost_coefficient * timestep_interval_hours  # In Wh.
                                   @ sp.block_diag(self.der_active_power_vector_reference)
                           ).ravel()])
             )
@@ -2256,6 +2257,16 @@ class DERModelSet(DERModelSetBase):
                                      for der_type, der_name in self.electric_ders
                                  ] * len(self.timesteps)]], axis=1)
             )
+            optimization_problem.define_parameter(
+                'der_active_power_marginal_cost_transposed',
+                np.concatenate([[[
+                                     self.der_models[der_name].marginal_cost
+                                     * timestep_interval_hours  # In kWh.
+                                     * self.der_models[der_name].active_power_nominal
+                                     for der_type, der_name in self.electric_ders
+                                 ] * len(self.timesteps)]], axis=1).transpose()
+            )
+
             optimization_problem.define_parameter(
                 'der_active_power_marginal_offers_timeseries',
                 np.tile(np.transpose([[
@@ -2506,10 +2517,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '<=',
                 ('constant', 'der_active_power_vector_maximum_limit', dict(scenario=scenarios)),
-                # keys=dict(
-                #     name='active_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-                #     node=self.electric_ders
-                # )
+                keys=dict(
+                    name='active_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                    node=self.electric_ders
+                )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2518,10 +2529,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '<=',
                 ('constant', 'der_reactive_power_vector_maximum_limit', dict(scenario=scenarios)),
-                # keys=dict(
-                #     name='reactive_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
-                #     node=self.electric_ders
-                # )
+                keys=dict(
+                    name='reactive_power_vector_maximum_constraint', scenario=scenarios, timestep=self.timesteps,
+                    node=self.electric_ders
+                )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2530,10 +2541,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '>=',
                 ('constant', 'der_active_power_vector_minimum_limit', dict(scenario=scenarios)),
-                # keys=dict(
-                #     name='active_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-                #     node=self.electric_ders
-                # )
+                keys=dict(
+                    name='active_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                    node=self.electric_ders
+                )
             )
             optimization_problem.define_constraint(
                 ('variable', 1, dict(
@@ -2542,10 +2553,10 @@ class DERModelSet(DERModelSetBase):
                 )),
                 '>=',
                 ('constant', 'der_reactive_power_vector_minimum_limit', dict(scenario=scenarios)),
-                # keys=dict(
-                #     name='reactive_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
-                #     node=self.electric_ders
-                # )
+                keys=dict(
+                    name='reactive_power_vector_minimum_constraint', scenario=scenarios, timestep=self.timesteps,
+                    node=self.electric_ders
+                )
             )
         # ===============================================================
         if len(self.thermal_ders) > 0:

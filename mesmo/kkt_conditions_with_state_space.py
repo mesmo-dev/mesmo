@@ -54,34 +54,30 @@ class StrategicMarket(object):
             self.timestep_interval_hours = (self.der_model_set.timesteps[1] -
                                             self.der_model_set.timesteps[0]) / pd.Timedelta('1h')
             # _____________________________
-        flexible_generator_index = [der for der in self.der_model_set.electric_ders if 'flexible_generator' in der]
-        self.strategic_generator_set_to_zero_map = pd.DataFrame(0, index=self.der_model_set.electric_ders,
-                                                                columns=self.der_model_set.electric_ders)
-        for i in self.strategic_generator_set_to_zero_map.index:
-            for c in self.strategic_generator_set_to_zero_map.columns:
+
+        self.strategic_generator_constant_offer_set_to_zero_map = pd.DataFrame(0, index=self.der_model_set.electric_ders,
+                                                                               columns=self.der_model_set.electric_ders)
+
+        # Make a mapping matrix to set marginal cost of strategic generator to zero:
+        for i in self.strategic_generator_constant_offer_set_to_zero_map.index:
+            for c in self.strategic_generator_constant_offer_set_to_zero_map.columns:
                 # if i == c and '4_5' not in i:
                 if i == c and strategic_der not in i:  # todo: set strategic der name
-                    self.strategic_generator_set_to_zero_map.at[i, c] = 1
+                    self.strategic_generator_constant_offer_set_to_zero_map.at[i, c] = 1
 
         self.timesteps = self.linear_electric_grid_model_set.timesteps
         self.ders = self.linear_electric_grid_model_set.electric_grid_model.ders
         self.nodes = self.linear_electric_grid_model_set.electric_grid_model.nodes
         self.branches = self.linear_electric_grid_model_set.electric_grid_model.branches
         self.flexible_load_index = [der for der in self.ders if 'flexible_load' in der]
-        self.flexible_load_map = pd.DataFrame(0, index=self.flexible_load_index, columns=self.ders)
-        for i in self.flexible_load_map.index:
-            for c in self.flexible_load_map.columns:
-                if i == c:
-                    self.flexible_load_map.at[i, c] = 1
 
-        # self.strategic_generator_index = [der for der in self.ders if '4_5' in der]
         self.strategic_generator_index = [der for der in self.ders if
                                           strategic_der in der]  # todo: set strategic der name
-        self.flexible_generator_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
-        for i in self.flexible_generator_map.index:
-            for c in self.flexible_generator_map.columns:
+        self.strategic_generator_scaling_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
+        for i in self.strategic_generator_scaling_map.index:
+            for c in self.strategic_generator_scaling_map.columns:
                 if i == c:
-                    self.flexible_generator_map.at[i, c] = 1
+                    self.strategic_generator_scaling_map.at[i, c] = 1
 
         self.flexible_generator_index = [der for der in self.ders if 'flexible_generator' in der]
         flexible_der_index = self.flexible_generator_index + self.flexible_load_index
@@ -299,45 +295,45 @@ class StrategicMarket(object):
             node_voltage_magnitude_vector_minimum: np.ndarray = None,
             node_voltage_magnitude_vector_maximum: np.ndarray = None,
             branch_power_magnitude_vector_maximum: np.ndarray = None,
-            big_m: int = 100,
+            big_m: int = 300,
             grid_cost_coefficient: float = 1,
             scenarios: typing.Union[list, pd.Index] = None,
     ):
         if scenarios is None:
             scenarios = [None]
 
-        optimization_problem.define_parameter(
-            'minus_strategic_generator_maximum_active_power',
-            sp.block_diag([self.set_output_strategic_generator_maximum_limit_map.values] * len(self.timesteps))
-            @ (
-                    sp.block_diag([
-                        self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
-                        for der_name in self.der_model_set.flexible_der_names
-                    ])
-                    @ pd.concat([
-                self.der_model_set.flexible_der_models[der_name].disturbance_timeseries
-                for der_name in self.der_model_set.flexible_der_names
-            ], axis='columns').T.values
-            ).T.ravel()
-        )
-        optimization_problem.define_parameter(
-            'strategic_generator_minimum_active_power',
-            sp.block_diag([self.set_output_strategic_generator_minimum_limit_map.values] * len(self.timesteps))
-            @ (
-                    sp.block_diag([
-                        self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
-                        for der_name in self.der_model_set.flexible_der_names
-                    ])
-                    @ pd.concat([
-                self.der_model_set.flexible_der_models[der_name].disturbance_timeseries
-                for der_name in self.der_model_set.flexible_der_names
-            ], axis='columns').T.values
-            ).T.ravel()
-        )
+        # optimization_problem.define_parameter(
+        #     'minus_strategic_generator_maximum_active_power',
+        #     sp.block_diag([self.set_output_strategic_generator_maximum_limit_map.values] * len(self.timesteps))
+        #     @ (
+        #             sp.block_diag([
+        #                 self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
+        #                 for der_name in self.der_model_set.flexible_der_names
+        #             ])
+        #             @ pd.concat([
+        #         self.der_model_set.flexible_der_models[der_name].disturbance_timeseries
+        #         for der_name in self.der_model_set.flexible_der_names
+        #     ], axis='columns').T.values
+        #     ).T.ravel()
+        # )
+        # optimization_problem.define_parameter(
+        #     'strategic_generator_minimum_active_power',
+        #     sp.block_diag([self.set_output_strategic_generator_minimum_limit_map.values] * len(self.timesteps))
+        #     @ (
+        #             sp.block_diag([
+        #                 self.der_model_set.flexible_der_models[der_name].disturbance_output_matrix.values
+        #                 for der_name in self.der_model_set.flexible_der_names
+        #             ])
+        #             @ pd.concat([
+        #         self.der_model_set.flexible_der_models[der_name].disturbance_timeseries
+        #         for der_name in self.der_model_set.flexible_der_names
+        #     ], axis='columns').T.values
+        #     ).T.ravel()
+        # )
 
         optimization_problem.define_parameter(
-            'flexible_generator_mapping_matrix',
-            sp.block_diag([self.flexible_generator_map.values] * len(self.timesteps))
+            'strategic_generator_scaling_map_matrix',
+            sp.block_diag([self.strategic_generator_scaling_map.values] * len(self.timesteps))
         )
 
         optimization_problem.define_parameter(
@@ -347,9 +343,10 @@ class StrategicMarket(object):
         # ===================================== coefficient
         optimization_problem.define_parameter(
             'minus_electric_grid_active_power_cost_flexible_der',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ np.transpose(np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-                           * - grid_cost_coefficient * self.timestep_interval_hours  # In Wh.
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            np.transpose(np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
+                           * -1.0 * grid_cost_coefficient * self.timestep_interval_hours  # In Wh.
                            @ sp.block_diag(
                 [np.array([np.real(
                     self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(
@@ -358,8 +355,9 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'minus_electric_grid_reactive_power_cost_flexible_der',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ np.transpose(np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            np.transpose(np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
                            * -1.0 * self.timestep_interval_hours  # In Wh.
                            @ sp.block_diag(
                 [np.array([np.imag(
@@ -371,8 +369,9 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'loss_active_active_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 linear_electric_grid_model.sensitivity_loss_active_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
                 # @ self.flexible_generator_map.values.transpose()
@@ -382,8 +381,9 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'loss_active_reactive_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 linear_electric_grid_model.sensitivity_loss_active_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
                 # @ self.flexible_generator_map.values.transpose()
@@ -393,8 +393,9 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'loss_reactive_active_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
                 # @ self.flexible_generator_map.values.transpose()
@@ -404,8 +405,9 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'loss_reactive_reactive_term_transposed',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([
                 linear_electric_grid_model.sensitivity_loss_reactive_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
                 # @ self.flexible_generator_map.values.transpose()
@@ -449,7 +451,6 @@ class StrategicMarket(object):
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                # @ self.flexible_load_map.values.transpose()
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
             ]).transpose()
@@ -476,7 +477,6 @@ class StrategicMarket(object):
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
                 @ sp.diags(np.real(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                # @ self.flexible_load_map.values.transpose()
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
             ]).transpose()
@@ -490,7 +490,6 @@ class StrategicMarket(object):
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
                 @ sp.diags(np.imag(linear_electric_grid_model.electric_grid_model.der_power_vector_reference))
-                # @ self.flexible_load_map.values.transpose()
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
             ]).transpose()
@@ -518,11 +517,11 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'output_vector_big_m',
-            big_m * 10 * sp.diags(np.ones(len(self.der_model_set.outputs) * len(self.timesteps)))
+            big_m * sp.diags(np.ones(len(self.der_model_set.outputs) * len(self.timesteps)))
         )
         optimization_problem.define_parameter(
             'output_vector_big_m_ones',
-            big_m * 10 * np.ones([len(self.der_model_set.outputs) * len(self.timesteps), 1])
+            big_m * np.ones([len(self.der_model_set.outputs) * len(self.timesteps), 1])
         )
         optimization_problem.define_parameter(
             'power_vector_mu_zeros',
@@ -546,19 +545,19 @@ class StrategicMarket(object):
         )
         optimization_problem.define_parameter(
             'voltage_big_m',
-            big_m * 20 * sp.diags(np.ones(len(self.nodes) * len(self.timesteps)))
+            big_m * sp.diags(np.ones(len(self.nodes) * len(self.timesteps)))
         )
         optimization_problem.define_parameter(
             'voltage_big_m_ones',
-            big_m * 20 * np.ones([len(self.nodes) * len(self.timesteps), 1])
+            big_m * np.ones([len(self.nodes) * len(self.timesteps), 1])
         )
         optimization_problem.define_parameter(
             'branch_power_big_m',
-            big_m * 30 * sp.diags(np.ones(len(self.branches) * len(self.timesteps)))
+            big_m * sp.diags(np.ones(len(self.branches) * len(self.timesteps)))
         )
         optimization_problem.define_parameter(
             'branch_power_big_m_ones',
-            big_m * 30 * np.ones([len(self.branches) * len(self.timesteps), 1])
+            big_m * np.ones([len(self.branches) * len(self.timesteps), 1])
         )
 
         # optimization_problem.define_parameter(
@@ -687,19 +686,20 @@ class StrategicMarket(object):
             ]))
         )
 
-        optimization_problem.define_parameter(
-            'der_active_power_marginal_cost_transposed',
-            np.concatenate([[[
-                                 self.der_model_set.der_models[der_name].marginal_cost
-                                 * self.timestep_interval_hours  # In Wh.
-                                 * self.der_model_set.der_models[der_name].active_power_nominal
-                                 for der_type, der_name in self.der_model_set.electric_ders
-                             ] * len(self.timesteps)]], axis=1).transpose()
-        )
+        # optimization_problem.define_parameter(
+        #     'der_active_power_marginal_cost_transposed',
+        #     np.concatenate([[[
+        #                          self.der_model_set.der_models[der_name].marginal_cost
+        #                          * self.timestep_interval_hours  # In Wh.
+        #                          * self.der_model_set.der_models[der_name].active_power_nominal
+        #                          for der_type, der_name in self.der_model_set.electric_ders
+        #                      ] * len(self.timesteps)]], axis=1).transpose()
+        # )
         optimization_problem.define_parameter(
             'non_strategic_der_active_power_marginal_cost',
-            sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
-            @ sp.block_diag([self.strategic_generator_set_to_zero_map.values] * len(self.der_model_set.timesteps))
+            # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
+            # @
+            sp.block_diag([self.strategic_generator_constant_offer_set_to_zero_map.values] * len(self.der_model_set.timesteps))
             @ np.transpose(np.concatenate([[[
                                                 self.der_model_set.der_models[der_name].marginal_cost
                                                 * self.timestep_interval_hours  # In Wh.
@@ -762,7 +762,7 @@ class StrategicMarket(object):
                 )),
                 '==',
                 ('constant', 'non_strategic_der_active_power_marginal_cost', dict(scenario=scenarios)),
-                ('variable', 'flexible_generator_mapping_matrix', dict(
+                ('variable', 'strategic_generator_scaling_map_matrix', dict(
                     name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,
                     fg=self.strategic_generator_index
                 )),
@@ -898,6 +898,14 @@ class StrategicMarket(object):
                 name='non_storage_initial_state_equation_mu', scenario=scenarios,
                 state=self.der_model_set.states
             )),
+            # ('variable', 1, dict(
+            #     name='storage_initial_state_equation_mu', scenario=scenarios,
+            #     state=self.der_model_set.states
+            # )),
+            # ('variable', 1, dict(
+            #     name='non_storage_initial_state_equation_mu', scenario=scenarios,
+            #     state=self.der_model_set.states
+            # )),
             '==',
             ('variable', 'state_matrix_transposed', dict(
                 name='state_equation_mu', scenario=scenarios, timestep=self.timesteps[0],
@@ -1156,7 +1164,7 @@ class StrategicMarket(object):
         )
 
         optimization_problem.define_constraint(
-            ('variable', -1.0, dict(
+            ('variable', 1.0, dict(
                 name='branch_power_magnitude_vector_1', scenario=scenarios, timestep=self.timesteps,
                 branch=self.branches
             )),
@@ -1384,7 +1392,7 @@ class StrategicMarket(object):
             optimization_problem.define_constraint(
                 ('variable', 1, dict(name='kkt_objective', scenario=scenarios)),
                 '==',
-                ('constant', 'kkt_value', dict())
+                ('constant', 'kkt_value', dict(scenario=scenarios))
             )
             optimization_problem.define_objective(
                 ('variable', 1, dict(name='kkt_objective', scenario=scenarios))

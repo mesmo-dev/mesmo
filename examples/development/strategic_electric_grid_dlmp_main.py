@@ -55,9 +55,9 @@ def main():
 
     # Define electric grid problem.
     # TODO: Review limits.
-    node_voltage_magnitude_vector_minimum = 0.9 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 1.15 * electric_grid_model.branch_power_vector_magnitude_reference
+    branch_power_magnitude_vector_maximum = 1.5 * electric_grid_model.branch_power_vector_magnitude_reference
 
     grid_cost_coefficient = 1.0
 
@@ -77,7 +77,6 @@ def main():
         kkt_conditions=False,
         grid_cost_coefficient=grid_cost_coefficient
     )
-
 
     if strategic_scenario:
         optimization_strategic = mesmo.utils.OptimizationProblem()
@@ -106,7 +105,7 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            big_m=120,
+            big_m=300,
             kkt_conditions=True,
             grid_cost_coefficient=grid_cost_coefficient
         )
@@ -117,8 +116,11 @@ def main():
 
     # Solve centralized optimization problem.
     optimization_non_strategic.solve()
-    # a=1
     optimization_strategic.solve()
+    # a=1
+    a = optimization_non_strategic.duals['output_equation']
+    b = optimization_strategic.results['output_equation_mu']
+    c = a-b
 
     # Obtain results.
     flexible_der_type = ['flexible_generator', 'flexible_load']

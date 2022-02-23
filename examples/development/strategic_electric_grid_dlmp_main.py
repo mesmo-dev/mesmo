@@ -55,11 +55,13 @@ def main():
 
     # Define electric grid problem.
     # TODO: Review limits.
-    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_minimum = 0.92 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 1.5 * electric_grid_model.branch_power_vector_magnitude_reference
+    branch_power_magnitude_vector_maximum = 1.24 * electric_grid_model.branch_power_vector_magnitude_reference
 
     grid_cost_coefficient = 1.0
+
+
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -84,7 +86,7 @@ def main():
         der_model_set.define_optimization_problem(optimization_strategic,
                                                   price_data,
                                                   state_space_model=True,
-                                                  kkt_conditions=True,
+                                                  kkt_conditions=False,
                                                   grid_cost_coefficient=grid_cost_coefficient
                                                   )
 
@@ -94,7 +96,7 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            kkt_conditions=True,
+            kkt_conditions=False,
             grid_cost_coefficient=grid_cost_coefficient
         )
 
@@ -105,8 +107,8 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            big_m=300,
-            kkt_conditions=True,
+            big_m=1000,
+            kkt_conditions=False,
             grid_cost_coefficient=grid_cost_coefficient
         )
 
@@ -118,9 +120,9 @@ def main():
     optimization_non_strategic.solve()
     optimization_strategic.solve()
     # a=1
-    a = optimization_non_strategic.duals['output_equation']
-    b = optimization_strategic.results['output_equation_mu']
-    c = a-b
+    # a = optimization_non_strategic.duals['output_equation']
+    # b = optimization_strategic.results['output_equation_mu']
+    # c = a-b
 
     # Obtain results.
     flexible_der_type = ['flexible_generator', 'flexible_load']
@@ -269,31 +271,31 @@ def main():
 
     # ______________________Nodal DLMPs at time 15:00:00 for non strategic scenario:_________________________________
     nodal_energy_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_non_strategic.electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_energy_dlmps_non_strategic_active_power.index = \
         nodal_energy_dlmps_non_strategic_active_power.index.to_flat_index()
 
     # Loss portion of DLMPs:
     nodal_loss_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_non_strategic.electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     # nodal_loss_dlmps_non_strategic_active_power.index = \
     #     nodal_loss_dlmps_non_strategic_active_power.index.to_flat_index()
 
     # Voltage portion of DLMPs:
     nodal_voltage_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_non_strategic.electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_voltage_dlmps_non_strategic_active_power.index = \
         nodal_voltage_dlmps_non_strategic_active_power.index.to_flat_index()
 
     # Congestion portion of DLMPs:
     nodal_congestion_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_non_strategic.electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_congestion_dlmps_non_strategic_active_power.index = \
         nodal_congestion_dlmps_non_strategic_active_power.index.to_flat_index()
 
     # Total DLMPs:
     nodal_total_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     # nodal_total_dlmps_non_strategic_active_power.index = \
     #     nodal_total_dlmps_non_strategic_active_power.index.to_flat_index()
 
@@ -301,31 +303,31 @@ def main():
 
     # ______________________Nodal DLMPs at time 15:00:00 for non strategic scenario:_________________________________
     nodal_energy_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_strategic.strategic_electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_energy_dlmps_strategic_active_power.index = \
         nodal_energy_dlmps_strategic_active_power.index.to_flat_index()
 
     # Loss portion of DLMP:
     nodal_loss_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_strategic.strategic_electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     # nodal_loss_dlmps_strategic_active_power.index = \
     #     nodal_loss_dlmps_strategic_active_power.index.to_flat_index()
 
     # Voltage portion of DLMP:
     nodal_voltage_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_strategic.strategic_electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_voltage_dlmps_strategic_active_power.index = \
         nodal_voltage_dlmps_strategic_active_power.index.to_flat_index()
 
     # Congestion portion of DLMP:
     nodal_congestion_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_strategic.strategic_electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     nodal_congestion_dlmps_strategic_active_power.index = \
         nodal_congestion_dlmps_strategic_active_power.index.to_flat_index()
 
     # Total DLMP:
     nodal_total_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power.loc['2021-02-22 15:00:00', :]
+        dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
     # nodal_total_dlmps_strategic_active_power.index = \
     #     nodal_total_dlmps_strategic_active_power.index.to_flat_index()
 
@@ -598,11 +600,11 @@ def main():
     # fig.savefig('Voltage profile.svg')
 
     line_loading_phase_1 = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 1)]
+        '2021-02-22 14:00:00', (slice(None), slice(None), 1)]
     line_loading_phase_2 = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 2)]
+        '2021-02-22 14:00:00', (slice(None), slice(None), 2)]
     line_loading_phase_3 = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 3)]
+        '2021-02-22 14:00:00', (slice(None), slice(None), 3)]
 
     fig, axes = plt.subplots(sharex=True, figsize=(6, 6))
     line_loading_phase_1.plot(
@@ -637,45 +639,6 @@ def main():
     fig.set_tight_layout(True)
     fig.show()
 
-    line2_loading_phase_1 = results_strategic.branch_power_magnitude_vector_2_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 1)]
-    line2_loading_phase_2 = results_strategic.branch_power_magnitude_vector_2_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 2)]
-    line2_loading_phase_3 = results_strategic.branch_power_magnitude_vector_2_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 3)]
-
-    fig, axes = plt.subplots(sharex=True, figsize=(6, 6))
-    line2_loading_phase_1.plot(
-        ax=axes,
-        label='Phase 1',
-        # y=(slice(None), slice(None), 3),
-        color='g',
-        marker='*'
-    )
-    line2_loading_phase_2.plot(
-        ax=axes,
-        label='Phase 2',
-        # y=(slice(None), slice(None), 3),
-        color='r',
-        marker='^'
-    )
-    line2_loading_phase_3.plot(
-        ax=axes,
-        label='Phase 3',
-        # y=(slice(None), slice(None), 3),
-        color='b',
-        marker='s'
-    )
-    fig.suptitle('Line_2 Loading at 15:00')
-    plt.xlabel('Branch name')
-    fig.set_tight_layout(True)
-    axes.set_ylabel('Loading [p.u]')
-    # axes[1].ticklabel_format(useOffset=False)
-    axes.legend()
-    plt.grid(axis='y')
-    plt.grid(axis='x')
-    fig.set_tight_layout(True)
-    fig.show()
     # fig.savefig('line_loading.svg')
 
     print(1)

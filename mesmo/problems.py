@@ -305,7 +305,7 @@ class OptimalOperationProblem(Problem):
     timesteps: pd.Index
     price_data: mesmo.data_interface.PriceData
     electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None
-    power_flow_solution_reference: mesmo.electric_grid_models.PowerFlowSolution = None
+    power_flow_solution_reference: mesmo.electric_grid_models.PowerFlowSolutionBase = None
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
     thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None
     thermal_power_flow_solution_reference: mesmo.thermal_grid_models.ThermalPowerFlowSolution = None

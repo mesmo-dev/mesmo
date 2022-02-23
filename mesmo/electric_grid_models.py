@@ -1,6 +1,5 @@
 """Electric grid models module."""
 
-import cvxpy as cp
 import itertools
 from multimethod import multimethod
 import natsort
@@ -3337,6 +3336,9 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         self.electric_grid_model = electric_grid_model
         self.timesteps = self.electric_grid_model.timesteps
         self.linear_electric_grid_models = linear_electric_grid_models
+
+    # Define `update()` as alternative entry point for `__init__()`
+    update = __init__
 
     @staticmethod
     def check_linear_electric_grid_model_method(linear_electric_grid_model_method):

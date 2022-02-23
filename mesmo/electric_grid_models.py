@@ -4740,13 +4740,13 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def get_der_power_limit_timeseries(
-            self,
-            der: tuple,
-            der_active_power_vector: pd.DataFrame,
-            der_reactive_power_vector: pd.DataFrame,
-            node_voltage_magnitude_vector_minimum: np.ndarray = None,
-            node_voltage_magnitude_vector_maximum: np.ndarray = None,
-            branch_power_magnitude_vector_maximum: np.ndarray = None
+        self,
+        der: tuple,
+        der_active_power_vector: pd.DataFrame,
+        der_reactive_power_vector: pd.DataFrame,
+        node_voltage_magnitude_vector_minimum: np.ndarray = None,
+        node_voltage_magnitude_vector_maximum: np.ndarray = None,
+        branch_power_magnitude_vector_maximum: np.ndarray = None,
     ) -> pd.DataFrame:
         """Calculate power limits for given DER through maximum loadability calculation, subject to nodal voltage
         and/or branch power limits as well as the dispatch quantities of other DERs.
@@ -4789,38 +4789,35 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
         # Define shorthands.
         der_index_flexible = np.array([self.electric_grid_model.ders.get_loc(der)])
-        der_index_fixed = np.array([
-            index
-            for index in range(len(self.electric_grid_model.ders))
-            if index not in der_index_flexible
-        ])
+        der_index_fixed = np.array(
+            [index for index in range(len(self.electric_grid_model.ders)) if index not in der_index_flexible]
+        )
 
         # Obtain branch power limit, if not set.
         if branch_power_magnitude_vector_maximum is None:
             branch_power_magnitude_vector_maximum = self.electric_grid_model.branch_power_vector_magnitude_reference
 
         # Calculate DER power limits.
-        der_power_limit_timeseries = pd.DataFrame(np.nan, index=self.timesteps, columns=['minimum', 'maximum'])
+        der_power_limit_timeseries = pd.DataFrame(np.nan, index=self.timesteps, columns=["minimum", "maximum"])
         for timestep in self.timesteps:
             linear_model = self.linear_electric_grid_models[timestep]
-            der_power_laxity = (
-                sp.diags(
-                    linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_flexible]
-                    .toarray().ravel() ** -1
-                )
-                @ (
-                    # TODO: Revise equation to use reference power flow solution.
-                    np.transpose([branch_power_magnitude_vector_maximum])
-                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_fixed]
-                    @ np.transpose([der_active_power_vector.loc[timestep, :].values[der_index_fixed]])
-                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive[:, der_index_fixed]
-                    @ np.transpose([der_reactive_power_vector.loc[timestep, :].values[der_index_fixed]])
-                )
+            der_power_laxity = sp.diags(
+                linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_flexible]
+                .toarray()
+                .ravel()
+                ** -1
+            ) @ (
+                # TODO: Revise equation to use reference power flow solution.
+                np.transpose([branch_power_magnitude_vector_maximum])
+                - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_fixed]
+                @ np.transpose([der_active_power_vector.loc[timestep, :].values[der_index_fixed]])
+                - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive[:, der_index_fixed]
+                @ np.transpose([der_reactive_power_vector.loc[timestep, :].values[der_index_fixed]])
             )
-            der_power_limit_timeseries.at[timestep, 'minimum'] = np.max(
+            der_power_limit_timeseries.at[timestep, "minimum"] = np.max(
                 der_power_laxity[der_power_laxity < 0.0], initial=-np.inf
             )
-            der_power_limit_timeseries.at[timestep, 'maximum'] = np.min(
+            der_power_limit_timeseries.at[timestep, "maximum"] = np.min(
                 der_power_laxity[der_power_laxity > 0.0], initial=+np.inf
             )
 

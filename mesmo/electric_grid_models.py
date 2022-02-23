@@ -1230,8 +1230,8 @@ class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
 
 
 class PowerFlowSolutionBase(mesmo.utils.ObjectBase):
-    """Power flow solution object consisting of DER power vector and the corresponding solution for
-    nodal voltage vector / branch power vector and total loss (all complex valued).
+    """Power flow solution base object consisting of DER power vector and the corresponding solution for
+    nodal voltage vector / branch power vector and total loss, all complex valued.
     """
 
     der_power_vector: np.ndarray
@@ -1941,6 +1941,13 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolutionBase):
         loss = opendssdirect.Circuit.Losses()[0] + 1.0j * opendssdirect.Circuit.Losses()[1]
 
         return loss
+
+
+class PowerFlowSolution(PowerFlowSolutionFixedPoint):
+    """Electric power flow solution object. This object is a wrapper for the default power flow solution method
+    as defined by inheritance. Currently, `PowerFlowSolutionFixedPoint` is the default method for solving the
+    electric grid power flow.
+    """
 
 
 class PowerFlowSolutionSet(mesmo.utils.ObjectBase):

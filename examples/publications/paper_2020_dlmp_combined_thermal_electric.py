@@ -26,7 +26,7 @@ def main():
     price_data = mesmo.data_interface.PriceData(scenario_name)
 
     # Obtain models.
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model_set = (
         mesmo.electric_grid_models.LinearElectricGridModelSet(

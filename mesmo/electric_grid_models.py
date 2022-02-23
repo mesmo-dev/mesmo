@@ -1,8 +1,7 @@
 """Electric grid models module."""
 
-import cvxpy as cp
 import itertools
-from multimethod import multimethod
+import multimethod
 import natsort
 import numpy as np
 import opendssdirect
@@ -19,15 +18,21 @@ logger = mesmo.config.get_logger(__name__)
 
 
 class ElectricGridModel(mesmo.utils.ObjectBase):
-    """Electric grid model object.
+    """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
+    node types / branch types, the nodal admittance / transformation matrices, branch admittance /
+    incidence matrices and DER incidence matrices.
 
-    Note:
-        This abstract class only defines the expected variables of linear electric grid model objects,
-        but does not implement any functionality.
+    :syntax:
+        - ``ElectricGridModel(electric_grid_data)``: Instantiate electric grid model for given
+          `electric_grid_data`.
+        - ``ElectricGridModel(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
+          The required `electric_grid_data` is obtained from the database.
+
+    Arguments:
+        electric_grid_data (mesmo.data_interface.ElectricGridData): Electric grid data object.
+        scenario_name (str): MESMO scenario name.
 
     Attributes:
-        timesteps (pd.Index): Index set of time steps of the current scenario. This is needed for optimization problem
-            definitions within linear electric grid models (see ``LinearElectricGridModel``).
         phases (pd.Index): Index set of the phases.
         node_names (pd.Index): Index set of the node names.
         node_types (pd.Index): Index set of the node types.
@@ -51,6 +56,21 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
         der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
         is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
             as single-phase-equivalent of three-phase balanced system.
+        node_admittance_matrix (sp.spmatrix): Nodal admittance matrix.
+        node_transformation_matrix (sp.spmatrix): Nodal transformation matrix.
+        branch_admittance_1_matrix (sp.spmatrix): Branch admittance matrix in the 'from' direction.
+        branch_admittance_2_matrix (sp.spmatrix): Branch admittance matrix in the 'to' direction.
+        branch_incidence_1_matrix (sp.spmatrix): Branch incidence matrix in the 'from' direction.
+        branch_incidence_2_matrix (sp.spmatrix): Branch incidence matrix in the 'to' direction.
+        der_incidence_wye_matrix (sp.spmatrix): Load incidence matrix for 'wye' DERs.
+        der_incidence_delta_matrix (sp.spmatrix): Load incidence matrix for 'delta' DERs.
+        node_admittance_matrix_no_source (sp.spmatrix): Nodal admittance matrix from no-source to no-source nodes.
+        node_transformation_matrix_no_source (sp.spmatrix): Nodal admittance matrix from source to no-source nodes.
+        der_incidence_wye_matrix_no_source (sp.spmatrix): Incidence matrix from wye-conn. DERs to no-source nodes.
+        der_incidence_delta_matrix_no_source (sp.spmatrix): Incidence matrix from delta-conn. DERs to no-source nodes.
+        node_voltage_vector_reference_no_source (sp.spmatrix): Nodal reference voltage vector for no-source nodes.
+        node_voltage_vector_reference_source (sp.spmatrix): Nodal reference voltage vector for source nodes.
+        node_admittance_matrix_no_source_inverse (sp.spmatrix): Inverse of no-source nodal admittance matrix.
     """
 
     timesteps: pd.Index
@@ -72,8 +92,37 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
     branch_power_vector_magnitude_reference: np.ndarray
     der_power_vector_reference: np.ndarray
     is_single_phase_equivalent: bool
+    node_admittance_matrix: sp.spmatrix
+    node_transformation_matrix: sp.spmatrix
+    branch_admittance_1_matrix: sp.spmatrix
+    branch_admittance_2_matrix: sp.spmatrix
+    branch_incidence_1_matrix: sp.spmatrix
+    branch_incidence_2_matrix: sp.spmatrix
+    der_incidence_wye_matrix: sp.spmatrix
+    der_incidence_delta_matrix: sp.spmatrix
+    node_admittance_matrix_no_source: sp.spmatrix
+    node_admittance_matrix_source_to_no_source: sp.spmatrix
+    node_transformation_matrix_no_source: sp.spmatrix
+    der_incidence_wye_matrix_no_source: sp.spmatrix
+    der_incidence_delta_matrix_no_source: sp.spmatrix
+    node_voltage_vector_reference_no_source: sp.spmatrix
+    node_voltage_vector_reference_source: sp.spmatrix
+    node_admittance_matrix_no_source_inverse: sp.spmatrix
 
-    def __init__(self, electric_grid_data: mesmo.data_interface.ElectricGridData):
+    @multimethod.multimethod
+    def __init__(self, scenario_name: str):
+
+        # Obtain electric grid data.
+        electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
+
+        # Instantiate electric grid model object.
+        self.__init__(electric_grid_data)
+
+    @multimethod.multimethod
+    def __init__(
+        self,
+        electric_grid_data: mesmo.data_interface.ElectricGridData,
+    ):
 
         # Process overhead line type definitions.
         # - This is implemented as direct modification on the electric grid data object and therefore done first.
@@ -292,319 +341,6 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
         # Make modifications for single-phase-equivalent modelling.
         if self.is_single_phase_equivalent:
             self.branch_power_vector_magnitude_reference[mesmo.utils.get_index(self.branches, branch_type="line")] *= 3
-
-    @staticmethod
-    def process_line_types_overhead(
-        electric_grid_data: mesmo.data_interface.ElectricGridData,
-    ) -> mesmo.data_interface.ElectricGridData:
-        """Process overhead line type definitions in electric grid data object."""
-
-        # Process over-head line type definitions.
-        for line_type, line_type_data in electric_grid_data.electric_grid_line_types_overhead.iterrows():
-
-            # Obtain data shorthands.
-            # - Only for phases which have `conductor_id` defined in `electric_grid_line_types_overhead`.
-            phases = pd.Index(
-                [
-                    1 if pd.notnull(line_type_data.at["phase_1_conductor_id"]) else None,
-                    2 if pd.notnull(line_type_data.at["phase_2_conductor_id"]) else None,
-                    3 if pd.notnull(line_type_data.at["phase_3_conductor_id"]) else None,
-                    "n" if pd.notnull(line_type_data.at["neutral_conductor_id"]) else None,
-                ]
-            ).dropna()
-            phase_conductor_id = pd.Series(
-                {
-                    1: line_type_data.at["phase_1_conductor_id"],
-                    2: line_type_data.at["phase_2_conductor_id"],
-                    3: line_type_data.at["phase_3_conductor_id"],
-                    "n": line_type_data.at["neutral_conductor_id"],
-                }
-            ).loc[phases]
-            phase_y = pd.Series(
-                {
-                    1: line_type_data.at["phase_1_y"],
-                    2: line_type_data.at["phase_2_y"],
-                    3: line_type_data.at["phase_3_y"],
-                    "n": line_type_data.at["neutral_y"],
-                }
-            ).loc[phases]
-            phase_xy = pd.Series(
-                {
-                    1: np.array([line_type_data.at["phase_1_x"], line_type_data.at["phase_1_y"]]),
-                    2: np.array([line_type_data.at["phase_2_x"], line_type_data.at["phase_2_y"]]),
-                    3: np.array([line_type_data.at["phase_3_x"], line_type_data.at["phase_3_y"]]),
-                    "n": np.array([line_type_data.at["neutral_x"], line_type_data.at["neutral_y"]]),
-                }
-            ).loc[phases]
-            phase_conductor_diameter = (
-                pd.Series(
-                    [
-                        electric_grid_data.electric_grid_line_types_overhead_conductors.at[
-                            phase_conductor_id.at[phase], "conductor_diameter"
-                        ]
-                        for phase in phases
-                    ],
-                    index=phases,
-                )
-                * 1e-3  # mm to m.
-            )
-            phase_conductor_geometric_mean_radius = (
-                pd.Series(
-                    [
-                        electric_grid_data.electric_grid_line_types_overhead_conductors.at[
-                            phase_conductor_id.at[phase], "conductor_geometric_mean_radius"
-                        ]
-                        for phase in phases
-                    ],
-                    index=phases,
-                )
-                * 1e-3  # mm to m.
-            )
-            phase_conductor_resistance = pd.Series(
-                [
-                    electric_grid_data.electric_grid_line_types_overhead_conductors.at[
-                        phase_conductor_id.at[phase], "conductor_resistance"
-                    ]
-                    for phase in phases
-                ],
-                index=phases,
-            )
-            phase_conductor_maximum_current = pd.Series(
-                [
-                    electric_grid_data.electric_grid_line_types_overhead_conductors.at[
-                        phase_conductor_id.at[phase], "conductor_maximum_current"
-                    ]
-                    for phase in phases
-                ],
-                index=phases,
-            )
-
-            # Obtain shorthands for neutral / non-neutral phases.
-            # - This is needed for Kron reduction.
-            phases_neutral = phases[phases.isin(["n"])]
-            phases_non_neutral = phases[~phases.isin(["n"])]
-
-            # Other parameter shorthands.
-            frequency = electric_grid_data.electric_grid.at["base_frequency"]  # In Hz.
-            earth_resistivity = line_type_data.at["earth_resistivity"]  # In Ωm.
-            air_permittivity = line_type_data.at["air_permittivity"]  # In nF/km.
-            g_factor = 1e-4  # In Ω/km from 0.1609347e-3 Ω/mile from Kersting <https://doi.org/10.1201/9781315120782>.
-
-            # Obtain impedance matrix in Ω/km based on Kersting <https://doi.org/10.1201/9781315120782>.
-            z_matrix = pd.DataFrame(index=phases, columns=phases, dtype=complex)
-            for phase_row, phase_col in itertools.product(phases, phases):
-                # Calculate geometric parameters.
-                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
-                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
-                s_angle = np.pi / 2 - np.arcsin((phase_y.at[phase_row] + phase_y.at[phase_col]) / s_distance)
-                # Calculate Kersting / Carson parameters.
-                k_factor = 8.565e-4 * s_distance * np.sqrt(frequency / earth_resistivity)
-                p_factor = (
-                    np.pi / 8
-                    - (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(s_angle)
-                    - k_factor**2 / 16 * np.cos(2 * s_angle) * (0.6728 + np.log(2 / k_factor))
-                )
-                q_factor = (
-                    -0.0386 + 0.5 * np.log(2 / k_factor) + (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(2 * s_angle)
-                )
-                x_factor = (
-                    2
-                    * np.pi
-                    * frequency
-                    * g_factor
-                    * np.log(phase_conductor_diameter[phase_row] / phase_conductor_geometric_mean_radius.at[phase_row])
-                )
-                # Calculate admittance according to Kersting / Carson <https://doi.org/10.1201/9781315120782>.
-                if phase_row == phase_col:
-                    z_matrix.at[phase_row, phase_col] = (
-                        phase_conductor_resistance.at[phase_row]
-                        + 4 * np.pi * frequency * p_factor * g_factor
-                        + 1j
-                        * (
-                            x_factor
-                            + 2
-                            * np.pi
-                            * frequency
-                            * g_factor
-                            * np.log(s_distance / phase_conductor_diameter[phase_row])
-                            + 4 * np.pi * frequency * q_factor * g_factor
-                        )
-                    )
-                else:
-                    z_matrix.at[phase_row, phase_col] = 4 * np.pi * frequency * p_factor * g_factor + 1j * (
-                        2 * np.pi * frequency * g_factor * np.log(s_distance / d_distance)
-                        + 4 * np.pi * frequency * q_factor * g_factor
-                    )
-
-            # Apply Kron reduction.
-            z_matrix = pd.DataFrame(
-                (
-                    z_matrix.loc[phases_non_neutral, phases_non_neutral].values
-                    - z_matrix.loc[phases_non_neutral, phases_neutral].values
-                    @ z_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
-                    @ z_matrix.loc[phases_neutral, phases_non_neutral].values
-                ),
-                index=phases_non_neutral,
-                columns=phases_non_neutral,
-            )
-
-            # Obtain potentials matrix in km/nF based on Kersting <https://doi.org/10.1201/9781315120782>.
-            p_matrix = pd.DataFrame(index=phases, columns=phases, dtype=float)
-            for phase_row, phase_col in itertools.product(phases, phases):
-                # Calculate geometric parameters.
-                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
-                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
-                # Calculate potential according to Kersting <https://doi.org/10.1201/9781315120782>.
-                if phase_row == phase_col:
-                    p_matrix.at[phase_row, phase_col] = (
-                        1 / (2 * np.pi * air_permittivity) * np.log(s_distance / phase_conductor_diameter.at[phase_row])
-                    )
-                else:
-                    p_matrix.at[phase_row, phase_col] = (
-                        1 / (2 * np.pi * air_permittivity) * np.log(s_distance / d_distance)
-                    )
-
-            # Apply Kron reduction.
-            p_matrix = pd.DataFrame(
-                (
-                    p_matrix.loc[phases_non_neutral, phases_non_neutral].values
-                    - p_matrix.loc[phases_non_neutral, phases_neutral].values
-                    @ p_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
-                    @ p_matrix.loc[phases_neutral, phases_non_neutral].values
-                ),
-                index=phases_non_neutral,
-                columns=phases_non_neutral,
-            )
-
-            # Obtain capacitance matrix in nF/km.
-            c_matrix = pd.DataFrame(np.linalg.inv(p_matrix), index=phases_non_neutral, columns=phases_non_neutral)
-
-            # Obtain final element matrices.
-            resistance_matrix = z_matrix.apply(np.real)  # In Ω/km.
-            reactance_matrix = z_matrix.apply(np.imag)  # In Ω/km.
-            capacitance_matrix = c_matrix  # In nF/km.
-
-            # Add to line type matrices definition.
-            for phase_row in phases_non_neutral:
-                for phase_col in phases_non_neutral[phases_non_neutral <= phase_row]:
-                    electric_grid_data.electric_grid_line_types_matrices = (
-                        electric_grid_data.electric_grid_line_types_matrices.append(
-                            pd.Series(
-                                {
-                                    "line_type": line_type,
-                                    "row": phase_row,
-                                    "col": phase_col,
-                                    "resistance": resistance_matrix.at[phase_row, phase_col],
-                                    "reactance": reactance_matrix.at[phase_row, phase_col],
-                                    "capacitance": capacitance_matrix.at[phase_row, phase_col],
-                                }
-                            ),
-                            ignore_index=True,
-                        )
-                    )
-
-            # Obtain number of phases.
-            electric_grid_data.electric_grid_line_types.loc[line_type, "n_phases"] = len(phases_non_neutral)
-
-            # Obtain maximum current.
-            # TODO: Validate this.
-            electric_grid_data.electric_grid_line_types.loc[
-                line_type, "maximum_current"
-            ] = phase_conductor_maximum_current.loc[phases_non_neutral].mean()
-
-        return electric_grid_data
-
-
-class ElectricGridModelDefault(ElectricGridModel):
-    """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
-    node types / branch types, the nodal admittance / transformation matrices, branch admittance /
-    incidence matrices and DER incidence matrices.
-
-    :syntax:
-        - ``ElectricGridModelDefault(electric_grid_data)``: Instantiate electric grid model for given
-          `electric_grid_data`.
-        - ``ElectricGridModelDefault(scenario_name)``: Instantiate electric grid model for given `scenario_name`.
-          The required `electric_grid_data` is obtained from the database.
-
-    Arguments:
-        electric_grid_data (mesmo.data_interface.ElectricGridData): Electric grid data object.
-        scenario_name (str): MESMO scenario name.
-
-    Attributes:
-        phases (pd.Index): Index set of the phases.
-        node_names (pd.Index): Index set of the node names.
-        node_types (pd.Index): Index set of the node types.
-        line_names (pd.Index): Index set of the line names.
-        transformer_names (pd.Index): Index set of the transformer names.
-        branch_names (pd.Index): Index set of the branch names, i.e., all line names and transformer names.
-        branch_types (pd.Index): Index set of the branch types.
-        der_names (pd.Index): Index set of the DER names.
-        der_types (pd.Index): Index set of the DER types.
-        nodes (pd.Index): Multi-level / tuple index set of the node types, node names and phases
-            corresponding to the dimension of the node admittance matrices.
-        branches (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            corresponding to the dimension of the branch admittance matrices.
-        lines (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            for the lines only.
-        transformers (pd.Index): Multi-level / tuple index set of the branch types, branch names and phases
-            for the transformers only.
-        ders (pd.Index): Index set of the DER names, corresponding to the dimension of the DER power vector.
-        node_voltage_vector_reference (np.ndarray): Node voltage reference / no load vector.
-        branch_power_vector_magnitude_reference (np.ndarray): Branch power reference / rated power vector.
-        der_power_vector_reference (np.ndarray): DER power reference / nominal power vector.
-        is_single_phase_equivalent (bool): Singe-phase-equivalent modelling flag. If true, electric grid is modelled
-            as single-phase-equivalent of three-phase balanced system.
-        node_admittance_matrix (sp.spmatrix): Nodal admittance matrix.
-        node_transformation_matrix (sp.spmatrix): Nodal transformation matrix.
-        branch_admittance_1_matrix (sp.spmatrix): Branch admittance matrix in the 'from' direction.
-        branch_admittance_2_matrix (sp.spmatrix): Branch admittance matrix in the 'to' direction.
-        branch_incidence_1_matrix (sp.spmatrix): Branch incidence matrix in the 'from' direction.
-        branch_incidence_2_matrix (sp.spmatrix): Branch incidence matrix in the 'to' direction.
-        der_incidence_wye_matrix (sp.spmatrix): Load incidence matrix for 'wye' DERs.
-        der_incidence_delta_matrix (sp.spmatrix): Load incidence matrix for 'delta' DERs.
-        node_admittance_matrix_no_source (sp.spmatrix): Nodal admittance matrix from no-source to no-source nodes.
-        node_transformation_matrix_no_source (sp.spmatrix): Nodal admittance matrix from source to no-source nodes.
-        der_incidence_wye_matrix_no_source (sp.spmatrix): Incidence matrix from wye-conn. DERs to no-source nodes.
-        der_incidence_delta_matrix_no_source (sp.spmatrix): Incidence matrix from delta-conn. DERs to no-source nodes.
-        node_voltage_vector_reference_no_source (sp.spmatrix): Nodal reference voltage vector for no-source nodes.
-        node_voltage_vector_reference_source (sp.spmatrix): Nodal reference voltage vector for source nodes.
-        node_admittance_matrix_no_source_inverse (sp.spmatrix): Inverse of no-source nodal admittance matrix.
-    """
-
-    node_admittance_matrix: sp.spmatrix
-    node_transformation_matrix: sp.spmatrix
-    branch_admittance_1_matrix: sp.spmatrix
-    branch_admittance_2_matrix: sp.spmatrix
-    branch_incidence_1_matrix: sp.spmatrix
-    branch_incidence_2_matrix: sp.spmatrix
-    der_incidence_wye_matrix: sp.spmatrix
-    der_incidence_delta_matrix: sp.spmatrix
-    node_admittance_matrix_no_source: sp.spmatrix
-    node_admittance_matrix_source_to_no_source: sp.spmatrix
-    node_transformation_matrix_no_source: sp.spmatrix
-    der_incidence_wye_matrix_no_source: sp.spmatrix
-    der_incidence_delta_matrix_no_source: sp.spmatrix
-    node_voltage_vector_reference_no_source: sp.spmatrix
-    node_voltage_vector_reference_source: sp.spmatrix
-    node_admittance_matrix_no_source_inverse: sp.spmatrix
-
-    @multimethod
-    def __init__(self, scenario_name: str):
-
-        # Obtain electric grid data.
-        electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
-
-        # Instantiate electric grid model object.
-        self.__init__(electric_grid_data)
-
-    @multimethod
-    def __init__(
-        self,
-        electric_grid_data: mesmo.data_interface.ElectricGridData,
-    ):
-
-        # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
-        super().__init__(electric_grid_data)
 
         # Define sparse matrices for nodal admittance, nodal transformation,
         # branch admittance, branch incidence and der incidence matrix entries.
@@ -918,6 +654,243 @@ class ElectricGridModelDefault(ElectricGridModel):
                 ValueError(f"Node admittance matrix could not be inverted. Please check electric grid definition.")
             ) from exception
 
+    @staticmethod
+    def process_line_types_overhead(
+        electric_grid_data: mesmo.data_interface.ElectricGridData,
+    ) -> mesmo.data_interface.ElectricGridData:
+        """Process overhead line type definitions in electric grid data object."""
+
+        # Process over-head line type definitions.
+        for line_type, line_type_data in electric_grid_data.electric_grid_line_types_overhead.iterrows():
+
+            # Obtain data shorthands.
+            # - Only for phases which have `conductor_id` defined in `electric_grid_line_types_overhead`.
+            phases = pd.Index(
+                [
+                    1 if pd.notnull(line_type_data.at["phase_1_conductor_id"]) else None,
+                    2 if pd.notnull(line_type_data.at["phase_2_conductor_id"]) else None,
+                    3 if pd.notnull(line_type_data.at["phase_3_conductor_id"]) else None,
+                    "n" if pd.notnull(line_type_data.at["neutral_conductor_id"]) else None,
+                ]
+            ).dropna()
+            phase_conductor_id = pd.Series(
+                {
+                    1: line_type_data.at["phase_1_conductor_id"],
+                    2: line_type_data.at["phase_2_conductor_id"],
+                    3: line_type_data.at["phase_3_conductor_id"],
+                    "n": line_type_data.at["neutral_conductor_id"],
+                }
+            ).loc[phases]
+            phase_y = pd.Series(
+                {
+                    1: line_type_data.at["phase_1_y"],
+                    2: line_type_data.at["phase_2_y"],
+                    3: line_type_data.at["phase_3_y"],
+                    "n": line_type_data.at["neutral_y"],
+                }
+            ).loc[phases]
+            phase_xy = pd.Series(
+                {
+                    1: np.array([line_type_data.at["phase_1_x"], line_type_data.at["phase_1_y"]]),
+                    2: np.array([line_type_data.at["phase_2_x"], line_type_data.at["phase_2_y"]]),
+                    3: np.array([line_type_data.at["phase_3_x"], line_type_data.at["phase_3_y"]]),
+                    "n": np.array([line_type_data.at["neutral_x"], line_type_data.at["neutral_y"]]),
+                }
+            ).loc[phases]
+            phase_conductor_diameter = (
+                pd.Series(
+                    [
+                        electric_grid_data.electric_grid_line_types_overhead_conductors.at[
+                            phase_conductor_id.at[phase], "conductor_diameter"
+                        ]
+                        for phase in phases
+                    ],
+                    index=phases,
+                )
+                * 1e-3  # mm to m.
+            )
+            phase_conductor_geometric_mean_radius = (
+                pd.Series(
+                    [
+                        electric_grid_data.electric_grid_line_types_overhead_conductors.at[
+                            phase_conductor_id.at[phase], "conductor_geometric_mean_radius"
+                        ]
+                        for phase in phases
+                    ],
+                    index=phases,
+                )
+                * 1e-3  # mm to m.
+            )
+            phase_conductor_resistance = pd.Series(
+                [
+                    electric_grid_data.electric_grid_line_types_overhead_conductors.at[
+                        phase_conductor_id.at[phase], "conductor_resistance"
+                    ]
+                    for phase in phases
+                ],
+                index=phases,
+            )
+            phase_conductor_maximum_current = pd.Series(
+                [
+                    electric_grid_data.electric_grid_line_types_overhead_conductors.at[
+                        phase_conductor_id.at[phase], "conductor_maximum_current"
+                    ]
+                    for phase in phases
+                ],
+                index=phases,
+            )
+
+            # Obtain shorthands for neutral / non-neutral phases.
+            # - This is needed for Kron reduction.
+            phases_neutral = phases[phases.isin(["n"])]
+            phases_non_neutral = phases[~phases.isin(["n"])]
+
+            # Other parameter shorthands.
+            frequency = electric_grid_data.electric_grid.at["base_frequency"]  # In Hz.
+            earth_resistivity = line_type_data.at["earth_resistivity"]  # In Ωm.
+            air_permittivity = line_type_data.at["air_permittivity"]  # In nF/km.
+            g_factor = 1e-4  # In Ω/km from 0.1609347e-3 Ω/mile from Kersting <https://doi.org/10.1201/9781315120782>.
+
+            # Obtain impedance matrix in Ω/km based on Kersting <https://doi.org/10.1201/9781315120782>.
+            z_matrix = pd.DataFrame(index=phases, columns=phases, dtype=complex)
+            for phase_row, phase_col in itertools.product(phases, phases):
+                # Calculate geometric parameters.
+                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
+                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
+                s_angle = np.pi / 2 - np.arcsin((phase_y.at[phase_row] + phase_y.at[phase_col]) / s_distance)
+                # Calculate Kersting / Carson parameters.
+                k_factor = 8.565e-4 * s_distance * np.sqrt(frequency / earth_resistivity)
+                p_factor = (
+                    np.pi / 8
+                    - (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(s_angle)
+                    - k_factor**2 / 16 * np.cos(2 * s_angle) * (0.6728 + np.log(2 / k_factor))
+                )
+                q_factor = (
+                    -0.0386 + 0.5 * np.log(2 / k_factor) + (3 * np.sqrt(2)) ** -1 * k_factor * np.cos(2 * s_angle)
+                )
+                x_factor = (
+                    2
+                    * np.pi
+                    * frequency
+                    * g_factor
+                    * np.log(phase_conductor_diameter[phase_row] / phase_conductor_geometric_mean_radius.at[phase_row])
+                )
+                # Calculate admittance according to Kersting / Carson <https://doi.org/10.1201/9781315120782>.
+                if phase_row == phase_col:
+                    z_matrix.at[phase_row, phase_col] = (
+                        phase_conductor_resistance.at[phase_row]
+                        + 4 * np.pi * frequency * p_factor * g_factor
+                        + 1j
+                        * (
+                            x_factor
+                            + 2
+                            * np.pi
+                            * frequency
+                            * g_factor
+                            * np.log(s_distance / phase_conductor_diameter[phase_row])
+                            + 4 * np.pi * frequency * q_factor * g_factor
+                        )
+                    )
+                else:
+                    z_matrix.at[phase_row, phase_col] = 4 * np.pi * frequency * p_factor * g_factor + 1j * (
+                        2 * np.pi * frequency * g_factor * np.log(s_distance / d_distance)
+                        + 4 * np.pi * frequency * q_factor * g_factor
+                    )
+
+            # Apply Kron reduction.
+            z_matrix = pd.DataFrame(
+                (
+                    z_matrix.loc[phases_non_neutral, phases_non_neutral].values
+                    - z_matrix.loc[phases_non_neutral, phases_neutral].values
+                    @ z_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
+                    @ z_matrix.loc[phases_neutral, phases_non_neutral].values
+                ),
+                index=phases_non_neutral,
+                columns=phases_non_neutral,
+            )
+
+            # Obtain potentials matrix in km/nF based on Kersting <https://doi.org/10.1201/9781315120782>.
+            p_matrix = pd.DataFrame(index=phases, columns=phases, dtype=float)
+            for phase_row, phase_col in itertools.product(phases, phases):
+                # Calculate geometric parameters.
+                d_distance = np.linalg.norm(phase_xy.at[phase_row] - phase_xy.at[phase_col])
+                s_distance = np.linalg.norm(phase_xy.at[phase_row] - np.array([1, -1]) * phase_xy.at[phase_col])
+                # Calculate potential according to Kersting <https://doi.org/10.1201/9781315120782>.
+                if phase_row == phase_col:
+                    p_matrix.at[phase_row, phase_col] = (
+                        1 / (2 * np.pi * air_permittivity) * np.log(s_distance / phase_conductor_diameter.at[phase_row])
+                    )
+                else:
+                    p_matrix.at[phase_row, phase_col] = (
+                        1 / (2 * np.pi * air_permittivity) * np.log(s_distance / d_distance)
+                    )
+
+            # Apply Kron reduction.
+            p_matrix = pd.DataFrame(
+                (
+                    p_matrix.loc[phases_non_neutral, phases_non_neutral].values
+                    - p_matrix.loc[phases_non_neutral, phases_neutral].values
+                    @ p_matrix.loc[phases_neutral, phases_neutral].values ** -1  # Inverse of scalar value.
+                    @ p_matrix.loc[phases_neutral, phases_non_neutral].values
+                ),
+                index=phases_non_neutral,
+                columns=phases_non_neutral,
+            )
+
+            # Obtain capacitance matrix in nF/km.
+            c_matrix = pd.DataFrame(np.linalg.inv(p_matrix), index=phases_non_neutral, columns=phases_non_neutral)
+
+            # Obtain final element matrices.
+            resistance_matrix = z_matrix.apply(np.real)  # In Ω/km.
+            reactance_matrix = z_matrix.apply(np.imag)  # In Ω/km.
+            capacitance_matrix = c_matrix  # In nF/km.
+
+            # Add to line type matrices definition.
+            for phase_row in phases_non_neutral:
+                for phase_col in phases_non_neutral[phases_non_neutral <= phase_row]:
+                    electric_grid_data.electric_grid_line_types_matrices = (
+                        electric_grid_data.electric_grid_line_types_matrices.append(
+                            pd.Series(
+                                {
+                                    "line_type": line_type,
+                                    "row": phase_row,
+                                    "col": phase_col,
+                                    "resistance": resistance_matrix.at[phase_row, phase_col],
+                                    "reactance": reactance_matrix.at[phase_row, phase_col],
+                                    "capacitance": capacitance_matrix.at[phase_row, phase_col],
+                                }
+                            ),
+                            ignore_index=True,
+                        )
+                    )
+
+            # Obtain number of phases.
+            electric_grid_data.electric_grid_line_types.loc[line_type, "n_phases"] = len(phases_non_neutral)
+
+            # Obtain maximum current.
+            # TODO: Validate this.
+            electric_grid_data.electric_grid_line_types.loc[
+                line_type, "maximum_current"
+            ] = phase_conductor_maximum_current.loc[phases_non_neutral].mean()
+
+        return electric_grid_data
+
+
+class ElectricGridModelDefault(ElectricGridModel):
+    """`ElectricGridModelDefault` is a placeholder for `ElectricGridModel` for backwards compatibility and will
+    be removed in a future version of MESMO.
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        # Issue warning when using this class.
+        logger.warning(
+            "`ElectricGridModelDefault` is a placeholder for `ElectricGridModel` for backwards compatibility and will "
+            "be removed in a future version of MESMO."
+        )
+
+        super().__init__(*args, **kwargs)
+
 
 class ElectricGridModelOpenDSS(ElectricGridModel):
     """OpenDSS electric grid model object.
@@ -970,7 +943,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
     circuit_name: str
     electric_grid_data: mesmo.data_interface.ElectricGridData
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, scenario_name: str):
 
         # Obtain electric grid data.
@@ -978,7 +951,7 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
         self.__init__(electric_grid_data)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, electric_grid_data: mesmo.data_interface.ElectricGridData):
 
         # TODO: Add reset method to ensure correct circuit model is set in OpenDSS when handling multiple models.
@@ -1256,9 +1229,9 @@ class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
     electric_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
-class PowerFlowSolution(mesmo.utils.ObjectBase):
-    """Power flow solution object consisting of DER power vector and the corresponding solution for
-    nodal voltage vector / branch power vector and total loss (all complex valued).
+class PowerFlowSolutionBase(mesmo.utils.ObjectBase):
+    """Power flow solution base object consisting of DER power vector and the corresponding solution for
+    nodal voltage vector / branch power vector and total loss, all complex valued.
     """
 
     der_power_vector: np.ndarray
@@ -1268,27 +1241,27 @@ class PowerFlowSolution(mesmo.utils.ObjectBase):
     loss: complex
 
 
-class PowerFlowSolutionFixedPoint(PowerFlowSolution):
+class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
     """Fixed point power flow solution object."""
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, scenario_name: str, **kwargs):
 
         # Obtain `electric_grid_model`.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         self.__init__(electric_grid_model, **kwargs)
 
-    @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, **kwargs):
+    @multimethod.multimethod
+    def __init__(self, electric_grid_model: ElectricGridModel, **kwargs):
 
         # Obtain `der_power_vector`, assuming nominal power conditions.
         der_power_vector = electric_grid_model.der_power_vector_reference
 
         self.__init__(electric_grid_model, der_power_vector, **kwargs)
 
-    @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, der_power_vector: np.ndarray, **kwargs):
+    @multimethod.multimethod
+    def __init__(self, electric_grid_model: ElectricGridModel, der_power_vector: np.ndarray, **kwargs):
 
         # Store DER power vector.
         self.der_power_vector = der_power_vector.ravel()
@@ -1306,7 +1279,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def check_solution_conditions(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         node_power_vector_wye_initial_no_source: np.ndarray,
         node_power_vector_delta_initial_no_source: np.ndarray,
         node_power_vector_wye_candidate_no_source: np.ndarray,
@@ -1430,7 +1403,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def get_voltage(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: np.ndarray,
         outer_iteration_limit=100,
         outer_solution_algorithm="check_solution",  # Choices: `check_conditions`, `check_solution`.
@@ -1643,7 +1616,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         return node_voltage_vector
 
     @staticmethod
-    def get_branch_power(electric_grid_model: ElectricGridModelDefault, node_voltage_vector: np.ndarray):
+    def get_branch_power(electric_grid_model: ElectricGridModel, node_voltage_vector: np.ndarray):
         """Get branch power vectors by calculating power flow with given nodal voltage.
 
         - Returns two branch power vectors, where `branch_power_vector_1` represents the
@@ -1674,7 +1647,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         return (branch_power_vector_1, branch_power_vector_2)
 
     @staticmethod
-    def get_loss(electric_grid_model: ElectricGridModelDefault, node_voltage_vector: np.ndarray):
+    def get_loss(electric_grid_model: ElectricGridModel, node_voltage_vector: np.ndarray):
         """Get total electric losses with given nodal voltage."""
 
         # Calculate total losses.
@@ -1708,7 +1681,7 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
 
     @staticmethod
     def get_voltage(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: np.ndarray,
         voltage_iteration_limit=100,
         voltage_tolerance=1e-2,
@@ -1806,10 +1779,10 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
         return node_voltage_vector
 
 
-class PowerFlowSolutionOpenDSS(PowerFlowSolution):
+class PowerFlowSolutionOpenDSS(PowerFlowSolutionBase):
     """OpenDSS power flow solution object."""
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, scenario_name: str, **kwargs):
 
         # Obtain `electric_grid_model`.
@@ -1817,7 +1790,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         self.__init__(electric_grid_model, **kwargs)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModelOpenDSS, **kwargs):
 
         # Obtain `der_power_vector`, assuming nominal power conditions.
@@ -1825,7 +1798,7 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 
         self.__init__(electric_grid_model, der_power_vector, **kwargs)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModelOpenDSS, der_power_vector: np.ndarray, **kwargs):
 
         # Store DER power vector.
@@ -1970,17 +1943,24 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
         return loss
 
 
+class PowerFlowSolution(PowerFlowSolutionFixedPoint):
+    """Electric power flow solution object. This object is a wrapper for the default power flow solution method
+    as defined by inheritance. Currently, `PowerFlowSolutionFixedPoint` is the default method for solving the
+    electric grid power flow.
+    """
+
+
 class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
-    power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolution]
-    electric_grid_model: ElectricGridModelDefault
+    power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionBase]
+    electric_grid_model: ElectricGridModel
     der_power_vector: pd.DataFrame
     timesteps: pd.Index
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_operation_results: ElectricGridDEROperationResults,
         **kwargs,
     ):
@@ -1991,10 +1971,10 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
         self.__init__(electric_grid_model, der_power_vector, **kwargs)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: pd.DataFrame,
         power_flow_solution_method=PowerFlowSolutionFixedPoint,
     ):
@@ -2074,7 +2054,7 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         )
 
 
-class LinearElectricGridModel(mesmo.utils.ObjectBase):
+class LinearElectricGridModelBase(mesmo.utils.ObjectBase):
     """Abstract linear electric model object, consisting of the sensitivity matrices for
     voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
     nodal delta power.
@@ -2084,8 +2064,8 @@ class LinearElectricGridModel(mesmo.utils.ObjectBase):
         but does not implement any functionality.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
-        power_flow_solution (PowerFlowSolution): Reference power flow solution object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
+        power_flow_solution (PowerFlowSolutionBase): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (sp.spmatrix): Sensitivity matrix for complex voltage
@@ -2184,8 +2164,8 @@ class LinearElectricGridModel(mesmo.utils.ObjectBase):
             reactive loss by DER reactive power vector.
     """
 
-    electric_grid_model: ElectricGridModelDefault
-    power_flow_solution: PowerFlowSolution
+    electric_grid_model: ElectricGridModel
+    power_flow_solution: PowerFlowSolutionBase
     sensitivity_voltage_by_power_wye_active: sp.spmatrix
     sensitivity_voltage_by_power_wye_reactive: sp.spmatrix
     sensitivity_voltage_by_power_delta_active: sp.spmatrix
@@ -2236,7 +2216,7 @@ class LinearElectricGridModel(mesmo.utils.ObjectBase):
     sensitivity_loss_reactive_by_der_power_reactive: sp.spmatrix
 
 
-class LinearElectricGridModelGlobal(LinearElectricGridModel):
+class LinearElectricGridModelGlobal(LinearElectricGridModelBase):
     """Linear electric grid model object based on global approximations, consisting of the sensitivity matrices for
     voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
     nodal delta power.
@@ -2249,13 +2229,13 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
           `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
-        power_flow_solution (PowerFlowSolution): Power flow solution object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
+        power_flow_solution (PowerFlowSolutionBase): Power flow solution object.
         scenario_name (str): MESMO scenario name.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
-        power_flow_solution (PowerFlowSolution): Reference power flow solution object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
+        power_flow_solution (PowerFlowSolutionBase): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (sp.spmatrix): Sensitivity matrix for complex voltage
@@ -2354,14 +2334,14 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
             reactive loss by DER reactive power vector.
     """
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
         scenario_name: str,
     ):
 
         # Obtain electric grid model.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         # Obtain der power vector.
         der_power_vector = electric_grid_model.der_power_vector_reference
@@ -2371,8 +2351,8 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
 
         self.__init__(electric_grid_model, power_flow_solution)
 
-    @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, power_flow_solution: PowerFlowSolution):
+    @multimethod.multimethod
+    def __init__(self, electric_grid_model: ElectricGridModel, power_flow_solution: PowerFlowSolutionBase):
         # TODO: Validate linear model with delta DERs.
 
         # Store power flow solution.
@@ -2742,7 +2722,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         )
 
 
-class LinearElectricGridModelLocal(LinearElectricGridModel):
+class LinearElectricGridModelLocal(LinearElectricGridModelBase):
     """Linear electric grid model object based on local approximations, consisting of the sensitivity matrices for
     voltage / voltage magnitude / squared branch power / active loss / reactive loss by changes in nodal wye power /
     nodal delta power.
@@ -2755,13 +2735,13 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
           `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
-        power_flow_solution (PowerFlowSolution): Power flow solution object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
+        power_flow_solution (PowerFlowSolutionBase): Power flow solution object.
         scenario_name (str): MESMO scenario name.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
-        power_flow_solution (PowerFlowSolution): Reference power flow solution object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
+        power_flow_solution (PowerFlowSolutionBase): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
         sensitivity_voltage_by_power_wye_reactive (sp.spmatrix): Sensitivity matrix for complex voltage
@@ -2860,14 +2840,14 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
             reactive loss by DER reactive power vector.
     """
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
         scenario_name: str,
     ):
 
         # Obtain electric grid model.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         # Obtain der power vector.
         der_power_vector = electric_grid_model.der_power_vector_reference
@@ -2877,8 +2857,8 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
 
         self.__init__(electric_grid_model, power_flow_solution)
 
-    @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, power_flow_solution: PowerFlowSolution):
+    @multimethod.multimethod
+    def __init__(self, electric_grid_model: ElectricGridModel, power_flow_solution: PowerFlowSolutionBase):
 
         # Store power flow solution.
         self.power_flow_solution = power_flow_solution
@@ -3276,25 +3256,25 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
 
 class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
-    linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
-    electric_grid_model: ElectricGridModelDefault
+    linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModelBase]
+    electric_grid_model: ElectricGridModel
     timesteps: pd.Index
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(self, scenario_name: str):
 
         # Obtain electric grid model & reference power flow solution.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
         power_flow_solution = PowerFlowSolutionFixedPoint(electric_grid_model)
 
         self.__init__(electric_grid_model, power_flow_solution)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
-        power_flow_solution: PowerFlowSolution,
-        linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelGlobal,
+        electric_grid_model: ElectricGridModel,
+        power_flow_solution: PowerFlowSolutionBase,
+        linear_electric_grid_model_method: typing.Type[LinearElectricGridModelBase] = LinearElectricGridModelGlobal,
     ):
 
         self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
@@ -3307,12 +3287,12 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
         self.__init__(electric_grid_model, linear_electric_grid_models)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         power_flow_solution_set: PowerFlowSolutionSet,
-        linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelLocal,
+        linear_electric_grid_model_method: typing.Type[LinearElectricGridModelBase] = LinearElectricGridModelLocal,
     ):
 
         self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
@@ -3326,11 +3306,11 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
         self.__init__(electric_grid_model, linear_electric_grid_models)
 
-    @multimethod
+    @multimethod.multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
-        linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel],
+        electric_grid_model: ElectricGridModel,
+        linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModelBase],
     ):
 
         # Store attributes.
@@ -3338,10 +3318,13 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         self.timesteps = self.electric_grid_model.timesteps
         self.linear_electric_grid_models = linear_electric_grid_models
 
+    # Define `update()` as alternative entry point for `__init__()`
+    update = __init__
+
     @staticmethod
     def check_linear_electric_grid_model_method(linear_electric_grid_model_method):
 
-        if not issubclass(linear_electric_grid_model_method, LinearElectricGridModel):
+        if not issubclass(linear_electric_grid_model_method, LinearElectricGridModelBase):
             raise ValueError(f"Invalid linear electric grid model method: {linear_electric_grid_model_method}")
 
     def define_optimization_problem(
@@ -4755,3 +4738,90 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             loss_active=loss_active,
             loss_reactive=loss_reactive,
         )
+
+    def get_der_power_limit_timeseries(
+            self,
+            der: tuple,
+            der_active_power_vector: pd.DataFrame,
+            der_reactive_power_vector: pd.DataFrame,
+            node_voltage_magnitude_vector_minimum: np.ndarray = None,
+            node_voltage_magnitude_vector_maximum: np.ndarray = None,
+            branch_power_magnitude_vector_maximum: np.ndarray = None
+    ) -> pd.DataFrame:
+        """Calculate power limits for given DER through maximum loadability calculation, subject to nodal voltage
+        and/or branch power limits as well as the dispatch quantities of other DERs.
+
+        Methodology (work in progress):
+            1. Linear electric grid model equation:
+                - 𝒔^𝑏=𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^𝑑 ) 𝒔^𝑑=𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)+𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)
+                - 𝒔^𝑏 - Branch power vector
+                - 𝒔^𝑑 - DER power vector; 𝒔^(𝑑,1) - DER power vector of group 1; 𝒔^(𝑑,2) - DER power vector of group 2
+                - 𝑴^(𝑠^𝑏,𝑠^𝑑 ),𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ),𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)- Sensitivity matrices
+                - ()^𝑟𝑒𝑓 - Reference value / approximation point
+            2. Loadability constraint:
+                - 𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)+𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)≤𝒔^(𝑏,𝑚𝑎𝑥)
+                - 𝒔^(𝑏,𝑚𝑎𝑥) - Branch power limit / loading limit
+            3. Reformulation for DER maximum power value:
+                - 𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) 𝒔^(𝑑,2)≤𝒔^(𝑏,𝑚𝑎𝑥)−𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1)
+                - Assume: 𝒔^(𝑑,2)∈ℝ^(1×1); Then: 𝑴^(𝑠^𝑏,𝑠^(𝑑,2) )∈ℝ^(𝑏×1)
+                - 𝒔^(𝑑,2,𝑙𝑎𝑥)=diag(𝑴^(𝑠^𝑏,𝑠^(𝑑,2) ) )^(−1) (𝒔^(𝑏,𝑚𝑎𝑥)−𝒔^(𝑏,𝑟𝑒𝑓)+𝑴^(𝑠^𝑏,𝑠^(𝑑,1) ) 𝒔^(𝑑,1) )
+                - With: 𝒔^(𝑑,2,𝑙𝑎𝑥)∈ℝ^(𝑏×1)
+                - max((𝒔^(𝑑,2,𝑙𝑎𝑥) )^− )=𝒔^(𝑑,2,𝑚𝑖𝑛)≤𝒔^(𝑑,2)≤𝒔^(𝑑,2,𝑚𝑎𝑥)=min((𝒔^(𝑑,2,𝑙𝑎𝑥) )^+ )
+
+        Arguments:
+            ders (tuple): Index identifier of selected DER. Must be valid entry of `electric_grid_model.ders`.
+            der_active_power_vector (pd.DataFrame): DER active power vector as dataframe with timesteps as index
+                and DERs as columns. Must contain all other DERs aside from the selected.
+            der_reactive_power_vector (pd.DataFrame): DER reactive power vector as dataframe with timesteps as index
+                and DERs as columns. Must contain all other DERs aside from the selected.
+
+        Keyword arguments:
+            node_voltage_magnitude_vector_minimum (np.ndarray): Minimum nodal voltage limit vector.
+            node_voltage_magnitude_vector_maximum (np.ndarray): Maximum nodal voltage limit vector.
+            branch_power_magnitude_vector_maximum (np.ndarray): Maximum branch power limit vector.
+        """
+
+        # Raise error for not yet implemented functionality.
+        if (node_voltage_magnitude_vector_minimum is not None) or (node_voltage_magnitude_vector_maximum is not None):
+            raise NotImplementedError(
+                "Maximum loadability calculation has not yet been implemented for nodal voltage limits."
+            )
+
+        # Define shorthands.
+        der_index_flexible = np.array([self.electric_grid_model.ders.get_loc(der)])
+        der_index_fixed = np.array([
+            index
+            for index in range(len(self.electric_grid_model.ders))
+            if index not in der_index_flexible
+        ])
+
+        # Obtain branch power limit, if not set.
+        if branch_power_magnitude_vector_maximum is None:
+            branch_power_magnitude_vector_maximum = self.electric_grid_model.branch_power_vector_magnitude_reference
+
+        # Calculate DER power limits.
+        der_power_limit_timeseries = pd.DataFrame(np.nan, index=self.timesteps, columns=['minimum', 'maximum'])
+        for timestep in self.timesteps:
+            linear_model = self.linear_electric_grid_models[timestep]
+            der_power_laxity = (
+                sp.diags(
+                    linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_flexible]
+                    .toarray().ravel() ** -1
+                )
+                @ (
+                    # TODO: Revise equation to use reference power flow solution.
+                    np.transpose([branch_power_magnitude_vector_maximum])
+                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_active[:, der_index_fixed]
+                    @ np.transpose([der_active_power_vector.loc[timestep, :].values[der_index_fixed]])
+                    - linear_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive[:, der_index_fixed]
+                    @ np.transpose([der_reactive_power_vector.loc[timestep, :].values[der_index_fixed]])
+                )
+            )
+            der_power_limit_timeseries.at[timestep, 'minimum'] = np.max(
+                der_power_laxity[der_power_laxity < 0.0], initial=-np.inf
+            )
+            der_power_limit_timeseries.at[timestep, 'maximum'] = np.min(
+                der_power_laxity[der_power_laxity > 0.0], initial=+np.inf
+            )
+
+        return der_power_limit_timeseries

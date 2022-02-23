@@ -64,7 +64,7 @@ def main(
     price_data = mesmo.data_interface.PriceData(scenario_name)
 
     # Obtain models.
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     # TODO: Fix reliance on default scenario power flow.
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_dlmp_scenario_1_2_3_4_5')

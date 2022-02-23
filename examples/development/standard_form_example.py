@@ -30,7 +30,7 @@ def main():
 
     # Obtain model.
     der_model_set = mesmo.der_models.DERModelSet(der_data)
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
     linear_electric_grid_model = (
         mesmo.electric_grid_models.LinearElectricGridModelGlobal(

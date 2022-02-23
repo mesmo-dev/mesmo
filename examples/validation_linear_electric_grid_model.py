@@ -27,7 +27,7 @@ def main():
     base_voltage = scenario_data.scenario.at['base_voltage']
 
     # Obtain electric grid model.
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
 
     # Obtain power flow solution for nominal power conditions.
     power_flow_solution_initial = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)

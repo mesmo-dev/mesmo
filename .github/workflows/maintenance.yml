@@ -36,7 +36,7 @@ jobs:
         pip install -v -e .
     - name: Get new environment-${{ matrix.os }}.yml
       run: |
-        rm environment-*
+        rm -f environment-*
         conda env export -n mesmo --no-builds | grep -v "^prefix: " > environment-${{ matrix.os }}.yml
     - name: Store environment-${{ matrix.os }}.yml
       uses: actions/upload-artifact@v2
@@ -58,7 +58,7 @@ jobs:
         token: ${{ secrets.MESMO_BOT_PAT }}
     - name: Remove old environment files
       run: |
-        rm environment-*
+        rm -f environment-*
     - name: Get cached environment-windows-latest.yml
       uses: actions/download-artifact@v2
       with:

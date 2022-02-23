@@ -46,7 +46,7 @@ def main(
 
     # Obtain models.
     mesmo.utils.log_time(f"model setup")
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     # Use base scenario power flow for consistent linear model behavior and per unit values.
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint('paper_2021_troitzsch_admm_dlmp')
     linear_electric_grid_model_set = (

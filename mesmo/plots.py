@@ -162,7 +162,7 @@ def create_video(name: str, labels: pd.Index, results_path: str):
 
 @multimethod
 def plot_line_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.DataFrame,
     results_path: str,
@@ -195,7 +195,7 @@ def plot_line_utilization(
 
 @multimethod
 def plot_line_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.Series,
     results_path: str,
@@ -254,7 +254,7 @@ def wrapper_plot_line_utilization(*args, **kwargs):
 
 @multimethod
 def plot_transformer_utilization(
-    grid_model: mesmo.electric_grid_models.ElectricGridModel,
+    grid_model: mesmo.electric_grid_models.ElectricGridModelBase,
     grid_graph: ElectricGridGraph,
     value_vector: pd.DataFrame,
     results_path: str,
@@ -287,7 +287,7 @@ def plot_transformer_utilization(
 
 @multimethod
 def plot_transformer_utilization(
-    grid_model: mesmo.electric_grid_models.ElectricGridModel,
+    grid_model: mesmo.electric_grid_models.ElectricGridModelBase,
     grid_graph: ElectricGridGraph,
     value_vector: pd.Series,
     results_path: str,
@@ -346,7 +346,7 @@ def wrapper_plot_transformer_utilization(*args, **kwargs):
 
 @multimethod
 def plot_node_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.DataFrame,
     results_path: str,
@@ -383,7 +383,7 @@ def plot_node_utilization(
 
 @multimethod
 def plot_node_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.Series,
     results_path: str,
@@ -452,7 +452,7 @@ def wrapper_plot_node_utilization(*args, **kwargs):
 
 @multimethod
 def plot_grid_line_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.DataFrame,
     results_path: str,
@@ -485,7 +485,7 @@ def plot_grid_line_utilization(
 
 @multimethod
 def plot_grid_line_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.Series,
     results_path: str,
@@ -576,7 +576,7 @@ def wrapper_plot_grid_line_utilization(*args, **kwargs):
 
 @multimethod
 def plot_grid_transformer_utilization(
-    grid_model: mesmo.electric_grid_models.ElectricGridModel,
+    grid_model: mesmo.electric_grid_models.ElectricGridModelBase,
     grid_graph: ElectricGridGraph,
     value_vector: pd.DataFrame,
     results_path: str,
@@ -609,7 +609,7 @@ def plot_grid_transformer_utilization(
 
 @multimethod
 def plot_grid_transformer_utilization(
-    grid_model: mesmo.electric_grid_models.ElectricGridModel,
+    grid_model: mesmo.electric_grid_models.ElectricGridModelBase,
     grid_graph: ElectricGridGraph,
     value_vector: pd.Series,
     results_path: str,
@@ -688,7 +688,7 @@ def wrapper_plot_grid_transformer_utilization(*args, **kwargs):
 
 @multimethod
 def plot_grid_node_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.DataFrame,
     results_path: str,
@@ -725,7 +725,7 @@ def plot_grid_node_utilization(
 
 @multimethod
 def plot_grid_node_utilization(
-    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModel, mesmo.thermal_grid_models.ThermalGridModel],
+    grid_model: typing.Union[mesmo.electric_grid_models.ElectricGridModelBase, mesmo.thermal_grid_models.ThermalGridModel],
     grid_graph: typing.Union[ElectricGridGraph, ThermalGridGraph],
     value_vector: pd.Series,
     results_path: str,

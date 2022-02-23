@@ -9,11 +9,11 @@ logger = mesmo.config.get_logger(__name__)
 
 class TestElectricGridModels(unittest.TestCase):
 
-    def test_electric_grid_model_default(self):
+    def test_electric_grid_model(self):
         # Get result.
-        mesmo.utils.log_time("test_electric_grid_model_default", log_level='info', logger_object=logger)
-        mesmo.electric_grid_models.ElectricGridModelDefault(mesmo.config.config['tests']['scenario_name'])
-        mesmo.utils.log_time("test_electric_grid_model_default", log_level='info', logger_object=logger)
+        mesmo.utils.log_time("test_electric_grid_model", log_level='info', logger_object=logger)
+        mesmo.electric_grid_models.ElectricGridModel(mesmo.config.config['tests']['scenario_name'])
+        mesmo.utils.log_time("test_electric_grid_model", log_level='info', logger_object=logger)
 
     def test_electric_grid_model_opendss(self):
         # Get result.

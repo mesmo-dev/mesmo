@@ -56,7 +56,7 @@ class NominalOperationProblem(Problem):
     scenario_name: str
     timesteps: pd.Index
     price_data: mesmo.data_interface.PriceData
-    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None
     thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None
     der_model_set: mesmo.der_models.DERModelSet
     results: Results
@@ -65,7 +65,7 @@ class NominalOperationProblem(Problem):
     def __init__(
         self,
         scenario_name: str,
-        electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
+        electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None,
         thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
         der_model_set: mesmo.der_models.DERModelSet = None,
     ):
@@ -83,7 +83,7 @@ class NominalOperationProblem(Problem):
                 self.electric_grid_model = electric_grid_model
             else:
                 mesmo.utils.log_time("electric grid model instantiation")
-                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
                 mesmo.utils.log_time("electric grid model instantiation")
 
         # Obtain thermal grid model, power flow solution and linear model, if defined.
@@ -304,7 +304,7 @@ class OptimalOperationProblem(Problem):
     scenario_data: mesmo.data_interface.ScenarioData
     timesteps: pd.Index
     price_data: mesmo.data_interface.PriceData
-    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None
     power_flow_solution_reference: mesmo.electric_grid_models.PowerFlowSolution = None
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
     thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None
@@ -318,7 +318,7 @@ class OptimalOperationProblem(Problem):
     def __init__(
         self,
         scenario_name: str,
-        electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
+        electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None,
         thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
         der_model_set: mesmo.der_models.DERModelSet = None,
         solve_method: str = None,
@@ -344,7 +344,7 @@ class OptimalOperationProblem(Problem):
             if electric_grid_model is not None:
                 self.electric_grid_model = electric_grid_model
             else:
-                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+                self.electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
             self.power_flow_solution_reference = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(
                 self.electric_grid_model
             )

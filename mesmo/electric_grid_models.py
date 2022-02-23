@@ -17,7 +17,7 @@ import mesmo.utils
 logger = mesmo.config.get_logger(__name__)
 
 
-class ElectricGridModel(mesmo.utils.ObjectBase):
+class ElectricGridModelBase(mesmo.utils.ObjectBase):
     """Electric grid model object.
 
     Note:
@@ -514,7 +514,7 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
         return electric_grid_data
 
 
-class ElectricGridModelDefault(ElectricGridModel):
+class ElectricGridModel(ElectricGridModelBase):
     """Electric grid model object consisting of the index sets for node names / branch names / der names / phases /
     node types / branch types, the nodal admittance / transformation matrices, branch admittance /
     incidence matrices and DER incidence matrices.
@@ -918,6 +918,22 @@ class ElectricGridModelDefault(ElectricGridModel):
             ) from exception
 
 
+class ElectricGridModelDefault(ElectricGridModel):
+    """`ElectricGridModelDefault` is a placeholder for `ElectricGridModel` for backwards compatibility and will
+    be removed in a future version of MESMO.
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        # Issue warning when using this class.
+        logger.warning(
+            "`ElectricGridModelDefault` is a placeholder for `ElectricGridModel` for backwards compatibility and will "
+            "be removed in a future version of MESMO."
+        )
+
+        super().__init__(*args, **kwargs)
+
+
 class ElectricGridModelOpenDSS(ElectricGridModel):
     """OpenDSS electric grid model object.
 
@@ -1210,7 +1226,7 @@ class ElectricGridDEROperationResults(mesmo.utils.ResultsBase):
 
 class ElectricGridOperationResults(ElectricGridDEROperationResults):
 
-    electric_grid_model: ElectricGridModel
+    electric_grid_model: ElectricGridModelBase
     node_voltage_magnitude_vector: pd.DataFrame
     node_voltage_magnitude_vector_per_unit: pd.DataFrame
     node_voltage_angle_vector: pd.DataFrame
@@ -1274,12 +1290,12 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
     def __init__(self, scenario_name: str, **kwargs):
 
         # Obtain `electric_grid_model`.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         self.__init__(electric_grid_model, **kwargs)
 
     @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, **kwargs):
+    def __init__(self, electric_grid_model: ElectricGridModel, **kwargs):
 
         # Obtain `der_power_vector`, assuming nominal power conditions.
         der_power_vector = electric_grid_model.der_power_vector_reference
@@ -1287,7 +1303,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         self.__init__(electric_grid_model, der_power_vector, **kwargs)
 
     @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, der_power_vector: np.ndarray, **kwargs):
+    def __init__(self, electric_grid_model: ElectricGridModel, der_power_vector: np.ndarray, **kwargs):
 
         # Store DER power vector.
         self.der_power_vector = der_power_vector.ravel()
@@ -1305,7 +1321,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def check_solution_conditions(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         node_power_vector_wye_initial_no_source: np.ndarray,
         node_power_vector_delta_initial_no_source: np.ndarray,
         node_power_vector_wye_candidate_no_source: np.ndarray,
@@ -1429,7 +1445,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
 
     @staticmethod
     def get_voltage(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: np.ndarray,
         outer_iteration_limit=100,
         outer_solution_algorithm="check_solution",  # Choices: `check_conditions`, `check_solution`.
@@ -1642,7 +1658,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         return node_voltage_vector
 
     @staticmethod
-    def get_branch_power(electric_grid_model: ElectricGridModelDefault, node_voltage_vector: np.ndarray):
+    def get_branch_power(electric_grid_model: ElectricGridModel, node_voltage_vector: np.ndarray):
         """Get branch power vectors by calculating power flow with given nodal voltage.
 
         - Returns two branch power vectors, where `branch_power_vector_1` represents the
@@ -1673,7 +1689,7 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolution):
         return (branch_power_vector_1, branch_power_vector_2)
 
     @staticmethod
-    def get_loss(electric_grid_model: ElectricGridModelDefault, node_voltage_vector: np.ndarray):
+    def get_loss(electric_grid_model: ElectricGridModel, node_voltage_vector: np.ndarray):
         """Get total electric losses with given nodal voltage."""
 
         # Calculate total losses.
@@ -1707,7 +1723,7 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
 
     @staticmethod
     def get_voltage(
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: np.ndarray,
         voltage_iteration_limit=100,
         voltage_tolerance=1e-2,
@@ -1972,14 +1988,14 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolution):
 class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolution]
-    electric_grid_model: ElectricGridModelDefault
+    electric_grid_model: ElectricGridModel
     der_power_vector: pd.DataFrame
     timesteps: pd.Index
 
     @multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_operation_results: ElectricGridDEROperationResults,
         **kwargs,
     ):
@@ -1993,7 +2009,7 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
     @multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         der_power_vector: pd.DataFrame,
         power_flow_solution_method=PowerFlowSolutionFixedPoint,
     ):
@@ -2083,7 +2099,7 @@ class LinearElectricGridModel(mesmo.utils.ObjectBase):
         but does not implement any functionality.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -2183,7 +2199,7 @@ class LinearElectricGridModel(mesmo.utils.ObjectBase):
             reactive loss by DER reactive power vector.
     """
 
-    electric_grid_model: ElectricGridModelDefault
+    electric_grid_model: ElectricGridModel
     power_flow_solution: PowerFlowSolution
     sensitivity_voltage_by_power_wye_active: sp.spmatrix
     sensitivity_voltage_by_power_wye_reactive: sp.spmatrix
@@ -2248,12 +2264,12 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
           `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Power flow solution object.
         scenario_name (str): MESMO scenario name.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -2360,7 +2376,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
     ):
 
         # Obtain electric grid model.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         # Obtain der power vector.
         der_power_vector = electric_grid_model.der_power_vector_reference
@@ -2371,7 +2387,7 @@ class LinearElectricGridModelGlobal(LinearElectricGridModel):
         self.__init__(electric_grid_model, power_flow_solution)
 
     @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, power_flow_solution: PowerFlowSolution):
+    def __init__(self, electric_grid_model: ElectricGridModel, power_flow_solution: PowerFlowSolution):
         # TODO: Validate linear model with delta DERs.
 
         # Store power flow solution.
@@ -2754,12 +2770,12 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
           `power_flow_solution` is obtained for nominal power conditions.
 
     Parameters:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Power flow solution object.
         scenario_name (str): MESMO scenario name.
 
     Attributes:
-        electric_grid_model (ElectricGridModelDefault): Electric grid model object.
+        electric_grid_model (ElectricGridModel): Electric grid model object.
         power_flow_solution (PowerFlowSolution): Reference power flow solution object.
         sensitivity_voltage_by_power_wye_active (sp.spmatrix): Sensitivity matrix for complex voltage vector
             by active wye power vector.
@@ -2866,7 +2882,7 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
     ):
 
         # Obtain electric grid model.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
 
         # Obtain der power vector.
         der_power_vector = electric_grid_model.der_power_vector_reference
@@ -2877,7 +2893,7 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
         self.__init__(electric_grid_model, power_flow_solution)
 
     @multimethod
-    def __init__(self, electric_grid_model: ElectricGridModelDefault, power_flow_solution: PowerFlowSolution):
+    def __init__(self, electric_grid_model: ElectricGridModel, power_flow_solution: PowerFlowSolution):
 
         # Store power flow solution.
         self.power_flow_solution = power_flow_solution
@@ -3276,14 +3292,14 @@ class LinearElectricGridModelLocal(LinearElectricGridModel):
 class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
     linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel]
-    electric_grid_model: ElectricGridModelDefault
+    electric_grid_model: ElectricGridModel
     timesteps: pd.Index
 
     @multimethod
     def __init__(self, scenario_name: str):
 
         # Obtain electric grid model & reference power flow solution.
-        electric_grid_model = ElectricGridModelDefault(scenario_name)
+        electric_grid_model = ElectricGridModel(scenario_name)
         power_flow_solution = PowerFlowSolutionFixedPoint(electric_grid_model)
 
         self.__init__(electric_grid_model, power_flow_solution)
@@ -3291,7 +3307,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     @multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         power_flow_solution: PowerFlowSolution,
         linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelGlobal,
     ):
@@ -3309,7 +3325,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     @multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         power_flow_solution_set: PowerFlowSolutionSet,
         linear_electric_grid_model_method: typing.Type[LinearElectricGridModel] = LinearElectricGridModelLocal,
     ):
@@ -3328,7 +3344,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     @multimethod
     def __init__(
         self,
-        electric_grid_model: ElectricGridModelDefault,
+        electric_grid_model: ElectricGridModel,
         linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModel],
     ):
 

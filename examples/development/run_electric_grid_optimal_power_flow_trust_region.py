@@ -21,7 +21,7 @@ def main():
     scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
     price_data = mesmo.data_interface.PriceData(scenario_name)
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
+    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(scenario_name)
     presolve_results = der_model_set.pre_solve(price_data)
 
@@ -42,7 +42,7 @@ def run_optimal_operation_problem_trust_region(
     scenario_data: mesmo.data_interface.ScenarioData,
     price_data: mesmo.data_interface.PriceData,
     der_model_set: mesmo.der_models.DERModelSet,
-    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault,
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModel,
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None,
     presolve_results: mesmo.der_models.DERModelSetOperationResults = None,
     results_path: str = None,
@@ -417,7 +417,7 @@ def run_optimal_operation_problem_trust_region(
 
 
 def get_linear_electric_grid_model_set(
-        electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault,
+        electric_grid_model: mesmo.electric_grid_models.ElectricGridModel,
         power_flow_solution_set: mesmo.electric_grid_models.PowerFlowSolutionSet
 ):
     try:
@@ -565,7 +565,7 @@ class OptimalOperationProblem(object):
     timesteps: pd.Index
     price_data: mesmo.data_interface.PriceData
     scenario_data: mesmo.data_interface.ScenarioData
-    electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None
+    electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None
     power_flow_solution_set: mesmo.electric_grid_models.PowerFlowSolutionSet = None
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
     der_model_set: mesmo.der_models.DERModelSet
@@ -578,7 +578,7 @@ class OptimalOperationProblem(object):
             scenario_data: mesmo.data_interface.ScenarioData,
             price_data: mesmo.data_interface.PriceData,
             der_model_set: mesmo.der_models.DERModelSet,
-            electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault = None,
+            electric_grid_model: mesmo.electric_grid_models.ElectricGridModel = None,
     ):
         # Obtain data.
         self.scenario_data = scenario_data
@@ -762,7 +762,7 @@ class ElectricGridOptimalOperationProblem(OptimalOperationProblem):
             scenario_data: mesmo.data_interface.ScenarioData,
             price_data: mesmo.data_interface.PriceData,
             der_model_set: mesmo.der_models.DERModelSet,
-            electric_grid_model: mesmo.electric_grid_models.ElectricGridModelDefault
+            electric_grid_model: mesmo.electric_grid_models.ElectricGridModel
     ):
         # for der_name in der_model_set.der_names:
         #     der_model_set.der_models[der_name].is_electric_grid_connected = True

@@ -1355,14 +1355,16 @@ class StrategicMarket(object):
             #       output=self.der_model_set.outputs
             #     ))
             # )
-            # optimization_problem.define_objective(
-            #     ('variable', 'active_power_constant_transposed', dict(
-            #         name='output_to_active_power_mapping_equation_mu', scenario=scenarios, der=self.ders
-            #     )),
-            #     ('variable', 'reactive_power_constant_transposed', dict(
-            #         name='output_to_reactive_power_mapping_equation_mu', scenario=scenarios, der=self.ders
-            #     )),
-            # )
+            optimization_problem.define_objective(
+                # ('variable', 'active_power_constant_transposed', dict(
+                #     name='output_to_active_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
+                #     timestep=self.timesteps
+                # )),
+                # ('variable', 'reactive_power_constant_transposed', dict(
+                #     name='output_to_reactive_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
+                #     timestep=self.timesteps
+                # )),
+            )
             # optimization_problem.define_objective(
             #     ('variable', 'minus_output_minimum_timeseries_transposed', dict(
             #         name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,

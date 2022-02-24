@@ -41,6 +41,15 @@ def main():
     # price_data.price_sensitivity_coefficient = 1e-6
     # Run nominal operational problem:
     nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)
+    nominal_voltage = nominal_operation.node_voltage_magnitude_vector_per_unit
+    nominal_branch_power_1 = nominal_operation.branch_power_magnitude_vector_1_per_unit
+    nominal_branch_power_2 = nominal_operation.branch_power_magnitude_vector_2_per_unit
+
+    # optimal_operation = mesmo.api.run_optimal_operation_problem(scenario_name, store_results=False)
+    # optimal_voltage = optimal_operation.node_voltage_magnitude_vector_per_unit.min()
+    # optimal_branch_power_1 = optimal_operation.branch_power_magnitude_vector_1_per_unit.max()
+    # optimal_branch_power_2 = optimal_operation.branch_power_magnitude_vector_2_per_unit.max()
+    # flexible_generator_optimal_dispatch = optimal_operation.der_active_power_vector_per_unit['flexible_generator']
 
     # Obtain models.
     electric_grid_model = mesmo.electric_grid_models.ElectricGridModelDefault(scenario_name)
@@ -58,11 +67,11 @@ def main():
 
     # Define electric grid problem.
     # TODO: Review limits.
-    node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    node_voltage_magnitude_vector_maximum = 1.1 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 2 * electric_grid_model.branch_power_vector_magnitude_reference
+    node_voltage_magnitude_vector_minimum = 0.95 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
+    branch_power_magnitude_vector_maximum = 1 * electric_grid_model.branch_power_vector_magnitude_reference
 
-    grid_cost_coefficient = 1.0
+    grid_cost_coefficient = 0.5
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -108,7 +117,7 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            big_m=1000,
+            big_m=2500,
             kkt_conditions=False,
             grid_cost_coefficient=grid_cost_coefficient
         )
@@ -144,6 +153,8 @@ def main():
     # Obtain DLMPs.
     dlmps_non_strategic = linear_electric_grid_model_set.get_optimization_dlmps(optimization_non_strategic, price_data)
     dlmps_strategic = strategic_der_model_set.get_optimization_dlmps(optimization_strategic, price_data)
+    dlmp_difference = dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power - \
+                      dlmps_non_strategic.electric_grid_total_dlmp_node_active_power
 
     # DLMPs in non-strategic scenario Timeseries for Node 10 for three phases
     # Energy portion of DLMP:
@@ -229,6 +240,7 @@ def main():
     fig.set_tight_layout(True)
     axes.set_ylabel('DLMP [$/kWh]')
     axes.title.set_text('Node 10 total DLMP')
+    axes.legend()
     axes.grid()
     fig.show()
     # fig.savefig('dlmp_timeseries_node_10.svg')

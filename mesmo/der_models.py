@@ -1916,9 +1916,12 @@ class DERModelSet(DERModelSetBase):
         )
         # { Todo set the name of strategic generator
         set_strategic_der_disturbance_factor_to_zero_map = pd.DataFrame(0, index=self.outputs, columns=self.outputs)
+        index = [('pv_b10_strategic', 'active_power'),
+                 ('pv_b10_strategic', 'power_maximum_margin'),
+                 ('pv_b10_strategic', 'power_minimum_margin')]
         for i in set_strategic_der_disturbance_factor_to_zero_map.index:
             for c in set_strategic_der_disturbance_factor_to_zero_map.columns:
-                if i == c and 'pv_b10_strategic' not in i:
+                if i == c and i not in index :
                     set_strategic_der_disturbance_factor_to_zero_map.at[i, c] = 1
 
         set_strategic_der_disturbance_factor_to_zero_map = \
@@ -2405,6 +2408,10 @@ class DERModelSet(DERModelSetBase):
                     ('variable', 'mapping_active_power_by_output', dict(
                         name='output_vector', scenario=scenarios, timestep=self.timesteps
                     )),
+                    keys=dict(
+                        name='output_to_active_power_vector_mapping_equation', scenario=scenarios, timestep=self.timesteps,
+                        der=self.electric_ders
+                    ),
                     broadcast=['timestep', 'scenario']
                 )
                 optimization_problem.define_constraint(
@@ -2417,6 +2424,11 @@ class DERModelSet(DERModelSetBase):
                     ('variable', 'mapping_reactive_power_by_output', dict(
                         name='output_vector', scenario=scenarios, timestep=self.timesteps
                     )),
+                    keys=dict(
+                        name='output_to_reactive_power_vector_mapping_equation', scenario=scenarios,
+                        timestep=self.timesteps,
+                        der=self.electric_ders
+                    ),
                     broadcast=['timestep', 'scenario']
                 )
             # """

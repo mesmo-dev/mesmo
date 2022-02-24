@@ -71,7 +71,7 @@ def main():
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 1 * electric_grid_model.branch_power_vector_magnitude_reference
 
-    grid_cost_coefficient = 0.5
+    grid_cost_coefficient = 1
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,

@@ -71,7 +71,7 @@ def main():
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = 1 * electric_grid_model.branch_power_vector_magnitude_reference
 
-    grid_cost_coefficient = 1
+    grid_cost_coefficient = 0.75
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -156,83 +156,96 @@ def main():
     dlmp_difference = dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power - \
                       dlmps_non_strategic.electric_grid_total_dlmp_node_active_power
 
+    flexible_der_active_power_non_strategic = results_non_strategic.der_active_power_vector_per_unit[flexible_der_type]
+    flexible_der_active_power_strategic = results_strategic.der_active_power_vector_per_unit[flexible_der_type]
+
+    flexible_der_reactive_power_non_strategic = results_non_strategic.der_reactive_power_vector_per_unit[
+        flexible_der_type]
+    flexible_der_reactive_power_strategic = results_strategic.der_reactive_power_vector_per_unit[flexible_der_type]
+
+    x = np.arange(len(flexible_der_active_power_non_strategic.columns))
+    width = 0.35
+    fig, axes = plt.subplots(1, figsize=(12, 6))
+    axes.bar(x + width / 2,
+             flexible_der_active_power_non_strategic.loc['2021-02-22 14:00:00'],
+             width=width,
+             color='b',
+             label='non_strategic')
+    axes.bar(x - width / 2,
+             flexible_der_active_power_strategic.loc['2021-02-22 14:00:00'],
+             width=width,
+             color='r',
+             label='strategic')
+    axes.set_xticks(x, flexible_der_active_power_strategic.columns)
+    plt.xlabel('DER name')
+    fig.set_tight_layout(True)
+    axes.set_ylabel('Power dispatch [p.u]')
+    axes.title.set_text("Flexible DER's active power dispatch at 14 PM")
+    plt.xticks(rotation=-40, fontsize=8)
+    axes.legend()
+    axes.grid()
+    fig.show()
+    fig.savefig('flexible_der_active_power_dispatch.svg')
+
+
+
     # DLMPs in non-strategic scenario Timeseries for Node 10 for three phases
     # Energy portion of DLMP:
     node_10_energy_dlmps_non_strategic_active_power = \
         dlmps_non_strategic.electric_grid_energy_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_energy_dlmps_non_strategic_active_power.columns = \
-    #     node_10_energy_dlmps_non_strategic_active_power.columns.to_flat_index()
 
     # Loss portion of DLMP:
     node_10_loss_dlmps_non_strategic_active_power = \
         dlmps_non_strategic.electric_grid_loss_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_loss_dlmps_non_strategic_active_power.columns = \
-    #     node_10_loss_dlmps_non_strategic_active_power.columns.to_flat_index()
 
     # Voltage portion of DLMP:
     node_10_voltage_dlmps_non_strategic_active_power = \
         dlmps_non_strategic.electric_grid_voltage_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_voltage_dlmps_non_strategic_active_power.columns = \
-    #     node_10_voltage_dlmps_non_strategic_active_power.columns.to_flat_index()
 
     # Congestion portion of DLMP:
     node_10_congestion_dlmps_non_strategic_active_power = \
         dlmps_non_strategic.electric_grid_congestion_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_congestion_dlmps_non_strategic_active_power.columns = \
-    #     node_10_congestion_dlmps_non_strategic_active_power.columns.to_flat_index()
 
     # TODO plotting the results
     # Total DLMP:
     node_10_total_dlmps_non_strategic_active_power = \
         dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_total_dlmps_non_strategic_active_power.columns = \
-    #     node_10_total_dlmps_non_strategic_active_power.columns.to_flat_index()
 
     # ------------------DLMPs in Strategic scenario Timeseries for Node 10 for three phases------------------------:
     # Energy portion of DLMP:
     node_10_energy_dlmps_strategic_active_power = \
         dlmps_strategic.strategic_electric_grid_energy_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_energy_dlmps_strategic_active_power.columns = \
-    #     node_10_energy_dlmps_strategic_active_power.columns.to_flat_index()
 
     # Loss portion of DLMP:
     node_10_loss_dlmps_strategic_active_power = \
         dlmps_strategic.strategic_electric_grid_loss_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_loss_dlmps_strategic_active_power.columns = \
-    #     node_10_loss_dlmps_strategic_active_power.columns.to_flat_index()
 
     # Voltage portion of DLMP:
     node_10_voltage_dlmps_strategic_active_power = \
         dlmps_strategic.strategic_electric_grid_voltage_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_voltage_dlmps_strategic_active_power.columns = \
-    #     node_10_voltage_dlmps_strategic_active_power.columns.to_flat_index()
 
     # Congestion portion of DLMP:
     node_10_congestion_dlmps_strategic_active_power = \
         dlmps_strategic.strategic_electric_grid_congestion_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_congestion_dlmps_strategic_active_power.columns = \
-    #     node_10_congestion_dlmps_strategic_active_power.columns.to_flat_index()
 
     # TODO plotting the results
     # Total DLMP:
     node_10_total_dlmps_strategic_active_power = \
         dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power.loc[:, ('no_source', 'b10', 1)]
-    # node_10_total_dlmps_strategic_active_power.columns = \
-    #     node_10_total_dlmps_strategic_active_power.columns.to_flat_index()
 
-    fig, axes = plt.subplots(1, sharex=True, sharey=True, figsize=(6, 6))
+    fig, axes = plt.subplots(1, sharex=True, sharey=True, figsize=(12, 6))
     node_10_total_dlmps_non_strategic_active_power.plot(
         ax=axes,
         label='Non-strategic',
         y=('no_source', 'b10', 1),
-        color='g',
+        color='b',
         marker='s'
     )
     node_10_total_dlmps_strategic_active_power.plot(
         ax=axes,
         label='Strategic',
         y=('no_source', 'b10', 1),
-        color='b',
+        color='r',
         marker='^'
     )
     fig.suptitle('DLMP timeseries at node 10')
@@ -243,84 +256,115 @@ def main():
     axes.legend()
     axes.grid()
     fig.show()
-    # fig.savefig('dlmp_timeseries_node_10.svg')
+    fig.savefig('dlmp_timeseries_node_10.svg')
 
     # ______________________Nodal DLMPs at time 15:00:00 for non strategic scenario:_________________________________
     nodal_energy_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_energy_dlmps_non_strategic_active_power.index = \
-    #     nodal_energy_dlmps_non_strategic_active_power.index.to_flat_index()
+        dlmps_non_strategic.electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Loss portion of DLMPs:
     nodal_loss_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_loss_dlmps_non_strategic_active_power.index = \
-    #     nodal_loss_dlmps_non_strategic_active_power.index.to_flat_index()
+        dlmps_non_strategic.electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Voltage portion of DLMPs:
     nodal_voltage_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_voltage_dlmps_non_strategic_active_power.index = \
-    #     nodal_voltage_dlmps_non_strategic_active_power.index.to_flat_index()
+        dlmps_non_strategic.electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Congestion portion of DLMPs:
     nodal_congestion_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_congestion_dlmps_non_strategic_active_power.index = \
-    #     nodal_congestion_dlmps_non_strategic_active_power.index.to_flat_index()
+        dlmps_non_strategic.electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Total DLMPs:
     nodal_total_dlmps_non_strategic_active_power = \
-        dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_total_dlmps_non_strategic_active_power.index = \
-    #     nodal_total_dlmps_non_strategic_active_power.index.to_flat_index()
+        dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # ______________________Nodal DLMPs at time 15:00:00 for non strategic scenario:_________________________________
     nodal_energy_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_energy_dlmps_strategic_active_power.index = \
-    #     nodal_energy_dlmps_strategic_active_power.index.to_flat_index()
+        dlmps_strategic.strategic_electric_grid_energy_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Loss portion of DLMP:
     nodal_loss_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_loss_dlmps_strategic_active_power.index = \
-    #     nodal_loss_dlmps_strategic_active_power.index.to_flat_index()
+        dlmps_strategic.strategic_electric_grid_loss_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Voltage portion of DLMP:
     nodal_voltage_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_voltage_dlmps_strategic_active_power.index = \
-    #     nodal_voltage_dlmps_strategic_active_power.index.to_flat_index()
+        dlmps_strategic.strategic_electric_grid_voltage_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Congestion portion of DLMP:
     nodal_congestion_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_congestion_dlmps_strategic_active_power.index = \
-    #     nodal_congestion_dlmps_strategic_active_power.index.to_flat_index()
+        dlmps_strategic.strategic_electric_grid_congestion_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
     # Total DLMP:
     nodal_total_dlmps_strategic_active_power = \
-        dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00', :]
-    # nodal_total_dlmps_strategic_active_power.index = \
-    #     nodal_total_dlmps_strategic_active_power.index.to_flat_index()
+        dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power.loc['2021-02-22 14:00:00']
 
-    fig, axes = plt.subplots(1, sharex=True, figsize=(6, 6))
-    nodal_total_dlmps_non_strategic_active_power[(slice(None), slice(None), 1)].plot(
+    x = np.arange(len(nodal_energy_dlmps_non_strategic_active_power.index))
+    fig, axes = plt.subplots(2, sharex=True, sharey=True, figsize=(12, 6))
+    axes[0].bar(x, nodal_energy_dlmps_non_strategic_active_power, label='Energy', color='g')
+    axes[1].bar(x, nodal_energy_dlmps_strategic_active_power, label='Energy', color='g')
+    axes[0].bar(x, nodal_loss_dlmps_non_strategic_active_power,
+                bottom=nodal_energy_dlmps_non_strategic_active_power,
+                label='Loss',
+                color='b')
+    axes[1].bar(x, nodal_loss_dlmps_strategic_active_power,
+                bottom=nodal_energy_dlmps_strategic_active_power,
+                label='Loss',
+                color='b')
+    axes[0].bar(x, nodal_voltage_dlmps_non_strategic_active_power,
+                bottom=nodal_energy_dlmps_non_strategic_active_power + nodal_loss_dlmps_non_strategic_active_power,
+                label='Voltage',
+                color='r')
+    axes[1].bar(x, nodal_voltage_dlmps_strategic_active_power,
+                bottom=nodal_energy_dlmps_strategic_active_power + nodal_loss_dlmps_strategic_active_power,
+                label='Voltage',
+                color='r')
+    axes[0].bar(x, nodal_congestion_dlmps_non_strategic_active_power,
+                bottom=nodal_energy_dlmps_non_strategic_active_power + nodal_loss_dlmps_non_strategic_active_power +
+                       nodal_voltage_dlmps_non_strategic_active_power,
+                label='Congestion',
+                color='y')
+    axes[1].bar(x, nodal_congestion_dlmps_strategic_active_power,
+                bottom=nodal_energy_dlmps_strategic_active_power + nodal_loss_dlmps_strategic_active_power +
+                        nodal_voltage_dlmps_strategic_active_power,
+                label='Congestion',
+                color='y')
+    axes[0].plot(x, nodal_total_dlmps_non_strategic_active_power, color='k', label='Total', marker='*')
+    axes[1].plot(x, nodal_total_dlmps_strategic_active_power, color='k', label='Total', marker='*')
+    axes[1].set_xticks(x, nodal_energy_dlmps_non_strategic_active_power.index)
+    plt.xlabel('Node name')
+    fig.set_tight_layout(True)
+    axes[0].set_ylabel('DLMP [$/MW]')
+    axes[1].set_ylabel('DLMP [$/MW]')
+    axes[0].title.set_text("Non-strategic nodal DLMPs at 14 PM")
+    axes[1].title.set_text("Strategic nodal DLMPs at 14 PM")
+    plt.xticks(rotation=-40, fontsize=8)
+    axes[0].legend()
+    axes[1].legend()
+    axes[0].grid()
+    axes[1].grid()
+    fig.show()
+    fig.savefig('contributions_to_DLMP.svg')
+
+
+    fig, axes = plt.subplots(figsize=(12, 6))
+    nodal_total_dlmps_non_strategic_active_power.plot(
         ax=axes,
         label='Non-strategic',
         # y=(slice(None), slice(None), 3),
-        color='g',
+        color='b',
         marker='*'
     )
-    nodal_total_dlmps_strategic_active_power[(slice(None), slice(None), 1)].plot(
+    nodal_total_dlmps_strategic_active_power.plot(
         ax=axes,
         label='Strategic',
         # y=(slice(None), slice(None), 3),
-        color='b',
+        color='r',
         marker='^'
     )
-    fig.suptitle('Nodal DLMPs at 15:00')
+    x = np.arange(len(nodal_total_dlmps_strategic_active_power.index))
+    axes.set_xticks(x, nodal_total_dlmps_strategic_active_power.index)
+    plt.xticks(rotation=-30, fontsize=8)
+    fig.suptitle('Nodal DLMPs at 14:00')
     plt.xlabel('Node name')
     fig.set_tight_layout(True)
     axes.set_ylabel('DLMP [$/kWh]')
@@ -329,34 +373,7 @@ def main():
     axes.grid()
     axes.title.set_text('Nodal DLMPs')
     fig.show()
-    # fig.savefig('Nodal_DLMPs_at_15.svg')
-
-    # Contribution of losses to the DLMPs
-    fig, axes = plt.subplots(1, sharex=True, figsize=(6, 6))
-    nodal_loss_dlmps_non_strategic_active_power[(slice(None), slice(None), 1)].plot(
-        ax=axes,
-        label='Non-strategic',
-        # y=(slice(None), slice(None), 3),
-        color='g',
-        marker='*'
-    )
-    nodal_loss_dlmps_strategic_active_power[(slice(None), slice(None), 1)].plot(
-        ax=axes,
-        label='Strategic',
-        # y=(slice(None), slice(None), 3),
-        color='b',
-        marker='^'
-    )
-    fig.suptitle('Contribution of losses to nodal DLMP at 15:00')
-    plt.xlabel('Node name')
-    fig.set_tight_layout(True)
-    axes.set_ylabel('DLMP [$/kWh]')
-    axes.yaxis.set_major_formatter(FormatStrFormatter('%.4f'))
-    axes.legend()
-    axes.grid()
-    axes.title.set_text('Nodal DLMPs')
-    fig.show()
-    # fig.savefig('losses_dlmp.svg')
+    fig.savefig('Nodal_DLMPs_at_14.svg')
 
     # Figures for strategic DER offers:
     dlmps_strategic_active_power1 = dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power
@@ -388,7 +405,7 @@ def main():
     der_active_power_marginal_offers_timeseries.plot(
         ax=ax,
         label='DER active power marginal cost',
-        color='g',
+        color='b',
         marker='s'
     )
     der_active_power_strategic_marginal_offers_timeseries[('flexible_generator', 'pv_b10_strategic')].plot(
@@ -398,7 +415,7 @@ def main():
         marker='^'
     )
     fig.suptitle('Offer comparison for the strategic generator')
-    ax.set_ylabel('Offer price [$/kWh]')
+    ax.set_ylabel('Offer price [$/MWh]')
     ax.set_xlabel('Time [h]')
     # ax.set_ylim([0.0, 1.0])
     plt.legend()
@@ -406,13 +423,13 @@ def main():
     plt.grid(axis='x')
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('Offers.svg')
+    fig.savefig('strategic_offers.svg')
 
     fig, ax = plt.subplots()
     der_01_10_non_strategic_active_power_vector.plot(
         ax=ax,
         label="Non-strategic",
-        color='g',
+        color='b',
         marker='s'
     )
     der_01_10_strategic_active_power_vector.plot(
@@ -422,22 +439,23 @@ def main():
         marker='^'
     )
     fig.suptitle("Strategic der's active power generation")
-    ax.set_ylabel('Active power dispatched in p.u.')
+    ax.set_ylabel('Active power dispatched [p.u.]')
     ax.set_xlabel('Time [h]')
     # ax.set_ylim([0.0, 1.0])
     plt.legend()
     plt.grid(axis='y')
     plt.grid(axis='x')
     fig.set_tight_layout(True)
+    plt.xticks(rotation=-90, fontsize=8)
     fig.show()
-    # fig.savefig('DER_01_10_active_power.svg')
+    fig.savefig('strategic_der_active_power.svg')
 
     # Plot Offer and power dispatch together:
     fig, ax = plt.subplots()
     der_01_10_strategic_active_power_vector.plot(
         ax=ax,
         label="Strategic DER power dispatch",
-        color='g',
+        color='b',
         marker='s'
     )
     ax2 = ax.twinx()
@@ -448,29 +466,41 @@ def main():
         marker='^'
     )
     fig.suptitle("Strategic der's active power generation")
-    ax.set_ylabel('Active power dispatched in p.u.')
-    ax2.set_ylabel('Offer price [$/kWh]')
+    ax.set_ylabel('Active power dispatched [p.u.]')
+    ax2.set_ylabel('Offer price [$/MWh]')
     ax.set_xlabel('Time [h]')
     ax.legend(loc=0)
     ax2.legend(loc=0)
     plt.grid(axis='y')
     plt.grid(axis='x')
     fig.set_tight_layout(True)
+    plt.xticks(rotation=-90, fontsize=8)
     fig.show()
-    # fig.savefig('DER_01_10_active_power_offer.svg')
+    fig.savefig('DER_01_10_active_power_offer.svg')
 
-    voltage_profile_phase_1 = results_strategic.node_voltage_magnitude_vector_per_unit.loc[
-        '2021-02-22 15:00:00', (slice(None), slice(None), 1)]
+    voltage_profile_non_strategic = results_non_strategic.node_voltage_magnitude_vector_per_unit.loc[
+        '2021-02-22 14:00:00']
+    voltage_profile_strategic = results_strategic.node_voltage_magnitude_vector_per_unit.loc['2021-02-22 14:00:00']
 
-    fig, axes = plt.subplots(sharex=True, figsize=(6, 6))
-    voltage_profile_phase_1.plot(
+    fig, axes = plt.subplots(figsize=(12, 6))
+    voltage_profile_non_strategic.plot(
         ax=axes,
-        label='Phase 1',
+        label='non-strategic',
         # y=(slice(None), slice(None), 3),
-        color='g',
+        color='b',
         marker='*'
     )
-    fig.suptitle('Nodal Voltage Profile at 15:00')
+    voltage_profile_strategic.plot(
+        ax=axes,
+        label='strategic',
+        # y=(slice(None), slice(None), 3),
+        color='r',
+        marker='*'
+    )
+    x = np.arange(len(voltage_profile_strategic.index))
+    axes.set_xticks(x, voltage_profile_strategic.index)
+    plt.xticks(rotation=-30, fontsize=8)
+    fig.suptitle('Nodal Voltage Profile at 14:00')
     plt.xlabel('Node name')
     fig.set_tight_layout(True)
     axes.set_ylabel('Voltage [p.u]')
@@ -480,20 +510,32 @@ def main():
     plt.grid(axis='x')
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('Voltage profile.svg')
+    fig.savefig('Voltage profile.svg')
 
-    line_loading_phase_1 = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[
-        '2021-02-22 14:00:00', (slice(None), slice(None), 1)]
+    line_loading_non_strategic = results_non_strategic.branch_power_magnitude_vector_1_per_unit.loc[
+        '2021-02-22 14:00:00']
+    line_loading_strategic = results_strategic.branch_power_magnitude_vector_1_per_unit.loc['2021-02-22 14:00:00']
 
-    fig, axes = plt.subplots(sharex=True, figsize=(6, 6))
-    line_loading_phase_1.plot(
+    fig, axes = plt.subplots(figsize=(12, 6))
+    line_loading_non_strategic.plot(
         ax=axes,
-        label='Phase 1',
-        # y=(slice(None), slice(None), 3),
-        color='g',
+        label='non-strategic',
+        # x=np.arange(len(line_loading_strategic.index)),
+        color='b',
         marker='*'
     )
-    fig.suptitle('Line Loading at 15:00')
+    line_loading_strategic.plot(
+        ax=axes,
+        label='strategic',
+        y=line_loading_strategic.values,
+        # x=np.arange(len(line_loading_strategic.index)),
+        color='r',
+        marker='*'
+    )
+    x = np.arange(len(line_loading_non_strategic.index))
+    axes.set_xticks(x, line_loading_non_strategic.index)
+    fig.suptitle('Line Loading at 14:00')
+    plt.xticks(rotation=-30, fontsize=8)
     plt.xlabel('Branch name')
     fig.set_tight_layout(True)
     axes.set_ylabel('Loading [p.u]')
@@ -502,8 +544,7 @@ def main():
     plt.grid(axis='x')
     fig.set_tight_layout(True)
     fig.show()
-
-    # fig.savefig('line_loading.svg')
+    fig.savefig('line_loading.svg')
 
     print(1)
 

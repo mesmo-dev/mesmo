@@ -768,6 +768,16 @@ class StrategicMarket(object):
                 )),
                 broadcast=['scenario']
             )
+            # optimization_problem.define_constraint(
+            #     ('variable', 1.0, dict(
+            #         name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
+            #         der=self.ders
+            #     )),
+            #     '>=',
+            #     ('constant', 'der_active_power_marginal_cost_transposed', dict(scenario=scenarios)),
+            #     broadcast=['scenario']
+            # )
+
         # optimization_problem.define_constraint(
         #     ('variable', 1.0, dict(
         #         name='flexible_generator_strategic_offer', timestep=self.timesteps, scenario=scenarios,

@@ -1772,7 +1772,7 @@ class DERModelSet(DERModelSetBase):
 
         optimization_problem.define_parameter(
             'state_vector_initial_transposed',
-            -1.0 * np.transpose(
+            1.0 * np.transpose(
                 scale_map_initial_state_vector_to_state_vector_size.values
                 @ np.concatenate([
                     self.flexible_der_models[der_name].state_vector_initial.values
@@ -1849,7 +1849,7 @@ class DERModelSet(DERModelSetBase):
         # {
         optimization_problem.define_parameter(
             'disturbance_state_equation_transposed',
-            -1.0 * np.array([(
+            1.0 * np.array([(
                               sp.block_diag([
                                   self.flexible_der_models[der_name].disturbance_matrix.values
                                   for der_name in self.flexible_der_names
@@ -1929,7 +1929,7 @@ class DERModelSet(DERModelSetBase):
 
         optimization_problem.define_parameter(
             'disturbance_output_equation_transposed',
-            -1.0 * np.array([(
+            1.0 * np.array([(
                               sp.block_diag([
                                   self.flexible_der_models[der_name].disturbance_output_matrix.values
                                   for der_name in self.flexible_der_names
@@ -1939,7 +1939,7 @@ class DERModelSet(DERModelSetBase):
                           for der_name in self.flexible_der_names
                       ], axis='columns').T.values
                       ).T.ravel()])
-            @ set_strategic_der_disturbance_factor_to_zero_map
+            # @ set_strategic_der_disturbance_factor_to_zero_map
         )
         # }
         if len(self.electric_ders) > 0:

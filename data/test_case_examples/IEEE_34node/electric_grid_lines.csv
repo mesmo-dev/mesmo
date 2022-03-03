@@ -2,7 +2,7 @@ electric_grid_name,line_name,line_type,node_1_name,node_2_name,is_phase_1_connec
 ieee_34node,1,config300,800,802,1,1,1,0.7864
 ieee_34node,2,config300,802,806,1,1,1,0.5273
 ieee_34node,3,config300,806,808,1,1,1,9.8237
-ieee_34node,4,config300,808,810,0,1,0,1.7691
+ieee_34node,4,config303,808,810,0,1,0,1.7691
 ieee_34node,5,config300,808,812,1,1,1,11.43
 ieee_34node,6,config300,812,814,1,1,1,9.0617
 ieee_34node,7,config301,814,850,1,1,1,0.003

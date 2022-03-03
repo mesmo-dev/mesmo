@@ -11,7 +11,7 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'polimi_test_case'
+    scenario_name = 'ieee_34node'
 
     # High-level API call.
     nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)

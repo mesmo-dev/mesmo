@@ -1939,7 +1939,7 @@ class DERModelSet(DERModelSetBase):
                           for der_name in self.flexible_der_names
                       ], axis='columns').T.values
                       ).T.ravel()])
-            # @ set_strategic_der_disturbance_factor_to_zero_map
+            @ set_strategic_der_disturbance_factor_to_zero_map
         )
         # }
         if len(self.electric_ders) > 0:

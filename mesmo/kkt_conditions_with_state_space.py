@@ -568,12 +568,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_voltage_constant_plus_voltage_maximum_limit',
-            -1.0 * np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 node_voltage_magnitude_vector_maximum.ravel()
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - 1.0 * np.concatenate([
+            ])]) + 1.0 * np.concatenate([
                 sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
@@ -588,12 +588,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'voltage_constant_minus_voltage_limit_minimum',
-            -1.0 * np.transpose(-1.0 * np.transpose([np.concatenate([
+            1.0 * np.transpose(-1.0 * np.transpose([np.concatenate([
                 node_voltage_magnitude_vector_minimum.ravel()
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + np.concatenate([
+            ])]) - np.concatenate([
                 sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
@@ -608,12 +608,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_branch_power_1_constant_plus_branch_power_maximum',
-            -1.0 * np.transpose(np.transpose([np.concatenate([
+            - 1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - 1.0 * np.concatenate([
+            ])]) + 1.0 * np.concatenate([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
@@ -628,12 +628,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_1_constant_minus_branch_power_minimum',
-            -1.0 * np.transpose(np.transpose([np.concatenate([
+            - 1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + np.concatenate([
+            ])]) - 1.0 * np.concatenate([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
@@ -648,12 +648,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_branch_power_2_constant_plus_branch_power_maximum',
-            -1.0 * np.transpose(np.transpose([np.concatenate([
+            - 1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - 1.0 * np.concatenate([
+            ])]) + 1.0 * np.concatenate([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
@@ -668,12 +668,12 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'branch_power_2_constant_minus_branch_power_minimum',
-            -1.0 * np.transpose(np.transpose([np.concatenate([
+            - 1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + np.concatenate([
+            ])]) - 1.0 * np.concatenate([
                 sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
                 @ (
                         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])

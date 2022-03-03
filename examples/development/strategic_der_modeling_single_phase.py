@@ -40,10 +40,11 @@ def main():
                                                 )
     # price_data.price_sensitivity_coefficient = 1e-6
     # Run nominal operational problem:
-    nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)
-    nominal_voltage = nominal_operation.node_voltage_magnitude_vector_per_unit
-    nominal_branch_power_1 = nominal_operation.branch_power_magnitude_vector_1_per_unit
-    nominal_branch_power_2 = nominal_operation.branch_power_magnitude_vector_2_per_unit
+    # nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)
+    # nominal_voltage = nominal_operation.node_voltage_magnitude_vector_per_unit
+    # nominal_branch_power_1 = nominal_operation.branch_power_magnitude_vector_1_per_unit
+    # nominal_branch_power_2 = nominal_operation.branch_power_magnitude_vector_2_per_unit
+    # max_branch_power = nominal_branch_power_1.max().values
 
     # optimal_operation = mesmo.api.run_optimal_operation_problem(scenario_name, store_results=False)
     # optimal_voltage = optimal_operation.node_voltage_magnitude_vector_per_unit.min()
@@ -65,13 +66,19 @@ def main():
     # Instantiate centralized optimization problem.
     optimization_non_strategic = mesmo.utils.OptimizationProblem()
 
+    max_branch_power = np.array([0.808, 0.784, 0.726, 0.532,
+                                 0.926, 0.803, 0.810, 0.708, 0.708,
+                                 0.789, 0.789, 0.789, 0.789, 0.789, 0.789,
+                                 0.538, 0.538, 0.538, 0.538])
+    max_branch_power -= 0.00
+
     # Define electric grid problem.
     # TODO: Review limits.
     node_voltage_magnitude_vector_minimum = 0.95 * np.abs(electric_grid_model.node_voltage_vector_reference)
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
-    branch_power_magnitude_vector_maximum = 1 * electric_grid_model.branch_power_vector_magnitude_reference
+    branch_power_magnitude_vector_maximum = max_branch_power * electric_grid_model.branch_power_vector_magnitude_reference
 
-    grid_cost_coefficient = 0.75
+    grid_cost_coefficient = 0.85
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -163,7 +170,7 @@ def main():
         flexible_der_type]
     flexible_der_reactive_power_strategic = results_strategic.der_reactive_power_vector_per_unit[flexible_der_type]
 
-    report_time = '2021-02-22 14:00:00'
+    report_time = '2021-02-22 13:00:00'
 
     x = np.arange(len(flexible_der_active_power_non_strategic.columns))
     width = 0.35
@@ -188,8 +195,6 @@ def main():
     axes.grid()
     fig.show()
     # fig.savefig('flexible_der_active_power_dispatch.svg')
-
-
 
     # DLMPs in non-strategic scenario Timeseries for Node 10 for three phases
     # Energy portion of DLMP:
@@ -327,7 +332,7 @@ def main():
                 color='y')
     axes[1].bar(x, nodal_congestion_dlmps_strategic_active_power,
                 bottom=nodal_energy_dlmps_strategic_active_power + nodal_loss_dlmps_strategic_active_power +
-                        nodal_voltage_dlmps_strategic_active_power,
+                       nodal_voltage_dlmps_strategic_active_power,
                 label='Congestion',
                 color='y')
     axes[0].plot(x, nodal_total_dlmps_non_strategic_active_power, color='k', label='Total', marker='*')
@@ -347,14 +352,14 @@ def main():
     fig.show()
     # fig.savefig('contributions_to_DLMP.svg')
 
-
     fig, axes = plt.subplots(figsize=(12, 6))
     nodal_total_dlmps_non_strategic_active_power.plot(
         ax=axes,
         label='Non-strategic',
+        kind='bar',
         # y=(slice(None), slice(None), 3),
-        color='b',
-        marker='*'
+        color='b'
+        # marker='*'
     )
     nodal_total_dlmps_strategic_active_power.plot(
         ax=axes,
@@ -514,9 +519,12 @@ def main():
     fig.show()
     # fig.savefig('Voltage profile.svg')
 
-    line_loading_non_strategic = results_non_strategic.branch_power_magnitude_vector_1_per_unit.loc[
-        report_time]
-    line_loading_strategic = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[report_time]
+    # line_loading_non_strategic = results_non_strategic.branch_power_magnitude_vector_1_per_unit.loc[
+    #     report_time]
+    # line_loading_strategic = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[report_time]
+
+    line_loading_non_strategic = results_non_strategic.branch_power_magnitude_vector_1_per_unit.max()
+    line_loading_strategic = results_strategic.branch_power_magnitude_vector_1_per_unit.max()
 
     fig, axes = plt.subplots(figsize=(12, 6))
     line_loading_non_strategic.plot(

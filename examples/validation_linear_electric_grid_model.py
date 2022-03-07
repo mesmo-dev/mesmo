@@ -15,6 +15,8 @@ def main():
     scenario_name = mesmo.config.config['tests']['scenario_name']
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
     power_multipliers = np.arange(-0.2, 1.8, 0.1)
+    # Select linear electric grid model type that is being validated.
+    linear_electric_grid_model_method = mesmo.electric_grid_models.LinearElectricGridModelGlobal
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     mesmo.data_interface.recreate_database()
@@ -31,12 +33,7 @@ def main():
     power_flow_solution_initial = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
 
     # Obtain linear electric grid model for nominal power conditions.
-    linear_electric_grid_model = (
-        mesmo.electric_grid_models.LinearElectricGridModelGlobal(
-            electric_grid_model,
-            power_flow_solution_initial
-        )
-    )
+    linear_electric_grid_model = linear_electric_grid_model_method(electric_grid_model, power_flow_solution_initial)
 
     # Instantiate results variables.
     der_power_vector_active = (
@@ -290,6 +287,33 @@ def main():
 
     # Print results.
     print(f"linear_electric_grid_model_error =\n{linear_electric_grid_model_error}")
+
+    # Apply base scaling to obtain actual unit values.
+    power_flow_solution_initial.der_power_vector *= base_power
+    power_flow_solution_initial.node_voltage_vector *= base_voltage
+    power_flow_solution_initial.branch_power_vector_1 *= base_power
+    power_flow_solution_initial.branch_power_vector_2 *= base_power
+    power_flow_solution_initial.loss *= base_power
+    der_power_vector_active *= base_power
+    der_power_vector_reactive *= base_power
+    der_power_vector_active_change *= base_power
+    der_power_vector_reactive_change *= base_power
+    node_voltage_vector_power_flow *= base_voltage
+    node_voltage_vector_linear_model *= base_voltage
+    node_voltage_vector_magnitude_power_flow *= base_voltage
+    node_voltage_vector_magnitude_linear_model *= base_voltage
+    branch_power_vector_1_squared_power_flow *= base_power ** 2
+    branch_power_vector_1_squared_linear_model *= base_power ** 2
+    branch_power_vector_2_squared_power_flow *= base_power ** 2
+    branch_power_vector_2_squared_linear_model *= base_power ** 2
+    branch_power_vector_1_magnitude_power_flow *= base_power
+    branch_power_vector_1_magnitude_linear_model *= base_power
+    branch_power_vector_2_magnitude_power_flow *= base_power
+    branch_power_vector_2_magnitude_linear_model *= base_power
+    loss_active_power_flow *= base_power
+    loss_active_linear_model *= base_power
+    loss_reactive_power_flow *= base_power
+    loss_reactive_linear_model *= base_power
 
     # Store results as CSV.
     der_power_vector_active.to_csv(os.path.join(results_path, 'der_power_vector_active.csv'))

@@ -136,11 +136,15 @@ def connect_database() -> sqlite3.Connection:
 class ScenarioData(mesmo.utils.ObjectBase):
     """Scenario data object."""
 
+    scenario_name: str
     scenario: pd.Series
     timesteps: pd.Index
     parameters: pd.Series
 
     def __init__(self, scenario_name: str, database_connection=None):
+
+        # Store scenario name.
+        self.scenario_name = scenario_name
 
         # Obtain database connection.
         if database_connection is None:

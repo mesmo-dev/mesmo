@@ -150,8 +150,10 @@ class ScenarioData(mesmo.utils.ObjectBase):
         self.parameters = pd.read_sql(
             """
                 SELECT * FROM parameters
-                JOIN scenarios USING (parameter_set)
-                WHERE scenario_name = ?
+                WHERE parameter_set = (
+                    SELECT parameter_set FROM scenarios
+                    WHERE scenario_name = ?
+                )
                 """,
             con=database_connection,
             params=[scenario_name],

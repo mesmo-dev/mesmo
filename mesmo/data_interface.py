@@ -910,18 +910,22 @@ class ElectricGridData(mesmo.utils.ObjectBase):
     def validate(self):
 
         # If not all line types defined, raise error.
-        if not self.electric_grid_lines.loc[:, "line_type"].isin(
-            self.electric_grid_line_types.loc[:, "line_type"]
-        ).all():
+        if (
+            not self.electric_grid_lines.loc[:, "line_type"]
+            .isin(self.electric_grid_line_types.loc[:, "line_type"])
+            .all()
+        ):
             raise ValueError(
                 "Some `line_type` from `electric_grid_lines` have not been found in `electric_grid_line_types`."
             )
 
         # If line type matrix phases differ from matrix entries, raise error.
         for line_type_index, line_type in self.electric_grid_line_types.iterrows():
-            if np.math.factorial(line_type.at['n_phases']) != len(self.electric_grid_line_types_matrices.loc[
-                self.electric_grid_line_types_matrices.loc[:, 'line_type'] == line_type_index,
-            ]):
+            if np.math.factorial(line_type.at["n_phases"]) != len(
+                self.electric_grid_line_types_matrices.loc[
+                    self.electric_grid_line_types_matrices.loc[:, "line_type"] == line_type_index,
+                ]
+            ):
                 raise ValueError(
                     "Matrix in `electric_grid_line_types_matrices` does not match `n_phases` as defined in "
                     "`electric_grid_line_types`."

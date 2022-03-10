@@ -136,11 +136,15 @@ def connect_database() -> sqlite3.Connection:
 class ScenarioData(mesmo.utils.ObjectBase):
     """Scenario data object."""
 
+    scenario_name: str
     scenario: pd.Series
     timesteps: pd.Index
     parameters: pd.Series
 
     def __init__(self, scenario_name: str, database_connection=None):
+
+        # Store scenario name.
+        self.scenario_name = scenario_name
 
         # Obtain database connection.
         if database_connection is None:
@@ -150,8 +154,10 @@ class ScenarioData(mesmo.utils.ObjectBase):
         self.parameters = pd.read_sql(
             """
                 SELECT * FROM parameters
-                JOIN scenarios USING (parameter_set)
-                WHERE scenario_name = ?
+                WHERE parameter_set = (
+                    SELECT parameter_set FROM scenarios
+                    WHERE scenario_name = ?
+                )
                 """,
             con=database_connection,
             params=[scenario_name],
@@ -795,7 +801,7 @@ class ElectricGridData(mesmo.utils.ObjectBase):
             pd.read_sql(
                 """
                 SELECT * FROM electric_grid_lines
-                JOIN electric_grid_line_types USING (line_type)
+                LEFT JOIN electric_grid_line_types USING (line_type)
                 WHERE electric_grid_name = (
                     SELECT electric_grid_name FROM scenarios
                     WHERE scenario_name = ?
@@ -898,6 +904,29 @@ class ElectricGridData(mesmo.utils.ObjectBase):
             index=natsort.natsorted(self.electric_grid_transformers.index)
         )
 
+        # Run validation checks.
+        self.validate()
+
+    def validate(self):
+
+        # If not all line types defined, raise error.
+        if not self.electric_grid_lines.loc[:, "line_type"].isin(
+            self.electric_grid_line_types.loc[:, "line_type"]
+        ).all():
+            raise ValueError(
+                "Some `line_type` from `electric_grid_lines` have not been found in `electric_grid_line_types`."
+            )
+
+        # If line type matrix phases differ from matrix entries, raise error.
+        for line_type_index, line_type in self.electric_grid_line_types.iterrows():
+            if np.math.factorial(line_type.at['n_phases']) != len(self.electric_grid_line_types_matrices.loc[
+                self.electric_grid_line_types_matrices.loc[:, 'line_type'] == line_type_index,
+            ]):
+                raise ValueError(
+                    "Matrix in `electric_grid_line_types_matrices` does not match `n_phases` as defined in "
+                    "`electric_grid_line_types`."
+                )
+
 
 class ThermalGridData(mesmo.utils.ObjectBase):
     """Thermal grid data object."""
@@ -967,7 +996,7 @@ class ThermalGridData(mesmo.utils.ObjectBase):
             pd.read_sql(
                 """
                 SELECT * FROM thermal_grid_lines
-                JOIN thermal_grid_line_types USING (line_type)
+                LEFT JOIN thermal_grid_line_types USING (line_type)
                 WHERE thermal_grid_name = (
                     SELECT thermal_grid_name FROM scenarios
                     WHERE scenario_name = ?

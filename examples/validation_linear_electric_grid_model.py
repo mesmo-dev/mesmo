@@ -60,16 +60,16 @@ def main():
     node_voltage_vector_magnitude_linear_model = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.nodes, dtype=float)
     )
-    branch_power_vector_1_squared_power_flow = (
+    branch_power_vector_1_power_flow = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
-    branch_power_vector_1_squared_linear_model = (
+    branch_power_vector_1_linear_model = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
-    branch_power_vector_2_squared_power_flow = (
+    branch_power_vector_2_power_flow = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
-    branch_power_vector_2_squared_linear_model = (
+    branch_power_vector_2_linear_model = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_1_magnitude_power_flow = (
@@ -82,6 +82,18 @@ def main():
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     branch_power_vector_2_magnitude_linear_model = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
+    )
+    branch_power_vector_1_squared_power_flow = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
+    )
+    branch_power_vector_1_squared_linear_model = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
+    )
+    branch_power_vector_2_squared_power_flow = (
+        pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
+    )
+    branch_power_vector_2_squared_linear_model = (
         pd.DataFrame(index=power_multipliers, columns=electric_grid_model.branches, dtype=float)
     )
     loss_active_power_flow = (
@@ -127,6 +139,8 @@ def main():
         power_flow_solution = power_flow_solutions[power_multiplier]
         node_voltage_vector_power_flow.loc[power_multiplier, :] = power_flow_solution.node_voltage_vector
         node_voltage_vector_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.node_voltage_vector)
+        branch_power_vector_1_power_flow.loc[power_multiplier, :] = power_flow_solution.branch_power_vector_1
+        branch_power_vector_2_power_flow.loc[power_multiplier, :] = power_flow_solution.branch_power_vector_2
         branch_power_vector_1_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_1)
         branch_power_vector_2_magnitude_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_2)
         branch_power_vector_1_squared_power_flow.loc[power_multiplier, :] = np.abs(power_flow_solution.branch_power_vector_1) ** 2
@@ -147,6 +161,20 @@ def main():
         + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
         @ np.transpose(der_power_vector_active_change.values)
         + linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+        @ np.transpose(der_power_vector_reactive_change.values)
+    ).transpose()
+    branch_power_vector_1_linear_model.loc[:, :] = (
+        np.transpose([power_flow_solution_initial.branch_power_vector_1] * len(power_multipliers))
+        + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_active
+        @ np.transpose(der_power_vector_active_change.values)
+        + linear_electric_grid_model.sensitivity_branch_power_1_by_der_power_reactive
+        @ np.transpose(der_power_vector_reactive_change.values)
+    ).transpose()
+    branch_power_vector_2_linear_model.loc[:, :] = (
+        np.transpose([power_flow_solution_initial.branch_power_vector_2] * len(power_multipliers))
+        + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_active
+        @ np.transpose(der_power_vector_active_change.values)
+        + linear_electric_grid_model.sensitivity_branch_power_2_by_der_power_reactive
         @ np.transpose(der_power_vector_reactive_change.values)
     ).transpose()
     branch_power_vector_1_magnitude_linear_model.loc[:, :] = (
@@ -289,6 +317,7 @@ def main():
     print(f"linear_electric_grid_model_error =\n{linear_electric_grid_model_error}")
 
     # Apply base scaling to obtain actual unit values.
+    electric_grid_model.node_voltage_vector_reference *= base_voltage
     power_flow_solution_initial.der_power_vector *= base_power
     power_flow_solution_initial.node_voltage_vector *= base_voltage
     power_flow_solution_initial.branch_power_vector_1 *= base_power
@@ -302,14 +331,18 @@ def main():
     node_voltage_vector_linear_model *= base_voltage
     node_voltage_vector_magnitude_power_flow *= base_voltage
     node_voltage_vector_magnitude_linear_model *= base_voltage
-    branch_power_vector_1_squared_power_flow *= base_power ** 2
-    branch_power_vector_1_squared_linear_model *= base_power ** 2
-    branch_power_vector_2_squared_power_flow *= base_power ** 2
-    branch_power_vector_2_squared_linear_model *= base_power ** 2
+    branch_power_vector_1_power_flow *= base_power
+    branch_power_vector_1_linear_model *= base_power
+    branch_power_vector_2_power_flow *= base_power
+    branch_power_vector_2_linear_model *= base_power
     branch_power_vector_1_magnitude_power_flow *= base_power
     branch_power_vector_1_magnitude_linear_model *= base_power
     branch_power_vector_2_magnitude_power_flow *= base_power
     branch_power_vector_2_magnitude_linear_model *= base_power
+    branch_power_vector_1_squared_power_flow *= base_power ** 2
+    branch_power_vector_1_squared_linear_model *= base_power ** 2
+    branch_power_vector_2_squared_power_flow *= base_power ** 2
+    branch_power_vector_2_squared_linear_model *= base_power ** 2
     loss_active_power_flow *= base_power
     loss_active_linear_model *= base_power
     loss_reactive_power_flow *= base_power
@@ -324,14 +357,18 @@ def main():
     node_voltage_vector_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_linear_model.csv'))
     node_voltage_vector_magnitude_power_flow.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_power_flow.csv'))
     node_voltage_vector_magnitude_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_linear_model.csv'))
-    branch_power_vector_1_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_power_flow.csv'))
-    branch_power_vector_1_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_linear_model.csv'))
-    branch_power_vector_2_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_power_flow.csv'))
-    branch_power_vector_2_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_linear_model.csv'))
+    branch_power_vector_1_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_power_flow.csv'))
+    branch_power_vector_1_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_linear_model.csv'))
+    branch_power_vector_2_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_power_flow.csv'))
+    branch_power_vector_2_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_linear_model.csv'))
     branch_power_vector_1_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_power_flow.csv'))
     branch_power_vector_1_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_linear_model.csv'))
     branch_power_vector_2_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_power_flow.csv'))
     branch_power_vector_2_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_linear_model.csv'))
+    branch_power_vector_1_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_power_flow.csv'))
+    branch_power_vector_1_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_squared_linear_model.csv'))
+    branch_power_vector_2_squared_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_power_flow.csv'))
+    branch_power_vector_2_squared_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_squared_linear_model.csv'))
     loss_active_power_flow.to_csv(os.path.join(results_path, 'loss_active_power_flow.csv'))
     loss_active_linear_model.to_csv(os.path.join(results_path, 'loss_active_linear_model.csv'))
     loss_reactive_power_flow.to_csv(os.path.join(results_path, 'loss_reactive_power_flow.csv'))
@@ -356,16 +393,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[abs(electric_grid_model.node_voltage_vector_reference[node_index])],
-            name='No load',
+            x=[1.0],
+            y=[abs(power_flow_solution_initial.node_voltage_vector[node_index])],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[abs(power_flow_solution_initial.node_voltage_vector[node_index])],
-            name='Initial point',
+            x=[0.0],
+            y=[abs(electric_grid_model.node_voltage_vector_reference[node_index])],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -390,16 +427,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[np.real(electric_grid_model.node_voltage_vector_reference[node_index])],
-            name='No load',
+            x=[1.0],
+            y=[np.real(power_flow_solution_initial.node_voltage_vector[node_index])],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[np.real(power_flow_solution_initial.node_voltage_vector[node_index])],
-            name='Initial point',
+            x=[0.0],
+            y=[np.real(electric_grid_model.node_voltage_vector_reference[node_index])],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -424,21 +461,21 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[np.imag(electric_grid_model.node_voltage_vector_reference[node_index])],
-            name='No load',
-            marker=go.scatter.Marker(size=15.0),
-            line=go.scatter.Line(width=0.0)
-        ))
-        figure.add_trace(go.Scatter(
             x=[1.0],
             y=[np.imag(power_flow_solution_initial.node_voltage_vector[node_index])],
             name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
+        figure.add_trace(go.Scatter(
+            x=[0.0],
+            y=[np.imag(electric_grid_model.node_voltage_vector_reference[node_index])],
+            name='No load',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
         figure.update_layout(
-            title=f"Voltage (real component) [V] for<br>(node_type, node_name, phase): {node}",
+            title=f"Voltage (imaginary component) [V] for<br>(node_type, node_name, phase): {node}",
             yaxis_title="Voltage magnitude [V]",
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
@@ -447,6 +484,142 @@ def main():
 
     # Branch flow.
     for branch_index, branch in enumerate(electric_grid_model.branches):
+
+        # Branch power active component 1.
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.real(branch_power_vector_1_power_flow.loc[:, branch]),
+            name='Power flow'
+        ))
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.real(branch_power_vector_1_linear_model.loc[:, branch]),
+            name='Linear model'
+        ))
+        figure.add_trace(go.Scatter(
+            x=[1.0],
+            y=[np.real(power_flow_solution_initial.branch_power_vector_1[branch_index])],
+            name='Initial point',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.add_trace(go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            name='No load',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.update_layout(
+            title=f"Branch power 1 active component [W] for<br>(branch_type, branch_name, phase): {branch}",
+            yaxis_title="Branch power active component [W]",
+            xaxis_title="Power multiplier",
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        )
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_1_active_{branch}'))
+
+        # Branch power reactive component 1.
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.imag(branch_power_vector_1_power_flow.loc[:, branch]),
+            name='Power flow'
+        ))
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.imag(branch_power_vector_1_linear_model.loc[:, branch]),
+            name='Linear model'
+        ))
+        figure.add_trace(go.Scatter(
+            x=[1.0],
+            y=[np.imag(power_flow_solution_initial.branch_power_vector_1[branch_index])],
+            name='Initial point',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.add_trace(go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            name='No load',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.update_layout(
+            title=f"Branch power 1 reactive component [VAr] for<br>(branch_type, branch_name, phase): {branch}",
+            yaxis_title="Branch power reactive component [VAr]",
+            xaxis_title="Power multiplier",
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        )
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_1_reactive_{branch}'))
+
+        # Branch power active component 2.
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.real(branch_power_vector_2_power_flow.loc[:, branch]),
+            name='Power flow'
+        ))
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.real(branch_power_vector_2_linear_model.loc[:, branch]),
+            name='Linear model'
+        ))
+        figure.add_trace(go.Scatter(
+            x=[1.0],
+            y=[np.real(power_flow_solution_initial.branch_power_vector_2[branch_index])],
+            name='Initial point',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.add_trace(go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            name='No load',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.update_layout(
+            title=f"Branch power 2 active component [W] for<br>(branch_type, branch_name, phase): {branch}",
+            yaxis_title="Branch power active component [W]",
+            xaxis_title="Power multiplier",
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        )
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_2_active_{branch}'))
+
+        # Branch power reactive component 2.
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.imag(branch_power_vector_2_power_flow.loc[:, branch]),
+            name='Power flow'
+        ))
+        figure.add_trace(go.Scatter(
+            x=power_multipliers,
+            y=np.imag(branch_power_vector_2_linear_model.loc[:, branch]),
+            name='Linear model'
+        ))
+        figure.add_trace(go.Scatter(
+            x=[1.0],
+            y=[np.imag(power_flow_solution_initial.branch_power_vector_2[branch_index])],
+            name='Initial point',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.add_trace(go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            name='No load',
+            marker=go.scatter.Marker(size=15.0),
+            line=go.scatter.Line(width=0.0)
+        ))
+        figure.update_layout(
+            title=f"Branch power 2 reactive component [VAr] for<br>(branch_type, branch_name, phase): {branch}",
+            yaxis_title="Branch power reactive component [VAr]",
+            xaxis_title="Power multiplier",
+            legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
+        )
+        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_2_reactive_{branch}'))
 
         # Branch power magnitude 1.
         figure = go.Figure()
@@ -461,16 +634,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
+            x=[1.0],
+            y=[abs(power_flow_solution_initial.branch_power_vector_1[branch_index])],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[abs(power_flow_solution_initial.branch_power_vector_1[branch_index])],
-            name='Initial point',
+            x=[0.0],
+            y=[0.0],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -495,16 +668,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
+            x=[1.0],
+            y=[abs(power_flow_solution_initial.branch_power_vector_2[branch_index])],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[abs(power_flow_solution_initial.branch_power_vector_2[branch_index])],
-            name='Initial point',
+            x=[0.0],
+            y=[0.0],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -529,16 +702,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
+            x=[1.0],
+            y=[abs(power_flow_solution_initial.branch_power_vector_1[branch_index] ** 2)],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[abs(power_flow_solution_initial.branch_power_vector_1[branch_index] ** 2)],
-            name='Initial point',
+            x=[0.0],
+            y=[0.0],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -563,16 +736,16 @@ def main():
             name='Linear model'
         ))
         figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
+            x=[1.0],
+            y=[abs(power_flow_solution_initial.branch_power_vector_2[branch_index] ** 2)],
+            name='Initial point',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
         figure.add_trace(go.Scatter(
-            x=[1.0],
-            y=[abs(power_flow_solution_initial.branch_power_vector_2[branch_index] ** 2)],
-            name='Initial point',
+            x=[0.0],
+            y=[0.0],
+            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -597,16 +770,16 @@ def main():
         name='Linear model'
     ))
     figure.add_trace(go.Scatter(
-        x=[0.0],
-        y=[0.0],
-        name='No load',
+        x=[1.0],
+        y=np.real(power_flow_solution_initial.loss),
+        name='Initial point',
         marker=go.scatter.Marker(size=15.0),
         line=go.scatter.Line(width=0.0)
     ))
     figure.add_trace(go.Scatter(
-        x=[1.0],
-        y=[np.real([power_flow_solution_initial.loss])],
-        name='Initial point',
+        x=[0.0],
+        y=[0.0],
+        name='No load',
         marker=go.scatter.Marker(size=15.0),
         line=go.scatter.Line(width=0.0)
     ))
@@ -632,7 +805,7 @@ def main():
     ))
     figure.add_trace(go.Scatter(
         x=[1.0],
-        y=[np.imag([power_flow_solution_initial.loss])],
+        y=np.imag(power_flow_solution_initial.loss),
         name='Initial point',
         marker=go.scatter.Marker(size=15.0),
         line=go.scatter.Line(width=0.0)

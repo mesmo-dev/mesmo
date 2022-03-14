@@ -52,3 +52,5 @@ ieee_34node,pv_806,fixed_generator,photovoltaic_generic,806,1,1,1,wye,1.00E+05,0
 ieee_34node,pv_836,fixed_generator,photovoltaic_generic,836,1,1,1,wye,1.50E+05,0.00E+00
 ieee_34node,pv_840,flexible_generator,photovoltaic_generic,840,1,1,1,wye,2.00E+05,1.50E+05
 ieee_34node,pv_812,flexible_generator,photovoltaic_generic,812,1,1,1,wye,2.25E+05,1.09E+05
+ieee_34node,cap_844,flexible_load,mixed_commercial_residential,844,1,1,1,wye,0,3.00E+05
+ieee_34node,cap_848,flexible_load,mixed_commercial_residential,848,1,1,1,wye,0,4.50E+05

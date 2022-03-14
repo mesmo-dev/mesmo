@@ -13,12 +13,12 @@ oganda_grid,load_b11,flexible_load,commercial_load,b11,1,0,0,wye,-1050000,-34512
 oganda_grid,load_b12,flexible_load,commercial_load,b12,1,0,0,wye,-1050000,-246515,1
 oganda_grid,load_b13,fixed_load,commercial_load,b13,1,0,0,wye,-1800000,-315535,1
 oganda_grid,load_b14,fixed_load,commercial_load,b14,1,0,0,wye,-1600000,-394420,1
-oganda_grid,pv_a2,fixed_generator,oganda_pv,a2,1,0,0,wye,900000,0,1
+oganda_grid,pv_a2,fixed_generator,oganda_pv,a2,1,0,0,wye,3150000,0,1
 oganda_grid,pv_a4,flexible_generator,oganda_pv,a4,1,0,0,wye,900000,0,1
 oganda_grid,pv_b2,flexible_generator,oganda_pv,b2,1,0,0,wye,900000,0,1
-oganda_grid,pv_b6,fixed_generator,oganda_pv,b6,1,0,0,wye,900000,0,1
+oganda_grid,pv_b6,fixed_generator,oganda_pv,b6,1,0,0,wye,3150000,0,1
 oganda_grid,pv_b7,flexible_generator,oganda_pv,b7,1,0,0,wye,1100000,0,1
-oganda_grid,pv_b1,fixed_generator,oganda_pv,b1,1,0,0,wye,900000,0,1
+oganda_grid,pv_b1,fixed_generator,oganda_pv,b1,1,0,0,wye,3150000,0,1
 oganda_grid,pv_b10_strategic,flexible_generator,oganda_pv,b10,1,0,0,wye,10000000,0,1
 oganda_grid,pv_b12,flexible_generator,oganda_pv,b12,1,0,0,wye,1900000,197210,0
 oganda_grid,load_b3,flexible_load,residential_load,b3,1,0,0,wye,-1200000,-394420,1

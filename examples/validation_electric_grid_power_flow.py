@@ -14,7 +14,8 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = mesmo.config.config['tests']['scenario_name']
+    # scenario_name = mesmo.config.config['tests']['scenario_name']
+    scenario_name = 'ieee_34node'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
     power_multipliers = np.arange(-0.2, 1.2, 0.1)
 

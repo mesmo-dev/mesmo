@@ -1,19 +1,13 @@
-"""Example script for setting up and solving an optimal operation problem.
-
-- The optimal operation problem (alias: optimal dispatch problem, optimal power flow problem)
-  formulates the optimization problem for minimizing the objective functions of DERs and grid operators
-  subject to the model constraints of all DERs and grids.
-"""
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 pd.options.plotting.backend = "matplotlib"
 import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = 'ieee_34node'
     flexible_der_type = ['flexible_generator', 'flexible_load']
@@ -25,7 +19,6 @@ def main():
     nominal_voltage = nominal_operation.node_voltage_magnitude_vector_per_unit.min()
     nominal_flexible_der_active_power_per_unit = \
         nominal_operation.der_active_power_vector_per_unit[flexible_der_type]
-
 
     # High-level API call.
     optimal_operation = mesmo.api.run_optimal_operation_problem(scenario_name, store_results=False)
@@ -61,28 +54,28 @@ def main():
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
         optimal_voltage[:, :, i].plot(
-            ax=axes[i-1],
+            ax=axes[i - 1],
             label=f'Min optimal voltage profile phase {i}',
             # y=(slice(None), slice(None), 3),
             color='b',
             marker='*'
         )
         nominal_voltage[:, :, i].plot(
-            ax=axes[i-1],
+            ax=axes[i - 1],
             label=f'Min nominal voltage profile phase {i}',
             # y=(slice(None), slice(None), 3),
             color='r',
             marker='*'
         )
         x = np.arange(len(optimal_voltage[:, :, i].index))
-        axes[i-1].set_xticks(x)
-        axes[i-1].set_xticklabels(optimal_voltage[:, :, i].index, rotation=-30, fontsize=8, minor=False)
+        axes[i - 1].set_xticks(x)
+        axes[i - 1].set_xticklabels(optimal_voltage[:, :, i].index, rotation=-30, fontsize=8, minor=False)
         fig.suptitle(f'Nodal Voltage Profile at {sample_time}')
         axes[i - 1].set_ylim([0.5, 1.05])
-        axes[i-1].set_ylabel('Voltage [p.u]')
-        axes[i-1].legend()
-        axes[i-1].grid(axis='y')
-        axes[i-1].grid(axis='x')
+        axes[i - 1].set_ylabel('Voltage [p.u]')
+        axes[i - 1].legend()
+        axes[i - 1].grid(axis='y')
+        axes[i - 1].grid(axis='x')
         fig.set_tight_layout(True)
         fig.set_tight_layout(True)
     fig.show()
@@ -90,32 +83,62 @@ def main():
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
         optimal_branch_power_1.loc['line', slice(None), i].plot(
-            ax=axes[i-1],
+            ax=axes[i - 1],
             label=f'Max optimal line loading phase {i}',
             color='b',
             marker='*'
         )
         nominal_branch_power_1.loc['line', slice(None), i].plot(
-            ax=axes[i-1],
+            ax=axes[i - 1],
             label=f'Max nominal line loading phase {i}',
             color='r',
             marker='*'
         )
     for i in [1, 2, 3]:
         x = np.arange(len(nominal_branch_power_1[:, :, i].index))
-        axes[i-1].set_xticks(x)
-        axes[i-1].set_xticklabels(nominal_branch_power_1[:, :, i].index, rotation=-30, fontsize=8, minor=False)
+        axes[i - 1].set_xticks(x)
+        axes[i - 1].set_xticklabels(nominal_branch_power_1[:, :, i].index, rotation=-30, fontsize=8, minor=False)
         # axes[i-1].set_ylim([0, 7])
-        axes[i-1].set_ylabel('Loading [p.u]')
-        axes[i-1].legend()
-        axes[i-1].grid(axis='y')
-        axes[i-1].grid(axis='x')
+        axes[i - 1].set_ylabel('Loading [p.u]')
+        axes[i - 1].legend()
+        axes[i - 1].grid(axis='y')
+        axes[i - 1].grid(axis='x')
         fig.set_tight_layout(True)
-        fig.suptitle(f'Line loading at {sample_time}')
+        fig.suptitle('Max Line loading')
         fig.set_tight_layout(True)
     fig.show()
 
+    fig, axes = plt.subplots(3, figsize=(12, 12))
+    for i in [1, 2, 3]:
+        optimal_branch_power_2.loc['line', slice(None), i].plot(
+            ax=axes[i - 1],
+            label=f'Max optimal line loading phase {i}',
+            color='b',
+            marker='*'
+        )
+        nominal_branch_power_2.loc['line', slice(None), i].plot(
+            ax=axes[i - 1],
+            label=f'Max nominal line loading phase {i}',
+            color='r',
+            marker='*'
+        )
+    for i in [1, 2, 3]:
+        x = np.arange(len(nominal_branch_power_2[:, :, i].index))
+        axes[i - 1].set_xticks(x)
+        axes[i - 1].set_xticklabels(nominal_branch_power_2[:, :, i].index, rotation=-30, fontsize=8, minor=False)
+        # axes[i-1].set_ylim([0, 7])
+        axes[i - 1].set_ylabel('Loading [p.u]')
+        axes[i - 1].legend()
+        axes[i - 1].grid(axis='y')
+        axes[i - 1].grid(axis='x')
+        fig.set_tight_layout(True)
+        fig.suptitle('Max Line loading')
+        fig.set_tight_layout(True)
+    fig.show()
+
+
     print(1)
+
 
 if __name__ == '__main__':
     main()

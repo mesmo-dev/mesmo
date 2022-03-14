@@ -55,7 +55,8 @@ class StrategicMarket(object):
                                             self.der_model_set.timesteps[0]) / pd.Timedelta('1h')
             # _____________________________
 
-        self.strategic_generator_constant_offer_set_to_zero_map = pd.DataFrame(0, index=self.der_model_set.electric_ders,
+        self.strategic_generator_constant_offer_set_to_zero_map = pd.DataFrame(0,
+                                                                               index=self.der_model_set.electric_ders,
                                                                                columns=self.der_model_set.electric_ders)
 
         # Make a mapping matrix to set marginal cost of strategic generator to zero:
@@ -73,7 +74,8 @@ class StrategicMarket(object):
 
         self.strategic_generator_index = [der for der in self.ders if
                                           strategic_der in der]  # todo: set strategic der name
-        self.strategic_generator_scaling_map = pd.DataFrame(0, index=self.ders, columns=self.strategic_generator_index, )
+        self.strategic_generator_scaling_map = pd.DataFrame(0, index=self.ders,
+                                                            columns=self.strategic_generator_index, )
         for i in self.strategic_generator_scaling_map.index:
             for c in self.strategic_generator_scaling_map.columns:
                 if i == c:
@@ -346,8 +348,8 @@ class StrategicMarket(object):
             # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
             # @
             np.transpose(np.array([price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')].values])
-                           * -1.0 * grid_cost_coefficient * self.timestep_interval_hours  # In Wh.
-                           @ sp.block_diag(
+                         * -1.0 * grid_cost_coefficient * self.timestep_interval_hours  # In Wh.
+                         @ sp.block_diag(
                 [np.array([np.real(
                     self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(
                     self.timesteps)
@@ -358,8 +360,8 @@ class StrategicMarket(object):
             # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
             # @
             np.transpose(np.array([price_data.price_timeseries.loc[:, ('reactive_power', 'source', 'source')].values])
-                           * -1.0 * self.timestep_interval_hours  # In Wh.
-                           @ sp.block_diag(
+                         * -1.0 * self.timestep_interval_hours  # In Wh.
+                         @ sp.block_diag(
                 [np.array([np.imag(
                     self.linear_electric_grid_model_set.electric_grid_model.der_power_vector_reference)])] * len(
                     self.timesteps)
@@ -568,122 +570,130 @@ class StrategicMarket(object):
 
         optimization_problem.define_parameter(
             'minus_voltage_constant_plus_voltage_maximum_limit',
-            1.0 * np.transpose(np.transpose([np.concatenate([
-                node_voltage_magnitude_vector_maximum.ravel()
-                / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
-                for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + 1.0 * np.concatenate([
-                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+            1.0 * np.transpose(
+                np.transpose([np.concatenate([
+                    node_voltage_magnitude_vector_maximum.ravel()
+                    / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
+                    for linear_electric_grid_model in
+                    self.linear_electric_grid_model_set.linear_electric_grid_models.values()
+                ])])
+                # + 1.0 * np.concatenate([
+                #     sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                #     @ (
+                #             np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+                #             - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                #             @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #             - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                #             @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #     ) for linear_electric_grid_model in
+                #     self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+            )
         )
 
         optimization_problem.define_parameter(
             'voltage_constant_minus_voltage_limit_minimum',
-            1.0 * np.transpose(-1.0 * np.transpose([np.concatenate([
+            1.0 * np.transpose(
+                -1.0 * np.transpose([np.concatenate([
                 node_voltage_magnitude_vector_minimum.ravel()
                 / np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference)
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - np.concatenate([
-                sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+                ])])
+                # - 1.0 * np.concatenate([
+                # sp.diags(np.abs(linear_electric_grid_model.electric_grid_model.node_voltage_vector_reference) ** -1)
+                # @ (
+                #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.node_voltage_vector)])
+                #         - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_active
+                #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #         - linear_electric_grid_model.sensitivity_voltage_magnitude_by_der_power_reactive
+                #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                # ) for linear_electric_grid_model in
+                # self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+            )
         )
 
         optimization_problem.define_parameter(
             'minus_branch_power_1_constant_plus_branch_power_maximum',
-            - 1.0 * np.transpose(np.transpose([np.concatenate([
+            -1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + 1.0 * np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+            ])])
+                # + 1.0 * np.concatenate([
+                # sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                # @ (
+                #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                # ) for linear_electric_grid_model in
+                # self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+        )
         )
 
         optimization_problem.define_parameter(
             'branch_power_1_constant_minus_branch_power_minimum',
-            - 1.0 * np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - 1.0 * np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+            ])])
+                #                - 1.0 * np.concatenate([
+                # sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                # @ (
+                #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_1)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_active
+                #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_1_magnitude_by_der_power_reactive
+                #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                # ) for linear_electric_grid_model in
+                # self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+                               )
         )
 
         optimization_problem.define_parameter(
             'minus_branch_power_2_constant_plus_branch_power_maximum',
-            - 1.0 * np.transpose(np.transpose([np.concatenate([
+            -1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) + 1.0 * np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+            ])])
+                #                  + 1.0 * np.concatenate([
+                # sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                # @ (
+                #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                # ) for linear_electric_grid_model in
+                # self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+                                 )
         )
 
         optimization_problem.define_parameter(
             'branch_power_2_constant_minus_branch_power_minimum',
-            - 1.0 * np.transpose(np.transpose([np.concatenate([
+            1.0 * np.transpose(np.transpose([np.concatenate([
                 branch_power_magnitude_vector_maximum.ravel()
                 / linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference
                 for linear_electric_grid_model in
                 self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ])]) - 1.0 * np.concatenate([
-                sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
-                @ (
-                        np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
-                        @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                        - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
-                        @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
-                ) for linear_electric_grid_model in
-                self.linear_electric_grid_model_set.linear_electric_grid_models.values()
-            ]))
+            ])])
+                #                  - 1.0 * np.concatenate([
+                # sp.diags(linear_electric_grid_model.electric_grid_model.branch_power_vector_magnitude_reference ** -1)
+                # @ (
+                #         np.transpose([np.abs(linear_electric_grid_model.power_flow_solution.branch_power_vector_2)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_active
+                #         @ np.transpose([np.real(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                #         - linear_electric_grid_model.sensitivity_branch_power_2_magnitude_by_der_power_reactive
+                #         @ np.transpose([np.imag(linear_electric_grid_model.power_flow_solution.der_power_vector)])
+                # ) for linear_electric_grid_model in
+                # self.linear_electric_grid_model_set.linear_electric_grid_models.values()])
+                                 )
         )
 
         # optimization_problem.define_parameter(
@@ -699,7 +709,8 @@ class StrategicMarket(object):
             'non_strategic_der_active_power_marginal_cost',
             # sp.block_diag([self.non_flexible_der_set_to_zero_map.values] * len(self.timesteps))
             # @
-            sp.block_diag([self.strategic_generator_constant_offer_set_to_zero_map.values] * len(self.der_model_set.timesteps))
+            sp.block_diag(
+                [self.strategic_generator_constant_offer_set_to_zero_map.values] * len(self.der_model_set.timesteps))
             @ np.transpose(np.concatenate([[[
                                                 self.der_model_set.der_models[der_name].marginal_cost
                                                 * self.timestep_interval_hours  # In Wh.

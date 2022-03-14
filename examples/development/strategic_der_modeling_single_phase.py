@@ -1,18 +1,10 @@
 """Validation script for solving a decentralized DER operation problem based on DLMPs from the centralized problem."""
 
-import cvxpy as cp
 import numpy as np
-import os
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
-
 pd.options.plotting.backend = "matplotlib"
-import plotly.express as px
-import plotly.graph_objects as go
-# pd.options.plotting.backend = "plotly"
-from PIL._util import deferred_error
 
 from mesmo.kkt_conditions_with_state_space import StrategicMarket
 import mesmo
@@ -66,11 +58,11 @@ def main():
     # Instantiate centralized optimization problem.
     optimization_non_strategic = mesmo.utils.OptimizationProblem()
 
-    max_branch_power = np.array([0.808, 0.784, 0.726, 0.532,
-                                 0.926, 0.803, 0.810, 0.708, 0.708,
-                                 0.789, 0.789, 0.789, 0.789, 0.789, 0.789,
-                                 0.538, 0.538, 0.538, 0.538])
-    max_branch_power -= 0.00
+    # max_branch_power = np.array([0.808, 0.784, 0.726, 0.532,
+    #                              0.926, 0.803, 0.810, 0.708, 0.708,
+    #                              0.789, 0.789, 0.789, 0.789, 0.789, 0.789,
+    #                              0.538, 0.538, 0.538, 0.538])
+    max_branch_power = 0.76
 
     # Define electric grid problem.
     # TODO: Review limits.
@@ -78,7 +70,7 @@ def main():
     node_voltage_magnitude_vector_maximum = 1.05 * np.abs(electric_grid_model.node_voltage_vector_reference)
     branch_power_magnitude_vector_maximum = max_branch_power * electric_grid_model.branch_power_vector_magnitude_reference
 
-    grid_cost_coefficient = 0.85
+    grid_cost_coefficient = 1
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -170,7 +162,7 @@ def main():
         flexible_der_type]
     flexible_der_reactive_power_strategic = results_strategic.der_reactive_power_vector_per_unit[flexible_der_type]
 
-    report_time = '2021-02-22 13:00:00'
+    report_time = '2021-02-22 14:00:00'
 
     x = np.arange(len(flexible_der_active_power_non_strategic.columns))
     width = 0.35
@@ -485,8 +477,7 @@ def main():
     fig.show()
     # fig.savefig('DER_01_10_active_power_offer.svg')
 
-    voltage_profile_non_strategic = results_non_strategic.node_voltage_magnitude_vector_per_unit.loc[
-        '2021-02-22 14:00:00']
+    voltage_profile_non_strategic = results_non_strategic.node_voltage_magnitude_vector_per_unit.loc[report_time]
     voltage_profile_strategic = results_strategic.node_voltage_magnitude_vector_per_unit.loc[report_time]
 
     fig, axes = plt.subplots(figsize=(12, 6))

@@ -191,176 +191,176 @@ def main():
 
 
     seller_optimization_problem_sets = pd.Series(data=None, index=seller_ders, dtype=object)
-    for der_name in seller_optimization_problem_sets.index:
-        seller_optimization_problem_sets.at[der_name] = mesmo.utils.OptimizationProblem()
+    for seller in seller_optimization_problem_sets.index:
+        seller_optimization_problem_sets.at[seller] = mesmo.utils.OptimizationProblem()
 
         # Define seller's ADMM variable
-        seller_optimization_problem_sets.loc[der_name].define_variable(
-            f'energy_transacted_from_seller_{der_name}_to_buyers', buyer=buyer_ders, timestep=scenario_data.timesteps
+        seller_optimization_problem_sets.loc[seller].define_variable(
+            f'energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders, timestep=scenario_data.timesteps
         )
-        seller_optimization_problem_sets.loc[der_name].define_variable(
-            f'deviation_of_energy_transacted_from_seller_{der_name}_to_buyers', buyer=buyer_ders,
+        seller_optimization_problem_sets.loc[seller].define_variable(
+            f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders,
             timestep=scenario_data.timesteps
         )
-        seller_optimization_problem_sets.loc[der_name].define_variable(
-            f'seller_{der_name}_active_power_vector', timestep=scenario_data.timesteps
+        seller_optimization_problem_sets.loc[seller].define_variable(
+            f'seller_{seller}_active_power_vector', timestep=scenario_data.timesteps
         )
         # Define seller's ADMMM parameter
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'admm_lambda_seller_{der_name}_to_buyers_active_power',
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'admm_lambda_seller_{seller}_to_buyers_active_power',
             np.zeros(len(scenario_data.timesteps) * len(buyer_ders))
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'energy_transacted_from_seller_{der_name}_to_buyers_local_copy',
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_local_copy',
             np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'energy_transacted_from_seller_{der_name}_to_buyers_zeros',
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_zeros',
             np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'seller_{der_name}_max_power',
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'seller_{seller}_max_power',
             np.array([1.0] * len(scenario_data.timesteps))
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'seller_{der_name}_min_power',
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'seller_{seller}_min_power',
             np.array([0.0] * len(scenario_data.timesteps))
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'half_of_grid_using_price_for_seller_{der_name}',
-            pd.concat([grid_using_price.loc[i, (der_name, slice(None))] for i in grid_using_price.index]).values
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'half_of_grid_using_price_for_seller_{seller}',
+            pd.concat([grid_using_price.loc[:, (seller, buyer)] for buyer in buyer_ders]).values
         )
-        seller_optimization_problem_sets.loc[der_name].define_parameter(
-            f'buyer_sized_ones_for_{der_name}_energy_transaction',
-            sp.block_diag([np.array([[1.0] * len(buyer_ders)])] * len(scenario_data.timesteps))
+        seller_optimization_problem_sets.loc[seller].define_parameter(
+            f'buyer_sized_ones_for_{seller}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(buyer_ders))
         )
 
     buyer_optimization_problem_sets = pd.Series(data=None, index=buyer_ders, dtype=object)
-    for der_name in buyer_optimization_problem_sets.index:
-        buyer_optimization_problem_sets.loc[der_name] = mesmo.utils.OptimizationProblem()
+    for buyer in buyer_optimization_problem_sets.index:
+        buyer_optimization_problem_sets.loc[buyer] = mesmo.utils.OptimizationProblem()
 
         # Define seller's ADMM variable
-        buyer_optimization_problem_sets.loc[der_name].define_variable(
-            f'energy_transacted_from_sellers_to_buyer_{der_name}', seller=seller_ders, timestep=scenario_data.timesteps
+        buyer_optimization_problem_sets.loc[buyer].define_variable(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders, timestep=scenario_data.timesteps
         )
-        buyer_optimization_problem_sets.loc[der_name].define_variable(
-            f'deviation_of_energy_transacted_from_sellers_to_buyer_{der_name}', seller=seller_ders,
+        buyer_optimization_problem_sets.loc[buyer].define_variable(
+            f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders,
             timestep=scenario_data.timesteps
         )
-        buyer_optimization_problem_sets.loc[der_name].define_variable(
-            f'buyer_{der_name}_active_power_vector', timestep=scenario_data.timesteps
+        buyer_optimization_problem_sets.loc[buyer].define_variable(
+            f'buyer_{buyer}_active_power_vector', timestep=scenario_data.timesteps
         )
         # Define seller's ADMMM parameter
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'energy_transacted_from_sellers_to_buyer_{der_name}_local_copy',
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy',
             np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'admm_lambda_from_sellers_to_buyer_{der_name}_active_power',
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
             np.zeros(len(scenario_data.timesteps) * len(seller_ders))
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'energy_transacted_from_sellers_to_buyer_{der_name}_zeros',
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros',
             np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'buyer_{der_name}_max_power',
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'buyer_{buyer}_max_power',
             np.array([1.0] * len(scenario_data.timesteps))
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'buyer_{der_name}_min_power',
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'buyer_{buyer}_min_power',
             np.array([0.0] * len(scenario_data.timesteps))
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'half_of_grid_using_price_for_buyer_{der_name}',
-            pd.concat([grid_using_price.loc[i, (slice(None), der_name)] for i in grid_using_price.index]).values
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'half_of_grid_using_price_for_buyer_{buyer}',
+            pd.concat([grid_using_price.loc[:, (seller, buyer)] for seller in seller_ders]).values
         )
-        buyer_optimization_problem_sets.loc[der_name].define_parameter(
-            f'seller_sized_ones_for_{der_name}_energy_transaction',
-            sp.block_diag([np.array([[1.0] * len(seller_ders)])] * len(scenario_data.timesteps))
+        buyer_optimization_problem_sets.loc[buyer].define_parameter(
+            f'seller_sized_ones_for_{buyer}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(seller_ders))
         )
     while radius >= 1:
         # Defining optimization constraints and objectives for sellers:
-        for der_name in seller_optimization_problem_sets.index:
-            seller_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', f'buyer_sized_ones_for_{der_name}_energy_transaction',
-                 dict(name=f'energy_transacted_from_seller_{der_name}_to_buyers')),
+        for seller in seller_optimization_problem_sets.index:
+            seller_optimization_problem_sets.loc[seller].define_constraint(
+                ('variable', f'buyer_sized_ones_for_{seller}_energy_transaction',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers')),
                 '==',
-                ('variable', seller_der_active_power_referecne.loc[:, der_name].values[0],
-                 dict(name=f'seller_{der_name}_active_power_vector'))
+                ('variable', sp.diags(der_model_set.fixed_der_models[seller].active_power_nominal_timeseries),
+                 dict(name=f'seller_{seller}_active_power_vector'))
             )
-            seller_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', -1.0, dict(name=f'deviation_of_energy_transacted_from_seller_{der_name}_to_buyers')),
+            seller_optimization_problem_sets.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers')),
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'),
                 '==',
-                ('variable', -1.0, dict(name=f'energy_transacted_from_seller_{der_name}_to_buyers')),
-                ('constant', f'energy_transacted_from_seller_{der_name}_to_buyers_local_copy')
+                ('variable', 1.0, dict(name=f'energy_transacted_from_seller_{seller}_to_buyers'))
             )
-            seller_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', 1.0, dict(name=f'seller_{der_name}_active_power_vector')),
+            seller_optimization_problem_sets.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
                 '>=',
-                ('constant', f'seller_{der_name}_min_power')
+                ('constant', f'seller_{seller}_min_power')
             )
-            seller_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', 1.0, dict(name=f'seller_{der_name}_active_power_vector')),
+            seller_optimization_problem_sets.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
                 '<=',
-                ('constant', f'seller_{der_name}_max_power')
+                ('constant', f'seller_{seller}_max_power')
             )
-            seller_optimization_problem_sets.loc[der_name].define_constraint(
+            seller_optimization_problem_sets.loc[seller].define_constraint(
                 ('variable', 1.0, dict(
-                    name=f'energy_transacted_from_seller_{der_name}_to_buyers')),
+                    name=f'energy_transacted_from_seller_{seller}_to_buyers')),
                 '>=',
-                ('constant', f'energy_transacted_from_seller_{der_name}_to_buyers_zeros')
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_zeros')
             )
-            seller_optimization_problem_sets.loc[der_name].define_objective(
-                ('variable', f'half_of_grid_using_price_for_seller_{der_name}',
-                 dict(name=f'energy_transacted_from_seller_{der_name}_to_buyers')),
-                ('variable', f'admm_lambda_seller_{der_name}_to_buyers_active_power',
-                 dict(name=f'deviation_of_energy_transacted_from_seller_{der_name}_to_buyers')),
-                ('variable', 0.5 * admm_rho, dict(name=f'deviation_of_energy_transacted_from_seller_{der_name}_to_buyers'),
-                 dict(name=f'deviation_of_energy_transacted_from_seller_{der_name}_to_buyers'))
+            seller_optimization_problem_sets.loc[seller].define_objective(
+                ('variable', f'half_of_grid_using_price_for_seller_{seller}',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', f'admm_lambda_seller_{seller}_to_buyers_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', 0.5 * admm_rho, dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'),
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'))
             )
-            seller_optimization_problem_sets.loc[der_name].solve()
+            seller_optimization_problem_sets.loc[seller].solve()
 
         # Defining optimization constraints and objectives for sellers:
-        for der_name in buyer_optimization_problem_sets.index:
-            buyer_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', f'seller_sized_ones_for_{der_name}_energy_transaction',
-                 dict(name=f'energy_transacted_from_sellers_to_buyer_{der_name}')),
+        for buyer in buyer_optimization_problem_sets.index:
+            buyer_optimization_problem_sets.loc[buyer].define_constraint(
+                ('variable', f'seller_sized_ones_for_{buyer}_energy_transaction',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
                 '==',
-                ('variable', -1.0 * buyer_der_active_power_reference.loc[:, der_name].values[0],
-                 dict(name=f'buyer_{der_name}_active_power_vector'))
+                ('variable', -1.0 * sp.diags(der_model_set.fixed_der_models[buyer].active_power_nominal_timeseries),
+                 dict(name=f'buyer_{buyer}_active_power_vector'))
             )
-            buyer_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', -1.0, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{der_name}')),
+            buyer_optimization_problem_sets.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'),
                 '==',
-                ('variable', -1.0, dict(name=f'energy_transacted_from_sellers_to_buyer_{der_name}')),
-                ('constant', f'energy_transacted_from_sellers_to_buyer_{der_name}_local_copy'),
+                ('variable', 1.0, dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}'))
             )
-            buyer_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', 1.0, dict(name=f'buyer_{der_name}_active_power_vector')),
+            buyer_optimization_problem_sets.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
                 '>=',
-                ('constant', f'buyer_{der_name}_min_power')
+                ('constant', f'buyer_{buyer}_min_power')
             )
-            buyer_optimization_problem_sets.loc[der_name].define_constraint(
-                ('variable', 1.0, dict(name=f'buyer_{der_name}_active_power_vector')),
+            buyer_optimization_problem_sets.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
                 '<=',
-                ('constant', f'buyer_{der_name}_max_power')
+                ('constant', f'buyer_{buyer}_max_power')
             )
-            buyer_optimization_problem_sets.loc[der_name].define_constraint(
+            buyer_optimization_problem_sets.loc[buyer].define_constraint(
                 ('variable', 1.0, dict(
-                    name=f'energy_transacted_from_sellers_to_buyer_{der_name}')),
+                    name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
                 '>=',
-                ('constant', f'energy_transacted_from_sellers_to_buyer_{der_name}_zeros')
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros')
             )
-            buyer_optimization_problem_sets.loc[der_name].define_objective(
-                ('variable', f'half_of_grid_using_price_for_buyer_{der_name}',
-                 dict(name=f'energy_transacted_from_sellers_to_buyer_{der_name}')),
-                ('variable', f'admm_lambda_from_sellers_to_buyer_{der_name}_active_power',
-                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{der_name}')),
-                ('variable', 0.5 * admm_rho, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{der_name}'),
-                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{der_name}'))
+            buyer_optimization_problem_sets.loc[buyer].define_objective(
+                ('variable', f'half_of_grid_using_price_for_buyer_{buyer}',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', 0.5 * admm_rho, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'),
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'))
             )
-            buyer_optimization_problem_sets.loc[der_name].solve()
+            buyer_optimization_problem_sets.loc[buyer].solve()
 
         # Update admm parameters for seller optimization:
         for seller in seller_optimization_problem_sets.index:
@@ -400,7 +400,7 @@ def main():
                 ]).values - buyer_optimization_problem_sets.loc[buyer].parameters[
                             f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'].ravel())
 
-        radius = np.linalg.norm(a=np.concatenate(a=[seller_optimization_problem_sets.loc[seller].results[
+        radius = np.linalg.norm(np.concatenate([seller_optimization_problem_sets.loc[seller].results[
                 f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'] for seller in seller_ders]).ravel())
 
         print(radius)

@@ -100,6 +100,96 @@ def main():
     # seller_ones = sp.block_diag([[np.ones(len(seller_ders))]] * len(scenario_data.timesteps)).transpose()
     # grid_using_price = -1.0 * seller_dlmp.transpose().values @ buyer_ones + seller_ones @ buyer_dlmp.values
 
+    optimization_centralized = mesmo.utils.OptimizationProblem()
+    optimization_centralized.define_variable(
+     'energy_transacted_from_sellers_to_buyers', seller=seller_ders, buyer=buyer_ders, timestep=scenario_data.timesteps
+    )
+    optimization_centralized.define_variable(
+        'sellers_active_power_vector', seller=seller_ders, timestep=scenario_data.timesteps
+    )
+    optimization_centralized.define_variable(
+        'buyers_active_power_vector', buyer=buyer_ders, timestep=scenario_data.timesteps
+    )
+    optimization_centralized.define_parameter(
+        'grid_using_price',
+        pd.concat([pd.concat([grid_using_price.loc[:, (s, b)] for b in buyer_ders]) for s in seller_ders]).values
+    )
+    optimization_centralized.define_parameter(
+        'sellers_max_active_power_vector',
+        np.transpose([[1] * len(seller_ders) * len(scenario_data.timesteps)])
+    )
+    optimization_centralized.define_parameter(
+        'sellers_min_active_power_vector',
+        np.transpose([[0] * len(seller_ders) * len(scenario_data.timesteps)])
+    )
+    optimization_centralized.define_parameter(
+        'buyers_max_active_power_vector',
+        np.transpose([[1] * len(buyer_ders) * len(scenario_data.timesteps)])
+    )
+    optimization_centralized.define_parameter(
+        'buyers_min_active_power_vector',
+        np.transpose([[0] * len(buyer_ders) * len(scenario_data.timesteps)])
+    )
+    optimization_centralized.define_parameter(
+        'minimum_energy_transaction',
+        np.transpose([[0] * len(seller_ders)*len(buyer_ders) * len(scenario_data.timesteps)])
+    )
+
+    for seller in seller_ders:
+        optimization_centralized.define_constraint(
+            ('variable', np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(buyer_ders)), dict(
+                name='energy_transacted_from_sellers_to_buyers', seller=seller, buyer=buyer_ders,
+                timestep=scenario_data.timesteps
+            )),
+            '==',
+            ('variable', sp.diags(der_model_set.fixed_der_models[seller].active_power_nominal_timeseries), dict(
+                name='sellers_active_power_vector', seller=seller, timestep=scenario_data.timesteps))
+        )
+
+    for buyer in buyer_ders:
+        optimization_centralized.define_constraint(
+            ('variable', np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(seller_ders)), dict(
+                name='energy_transacted_from_sellers_to_buyers', seller=seller_ders, buyer=buyer,
+                timestep=scenario_data.timesteps
+            )),
+            '==',
+            ('variable', - 1.0 * sp.diags(der_model_set.fixed_der_models[buyer].active_power_nominal_timeseries), dict(
+                name='buyers_active_power_vector', buyer=buyer, timestep=scenario_data.timesteps))
+        )
+
+    optimization_centralized.define_constraint(
+        ('variable', 1.0, dict(name='sellers_active_power_vector')),
+        '>=',
+        ('constant', 'sellers_min_active_power_vector')
+    )
+    optimization_centralized.define_constraint(
+        ('variable', 1.0, dict(name='sellers_active_power_vector')),
+        '<=',
+        ('constant', 'sellers_max_active_power_vector')
+    )
+    optimization_centralized.define_constraint(
+        ('variable', 1.0, dict(name='buyers_active_power_vector')),
+        '>=',
+        ('constant', 'buyers_min_active_power_vector')
+    )
+    optimization_centralized.define_constraint(
+        ('variable', 1.0, dict(name='buyers_active_power_vector')),
+        '<=',
+        ('constant', 'buyers_max_active_power_vector')
+    )
+    optimization_centralized.define_constraint(
+        ('variable', 1.0, dict(name='energy_transacted_from_sellers_to_buyers')),
+        '>=',
+        ('constant', 'minimum_energy_transaction')
+    )
+
+    optimization_centralized.define_objective(
+        ('variable', 'grid_using_price', dict(name='energy_transacted_from_sellers_to_buyers'))
+    )
+    optimization_centralized.solve()
+
+
+
     seller_optimization_problem_sets = pd.Series(data=None, index=seller_ders, dtype=object)
     for der_name in seller_optimization_problem_sets.index:
         seller_optimization_problem_sets.at[der_name] = mesmo.utils.OptimizationProblem()

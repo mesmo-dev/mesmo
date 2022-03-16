@@ -17,6 +17,8 @@ def main():
     power_multipliers = np.arange(-0.2, 1.8, 0.1)
     # Select linear electric grid model type that is being validated.
     linear_electric_grid_model_method = mesmo.electric_grid_models.LinearElectricGridModelGlobal
+    # Select power flow solution method that is used as reference.
+    power_flow_solution_method = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     mesmo.data_interface.recreate_database()
@@ -27,10 +29,13 @@ def main():
     base_voltage = scenario_data.scenario.at['base_voltage']
 
     # Obtain electric grid model.
-    electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
+    if power_flow_solution_method is mesmo.electric_grid_models.PowerFlowSolutionOpenDSS:
+        electric_grid_model = mesmo.electric_grid_models.ElectricGridModelOpenDSS(scenario_name)
+    else:
+        electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
 
     # Obtain power flow solution for nominal power conditions.
-    power_flow_solution_initial = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
+    power_flow_solution_initial = power_flow_solution_method(electric_grid_model)
 
     # Obtain linear electric grid model for nominal power conditions.
     linear_electric_grid_model = linear_electric_grid_model_method(electric_grid_model, power_flow_solution_initial)
@@ -130,7 +135,7 @@ def main():
     # Obtain power flow solutions.
     power_flow_solutions = (
         mesmo.utils.starmap(
-            mesmo.electric_grid_models.PowerFlowSolutionFixedPoint,
+            power_flow_solution_method,
             [(electric_grid_model, row) for row in (der_power_vector_active + 1.0j * der_power_vector_reactive).values]
         )
     )
@@ -538,13 +543,6 @@ def main():
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
-        figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
-            marker=go.scatter.Marker(size=15.0),
-            line=go.scatter.Line(width=0.0)
-        ))
         figure.update_layout(
             title=f"Branch power 1 reactive component [VAr] for<br>(branch_type, branch_name, phase): {branch}",
             yaxis_title="Branch power reactive component [VAr]",
@@ -603,13 +601,6 @@ def main():
             x=[1.0],
             y=[np.imag(power_flow_solution_initial.branch_power_vector_2[branch_index])],
             name='Initial point',
-            marker=go.scatter.Marker(size=15.0),
-            line=go.scatter.Line(width=0.0)
-        ))
-        figure.add_trace(go.Scatter(
-            x=[0.0],
-            y=[0.0],
-            name='No load',
             marker=go.scatter.Marker(size=15.0),
             line=go.scatter.Line(width=0.0)
         ))
@@ -771,7 +762,7 @@ def main():
     ))
     figure.add_trace(go.Scatter(
         x=[1.0],
-        y=np.real(power_flow_solution_initial.loss),
+        y=np.array([np.real(power_flow_solution_initial.loss)]).ravel().tolist(),
         name='Initial point',
         marker=go.scatter.Marker(size=15.0),
         line=go.scatter.Line(width=0.0)
@@ -805,7 +796,7 @@ def main():
     ))
     figure.add_trace(go.Scatter(
         x=[1.0],
-        y=np.imag(power_flow_solution_initial.loss),
+        y=np.array([np.imag(power_flow_solution_initial.loss)]).ravel().tolist(),
         name='Initial point',
         marker=go.scatter.Marker(size=15.0),
         line=go.scatter.Line(width=0.0)

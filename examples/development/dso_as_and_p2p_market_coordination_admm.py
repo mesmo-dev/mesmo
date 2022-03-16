@@ -280,7 +280,9 @@ def main():
             f'seller_sized_ones_for_{buyer}_energy_transaction',
             np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(seller_ders))
         )
-    while radius >= 1:
+    while radius >= 0.01:
+        admm_iteration += 1
+
         # Defining optimization constraints and objectives for sellers:
         for seller in seller_optimization_problem_sets.index:
             seller_optimization_problem_sets.loc[seller].define_constraint(
@@ -404,10 +406,11 @@ def main():
                 ]).values - buyer_optimization_problem_sets.loc[buyer].parameters[
                             f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'].ravel())
 
-        radius = np.linalg.norm(np.concatenate(a=[seller_optimization_problem_sets.loc[seller].results[
-                f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'] for seller in seller_ders]).ravel())
+        radius = np.linalg.norm(np.concatenate(
+            [seller_optimization_problem_sets.loc[seller].results[
+                f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers']
+             for seller in seller_ders]).ravel().__abs__())
 
-        admm_iteration += 1
         print(radius)
         print(admm_iteration)
 

@@ -18,7 +18,7 @@ def main():
     # Select linear electric grid model type that is being validated.
     linear_electric_grid_model_method = mesmo.electric_grid_models.LinearElectricGridModelGlobal
     # Select power flow solution method that is used as reference.
-    power_flow_solution_method = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint
+    power_flow_solution_method = mesmo.electric_grid_models.PowerFlowSolutionOpenDSS
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     mesmo.data_interface.recreate_database()

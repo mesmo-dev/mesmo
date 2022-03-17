@@ -12,7 +12,7 @@ def main():
     parameter_matrix = np.random.rand(dimension, dimension)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define optimization parameters.
     optimization_problem.define_parameter('parameter_matrix', parameter_matrix)

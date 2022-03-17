@@ -155,7 +155,7 @@ def solve_problem(
     flexible_der_model.storage_states = flexible_der_model.states
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define / solve optimization problem.
     flexible_der_model.define_optimization_variables(optimization_problem)

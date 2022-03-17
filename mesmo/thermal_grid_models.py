@@ -13,6 +13,7 @@ import typing
 import mesmo.config
 import mesmo.data_interface
 import mesmo.der_models
+import mesmo.solutions
 import mesmo.utils
 
 logger = mesmo.config.get_logger(__name__)
@@ -653,7 +654,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     def define_optimization_problem(
         self,
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
         **kwargs,
@@ -666,7 +667,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
     def define_optimization_variables(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -689,7 +690,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     def define_optimization_parameters(
         self,
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         node_head_vector_minimum: np.ndarray = None,
         branch_flow_vector_maximum: np.ndarray = None,
@@ -856,7 +857,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def define_optimization_constraints(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -1004,7 +1005,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def define_optimization_objective(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -1073,7 +1074,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     ) -> float:
 
         # Instantiate optimization problem.
-        optimization_problem = mesmo.utils.OptimizationProblem()
+        optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_objective(optimization_problem)
@@ -1094,7 +1095,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     def get_optimization_dlmps(
         self,
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ) -> ThermalGridDLMPResults:
@@ -1263,7 +1264,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def get_optimization_results(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ) -> ThermalGridOperationResults:
 
         # Obtain results index sets, depending on if / if not scenarios given.

@@ -38,7 +38,7 @@ def main():
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate centralized optimization problem.
-    optimization_centralized = mesmo.utils.OptimizationProblem()
+    optimization_centralized = mesmo.solutions.OptimizationProblem()
 
     # Define electric grid problem.
     # TODO: Review limits.
@@ -91,7 +91,7 @@ def main():
     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
 
     # Instantiate decentralized DER optimization problem.
-    optimization_decentralized = mesmo.utils.OptimizationProblem()
+    optimization_decentralized = mesmo.solutions.OptimizationProblem()
 
     # Define DER problem.
     der_model_set.define_optimization_problem(optimization_decentralized, price_data_dlmps)

@@ -107,10 +107,10 @@ def main(
 
     # Instantiate optimization problems.
     # TODO: Consider timestep_interval_hours in ADMM objective.
-    optimization_problem_baseline = mesmo.utils.OptimizationProblem()
-    optimization_problem_electric = mesmo.utils.OptimizationProblem()
-    optimization_problem_thermal = mesmo.utils.OptimizationProblem()
-    optimization_problem_aggregator = mesmo.utils.OptimizationProblem()
+    optimization_problem_baseline = mesmo.solutions.OptimizationProblem()
+    optimization_problem_electric = mesmo.solutions.OptimizationProblem()
+    optimization_problem_thermal = mesmo.solutions.OptimizationProblem()
+    optimization_problem_aggregator = mesmo.solutions.OptimizationProblem()
 
     # Instantiate ADMM optimization parameters.
     optimization_problem_electric.define_parameter(

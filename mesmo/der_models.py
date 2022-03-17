@@ -14,6 +14,7 @@ import cobmo.building_model
 import mesmo.config
 import mesmo.data_interface
 import mesmo.electric_grid_models
+import mesmo.solutions
 import mesmo.utils
 
 logger = mesmo.config.get_logger(__name__)
@@ -1512,7 +1513,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_problem(
         self,
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
@@ -1524,7 +1525,7 @@ class DERModelSet(DERModelSetBase):
         self.define_optimization_objective(optimization_problem, scenarios=scenarios)
 
     def define_optimization_variables(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -1557,7 +1558,7 @@ class DERModelSet(DERModelSetBase):
 
     def define_optimization_parameters(
         self,
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
@@ -1938,7 +1939,7 @@ class DERModelSet(DERModelSetBase):
             )
 
     def define_optimization_constraints(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -2098,7 +2099,7 @@ class DERModelSet(DERModelSetBase):
             )
 
     def define_optimization_objective(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
 
         # If no scenarios given, obtain default value.
@@ -2266,7 +2267,7 @@ class DERModelSet(DERModelSetBase):
     ) -> float:
 
         # Instantiate optimization problem.
-        optimization_problem = mesmo.utils.OptimizationProblem()
+        optimization_problem = mesmo.solutions.OptimizationProblem()
         optimization_problem.flags["has_electric_grid_objective"] = has_electric_grid_objective
         optimization_problem.flags["has_thermal_grid_objective"] = has_thermal_grid_objective
         self.define_optimization_variables(optimization_problem)
@@ -2292,7 +2293,7 @@ class DERModelSet(DERModelSetBase):
         return objective
 
     def get_optimization_results(
-        self, optimization_problem: mesmo.utils.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
+        self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ) -> DERModelSetOperationResults:
 
         # Obtain results index sets, depending on if / if not scenarios given.
@@ -2369,7 +2370,7 @@ class DERModelSet(DERModelSetBase):
     def pre_solve(self, price_data: mesmo.data_interface.PriceData) -> DERModelSetOperationResults:
 
         # Instantiate optimization problem.
-        optimization_problem = mesmo.utils.OptimizationProblem()
+        optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_constraints(optimization_problem)

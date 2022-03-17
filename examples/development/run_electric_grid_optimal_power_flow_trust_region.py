@@ -438,7 +438,7 @@ def get_linear_electric_grid_model_set(
 
 
 def define_trust_region_delta_parameter(
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         delta: float,
 ):
     optimization_problem.define_parameter(
@@ -451,7 +451,7 @@ def define_trust_region_delta_parameter(
     )
 
 def define_trust_region_electric_grid_parameters(
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         node_voltage_vector_reference,
         branch_power_magnitude_vector_1_reference,
         branch_power_magnitude_vector_2_reference,
@@ -481,7 +481,7 @@ def define_trust_region_electric_grid_parameters(
     )
 
 def define_trust_region_constraints(
-        optimization_problem: mesmo.utils.OptimizationProblem,
+        optimization_problem: mesmo.solutions.OptimizationProblem,
         timesteps: pd.Index
 ):
     # Define trust region constraints.
@@ -570,7 +570,7 @@ class OptimalOperationProblem(object):
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
     der_model_set: mesmo.der_models.DERModelSet
     presolve_results: mesmo.der_models.DERModelSetOperationResults = None
-    optimization_problem: mesmo.utils.OptimizationProblem
+    optimization_problem: mesmo.solutions.OptimizationProblem
     results: mesmo.problems.Results
 
     def __init__(
@@ -605,7 +605,7 @@ class OptimalOperationProblem(object):
         """
         print('Formulating optimization problem...', end='\r')
         # Instantiate optimization problem.
-        self.optimization_problem = mesmo.utils.OptimizationProblem()
+        self.optimization_problem = mesmo.solutions.OptimizationProblem()
 
         if self.electric_grid_model is not None:
             # ---------------------------------------------------------------------------------------------------------

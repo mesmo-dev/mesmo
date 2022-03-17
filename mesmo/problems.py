@@ -11,6 +11,7 @@ import mesmo.config
 import mesmo.data_interface
 import mesmo.der_models
 import mesmo.electric_grid_models
+import mesmo.solutions
 import mesmo.thermal_grid_models
 import mesmo.utils
 
@@ -311,7 +312,7 @@ class OptimalOperationProblem(Problem):
     thermal_power_flow_solution_reference: mesmo.thermal_grid_models.ThermalPowerFlowSolution = None
     linear_thermal_grid_model_set: mesmo.thermal_grid_models.LinearThermalGridModelSet = None
     der_model_set: mesmo.der_models.DERModelSet
-    optimization_problem: mesmo.utils.OptimizationProblem
+    optimization_problem: mesmo.solutions.OptimizationProblem
     results: Results
 
     @multimethod
@@ -379,7 +380,7 @@ class OptimalOperationProblem(Problem):
             mesmo.utils.log_time("DER model instantiation")
 
         # Instantiate optimization problem.
-        self.optimization_problem = mesmo.utils.OptimizationProblem()
+        self.optimization_problem = mesmo.solutions.OptimizationProblem()
 
         # Define electric grid problem.
         if self.electric_grid_model is not None:

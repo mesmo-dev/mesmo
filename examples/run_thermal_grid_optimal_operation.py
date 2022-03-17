@@ -34,7 +34,7 @@ def main():
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define thermal grid problem.
     node_head_vector_minimum = 1.5 * thermal_power_flow_solution.node_head_vector

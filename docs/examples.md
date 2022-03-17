@@ -62,7 +62,7 @@ der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 ### Defining and solving the optimization problem
 
 ```python
-optimization_problem = mesmo.utils.OptimizationProblem()
+optimization_problem = mesmo.solutions.OptimizationProblem()
 ```
 
 - We first initialize the {class}`mesmo.utils.OptimizationProblem` object, which serves as container for variables / parameters / constraints / objective of the optimization problem.
@@ -294,7 +294,7 @@ parameter_matrix = np.random.rand(dimension, dimension)
 - Note that for the optimization problem interface, accepted numerical values for parameter, constraint or objective definitions are 1) float values, 2) numpy arrays or 3) scipy sparse matrices.
 
 ```python
-optimization_problem = mesmo.utils.OptimizationProblem()
+optimization_problem = mesmo.solutions.OptimizationProblem()
 ```
 
 - We instantiate the optimization problem object serves as a container for the parameters, variables, constraints and objective terms.

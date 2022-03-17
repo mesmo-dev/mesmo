@@ -30,7 +30,7 @@ def main():
     der_model_set = mesmo.der_models.DERModelSet(scenario_name, der_name=der_name)
 
     # Define optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
     der_model_set.define_optimization_problem(optimization_problem, price_data)
 
     # Solve optimization problem.

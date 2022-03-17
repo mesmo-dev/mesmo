@@ -11,7 +11,7 @@ def main():
     # Settings.
     scenario_name = 'ieee_34node'
     flexible_der_type = ['flexible_generator', 'flexible_load']
-    sample_time = '2021-02-22 09:00:00'
+    sample_time = '2021-02-22 14:00:00'
 
     nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)
     nominal_branch_power_1 = nominal_operation.branch_power_magnitude_vector_1_per_unit.max()
@@ -30,7 +30,7 @@ def main():
 
     x = np.arange(len(optimal_flexible_der_active_power_per_unit.columns))
     width = 0.35
-    fig, axes = plt.subplots(1, figsize=(12, 6))
+    fig, axes = plt.subplots(1, figsize=(20, 6))
     axes.bar(x + width / 2,
              optimal_flexible_der_active_power_per_unit.loc[sample_time],
              width=width,
@@ -110,13 +110,13 @@ def main():
 
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
-        optimal_branch_power_2.loc['line', slice(None), i].plot(
+        optimal_branch_power_2.loc[slice(None), slice(None), i].plot(
             ax=axes[i - 1],
             label=f'Max optimal line loading phase {i}',
             color='b',
             marker='*'
         )
-        nominal_branch_power_2.loc['line', slice(None), i].plot(
+        nominal_branch_power_2.loc[slice(None), slice(None), i].plot(
             ax=axes[i - 1],
             label=f'Max nominal line loading phase {i}',
             color='r',

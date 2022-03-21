@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 pd.options.plotting.backend = "matplotlib"
 import mesmo
 
@@ -46,7 +45,7 @@ def main():
     fig.set_tight_layout(True)
     axes.set_ylabel('Power dispatch [p.u]')
     axes.title.set_text(f"Flexible DER's active power dispatch at {sample_time}")
-    plt.xticks(rotation=-40, fontsize=10)
+    plt.xticks(rotation=-90, fontsize=10)
     axes.legend()
     axes.grid()
     fig.show()
@@ -95,9 +94,9 @@ def main():
             marker='*'
         )
     for i in [1, 2, 3]:
-        x = np.arange(len(nominal_branch_power_1[:, :, i].index))
+        x = np.arange(len(nominal_branch_power_1[:, :, i].index[:-2]))
         axes[i - 1].set_xticks(x)
-        axes[i - 1].set_xticklabels(nominal_branch_power_1[:, :, i].index, rotation=-30, fontsize=8, minor=False)
+        axes[i - 1].set_xticklabels(nominal_branch_power_1[:, :, i].index[:-2], rotation=-30, fontsize=8, minor=False)
         # axes[i-1].set_ylim([0, 7])
         axes[i - 1].set_ylabel('Loading [p.u]')
         axes[i - 1].legend()
@@ -110,22 +109,22 @@ def main():
 
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
-        optimal_branch_power_2.loc[slice(None), slice(None), i].plot(
+        optimal_branch_power_2.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
             label=f'Max optimal line loading phase {i}',
             color='b',
             marker='*'
         )
-        nominal_branch_power_2.loc[slice(None), slice(None), i].plot(
+        nominal_branch_power_2.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
             label=f'Max nominal line loading phase {i}',
             color='r',
             marker='*'
         )
     for i in [1, 2, 3]:
-        x = np.arange(len(nominal_branch_power_2[:, :, i].index))
+        x = np.arange(len(nominal_branch_power_2[:, :, i].index[:-2]))
         axes[i - 1].set_xticks(x)
-        axes[i - 1].set_xticklabels(nominal_branch_power_2[:, :, i].index, rotation=-30, fontsize=8, minor=False)
+        axes[i - 1].set_xticklabels(nominal_branch_power_2[:, :, i].index[:-2], rotation=-30, fontsize=8, minor=False)
         # axes[i-1].set_ylim([0, 7])
         axes[i - 1].set_ylabel('Loading [p.u]')
         axes[i - 1].legend()

@@ -1,10 +1,10 @@
 """Problems module for mathematical optimization and simulation problem type definitions."""
 
-import datetime
 import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
+import tqdm
 import typing
 
 import mesmo.config
@@ -25,26 +25,63 @@ class Results(
     mesmo.electric_grid_models.ElectricGridDLMPResults,
     mesmo.thermal_grid_models.ThermalGridDLMPResults,
 ):
+    """Results object, which serves as data object to hold structured results variables from solved problems."""
 
     price_data: mesmo.data_interface.PriceData
 
 
 class ResultsDict(typing.Dict[str, Results]):
-
-    pass
-
-
-class Problem(mesmo.utils.ObjectBase):
-
-    pass
+    """Results dictionary, which serves as collection object for labelled results objects."""
 
 
-class ProblemDict(typing.Dict[str, Problem]):
+class ProblemBase(mesmo.utils.ObjectBase):
+    """Problem base object, which serves as abstract base class for problem objects."""
 
-    pass
+    def solve(self):
+        raise NotImplementedError
+
+    def get_results(self) -> Results:
+        raise NotImplementedError
 
 
-class NominalOperationProblem(Problem):
+class ProblemDict(typing.Dict[str, ProblemBase]):
+    """Problem dictionary, which serves as collection object for labelled problem objects."""
+
+    def solve(self):
+        """Solve all problems within this `ProblemDict`."""
+
+        # Loop over problems with tqdm to show progress bar.
+        mesmo.utils.log_time("solve problems", logger_object=logger)
+        for problem in tqdm.tqdm(
+            self.values(),
+            total=len(self),
+            disable=(mesmo.config.config["logs"]["level"] != "debug"),  # Progress bar only shown in debug mode.
+        ):
+            # Solve individual problem.
+            problem.solve()
+        mesmo.utils.log_time("solve problems", logger_object=logger)
+
+    def get_results(self) -> ResultsDict:
+        """Get results for all problems within this `ProblemDict`."""
+
+        # Instantiate results dict.
+        results_dict = ResultsDict({label: Results() for label in self.keys()})
+
+        # Loop over problems with tqdm to show progress bar.
+        mesmo.utils.log_time("get results", logger_object=logger)
+        for label, problem in tqdm.tqdm(
+            self.items(),
+            total=len(self),
+            disable=(mesmo.config.config["logs"]["level"] != "debug"),  # Progress bar only shown in debug mode.
+        ):
+            # Get individual results.
+            results_dict[label] = problem.get_results()
+        mesmo.utils.log_time("get results", logger_object=logger)
+
+        return results_dict
+
+
+class NominalOperationProblem(ProblemBase):
     """Nominal operation problem object, consisting of the corresponding electric / thermal grid models,
     reference power flow solutions and DER model set for the given scenario.
 
@@ -282,7 +319,7 @@ class NominalOperationProblem(Problem):
         return self.results
 
 
-class OptimalOperationProblem(Problem):
+class OptimalOperationProblem(ProblemBase):
     """Optimal operation problem object, consisting of an optimization problem as well as the corresponding
     electric / thermal grid models, reference power flow solutions, linear grid models and DER model set
     for the given scenario.

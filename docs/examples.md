@@ -65,7 +65,7 @@ der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 optimization_problem = mesmo.solutions.OptimizationProblem()
 ```
 
-- We first initialize the {class}`mesmo.utils.OptimizationProblem` object, which serves as container for variables / parameters / constraints / objective of the optimization problem.
+- We first initialize the {class}`mesmo.solutions.OptimizationProblem` object, which serves as container for variables / parameters / constraints / objective of the optimization problem.
 
 ```python
 linear_electric_grid_model_set.define_optimization_problem(optimization_problem, price_data)
@@ -79,7 +79,7 @@ der_model_set.define_optimization_problem(optimization_problem, price_data)
 optimization_problem.solve()
 ```
 
-- We call the `solve()` method to invoke the optimization solver. Internally this method first generates the LP/QP standard form and then passes the problem to the solver interface, i.e., direct via `gurobipy` or indirect via `cvxpy`. Please refer to the class documentation of {class}`mesmo.utils.OptimizationProblem` for more on this.
+- We call the `solve()` method to invoke the optimization solver. Internally this method first generates the LP/QP standard form and then passes the problem to the solver interface, i.e., direct via `gurobipy` or indirect via `cvxpy`. Please refer to the class documentation of {class}`mesmo.solutions.OptimizationProblem` for more on this.
 - The problem solution is stored within `optimization_problem` in terms of variable and dual vectors.
 
 ### Retrieving and evaluating results
@@ -298,7 +298,7 @@ optimization_problem = mesmo.solutions.OptimizationProblem()
 ```
 
 - We instantiate the optimization problem object serves as a container for the parameters, variables, constraints and objective terms.
-- As documented at {class}`mesmo.utils.OptimizationProblem`, the optimization problem objects exposes methods for problem setup & solution, which are utilized in the following.
+- As documented at {class}`mesmo.solutions.OptimizationProblem`, the optimization problem objects exposes methods for problem setup & solution, which are utilized in the following.
 
 ### Defining parameters
 

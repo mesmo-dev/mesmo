@@ -511,7 +511,7 @@ def write_figure_plotly(figure: go.Figure, results_path: str, file_format=mesmo.
 
 
 def OptimizationProblem() -> "mesmo.solutions.OptimizationProblem":
-    """`mesmo.utils.OptimizationProblem` is a placeholder for `mesmo.solutions.OptimizationProblem` for backwards
+    """:class:`mesmo.utils.OptimizationProblem` is a placeholder for :class:`mesmo.solutions.OptimizationProblem` for backwards
     compatibility and will be removed in a future version of MESMO.
     """
 

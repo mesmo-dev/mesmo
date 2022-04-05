@@ -72,7 +72,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         This problem can be defined and solved with the optimization problem interface as follows::
 
             # Instantiate optimization problem.
-            optimization_problem = mesmo.utils.OptimizationProblem()
+            optimization_problem = mesmo.solutions.OptimizationProblem()
 
             # Define optimization parameters.
             optimization_problem.define_parameter('parameter_matrix', parameter_matrix)

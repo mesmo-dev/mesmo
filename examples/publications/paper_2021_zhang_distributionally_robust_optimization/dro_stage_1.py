@@ -46,7 +46,7 @@ class Stage1(object):
                 ] = 0.0
 
         # Instantiate optimization problem.
-        self.optimization_problem = mesmo.utils.OptimizationProblem()
+        self.optimization_problem = mesmo.solutions.OptimizationProblem()
 
         # Define DER problem.
         self.der_model_set.define_optimization_variables(
@@ -188,7 +188,7 @@ def main():
     stage_1 = Stage1(scenario_name, dro_data_set)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define optimization problem.
     optimization_problem.define_variable('x_vector', index=range(len(stage_1.optimization_problem.variables)))

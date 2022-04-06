@@ -107,7 +107,7 @@ class Stage2(object):
         )
 
         # Instantiate optimization problem.
-        self.optimization_problem = mesmo.utils.OptimizationProblem()
+        self.optimization_problem = mesmo.solutions.OptimizationProblem()
 
         # Re-define stage 1 variables.
         # - This is needed to retain the appropriate dimensions for the combined problem.
@@ -450,7 +450,7 @@ def main():
     stage_1 = Stage1(scenario_name, dro_data_set)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define optimization problem.
     optimization_problem.define_variable('x_vector', index=range(len(stage_1.optimization_problem.variables)))
@@ -479,7 +479,7 @@ def main():
     stage_2 = Stage2(scenario_name, dro_data_set)
 
     # Re-instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define optimization problem.
     optimization_problem.define_variable('stage_1_vector', index=stage_2.stage_1_index)

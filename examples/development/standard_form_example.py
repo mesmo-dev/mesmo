@@ -70,7 +70,7 @@ def main():
     # Instantiate optimization problem.
     mesmo.utils.log_time('standard-form interface')
     mesmo.utils.log_time('standard-form problem')
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define linear electric grid model set problem.
     linear_electric_grid_model_set.define_optimization_variables(optimization_problem)

@@ -38,7 +38,7 @@ def main():
     stage_2 = Stage2(scenario_name, dro_data_set, enable_electric_grid_model=enable_electric_grid_model)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     mesmo.utils.logger.info('Define DRO constants and variables')
 

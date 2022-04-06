@@ -40,6 +40,12 @@ This reference is work in progress.
 .. automodule:: mesmo.data_interface
 ```
 
+## `mesmo.solutions`
+
+```{eval-rst}
+.. automodule:: mesmo.solutions
+```
+
 ## `mesmo.utils`
 
 ```{eval-rst}

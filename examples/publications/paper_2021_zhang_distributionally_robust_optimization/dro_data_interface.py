@@ -60,7 +60,7 @@ class DROAmbiguitySet(object):
     def __init__(
             self,
             scenario_name: str,
-            optimization_problem_stage_2: mesmo.utils.OptimizationProblem,
+            optimization_problem_stage_2: mesmo.solutions.OptimizationProblem,
             delta_index: np.ndarray,
             dro_data_set: DRODataSet,
             stage_2_delta_disturbances: pd.DataFrame

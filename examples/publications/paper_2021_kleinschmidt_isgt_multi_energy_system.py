@@ -55,7 +55,7 @@ def main(
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define electric grid problem.
     node_voltage_magnitude_vector_minimum = 0.5 * np.abs(electric_grid_model.node_voltage_vector_reference)

@@ -69,7 +69,7 @@ def main():
         mesmo.utils.logger.info(f"Cheap SO: {test_index} out of {so_test_number}")
 
         # Instantiate optimization problem.
-        optimization_problem = mesmo.utils.OptimizationProblem()
+        optimization_problem = mesmo.solutions.OptimizationProblem()
 
         optimization_problem.define_variable(
             'stage_1_vector', stage_1_index=range(len(stage_1.optimization_problem.variables))

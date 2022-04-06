@@ -21,7 +21,7 @@ def main():
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
     # Instantiate optimization problem.
-    optimization_problem = mesmo.utils.OptimizationProblem()
+    optimization_problem = mesmo.solutions.OptimizationProblem()
 
     # Define optimization problem.
     linear_electric_grid_model_set.define_optimization_problem(optimization_problem, price_data)

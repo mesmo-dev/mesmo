@@ -1,6 +1,5 @@
 """Example script for EV charging study."""
 
-import cvxpy as cp
 import numpy as np
 import os
 import pandas as pd
@@ -99,16 +98,10 @@ def main():
             )
 
     # Solve problems.
-    for problem in problem_dict.values():
-        problem.solve()
+    problem_dict.solve()
 
     # Obtain results.
-    results_dict = (
-        mesmo.problems.ResultsDict({
-            label: problem.get_results()
-            for label, problem in problem_dict.items()
-        })
-    )
+    results_dict = problem_dict.get_results()
     results_sets = dict()
     results_sets['_nominal'] = {
         key: value

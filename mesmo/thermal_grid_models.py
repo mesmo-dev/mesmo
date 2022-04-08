@@ -373,9 +373,8 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
-    branch_flow_vector: np.ndarray
-    branch_head_vector: np.ndarray
     node_head_vector: np.ndarray
+    branch_flow_vector: np.ndarray
     pump_power: float
 
     @multimethod

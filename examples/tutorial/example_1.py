@@ -1,7 +1,7 @@
 """MESMO tutorial: Example 1."""
 
 import os
-import plotly.express as px
+import plotly.graph_objects as go
 
 import mesmo
 
@@ -40,7 +40,14 @@ def main():
     results.save(results_path)
 
     # Plot some results.
-    figure = px.line(results.branch_power_magnitude_vector_1.loc[:, ('line', '1', 1)].rename('Line 1; phase 1'))
+    figure = go.Figure()
+    figure.add_scatter(
+        x=results.branch_power_magnitude_vector_1.index,
+        y=results.branch_power_magnitude_vector_1.loc[:, [('line', '1', 1)]].values.ravel()
+    )
+    figure.update_layout(
+        title='Branch Power Magnitude at Line 1 (Phase 1)'
+    )
     mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'branch_power_line_1_phase_1'))
 
     # Print results path.

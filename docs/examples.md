@@ -29,7 +29,7 @@ The tutorial will work through the following steps:
 
 ```python
 import os
-import plotly.express as px
+import plotly.graph_objects as go
 import mesmo
 ```
 
@@ -100,11 +100,18 @@ results.save(results_path)
 - The `save()` method of the `results` object stores all `pd.DataFrame` and `pd.Series` objects as CSV files. Note that `results` also contains the linear electric grid and DER model objects, which are stored as binary PKL files.
 
 ```python
-figure = px.line(results.branch_power_magnitude_vector_1.loc[:, ('line', '1', 1)].rename('Line 1; phase 1'))
+figure = go.Figure()
+figure.add_scatter(
+    x=results.branch_power_magnitude_vector_1.index,
+    y=results.branch_power_magnitude_vector_1.loc[:, [('line', '1', 1)]].values.ravel()
+)
+figure.update_layout(
+    title='Branch Power Magnitude at Line 1 (Phase 1)'
+)
 mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'branch_power_line_1_phase_1'))
 ```
 
-- We use `plotly.express` for quick plotting and the `write_figure_plotly()` utility function to store the plotly figure to a file. The file output of `write_figure_plotly()` can be controlled via configuration parameters as described [here](configuration_reference.md#plot-configuration).
+- We use `plotly.graph_objects` for plotting and the `write_figure_plotly()` utility function to store the plotly figure to a file. The file output of `write_figure_plotly()` can be controlled via configuration parameters as described [here](configuration_reference.md#plot-configuration).
 - To construct a relative output path for the figure, we use `os.path.join()`. This is the recommended approach for reproducibility rather than hard-coding paths.
 
 ## Tutorial 2
@@ -246,7 +253,6 @@ mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'comparison')
 ```
 
 - We create a plot to compare the DER dispatch schedule between nominal and optimal operation problem.
-- Here, we use `plotly` via the `plotly.graph_objects` interface, rather than via `plotly.express` as in [tutorial 1](#tutorial-1). Typical recommendation is to use `plotly.graph_objects` when seeking more control over the output and `plotly.express` when seeking quick results.
 
 ```python
 mesmo.utils.launch(results_path)

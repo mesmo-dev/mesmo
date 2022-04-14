@@ -1,6 +1,5 @@
 """Thermal grid models module."""
 
-import cvxpy as cp
 import itertools
 from multimethod import multimethod
 import numpy as np
@@ -250,6 +249,32 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         else:
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
+        # Define shorthands for no-source / source variables.
+        # TODO: Add in class documentation.
+        # TODO: Replace local variables in power flow / linear models.
+        node_incidence_matrix = sp.identity(len(self.nodes)).tocsr()
+        self.node_incidence_matrix_no_source = node_incidence_matrix[
+            np.ix_(range(len(self.nodes)), mesmo.utils.get_index(self.nodes, node_type="no_source"))
+        ]
+        self.node_incidence_matrix_source = node_incidence_matrix[
+            np.ix_(range(len(self.nodes)), mesmo.utils.get_index(self.nodes, node_type="source"))
+        ]
+        self.der_node_incidence_matrix_no_source = self.der_node_incidence_matrix[
+            np.ix_(mesmo.utils.get_index(self.nodes, node_type="no_source"), range(len(self.ders)))
+        ]
+        self.branch_incidence_matrix_no_source = self.branch_incidence_matrix[
+            np.ix_(range(len(self.branches)), mesmo.utils.get_index(self.nodes, node_type="no_source"))
+        ]
+        self.branch_incidence_matrix_source = self.branch_incidence_matrix[
+            np.ix_(range(len(self.branches)), mesmo.utils.get_index(self.nodes, node_type="source"))
+        ]
+        self.node_head_vector_reference_no_source = self.node_head_vector_reference[
+            mesmo.utils.get_index(self.nodes, node_type="no_source")
+        ]
+        self.node_head_vector_reference_source = self.node_head_vector_reference[
+            mesmo.utils.get_index(self.nodes, node_type="source")
+        ]
+
     def get_branch_loss_coefficient_vector(self, branch_flow_vector: np.ndarray):
 
         # Obtain branch velocity vector.
@@ -348,13 +373,39 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
     """Thermal grid power flow solution object."""
 
     der_thermal_power_vector: np.ndarray
-    branch_flow_vector: np.ndarray
-    branch_head_vector: np.ndarray
     node_head_vector: np.ndarray
+    branch_flow_vector: np.ndarray
     pump_power: float
+
+    @multimethod
+    def __init__(self, scenario_name: str):
+
+        # Obtain thermal grid model.
+        thermal_grid_model = ThermalGridModel(scenario_name)
+
+        self.__init__(thermal_grid_model)
+
+    @multimethod
+    def __init__(self, thermal_grid_model: ThermalGridModel):
+
+        # Obtain DER thermal power vector.
+        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
+
+        self.__init__(thermal_grid_model, der_thermal_power_vector)
+
+    @multimethod
+    def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
+        raise NotImplementedError
 
 
 class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
+
+    # Enable calls to `__init__` method definitions in parent class.
+    @multimethod
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @multimethod
     def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
 
         # Obtain DER thermal power vector.
@@ -405,24 +456,140 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         )
 
 
+class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
+
+    # Enable calls to `__init__` method definitions in parent class.
+    @multimethod
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @multimethod
+    def __init__(
+        self,
+        thermal_grid_model: ThermalGridModel,
+        der_thermal_power_vector: np.ndarray,
+        head_iteration_limit=100,
+        head_tolerance=1e-2,
+    ):
+
+        # Obtain DER thermal power vector.
+        self.der_thermal_power_vector = der_thermal_power_vector.ravel()
+        # Define shorthand for DER volume flow vector.
+        der_flow_vector = (
+            self.der_thermal_power_vector
+            / mesmo.config.water_density
+            / thermal_grid_model.enthalpy_difference_distribution_water
+        )
+
+        # Obtain nodal power vector.
+        node_flow_vector_no_source = (
+            thermal_grid_model.der_node_incidence_matrix_no_source @ np.transpose([der_thermal_power_vector])
+        ).ravel()
+
+        # Obtain initial nodal power and voltage vectors, assuming no load and no injection.
+        # TODO: Enable passing previous solution for initialization.
+        node_flow_vector_initial_no_source = np.zeros(node_flow_vector_no_source.shape)
+        node_head_vector_initial_no_source = thermal_grid_model.node_head_vector_reference_no_source.copy()
+        branch_flow_vector_initial = thermal_grid_model.branch_flow_vector_reference.copy()
+        branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
+            branch_flow_vector_initial
+        )
+
+        # Define nodal power vector candidate to the desired nodal power vector.
+        node_flow_vector_candidate_no_source = node_flow_vector_initial_no_source.copy()
+
+        # Instantiate Newton-Raphson iteration variables.
+        head_iteration = 0
+        head_change = np.inf
+
+        # Run Newton-Raphson iterations.
+        while (head_iteration < head_iteration_limit) & (head_change > head_tolerance):
+
+            node_head_vector_estimate_no_source = (
+                scipy.sparse.linalg.spsolve(
+                    (
+                        np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                        @ (
+                            0.5 * sp.diags(branch_flow_vector_initial ** -1)
+                            @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
+                        )
+                        @ thermal_grid_model.branch_incidence_matrix_no_source
+                    ),
+                    (
+                        np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                        @ (0.5 * (branch_flow_vector_initial ** -1))
+                        - np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                        @ (
+                            0.5 * sp.diags(branch_flow_vector_initial ** -1)
+                            @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
+                        )
+                        @ thermal_grid_model.branch_incidence_matrix_source
+                        @ thermal_grid_model.node_head_vector_reference_source
+                        + node_flow_vector_candidate_no_source
+                    )
+                )
+            )
+
+            node_head_vector_estimate = (
+                thermal_grid_model.node_incidence_matrix_no_source
+                @ node_head_vector_estimate_no_source
+                + thermal_grid_model.node_incidence_matrix_source
+                @ thermal_grid_model.node_head_vector_reference_source
+            )
+
+            branch_flow_vector_estimate = (
+                0.5 * branch_flow_vector_initial
+                - (
+                    0.5 * sp.diags(branch_flow_vector_initial ** -1)
+                    @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
+                )
+                @ thermal_grid_model.branch_incidence_matrix
+                @ node_head_vector_estimate
+            )
+
+            head_change = np.max(
+                np.abs(node_head_vector_estimate_no_source - node_head_vector_initial_no_source)
+            )
+
+            node_head_vector_initial_no_source = node_head_vector_estimate_no_source.copy()
+            branch_flow_vector_initial = branch_flow_vector_estimate.copy()
+            branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
+                branch_flow_vector_initial
+            )
+
+            head_iteration += 1
+
+        # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning
+        if head_iteration >= head_iteration_limit:
+            logger.warning(
+                "Newton-Raphson solution algorithm reached "
+                f"maximum limit of {head_iteration_limit} iterations."
+            )
+
+        # Obtain node head vector.
+        self.node_head_vector = node_head_vector_estimate
+
+        # Obtain branch volume flow vector.
+        self.branch_flow_vector = branch_flow_vector_estimate
+
+        # Obtain pump power loss.
+        self.pump_power = (
+            (2.0 * np.max(np.abs(self.node_head_vector)) + thermal_grid_model.energy_transfer_station_head_loss)
+            * -1.0
+            * np.sum(der_flow_vector)  # Source volume flow.
+            * mesmo.config.water_density
+            * mesmo.config.gravitational_acceleration
+            / thermal_grid_model.distribution_pump_efficiency
+        )
+
+
 class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
     """Thermal grid power flow solution object."""
 
+    # Enable calls to `__init__` method definitions in parent class.
     @multimethod
-    def __init__(self, scenario_name: str):
-
-        # Obtain thermal grid model.
-        thermal_grid_model = ThermalGridModel(scenario_name)
-
-        self.__init__(thermal_grid_model)
-
-    @multimethod
-    def __init__(self, thermal_grid_model: ThermalGridModel):
-
-        # Obtain DER thermal power vector.
-        der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
-
-        self.__init__(thermal_grid_model, der_thermal_power_vector)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @multimethod
     def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):

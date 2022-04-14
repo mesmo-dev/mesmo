@@ -1235,7 +1235,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             A_ub=self.get_a_matrix(),
             b_ub=b_vector,
             bounds=(None, None),
-            method='highs',
+            method="highs",
             options=dict(
                 disp=mesmo.config.config["optimization"]["show_solver_output"],
                 time_limit=mesmo.config.config["optimization"]["time_limit"],

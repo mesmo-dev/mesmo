@@ -505,51 +505,48 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         # Run Newton-Raphson iterations.
         while (head_iteration < head_iteration_limit) & (head_change > head_tolerance):
 
-            node_head_vector_estimate_no_source = (
-                scipy.sparse.linalg.spsolve(
-                    (
-                        np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                        @ (
-                            0.5 * sp.diags(branch_flow_vector_initial ** -1)
-                            @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
-                        )
-                        @ thermal_grid_model.branch_incidence_matrix_no_source
-                    ),
-                    (
-                        np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                        @ (0.5 * (branch_flow_vector_initial ** -1))
-                        - np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                        @ (
-                            0.5 * sp.diags(branch_flow_vector_initial ** -1)
-                            @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
-                        )
-                        @ thermal_grid_model.branch_incidence_matrix_source
-                        @ thermal_grid_model.node_head_vector_reference_source
-                        + node_flow_vector_candidate_no_source
+            node_head_vector_estimate_no_source = scipy.sparse.linalg.spsolve(
+                (
+                    np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                    @ (
+                        0.5
+                        * sp.diags(branch_flow_vector_initial**-1)
+                        @ sp.diags(branch_loss_coefficient_vector_initial**-1)
                     )
-                )
+                    @ thermal_grid_model.branch_incidence_matrix_no_source
+                ),
+                (
+                    np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                    @ (0.5 * (branch_flow_vector_initial**-1))
+                    - np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                    @ (
+                        0.5
+                        * sp.diags(branch_flow_vector_initial**-1)
+                        @ sp.diags(branch_loss_coefficient_vector_initial**-1)
+                    )
+                    @ thermal_grid_model.branch_incidence_matrix_source
+                    @ thermal_grid_model.node_head_vector_reference_source
+                    + node_flow_vector_candidate_no_source
+                ),
             )
 
             node_head_vector_estimate = (
-                thermal_grid_model.node_incidence_matrix_no_source
-                @ node_head_vector_estimate_no_source
-                + thermal_grid_model.node_incidence_matrix_source
-                @ thermal_grid_model.node_head_vector_reference_source
+                thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_estimate_no_source
+                + thermal_grid_model.node_incidence_matrix_source @ thermal_grid_model.node_head_vector_reference_source
             )
 
             branch_flow_vector_estimate = (
                 0.5 * branch_flow_vector_initial
                 - (
-                    0.5 * sp.diags(branch_flow_vector_initial ** -1)
-                    @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
+                    0.5
+                    * sp.diags(branch_flow_vector_initial**-1)
+                    @ sp.diags(branch_loss_coefficient_vector_initial**-1)
                 )
                 @ thermal_grid_model.branch_incidence_matrix
                 @ node_head_vector_estimate
             )
 
-            head_change = np.max(
-                np.abs(node_head_vector_estimate_no_source - node_head_vector_initial_no_source)
-            )
+            head_change = np.max(np.abs(node_head_vector_estimate_no_source - node_head_vector_initial_no_source))
 
             node_head_vector_initial_no_source = node_head_vector_estimate_no_source.copy()
             branch_flow_vector_initial = branch_flow_vector_estimate.copy()
@@ -562,8 +559,7 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning
         if head_iteration >= head_iteration_limit:
             logger.warning(
-                "Newton-Raphson solution algorithm reached "
-                f"maximum limit of {head_iteration_limit} iterations."
+                "Newton-Raphson solution algorithm reached " f"maximum limit of {head_iteration_limit} iterations."
             )
 
         # Obtain node head vector.

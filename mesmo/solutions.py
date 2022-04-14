@@ -6,6 +6,7 @@ import gurobipy as gp
 import itertools
 import numpy as np
 import pandas as pd
+import scipy.optimize
 import scipy.sparse as sp
 import typing
 
@@ -1043,6 +1044,8 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         elif mesmo.config.config["optimization"]["solver_interface"] == "direct":
             if mesmo.config.config["optimization"]["solver_name"] == "gurobi":
                 self.solve_gurobi(*self.get_gurobi_problem())
+            elif mesmo.config.config["optimization"]["solver_name"] == "highs":
+                self.solve_highs()
             # If no direct solver interface found, fall back to CVXPY interface.
             else:
                 logger.debug(
@@ -1213,6 +1216,42 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.objective = float(cvxpy_problem.objective.value)
 
         return cvxpy_problem
+
+    def solve_highs(self) -> scipy.optimize.OptimizeResult:
+        """Solve optimization problem via SciPy HiGHS interface."""
+
+        # Raise warning if Q matrix is not zero, because HiGHS interface below doesn't consider QP expressions yet.
+        if any((self.get_q_matrix() != 0).data):
+            logger.warning(f"Found QP expression: The HiGHS solver interface does not yet support QP solution.")
+
+        # Replace infinite values in b vector with maximum floating point value.
+        # - Reason: SciPy optimization interface doesn't accept infinite values.
+        b_vector = self.get_b_vector().ravel()
+        b_vector[b_vector == np.inf] = np.finfo(float).max
+
+        # Solve optimization problem.
+        scipy_result = scipy.optimize.linprog(
+            self.get_c_vector().ravel(),
+            A_ub=self.get_a_matrix(),
+            b_ub=b_vector,
+            bounds=(None, None),
+            method='highs',
+            options=dict(
+                disp=mesmo.config.config["optimization"]["show_solver_output"],
+                time_limit=mesmo.config.config["optimization"]["time_limit"],
+            ),
+        )
+
+        # Assert that solver exited with an optimal solution. If not, raise an error.
+        if not (scipy_result.status == 0):
+            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {scipy_result.message}")
+
+        # Store results.
+        self.x_vector = np.transpose([scipy_result.x])
+        self.mu_vector = np.transpose([scipy_result.ineqlin.marginals])
+        self.objective = scipy_result.fun
+
+        return scipy_result
 
     def get_results(self, x_vector: typing.Union[cp.Variable, np.ndarray] = None) -> dict:
         """Obtain results for decisions variables.

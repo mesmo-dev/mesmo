@@ -3870,6 +3870,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     ) -> ElectricGridDLMPResults:
 
         # Obtain results index sets, depending on if / if not scenarios given.
+        # TODO: Flatten index to align with other results.
         if scenarios in [None, [None]]:
             scenarios = [None]
             ders = self.electric_grid_model.ders
@@ -4404,6 +4405,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
             loss_active = ["loss_active"]
             loss_reactive = ["loss_reactive"]
         else:
+            # TODO: Check if this is correct.
             ders = (scenarios, self.electric_grid_model.ders)
             nodes = (scenarios, self.electric_grid_model.nodes)
             branches = (scenarios, self.electric_grid_model.branches)

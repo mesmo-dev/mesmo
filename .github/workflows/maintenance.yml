@@ -75,7 +75,7 @@ jobs:
       uses: psf/black@stable
       with:
         options: "--line-length 120"
-        src: "./mesmo"
+        # For future reference: Exclude submodules if this runs too long.
     - name: Commit changes
       uses: stefanzweifel/git-auto-commit-action@v4
       with:

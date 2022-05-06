@@ -61,6 +61,7 @@ setuptools.setup(
         'plotly',
         'pyyaml',
         'ray[default]',
+        'redis',  # Temporary fix for ray import error. See: https://github.com/ray-project/ray/issues/24169
         'scipy',
         'tqdm',
     ]

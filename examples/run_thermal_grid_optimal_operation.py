@@ -1,8 +1,6 @@
 """Example script for setting up and solving a thermal grid optimal operation problem."""
 
-import cvxpy as cp
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go

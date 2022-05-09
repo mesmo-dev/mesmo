@@ -4,8 +4,8 @@ import logging
 import matplotlib
 import matplotlib.pyplot as plt
 import multiprocessing
-import os
 import pandas as pd
+import pathlib
 import plotly.graph_objects as go
 import plotly.io as pio
 import yaml
@@ -20,13 +20,13 @@ def get_config() -> dict:
     """
 
     # Load default configuration values.
-    with open(os.path.join(base_path, "mesmo", "config_default.yml"), "r") as file:
+    with open((base_path / "mesmo" / "config_default.yml"), "r") as file:
         default_config = yaml.safe_load(file)
 
     # Create local `config.yml` for custom configuration in base directory, if not existing.
     # - The additional data paths setting is added for reference.
-    if not os.path.isfile(os.path.join(base_path, "config.yml")):
-        with open(os.path.join(base_path, "config.yml"), "w") as file:
+    if not (base_path / "config.yml").is_file():
+        with open((base_path / "config.yml"), "w") as file:
             file.write(
                 "# Local configuration parameters.\n"
                 "# - Configuration parameters and their defaults are defined in `mesmo/config_default.yml`\n"
@@ -36,7 +36,7 @@ def get_config() -> dict:
             )
 
     # Load custom configuration values, overwriting the default values.
-    with open(os.path.join(base_path, "config.yml"), "r") as file:
+    with open((base_path / "config.yml"), "r") as file:
         custom_config = yaml.safe_load(file)
 
     # Define utility function to recursively merge default and custom configuration.
@@ -64,23 +64,25 @@ def get_config() -> dict:
     else:
         complete_config = default_config
 
-    # Define utility function to obtain full paths.
-    # - Replace `./` with the base path and normalize paths.
-    def get_full_path(path: str) -> str:
-        if path.startswith("./"):
-            # Replace only first occurrence.
-            path = path.replace("./", base_path + os.path.sep, 1)
-        return os.path.normpath(path)
-
     # Obtain full paths.
-    complete_config["paths"]["data"] = get_full_path(complete_config["paths"]["data"])
+    complete_config["paths"]["data"] = parse_path(complete_config["paths"]["data"])
     complete_config["paths"]["additional_data"] = [
-        get_full_path(path) for path in complete_config["paths"]["additional_data"]
+        parse_path(path) for path in complete_config["paths"]["additional_data"]
     ]
-    complete_config["paths"]["database"] = get_full_path(complete_config["paths"]["database"])
-    complete_config["paths"]["results"] = get_full_path(complete_config["paths"]["results"])
+    complete_config["paths"]["database"] = parse_path(complete_config["paths"]["database"])
+    complete_config["paths"]["results"] = parse_path(complete_config["paths"]["results"])
 
     return complete_config
+
+
+def parse_path(path: str) -> pathlib.Path:
+    """Parse path strings into pathlib objects. Replaces `./` with the repository base path and normalizes paths."""
+
+    if path.startswith("./"):
+        # Replace only first occurrence.
+        return base_path / path.replace("./", "", 1)
+    else:
+        return pathlib.Path(path)
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -119,7 +121,7 @@ def get_parallel_pool() -> multiprocessing.Pool:
 
 
 # Obtain repository base directory path.
-base_path = os.path.dirname(os.path.dirname(os.path.normpath(__file__)))
+base_path = pathlib.Path(__file__).parent.parent
 
 # Obtain configuration dictionary.
 config = get_config()

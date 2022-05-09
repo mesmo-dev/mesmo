@@ -16,8 +16,8 @@ def main():
     # Settings.
     scenario_name = 'singapore_tanjongpagar'
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
-    os.mkdir(os.path.join(results_path, 'standard_form'))
-    os.mkdir(os.path.join(results_path, 'traditional_form'))
+    os.mkdir((results_path / 'standard_form'))
+    os.mkdir((results_path / 'traditional_form'))
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     # mesmo.data_interface.recreate_database()
@@ -117,7 +117,7 @@ def main():
         objective_1_thermal_grid = linear_thermal_grid_model_set.evaluate_optimization_objective(results_1, price_data)
     results_1.update(der_model_set.get_optimization_results(optimization_problem))
     objective_1_der = der_model_set.evaluate_optimization_objective(results_1, price_data, has_electric_grid_objective=True)
-    results_1.save(os.path.join(results_path, 'standard_form'))
+    results_1.save((results_path / 'standard_form'))
     mesmo.utils.log_time('standard-form interface')
     der_model_set.pre_solve(price_data)
 
@@ -204,7 +204,7 @@ def main():
         results_2.update(linear_thermal_grid_model.get_optimization_results(optimization_problem_cvxpy))
         results_2.update(linear_thermal_grid_model.get_optimization_dlmps(optimization_problem_cvxpy, price_data))
     objective_2 = float(optimization_problem_cvxpy.objective.value)
-    results_2.save(os.path.join(results_path, 'traditional_form'))
+    results_2.save((results_path / 'traditional_form'))
     mesmo.utils.log_time('cvxpy get results')
     mesmo.utils.log_time('cvxpy interface')
 
@@ -243,7 +243,7 @@ def main():
                 legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
             )
             # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'output_{der_name}_{output}'))
+            mesmo.utils.write_figure_plotly(figure, (results_path / f'output_{der_name}_{output}'))
 
     for der_name, der_model in der_model_set.flexible_der_models.items():
         for disturbance in der_model.disturbances:
@@ -260,7 +260,7 @@ def main():
                 showlegend=False
             )
             # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'disturbance_{der_name}_{disturbance}'))
+            mesmo.utils.write_figure_plotly(figure, (results_path / f'disturbance_{der_name}_{disturbance}'))
 
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
 
@@ -276,7 +276,7 @@ def main():
                 xaxis=go.layout.XAxis(tickformat='%H:%M')
             )
             # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+            mesmo.utils.write_figure_plotly(figure, (results_path / f'price_{commodity_type}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

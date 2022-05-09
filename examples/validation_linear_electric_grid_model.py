@@ -1,7 +1,6 @@
 """Example script for testing / validating the linear electric grid model."""
 
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -306,27 +305,27 @@ def main():
     loss_reactive_linear_model *= base_power
 
     # Store results as CSV.
-    der_power_vector_active.to_csv(os.path.join(results_path, 'der_power_vector_active.csv'))
-    der_power_vector_reactive.to_csv(os.path.join(results_path, 'der_power_vector_reactive.csv'))
-    der_power_vector_active_change.to_csv(os.path.join(results_path, 'der_power_vector_active_change.csv'))
-    der_power_vector_reactive_change.to_csv(os.path.join(results_path, 'der_power_vector_reactive_change.csv'))
-    node_voltage_vector_power_flow.to_csv(os.path.join(results_path, 'node_voltage_vector_power_flow.csv'))
-    node_voltage_vector_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_linear_model.csv'))
-    node_voltage_vector_magnitude_power_flow.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_power_flow.csv'))
-    node_voltage_vector_magnitude_linear_model.to_csv(os.path.join(results_path, 'node_voltage_vector_magnitude_linear_model.csv'))
-    branch_power_vector_1_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_power_flow.csv'))
-    branch_power_vector_1_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_linear_model.csv'))
-    branch_power_vector_2_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_power_flow.csv'))
-    branch_power_vector_2_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_linear_model.csv'))
-    branch_power_vector_1_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_power_flow.csv'))
-    branch_power_vector_1_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_1_magnitude_linear_model.csv'))
-    branch_power_vector_2_magnitude_power_flow.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_power_flow.csv'))
-    branch_power_vector_2_magnitude_linear_model.to_csv(os.path.join(results_path, 'branch_power_vector_2_magnitude_linear_model.csv'))
-    loss_active_power_flow.to_csv(os.path.join(results_path, 'loss_active_power_flow.csv'))
-    loss_active_linear_model.to_csv(os.path.join(results_path, 'loss_active_linear_model.csv'))
-    loss_reactive_power_flow.to_csv(os.path.join(results_path, 'loss_reactive_power_flow.csv'))
-    loss_reactive_linear_model.to_csv(os.path.join(results_path, 'loss_reactive_linear_model.csv'))
-    linear_electric_grid_model_error.to_csv(os.path.join(results_path, 'linear_electric_grid_model_error.csv'))
+    der_power_vector_active.to_csv(results_path / 'der_power_vector_active.csv')
+    der_power_vector_reactive.to_csv(results_path / 'der_power_vector_reactive.csv')
+    der_power_vector_active_change.to_csv(results_path / 'der_power_vector_active_change.csv')
+    der_power_vector_reactive_change.to_csv(results_path / 'der_power_vector_reactive_change.csv')
+    node_voltage_vector_power_flow.to_csv(results_path / 'node_voltage_vector_power_flow.csv')
+    node_voltage_vector_linear_model.to_csv(results_path / 'node_voltage_vector_linear_model.csv')
+    node_voltage_vector_magnitude_power_flow.to_csv(results_path / 'node_voltage_vector_magnitude_power_flow.csv')
+    node_voltage_vector_magnitude_linear_model.to_csv(results_path / 'node_voltage_vector_magnitude_linear_model.csv')
+    branch_power_vector_1_power_flow.to_csv(results_path / 'branch_power_vector_1_power_flow.csv')
+    branch_power_vector_1_linear_model.to_csv(results_path / 'branch_power_vector_1_linear_model.csv')
+    branch_power_vector_2_power_flow.to_csv(results_path / 'branch_power_vector_2_power_flow.csv')
+    branch_power_vector_2_linear_model.to_csv(results_path / 'branch_power_vector_2_linear_model.csv')
+    branch_power_vector_1_magnitude_power_flow.to_csv(results_path / 'branch_power_vector_1_magnitude_power_flow.csv')
+    branch_power_vector_1_magnitude_linear_model.to_csv(results_path / 'branch_power_vector_1_magnitude_linear_model.csv')
+    branch_power_vector_2_magnitude_power_flow.to_csv(results_path / 'branch_power_vector_2_magnitude_power_flow.csv')
+    branch_power_vector_2_magnitude_linear_model.to_csv(results_path / 'branch_power_vector_2_magnitude_linear_model.csv')
+    loss_active_power_flow.to_csv(results_path / 'loss_active_power_flow.csv')
+    loss_active_linear_model.to_csv(results_path / 'loss_active_linear_model.csv')
+    loss_reactive_power_flow.to_csv(results_path / 'loss_reactive_power_flow.csv')
+    loss_reactive_linear_model.to_csv(results_path / 'loss_reactive_linear_model.csv')
+    linear_electric_grid_model_error.to_csv(results_path / 'linear_electric_grid_model_error.csv')
 
     # Plot results.
 
@@ -365,7 +364,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'voltage_magnitude_{node}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'voltage_magnitude_{node}'))
 
         # Voltage real component.
         figure = go.Figure()
@@ -399,7 +398,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'voltage_real_{node}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'voltage_real_{node}'))
 
         # Voltage imaginary component.
         figure = go.Figure()
@@ -433,7 +432,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'voltage_imag_{node}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'voltage_imag_{node}'))
 
     # Branch flow.
     for branch_index, branch in enumerate(electric_grid_model.branches):
@@ -470,7 +469,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_1_active_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_1_active_{branch}'))
 
         # Branch power reactive component 1.
         figure = go.Figure()
@@ -497,7 +496,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_1_reactive_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_1_reactive_{branch}'))
 
         # Branch power active component 2.
         figure = go.Figure()
@@ -531,7 +530,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_2_active_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_2_active_{branch}'))
 
         # Branch power reactive component 2.
         figure = go.Figure()
@@ -558,7 +557,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_2_reactive_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_2_reactive_{branch}'))
 
         # Branch power magnitude 1.
         figure = go.Figure()
@@ -592,7 +591,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_1_magnitude_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_1_magnitude_{branch}'))
 
         # Branch power magnitude 2.
         figure = go.Figure()
@@ -626,7 +625,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_power_2_magnitude_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_power_2_magnitude_{branch}'))
 
     # Loss active.
     figure = go.Figure()
@@ -660,7 +659,7 @@ def main():
         xaxis_title="Power multiplier",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'loss_active'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'loss_active'))
 
     # Loss reactive.
     figure = go.Figure()
@@ -687,7 +686,7 @@ def main():
         xaxis_title="Power multiplier",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'loss_reactive'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'loss_reactive'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

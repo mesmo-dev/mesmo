@@ -1,8 +1,8 @@
 """DRO problem stage 1."""
 
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse as sp
@@ -179,7 +179,7 @@ def main():
     mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    dro_data_set = DRODataSet(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'dro_data'))
+    dro_data_set = DRODataSet((pathlib.Path(__file__).parent / 'dro_data'))
 
     # Get results path.
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -212,7 +212,7 @@ def main():
     stage_1.optimization_problem.results = stage_1.optimization_problem.get_results(optimization_problem.x_vector)
     results = stage_1.der_model_set.get_optimization_results(stage_1.optimization_problem, stage_1.scenarios_stage_1)
 
-    pd.DataFrame(optimization_problem.x_vector).to_csv(os.path.join(results_path, f's_1_vector_det.csv'))
+    pd.DataFrame(optimization_problem.x_vector).to_csv((results_path / f's_1_vector_det.csv'))
 
     # Obtain reserve results.
     energy_stage_1 = (
@@ -226,12 +226,12 @@ def main():
     )
 
     #
-    pd.DataFrame(energy_stage_1).to_csv(os.path.join(results_path, f'energy_det.csv'))
-    pd.DataFrame(up_reserve_stage_1).to_csv(os.path.join(results_path, f'up_reserve_det.csv'))
-    pd.DataFrame(down_reserve_stage_1).to_csv(os.path.join(results_path, f'down_reserve_det.csv'))
+    pd.DataFrame(energy_stage_1).to_csv((results_path / f'energy_det.csv'))
+    pd.DataFrame(up_reserve_stage_1).to_csv((results_path / f'up_reserve_det.csv'))
+    pd.DataFrame(down_reserve_stage_1).to_csv((results_path / f'down_reserve_det.csv'))
     objective_det = {'objective_value': [optimization_problem.objective]}
     objective_det_df = pd.DataFrame(data=objective_det)
-    objective_det_df.to_csv(os.path.join(results_path, f'objective_det.csv'))
+    objective_det_df.to_csv((results_path / f'objective_det.csv'))
 
 
     # Plot some results.
@@ -272,7 +272,7 @@ def main():
         legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.3, yanchor='auto')
     )
     # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / f'0_power_balance'))
 
     for der_name, der_model in stage_1.der_model_set.flexible_der_models.items():
 
@@ -318,8 +318,8 @@ def main():
                 legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.3, yanchor='auto', font=dict(size=9))
             )
             # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(
-                results_path, f'der_{der_model.der_type}_{der_name}_output_{output}'
+            mesmo.utils.write_figure_plotly(figure, (
+                results_path / f'der_{der_model.der_type}_{der_name}_output_{output}'
             ))
 
     # Print results path.

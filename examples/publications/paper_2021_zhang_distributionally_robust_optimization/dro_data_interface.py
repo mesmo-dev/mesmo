@@ -1,8 +1,8 @@
 """DRO data interface."""
 
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 
 import mesmo
 
@@ -23,25 +23,25 @@ class DRODataSet(object):
 
     def __init__(
             self,
-            data_path: str,
+            data_path: pathlib.Path,
     ):
 
-        self.forecast_price_raw = pd.read_csv(os.path.join(data_path, 'price_forecast_2021_26_07.csv'))
+        self.forecast_price_raw = pd.read_csv((data_path / 'price_forecast_2021_26_07.csv'))
         self.variance_building_disturbance = pd.read_csv(
-            os.path.join(data_path, 'flex_building_disturbance_timeseries_var.csv')
+            (data_path / 'flex_building_disturbance_timeseries_var.csv')
         )
         self.mean_building_disturbance = pd.read_csv(
-            os.path.join(data_path, 'flex_building_disturbance_timeseries_mean.csv')
+            (data_path / 'flex_building_disturbance_timeseries_mean.csv')
         )
         self.max_building_disturbance = pd.read_csv(
-            os.path.join(data_path, 'flex_building_disturbance_timeseries_max.csv')
+            (data_path / 'flex_building_disturbance_timeseries_max.csv')
         )
         self.min_building_disturbance = pd.read_csv(
-            os.path.join(data_path, 'flex_building_disturbance_timeseries_min.csv')
+            (data_path / 'flex_building_disturbance_timeseries_min.csv')
         )
         self.energy_price = self.forecast_price_raw['USEP($/MWh)'] / 100
         self.contingency_reserve_price = self.forecast_price_raw['Contingency($/MWh)'] / 100
-        self.dro_base_data = pd.read_csv(os.path.join(data_path, 'dro_base_data.csv'))
+        self.dro_base_data = pd.read_csv((data_path / 'dro_base_data.csv'))
         self.mean_energy_price = self.energy_price.mean()
         self.variance_energy_price = (self.energy_price-self.mean_energy_price).var()
         self.mean_contingency_price = self.contingency_reserve_price.mean()

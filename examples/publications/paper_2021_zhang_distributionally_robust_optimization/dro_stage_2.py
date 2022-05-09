@@ -1,8 +1,8 @@
 """DRO problem stage 2."""
 
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse as sp
@@ -444,7 +444,7 @@ def main():
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Get data.
-    dro_data_set = DRODataSet(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'dro_data'))
+    dro_data_set = DRODataSet((pathlib.Path(__file__).parent / 'dro_data'))
 
     # Get standard form of stage 1.
     stage_1 = Stage1(scenario_name, dro_data_set)
@@ -550,7 +550,7 @@ def main():
             name=f'deviation_down_{scenario}',
             line=go.scatter.Line(shape='hv', width=6-scenario_index, dash='dot')
         )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / f'0_power_balance'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

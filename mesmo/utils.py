@@ -3,12 +3,12 @@
 import copy
 import datetime
 import functools
-import glob
 import itertools
 import logging
 import numpy as np
 import os
 import pandas as pd
+import pathlib
 import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -112,7 +112,7 @@ class ResultsBase(ObjectBase):
             if attributes[attribute_name] is not None:
                 self.__setattr__(attribute_name, attributes[attribute_name])
 
-    def save(self, results_path: str):
+    def save(self, results_path: pathlib.Path):
         """Store results to files at given results path.
 
         - Each results variable / attribute will be stored as separate file with the attribute name as file name.
@@ -127,24 +127,24 @@ class ResultsBase(ObjectBase):
         for attribute_name in attributes:
             if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
                 # Pandas Series / DataFrame are stored to CSV.
-                attributes[attribute_name].to_csv(os.path.join(results_path, f"{attribute_name}.csv"))
+                attributes[attribute_name].to_csv((results_path / f"{attribute_name}.csv"))
             else:
                 # Other objects are stored to pickle binary file (PKL).
-                with open(os.path.join(results_path, f"{attribute_name}.pkl"), "wb") as output_file:
+                with open((results_path / f"{attribute_name}.pkl"), "wb") as output_file:
                     pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
-    def load(self, results_path: str):
+    def load(self, results_path: pathlib.Path):
         """Load results from given path."""
 
         # Obtain all CSV and PKL files at results path.
-        files = glob.glob(os.path.join(results_path, "*.csv")) + glob.glob(os.path.join(results_path, "*.pkl"))
+        files = list(results_path.glob("*.csv")) + list(results_path.glob("*.pkl"))
 
         # Load all files which correspond to valid attributes.
         for file in files:
 
             # Obtain file extension / attribute name.
-            file_extension = os.path.splitext(file)[1]
-            attribute_name = os.path.basename(os.path.splitext(file)[0])
+            file_extension = file.suffix
+            attribute_name = file.stem
 
             # Load file and set attribute value.
             if attribute_name in typing.get_type_hints(type(self)):
@@ -438,7 +438,7 @@ def get_timestamp(time: datetime.datetime = None) -> str:
     return time.strftime("%Y-%m-%d_%H-%M-%S")
 
 
-def get_results_path(base_name: str, scenario_name: str = None) -> str:
+def get_results_path(base_name: str, scenario_name: str = None) -> pathlib.Path:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
     created on disk along with this.
@@ -449,16 +449,15 @@ def get_results_path(base_name: str, scenario_name: str = None) -> str:
     """
 
     # Preprocess results path name components, including removing non-alphanumeric characters.
-    base_name = re.sub(r"\W-+", "", os.path.basename(os.path.splitext(base_name)[0])) + "_"
+    base_name = re.sub(r"\W-+", "", pathlib.Path(base_name).stem) + "_"
     scenario_name = "" if scenario_name is None else re.sub(r"\W-+", "", scenario_name) + "_"
     timestamp = mesmo.utils.get_timestamp()
 
     # Obtain results path.
-    results_path = os.path.join(mesmo.config.config["paths"]["results"], f"{base_name}{scenario_name}{timestamp}")
+    results_path = mesmo.config.config["paths"]["results"] / f"{base_name}{scenario_name}{timestamp}"
 
     # Instantiate results directory.
-    # TODO: Catch error if dir exists.
-    os.mkdir(results_path)
+    results_path.mkdir()
 
     return results_path
 
@@ -518,23 +517,23 @@ def get_plotly_mapbox_zoom_center(
     return zoom, center
 
 
-def launch(path):
+def launch(path: pathlib.Path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
-    if not os.path.exists(path):
+    if not path.exists():
         raise FileNotFoundError(f"Cannot launch file or directory that does not exist: {path}")
 
     if sys.platform == "win32":
-        os.startfile(path)
+        os.startfile(str(path))
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
-        subprocess.Popen(["xdg-open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["xdg-open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 def write_figure_plotly(
         figure: go.Figure,
-        results_path: str,
+        results_path: pathlib.Path,
         file_format=mesmo.config.config["plots"]["file_format"],
         width=mesmo.config.config["plots"]["plotly_figure_width"],
         height=mesmo.config.config["plots"]["plotly_figure_height"],

@@ -1,7 +1,6 @@
 """Example script for testing / validating the thermal grid power flow solution."""
 
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -140,12 +139,12 @@ def main():
     pump_power_method_2 *= base_power
 
     # Store results as CSV.
-    der_thermal_power_vector.to_csv(os.path.join(results_path, 'der_thermal_power_vector.csv'))
-    node_head_vector_method_1.to_csv(os.path.join(results_path, 'node_head_vector_method_1.csv'))
-    node_head_vector_method_2.to_csv(os.path.join(results_path, 'node_head_vector_method_2.csv'))
-    pump_power_method_1.to_csv(os.path.join(results_path, 'pump_power_method_1.csv'))
-    pump_power_method_2.to_csv(os.path.join(results_path, 'pump_power_method_2.csv'))
-    power_flow_solution_error.to_csv(os.path.join(results_path, 'power_flow_solution_error.csv'))
+    der_thermal_power_vector.to_csv(results_path / 'der_thermal_power_vector.csv')
+    node_head_vector_method_1.to_csv(results_path / 'node_head_vector_method_1.csv')
+    node_head_vector_method_2.to_csv(results_path / 'node_head_vector_method_2.csv')
+    pump_power_method_1.to_csv(results_path / 'pump_power_method_1.csv')
+    pump_power_method_2.to_csv(results_path / 'pump_power_method_2.csv')
+    power_flow_solution_error.to_csv(results_path / 'power_flow_solution_error.csv')
 
     # Plot results.
 
@@ -171,7 +170,7 @@ def main():
         xaxis_title="Node",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'nominal_head'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'nominal_head'))
 
     # Nominal branch flow.
     figure = go.Figure()
@@ -201,7 +200,7 @@ def main():
         xaxis_title="Branch",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'nominal_branch_flow_magnitude'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'nominal_branch_flow_magnitude'))
 
     # Nominal pump power.
     figure = go.Figure()
@@ -225,7 +224,7 @@ def main():
         xaxis=go.layout.XAxis(range=[-1, 2]),
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'nominal_pump_power'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'nominal_pump_power'))
 
     # Node head.
     for node_index, node in enumerate(thermal_grid_model.nodes):
@@ -246,7 +245,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'node_head_{node}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'node_head_{node}'))
 
     # Branch power magnitude.
     for branch_index, branch in enumerate(thermal_grid_model.branches):
@@ -267,7 +266,7 @@ def main():
             xaxis_title="Power multiplier",
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
         )
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'branch_flow_{branch}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'branch_flow_{branch}'))
 
     # Pump power.
     figure = go.Figure()
@@ -287,7 +286,7 @@ def main():
         xaxis_title="Power multiplier",
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'loss_active'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'loss_active'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

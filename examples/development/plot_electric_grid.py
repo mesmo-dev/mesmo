@@ -6,7 +6,6 @@
 
 import contextily as ctx
 import numpy as np
-import os
 import pandas as pd
 import PIL.Image
 import plotly.express as px
@@ -94,8 +93,8 @@ def main():
         xaxis=go.layout.XAxis(showgrid=False, zeroline=False, showticklabels=False, ticks=''),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, ticks='')
     ))
-    figure.write_html(os.path.join(results_path, 'electric_grid.html'))
-    mesmo.utils.launch(os.path.join(results_path, 'electric_grid.html'))
+    figure.write_html(results_path / 'electric_grid.html')
+    mesmo.utils.launch(results_path / 'electric_grid.html')
 
     # Obtain background map image for static plot.
     longitude_padding = 0.01 * (longitude_max - longitude_min)
@@ -189,9 +188,9 @@ def main():
         )
     ))
     mesmo.utils.write_figure_plotly(
-        figure, os.path.join(results_path, 'electric_grid'), file_format='pdf', width=width, height=height
+        figure, (results_path / 'electric_grid'), file_format='pdf', width=width, height=height
     )
-    mesmo.utils.launch(os.path.join(results_path, 'electric_grid.pdf'))
+    mesmo.utils.launch(results_path / 'electric_grid.pdf')
 
     # Print results path.
     mesmo.utils.launch(results_path)

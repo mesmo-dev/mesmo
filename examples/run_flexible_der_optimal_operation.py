@@ -1,8 +1,6 @@
 """Example script for setting up and solving a flexible DER optimal operation problem."""
 
-import cvxpy as cp
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -60,7 +58,7 @@ def main():
         ))
         figure.add_trace(go.Scatter(
             x=results['output_vector'].index,
-            y=results['output_vector'].loc[:, (der_name, output)].values,
+            y=results['output_vector'].loc[:, [(der_name, output)]].iloc[:, 0].values,
             name='Optimal',
             line=go.scatter.Line(shape='hv')
         ))
@@ -69,8 +67,7 @@ def main():
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
-        # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, output))
+        mesmo.utils.write_figure_plotly(figure, (results_path / output))
 
     for disturbance in der_model_set.flexible_der_models[der_name].disturbances:
 
@@ -85,8 +82,7 @@ def main():
             xaxis=go.layout.XAxis(tickformat='%H:%M'),
             showlegend=False
         )
-        # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, disturbance))
+        mesmo.utils.write_figure_plotly(figure, (results_path / disturbance))
 
     for commodity_type in ['active_power', 'reactive_power', 'thermal_power']:
 
@@ -101,8 +97,7 @@ def main():
                 title=f'Price: {commodity_type}',
                 xaxis=go.layout.XAxis(tickformat='%H:%M')
             )
-            # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+            mesmo.utils.write_figure_plotly(figure, (results_path / f'price_{commodity_type}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

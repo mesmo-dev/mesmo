@@ -1,10 +1,9 @@
 """Script for generating attribute values for the choice experiment in the PRIMO survey."""
 
-import cvxpy as cp
 import numpy as np
 from multimethod import multimethod
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -119,8 +118,8 @@ def main():
     print(f"costs_overview = \n{costs_overview}")
 
     # Save / plot results.
-    costs_daily.to_csv(os.path.join(results_path, 'costs_daily.csv'))
-    costs_overview.to_csv(os.path.join(results_path, 'costs_overview.csv'))
+    costs_daily.to_csv(results_path / 'costs_daily.csv')
+    costs_overview.to_csv(results_path / 'costs_overview.csv')
     save_results(results, results_path)
     plot_results(results, results_path)
 
@@ -139,7 +138,7 @@ def main():
                 xaxis=go.layout.XAxis(tickformat='%H:%M')
             )
             # figure.show()
-            mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_{commodity_type}'))
+            mesmo.utils.write_figure_plotly(figure, (results_path / f'price_{commodity_type}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)
@@ -179,7 +178,7 @@ def solve_problem(
 
 def save_results(
         results: dict,
-        results_path: str
+        results_path: pathlib.Path
 ):
 
     for label, result in results.items():
@@ -189,11 +188,11 @@ def save_results(
 
         # Create folder.
         try:
-            os.mkdir(os.path.join(results_path, label))
+            (results_path / label).mkdir()
         except Exception:
             pass
 
-        result.save(os.path.join(results_path, label))
+        result.save(results_path / label)
 
 
 @multimethod
@@ -209,7 +208,7 @@ def plot_results(
 @multimethod
 def plot_results(
         results: mesmo.der_models.DERModelOperationResults,
-        results_path: str,
+        results_path: pathlib.Path,
         label: tuple
 ):
 
@@ -218,7 +217,7 @@ def plot_results(
 
     # Create folder.
     try:
-        os.mkdir(os.path.join(results_path, label))
+        (results_path / label).mkdir()
     except Exception:
         pass
 
@@ -250,7 +249,7 @@ def plot_results(
             legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, label, output))
+        mesmo.utils.write_figure_plotly(figure, (results_path / label / output))
 
     # Plot disturbances.
     for disturbance in results.der_model.disturbances:
@@ -267,7 +266,7 @@ def plot_results(
             showlegend=False
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, label, disturbance))
+        mesmo.utils.write_figure_plotly(figure, (results_path / label / disturbance))
 
 
 if __name__ == '__main__':

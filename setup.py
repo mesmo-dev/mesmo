@@ -47,6 +47,7 @@ setuptools.setup(
         # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
         'cvxpy',
         'dill',
+        'dynaconf',
         'gurobipy',
         'kaleido',  # For static plot output with plotly.
         'matplotlib',

@@ -1,5 +1,6 @@
 """Configuration module."""
 
+import dynaconf
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
@@ -8,20 +9,15 @@ import pandas as pd
 import pathlib
 import plotly.graph_objects as go
 import plotly.io as pio
-import yaml
 
 
-def get_config() -> dict:
+def get_config() -> dynaconf.Dynaconf:
     """Load the configuration dictionary.
 
     - Default configuration is obtained from `./mesmo/config_default.yml`.
     - Custom configuration is obtained from `./config.yml` and overwrites the respective default configuration.
     - `./` denotes the repository base directory.
     """
-
-    # Load default configuration values.
-    with open((base_path / "mesmo" / "config_default.yml"), "r") as file:
-        default_config = yaml.safe_load(file)
 
     # Create local `config.yml` for custom configuration in base directory, if not existing.
     # - The additional data paths setting is added for reference.
@@ -35,44 +31,24 @@ def get_config() -> dict:
                 "  additional_data: []\n"
             )
 
-    # Load custom configuration values, overwriting the default values.
-    with open((base_path / "config.yml"), "r") as file:
-        custom_config = yaml.safe_load(file)
-
-    # Define utility function to recursively merge default and custom configuration.
-    def merge_config(default_values: dict, custom_values: dict) -> dict:
-        full_values = default_values.copy()
-        full_values.update(
-            {
-                key: (
-                    merge_config(default_values[key], custom_values[key])
-                    if (
-                        (key in default_values)
-                        and isinstance(default_values[key], dict)
-                        and isinstance(custom_values[key], dict)
-                    )
-                    else custom_values[key]
-                )
-                for key in custom_values.keys()
-            }
-        )
-        return full_values
-
-    # Obtain complete configuration.
-    if custom_config is not None:
-        complete_config = merge_config(default_config, custom_config)
-    else:
-        complete_config = default_config
+    # Load configuration values.
+    config_object = dynaconf.Dynaconf(
+        settings_files=[
+            base_path / "mesmo" / "config_default.yml",  # Default values are loaded first.
+            base_path / "config.yml",  # Custom local values are loaded second and overwrite default values.
+        ],
+        merge_enabled=True,  # Merge nested configuration parameters.
+    )
 
     # Obtain full paths.
-    complete_config["paths"]["data"] = parse_path(complete_config["paths"]["data"])
-    complete_config["paths"]["additional_data"] = [
-        parse_path(path) for path in complete_config["paths"]["additional_data"]
+    config_object["paths"]["data"] = parse_path(config_object["paths"]["data"])
+    config_object["paths"]["additional_data"] = [
+        parse_path(path) for path in config_object["paths"]["additional_data"]
     ]
-    complete_config["paths"]["database"] = parse_path(complete_config["paths"]["database"])
-    complete_config["paths"]["results"] = parse_path(complete_config["paths"]["results"])
+    config_object["paths"]["database"] = parse_path(config_object["paths"]["database"])
+    config_object["paths"]["results"] = parse_path(config_object["paths"]["results"])
 
-    return complete_config
+    return config_object
 
 
 def parse_path(path: str) -> pathlib.Path:

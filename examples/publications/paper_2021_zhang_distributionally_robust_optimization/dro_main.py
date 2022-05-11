@@ -337,7 +337,7 @@ def main():
     ]
 
     mesmo.utils.logger.info("Modify Gurobi problem.")
-    gurobipy_problem.write((results_path / 'gurobi.lp'))
+    gurobipy_problem.write(str(results_path / 'gurobi.lp'))
     gurobi_lp_file = pd.read_csv((results_path / 'gurobi.lp'), header=None).iloc[:, 0]
     bounds_line = gurobi_lp_file.index[gurobi_lp_file.str.contains('Bounds')][0]
     gurobi_lp_file = (

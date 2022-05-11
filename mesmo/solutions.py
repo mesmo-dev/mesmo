@@ -6,8 +6,8 @@ import gurobipy as gp
 import itertools
 import numpy as np
 import pandas as pd
-import scipy.optimize
 import scipy.sparse as sp
+import subprocess
 import typing
 
 import mesmo.config
@@ -1069,10 +1069,16 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
     def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
         """Obtain standard-form problem via Gurobi direct interface."""
 
+        # Instantiate Gurobi environment.
+        gurobipy_env = gp.Env(empty=True)
+        # Set solver output flag. This allows suppressing license information, which is printed upon model creation.
+        gurobipy_env.setParam('OutputFlag', int(mesmo.config.config["optimization"]["show_solver_output"]))
+        gurobipy_env.start()
+
         # Instantiate Gurobi model.
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
         #   and the associated attributes.
-        gurobipy_problem = gp.Model()
+        gurobipy_problem = gp.Model(env=gurobipy_env)
         # Set solver parameters.
         gurobipy_problem.setParam("OutputFlag", int(mesmo.config.config["optimization"]["show_solver_output"]))
         for key, value in mesmo.config.solver_parameters.items():
@@ -1149,6 +1155,95 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         return gurobipy_problem
 
+    def solve_highs(self):
+        """Solve optimization problem via HiGHS solver interface."""
+
+        # Get temporary file path for passing model file to HiGHS.
+        temp_path = mesmo.utils.get_results_path('temp')
+
+        # Write optimization problem to model file via Gurobi.
+        if mesmo.config.config["optimization"]["show_solver_output"]:
+            # Preface Gurobi outputs, to avoid confusion.
+            print("Writing model file for HiGHS via Gurobi. Please ignore Gurobi license information.")
+        gurobipy_problem, _, _, _ = self.get_gurobi_problem()
+        gurobipy_problem.write(str(temp_path / 'problem.mps'))
+
+        # Write options file.
+        # - Reference: https://www.maths.ed.ac.uk/hall/HiGHS/HighsOptions.html
+        options = [
+            f"log_file = {temp_path / 'log.txt'}\n",
+            "write_solution_style = 0\n",  # Write solutions in machine-readable format.
+            f"time_limit = {mesmo.config.config['optimization']['time_limit']}\n"
+            if mesmo.config.config['optimization']['time_limit'] is not None else "",
+        ]
+        with open(temp_path / 'options.txt', 'w') as file:
+            file.writelines(options)
+
+        # Run HiGHS.
+        command = [
+            mesmo.config.config['paths']['highs_solver'],
+            f"{temp_path / 'problem.mps'}",
+            "--options_file",
+            f"{temp_path / 'options.txt'}",
+            "--solution_file",
+            f"{temp_path / 'solution.txt'}",
+        ]
+        output = []
+        with subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                encoding='utf-8',
+                errors='replace',
+        ) as process:
+            for line in process.stdout:
+                if mesmo.config.config["optimization"]["show_solver_output"]:
+                    logger.info(line.replace('\n', ''))
+                output.append(line)
+
+        # Retrieve solution status and raise error if non-optimal.
+        try:
+            status = next(line for line in output if line.startswith('Model   status      : '))
+            status = status.replace('Model   status      : ', '').replace('\n', '')
+        except StopIteration:
+            raise RuntimeError(f"HiGHS solution status could not be retrieved: \n{''.join(output)}")
+        if status != 'Optimal':
+            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {status}")
+
+        # Read solution.
+        with open(temp_path / 'solution.txt', 'r') as file:
+            solution_lines = file.readlines()
+        x_vector_start = solution_lines.index(f'# Columns {len(self.variables)}\n') + 1
+        x_vector_end = solution_lines.index(f'# Rows {self.constraints_len}\n')
+        duals_start = solution_lines.index(f'# Dual solution values\n')
+        mu_vector_start = solution_lines.index(f'# Rows {self.constraints_len}\n', duals_start) + 1
+        mu_vector_end = solution_lines.index('\n', duals_start)
+
+        # Retrieve objective.
+        objective = next(line for line in solution_lines if line.startswith('Objective '))
+        objective = float(objective.replace('Objective ', '').replace('\n', ''))
+        self.objective = objective
+
+        # Retrieve x_vector.
+        x_vector = pd.Series(solution_lines[x_vector_start:x_vector_end])
+        x_vector = x_vector.str.replace('x_vector[', '', regex=False).str.replace(']', '', regex=False).str.replace('\n', '')
+        x_vector = x_vector.str.split(' ', expand=True).set_index(0).loc[:, 1]
+        x_vector.index = x_vector.index.astype(int)
+        x_vector = x_vector.astype(float)
+        x_vector = x_vector.sort_index()
+        self.x_vector = np.transpose([x_vector.values])
+
+        # Retrieve mu_vector.
+        mu_vector = pd.Series(solution_lines[mu_vector_start:mu_vector_end])
+        mu_vector = mu_vector.str.replace('constraints[', '', regex=False).str.replace(']', '', regex=False).str.replace('\n', '')
+        mu_vector = mu_vector.str.split(' ', expand=True).set_index(0).loc[:, 1]
+        mu_vector.index = mu_vector.index.astype(int)
+        mu_vector = mu_vector.astype(float)
+        mu_vector = mu_vector.sort_index()
+        self.mu_vector = np.transpose([mu_vector.values])
+
     def get_cvxpy_problem(
         self,
     ) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
@@ -1216,42 +1311,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.objective = float(cvxpy_problem.objective.value)
 
         return cvxpy_problem
-
-    def solve_highs(self) -> scipy.optimize.OptimizeResult:
-        """Solve optimization problem via SciPy HiGHS interface."""
-
-        # Raise warning if Q matrix is not zero, because HiGHS interface below doesn't consider QP expressions yet.
-        if any((self.get_q_matrix() != 0).data):
-            logger.warning(f"Found QP expression: The HiGHS solver interface does not yet support QP solution.")
-
-        # Replace infinite values in b vector with maximum floating point value.
-        # - Reason: SciPy optimization interface doesn't accept infinite values.
-        b_vector = self.get_b_vector().ravel()
-        b_vector[b_vector == np.inf] = np.finfo(float).max
-
-        # Solve optimization problem.
-        scipy_result = scipy.optimize.linprog(
-            self.get_c_vector().ravel(),
-            A_ub=self.get_a_matrix(),
-            b_ub=b_vector,
-            bounds=(None, None),
-            method="highs",
-            options=dict(
-                disp=mesmo.config.config["optimization"]["show_solver_output"],
-                time_limit=mesmo.config.config["optimization"]["time_limit"],
-            ),
-        )
-
-        # Assert that solver exited with an optimal solution. If not, raise an error.
-        if not (scipy_result.status == 0):
-            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {scipy_result.message}")
-
-        # Store results.
-        self.x_vector = np.transpose([scipy_result.x])
-        self.mu_vector = np.transpose([scipy_result.ineqlin.marginals])
-        self.objective = scipy_result.fun
-
-        return scipy_result
 
     def get_results(self, x_vector: typing.Union[cp.Variable, np.ndarray] = None) -> dict:
         """Obtain results for decisions variables.

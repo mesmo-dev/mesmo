@@ -47,6 +47,7 @@ def get_config() -> dynaconf.Dynaconf:
     ]
     config_object["paths"]["database"] = parse_path(config_object["paths"]["database"])
     config_object["paths"]["results"] = parse_path(config_object["paths"]["results"])
+    config_object["paths"]["highs_solver"] = parse_path(config_object["paths"]["highs_solver"])
 
     return config_object
 

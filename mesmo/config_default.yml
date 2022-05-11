@@ -9,6 +9,7 @@ paths:
   additional_data: []
   ignore_data_folders: []
   cobmo_additional_data: []
+  highs_solver: highs
 optimization:
   solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY in lower caps.
   solver_interface: direct # Choices: 'direct' or 'cvxpy'. If not defined, will use 'direct'.

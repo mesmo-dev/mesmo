@@ -30,7 +30,7 @@ class develop_submodules(setuptools.command.develop.develop):
         super().run()
         # Install submodules. Use `pip -v` to see subprocess outputs.
         for submodule in submodules:
-            subprocess.check_call([sys.executable, '-m' 'pip', 'install', '-e', submodule])
+            subprocess.check_call([sys.executable, '-m' 'pip', 'install', '-v', '-e', submodule])
         # Install HiGHS.
         install_highs()
 
@@ -40,7 +40,7 @@ class install_submodules(setuptools.command.install.install):
         super().run()
         # Install submodules. Use `pip -v` to see subprocess outputs.
         for submodule in submodules:
-            subprocess.check_call([sys.executable, '-m' 'pip', 'install', submodule])
+            subprocess.check_call([sys.executable, '-m' 'pip', 'install', '-v', submodule])
         # Install HiGHS solver.
         install_highs()
 
@@ -58,15 +58,22 @@ def install_highs():
         architecture_string = "x86_64-linux-gnu-cxx11"
     url = f"{base_url}{version_string}.{architecture_string}.tar.gz"
     # Download and unpack HiGHS binary files.
-    with requests.get(url, stream=True) as request:
-        request.raise_for_status()
-        with open(base_path / 'highs' / 'highs.tar.gz', 'wb') as file:
-            for chunk in request.iter_content(chunk_size=10240):
-                file.write(chunk)
-        with tarfile.open(base_path / 'highs' / 'highs.tar.gz') as file:
-            file.extractall(base_path / 'highs')
-    # Remove downloaded archive file.
-    (base_path / 'highs' / 'highs.tar.gz').unlink()
+    try:
+        with requests.get(url, stream=True) as request:
+            request.raise_for_status()
+            with open(base_path / 'highs' / 'highs.tar.gz', 'wb') as file:
+                for chunk in request.iter_content(chunk_size=10240):
+                    file.write(chunk)
+            with tarfile.open(base_path / 'highs' / 'highs.tar.gz') as file:
+                file.extractall(base_path / 'highs')
+        # Remove downloaded archive file.
+        (base_path / 'highs' / 'highs.tar.gz').unlink()
+    except requests.ConnectionError:
+        # Soft-fail on download connection errors.
+        print(
+            "WARNING: HiGHS solver could not be installed automatically. "
+            "Please configure optimization solver for MESMO manually."
+        )
 
 setuptools.setup(
     name='mesmo',

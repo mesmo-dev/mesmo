@@ -1185,14 +1185,15 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             file.writelines(options)
 
         # Run HiGHS.
-        command = [
-            mesmo.config.config['paths']['highs_solver'],
+        command = " ".join([
+            f"{mesmo.config.config['paths']['highs_solver']}",
+            "--model_file",
             f"{temp_path / 'problem.mps'}",
             "--options_file",
             f"{temp_path / 'options.txt'}",
             "--solution_file",
             f"{temp_path / 'solution.txt'}",
-        ]
+        ])
         output = []
         with subprocess.Popen(
                 command,
@@ -1213,9 +1214,9 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             status = next(line for line in output if line.startswith('Model   status      : '))
             status = status.replace('Model   status      : ', '').replace('\n', '')
         except StopIteration:
-            raise RuntimeError(f"HiGHS solution status could not be retrieved: \n{''.join(output)}")
+            raise RuntimeError(f"HiGHS solution status could not be retrieved:\n{command}\n{''.join(output)}")
         if status != 'Optimal':
-            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {status}")
+            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {status}\n{''.join(output)}")
 
         # Read solution.
         with open(temp_path / 'solution.txt', 'r') as file:

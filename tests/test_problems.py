@@ -1,6 +1,5 @@
 """Test problems."""
 
-import gurobipy as gp
 import unittest
 
 import mesmo

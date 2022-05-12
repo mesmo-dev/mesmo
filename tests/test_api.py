@@ -1,6 +1,5 @@
 """Test API."""
 
-import gurobipy as gp
 import unittest
 
 import mesmo

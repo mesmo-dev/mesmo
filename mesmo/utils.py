@@ -429,15 +429,6 @@ def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
     return array_inverse
 
 
-def get_timestamp(time: datetime.datetime = None) -> str:
-    """Generate formatted timestamp string, e.g., for saving results with timestamp."""
-
-    if time is None:
-        time = datetime.datetime.now()
-
-    return time.strftime("%Y-%m-%d_%H-%M-%S")
-
-
 def get_results_path(base_name: str, scenario_name: str = None) -> pathlib.Path:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
@@ -451,7 +442,7 @@ def get_results_path(base_name: str, scenario_name: str = None) -> pathlib.Path:
     # Preprocess results path name components, including removing non-alphanumeric characters.
     base_name = re.sub(r"\W-+", "", pathlib.Path(base_name).stem) + "_"
     scenario_name = "" if scenario_name is None else re.sub(r"\W-+", "", scenario_name) + "_"
-    timestamp = mesmo.utils.get_timestamp()
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
 
     # Obtain results path.
     results_path = mesmo.config.config["paths"]["results"] / f"{base_name}{scenario_name}{timestamp}"

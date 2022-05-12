@@ -457,7 +457,7 @@ def get_results_path(base_name: str, scenario_name: str = None) -> pathlib.Path:
     results_path = mesmo.config.config["paths"]["results"] / f"{base_name}{scenario_name}{timestamp}"
 
     # Instantiate results directory.
-    results_path.mkdir()
+    results_path.mkdir(parents=True)
 
     return results_path
 

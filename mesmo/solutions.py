@@ -944,10 +944,15 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
                 rows, columns, values = sp.find(values)
                 rows = np.array(variable_1_index)[rows]
                 columns = np.array(variable_2_index)[columns]
-                # Insert entry in collections.
+                # Insert entries in collections.
                 values_list.append(values)
                 rows_list.append(rows)
                 columns_list.append(columns)
+                # Insert entries for opposite-diagonal side in collections.
+                # - Terms need to be added on both off-diagonal sides of Q for symmetry.
+                values_list.append(values)
+                rows_list.append(columns)
+                columns_list.append(rows)
 
         # Instantiate Q matrix.
         q_matrix = (

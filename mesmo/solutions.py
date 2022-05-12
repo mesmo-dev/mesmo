@@ -538,7 +538,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
                     )
                 # Add new constraints to index.
                 new_constraints.index = constraint_index
-                self.constraints = self.constraints.append(new_constraints)
+                self.constraints = pd.concat([self.constraints, new_constraints])
                 self.constraints_len += len(constraint_index)
             else:
                 # Only change constraints size, if no ``keys`` defined.

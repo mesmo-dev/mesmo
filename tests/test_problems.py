@@ -22,10 +22,6 @@ class TestProblems(unittest.TestCase):
         # Get result.
         mesmo.utils.log_time("test_optimal_operation_problem", log_level='info', logger_object=logger)
         problem = mesmo.problems.OptimalOperationProblem('singapore_tanjongpagar')
-        try:
-            problem.solve()
-            problem.get_results()
-        except gp.GurobiError:
-            # Soft fail: Only raise warning on selected errors, since it may be due to solver not installed.
-            logger.warning(f"Test test_optimal_operation_problem failed due to solver error.", exc_info=True)
+        problem.solve()
+        problem.get_results()
         mesmo.utils.log_time("test_optimal_operation_problem", log_level='info', logger_object=logger)

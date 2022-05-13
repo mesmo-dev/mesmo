@@ -5,7 +5,7 @@ channels:
 dependencies:
   - affine=2.3.1
   - attrs=21.4.0
-  - blosc=1.21.0
+  - blosc=1.21.1
   - boost-cpp=1.74.0
   - brotli=1.0.9
   - brotli-bin=1.0.9
@@ -17,13 +17,13 @@ dependencies:
   - cffi=1.15.0
   - cfitsio=4.1.0
   - charset-normalizer=2.0.12
-  - click=8.1.2
+  - click=8.1.3
   - click-plugins=1.1.1
   - cligj=0.7.2
   - colorama=0.4.4
   - contextily=1.2.0
   - cryptography=36.0.2
-  - curl=7.82.0
+  - curl=7.83.1
   - cvxpy=1.2.0
   - cvxpy-base=1.2.0
   - cycler=0.11.0
@@ -36,7 +36,7 @@ dependencies:
   - fontconfig=2.14.0
   - fonts-conda-ecosystem=1
   - fonts-conda-forge=1
-  - fonttools=4.32.0
+  - fonttools=4.33.3
   - freetype=2.10.4
   - freexl=1.0.6
   - geographiclib=1.52
@@ -62,17 +62,17 @@ dependencies:
   - libbrotlidec=1.0.9
   - libbrotlienc=1.0.9
   - libcblas=3.9.0
-  - libcurl=7.82.0
+  - libcurl=7.83.1
   - libdeflate=1.10
   - libffi=3.4.2
-  - libgdal=3.4.2
+  - libgdal=3.4.3
   - libglib=2.70.2
   - libiconv=1.16
   - libkml=1.3.0
   - liblapack=3.9.0
   - libnetcdf=4.8.1
   - libpng=1.6.37
-  - libpq=14.2
+  - libpq=14.3
   - librttopo=1.1.0
   - libspatialite=5.0.1
   - libssh2=1.10.0
@@ -80,7 +80,7 @@ dependencies:
   - libwebp=1.2.2
   - libwebp-base=1.2.2
   - libxcb=1.13
-  - libxml2=2.9.13
+  - libxml2=2.9.14
   - libzip=1.8.0
   - libzlib=1.2.11
   - lz4-c=1.9.3
@@ -89,29 +89,29 @@ dependencies:
   - m2w64-gcc-libs-core=5.3.0
   - m2w64-gmp=6.1.0
   - m2w64-libwinpthread-git=5.0.0.4634.697f757
-  - matplotlib-base=3.5.1
+  - matplotlib-base=3.5.2
   - mercantile=1.2.1
   - mkl=2022.0.0
   - msys2-conda-epoch=20160418
   - munkres=1.1.4
   - numpy=1.22.3
   - openjpeg=2.4.0
-  - openssl=1.1.1n
+  - openssl=1.1.1o
   - osqp=0.6.2.post0
   - packaging=21.3
   - pandas=1.4.2
   - pcre=8.45
   - pillow=9.1.0
-  - pip=22.0.4
+  - pip=22.1
   - pixman=0.40.0
-  - poppler=22.01.0
+  - poppler=22.04.0
   - poppler-data=0.4.11
-  - postgresql=14.2
+  - postgresql=14.3
   - proj=9.0.0
   - pthread-stubs=0.4
   - pycparser=2.21
   - pyopenssl=22.0.0
-  - pyparsing=3.0.8
+  - pyparsing=3.0.9
   - pysocks=1.7.1
   - python=3.8.13
   - python-dateutil=2.8.2
@@ -122,11 +122,13 @@ dependencies:
   - requests=2.27.1
   - scipy=1.8.0
   - scs=3.2.0
+  - setuptools=62.2.0
   - six=1.16.0
+  - snappy=1.1.9
   - snuggs=1.4.7
-  - sqlite=3.38.2
+  - sqlite=3.38.5
   - tbb=2021.5.0
-  - tiledb=2.7.2
+  - tiledb=2.8.2
   - tk=8.6.12
   - ucrt=10.0.20348.0
   - unicodedata2=14.0.0
@@ -138,14 +140,13 @@ dependencies:
   - xerces-c=3.2.3
   - xorg-libxau=1.0.9
   - xorg-libxdmcp=1.1.3
-  - xyzservices=2022.3.0
+  - xyzservices=2022.4.0
   - xz=5.2.5
   - zlib=1.2.11
   - zstd=1.5.2
   - pip:
     - aiohttp==3.8.1
     - aiohttp-cors==0.7.0
-    - aioredis==1.3.1
     - aiosignal==1.2.0
     - ansicon==1.89.0
     - async-timeout==4.0.2
@@ -157,27 +158,28 @@ dependencies:
     - colorful==0.5.4
     - deprecated==1.2.13
     - dill==0.3.4
+    - distlib==0.3.4
     - dss-python==0.10.7.post1
+    - dynaconf==3.1.8
     - filelock==3.6.0
     - frozenlist==1.3.0
     - future==0.18.2
-    - google-api-core==2.7.2
-    - google-auth==2.6.4
-    - googleapis-common-protos==1.56.0
+    - google-api-core==2.7.3
+    - google-auth==2.6.6
+    - googleapis-common-protos==1.56.1
     - gpustat==1.0.0b1
     - grpcio==1.43.0
     - gurobipy==9.5.1
     - h5py==3.6.0
-    - hiredis==2.0.0
-    - holoviews==1.14.8
-    - hvplot==0.7.3
+    - holoviews==1.14.9
+    - hvplot==0.8.0
     - importlib-metadata==4.11.3
-    - importlib-resources==5.7.0
-    - jinja2==3.1.1
+    - importlib-resources==5.7.1
+    - jinja2==3.1.2
     - jinxed==1.1.0
-    - jsonschema==4.4.0
+    - jsonschema==4.5.1
     - kaleido==0.2.1
-    - markdown==3.3.6
+    - markdown==3.3.7
     - markupsafe==2.1.1
     - msgpack==1.0.3
     - multidict==6.0.2
@@ -185,16 +187,17 @@ dependencies:
     - natsort==8.1.0
     - networkx==2.8
     - nvidia-ml-py3==7.352.0
-    - opencensus==0.8.0
+    - opencensus==0.9.0
     - opencensus-context==0.1.2
     - opencv-python==4.5.5.64
     - opendssdirect-py==0.6.1
-    - panel==0.12.7
+    - panel==0.13.0
     - param==1.12.1
     - parameterized==0.8.1
-    - plotly==5.7.0
-    - prometheus-client==0.14.1
-    - protobuf==3.20.0
+    - platformdirs==2.5.2
+    - plotly==5.8.0
+    - prometheus-client==0.13.1
+    - protobuf==3.20.1
     - psutil==5.9.0
     - psychrolib==2.5.0
     - pvlib==0.9.1
@@ -205,17 +208,17 @@ dependencies:
     - pyrsistent==0.18.1
     - pyviz-comms==2.2.0
     - pyyaml==6.0
-    - ray==1.11.0
-    - redis==4.2.2
+    - ray==1.12.0
+    - redis==4.3.1
     - rsa==4.8
-    - setuptools==60.10.0
-    - smart-open==5.2.1
+    - smart-open==6.0.0
     - tenacity==8.0.1
     - tornado==6.1
     - tqdm==4.64.0
-    - typing-extensions==4.1.1
+    - typing-extensions==4.2.0
+    - virtualenv==20.14.1
     - wcwidth==0.2.5
     - webencodings==0.5.1
-    - wrapt==1.14.0
+    - wrapt==1.14.1
     - yarl==1.7.2
     - zipp==3.8.0

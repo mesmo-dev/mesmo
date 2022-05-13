@@ -11,7 +11,7 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'singapore_tanjongpagar_thermal_only'
+    scenario_name = "singapore_tanjongpagar_thermal_only"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -23,11 +23,8 @@ def main():
     # Obtain models.
     thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
-    linear_thermal_grid_model_set = (
-        mesmo.thermal_grid_models.LinearThermalGridModelSet(
-            thermal_grid_model,
-            thermal_power_flow_solution
-        )
+    linear_thermal_grid_model_set = mesmo.thermal_grid_models.LinearThermalGridModelSet(
+        thermal_grid_model, thermal_power_flow_solution
     )
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
@@ -41,7 +38,7 @@ def main():
         optimization_problem,
         price_data,
         node_head_vector_minimum=node_head_vector_minimum,
-        branch_flow_vector_maximum=branch_flow_vector_maximum
+        branch_flow_vector_maximum=branch_flow_vector_maximum,
     )
 
     # Define DER problem.

@@ -460,9 +460,9 @@ def get_alphanumeric_string(string: str):
 
 
 def get_plotly_mapbox_zoom_center(
-        longitudes: tuple,
-        latitudes: tuple,
-        width_to_height: float = 2.0,
+    longitudes: tuple,
+    latitudes: tuple,
+    width_to_height: float = 2.0,
 ) -> (float, dict):
     """Get optimal zoom and centering for a plotly mapbox plot, given lists of longitude and latitude values.
 
@@ -485,17 +485,33 @@ def get_plotly_mapbox_zoom_center(
     # Get center.
     longitude_max, longitude_min = max(longitudes), min(longitudes)
     latitude_max, latitude_min = max(latitudes), min(latitudes)
-    center = {
-        'lon': round((longitude_max + longitude_min) / 2, 6),
-        'lat': round((latitude_max + latitude_min) / 2, 6)
-    }
+    center = {"lon": round((longitude_max + longitude_min) / 2, 6), "lat": round((latitude_max + latitude_min) / 2, 6)}
 
     # Define longitudinal range by zoom level (20 to 1) in degrees, if centered at equator.
-    longitude_zoom_range = np.array([
-        0.0007, 0.0014, 0.003, 0.006, 0.012, 0.024, 0.048, 0.096,
-        0.192, 0.3712, 0.768, 1.536, 3.072, 6.144, 11.8784, 23.7568,
-        47.5136, 98.304, 190.0544, 360.0
-    ])
+    longitude_zoom_range = np.array(
+        [
+            0.0007,
+            0.0014,
+            0.003,
+            0.006,
+            0.012,
+            0.024,
+            0.048,
+            0.096,
+            0.192,
+            0.3712,
+            0.768,
+            1.536,
+            3.072,
+            6.144,
+            11.8784,
+            23.7568,
+            47.5136,
+            98.304,
+            190.0544,
+            360.0,
+        ]
+    )
 
     # Get zoom level.
     margin = 1.2
@@ -523,11 +539,11 @@ def launch(path: pathlib.Path):
 
 
 def write_figure_plotly(
-        figure: go.Figure,
-        results_path: pathlib.Path,
-        file_format=mesmo.config.config["plots"]["file_format"],
-        width=mesmo.config.config["plots"]["plotly_figure_width"],
-        height=mesmo.config.config["plots"]["plotly_figure_height"],
+    figure: go.Figure,
+    results_path: pathlib.Path,
+    file_format=mesmo.config.config["plots"]["file_format"],
+    width=mesmo.config.config["plots"]["plotly_figure_width"],
+    height=mesmo.config.config["plots"]["plotly_figure_height"],
 ):
     """Utility function for writing / storing plotly figure to output file. File format can be given with
     `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.

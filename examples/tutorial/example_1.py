@@ -10,7 +10,7 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = "singapore_6node"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -44,17 +44,15 @@ def main():
     figure = go.Figure()
     figure.add_scatter(
         x=results.branch_power_magnitude_vector_1.index,
-        y=results.branch_power_magnitude_vector_1.loc[:, [('line', '1', 1)]].values.ravel()
+        y=results.branch_power_magnitude_vector_1.loc[:, [("line", "1", 1)]].values.ravel(),
     )
-    figure.update_layout(
-        title='Branch Power Magnitude at Line 1 (Phase 1)'
-    )
-    mesmo.utils.write_figure_plotly(figure, (results_path / 'branch_power_line_1_phase_1'))
+    figure.update_layout(title="Branch Power Magnitude at Line 1 (Phase 1)")
+    mesmo.utils.write_figure_plotly(figure, (results_path / "branch_power_line_1_phase_1"))
 
     # Print results path.
     mesmo.utils.launch(results_path)
     print(f"Results are stored in: {results_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

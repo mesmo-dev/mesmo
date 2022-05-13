@@ -11,7 +11,7 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_name = 'singapore_6node'
+    scenario_name = "singapore_6node"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -23,11 +23,8 @@ def main():
     # Obtain models.
     electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
-    linear_electric_grid_model_set = (
-        mesmo.electric_grid_models.LinearElectricGridModelSet(
-            electric_grid_model,
-            power_flow_solution
-        )
+    linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(
+        electric_grid_model, power_flow_solution
     )
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 
@@ -43,7 +40,7 @@ def main():
         price_data,
         node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
         node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
-        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
     )
 
     # Define DER problem.
@@ -77,5 +74,5 @@ def main():
     print(f"Results are stored in: {results_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -13,88 +13,106 @@ import mesmo
 def main():
 
     # Settings.
-    scenario_basename = 'singapore_geylang'
+    scenario_basename = "singapore_geylang"
     results_path = mesmo.utils.get_results_path(__file__, scenario_basename)
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
-    mesmo.config.config['paths']['additional_data'].append(
+    mesmo.config.config["paths"]["additional_data"].append(
         (
-            pathlib.Path(__file__).parent /
-            '..' / '..' / '..' / 'data_processing' / 'singapore_synthetic_grid_to_mesmo' / 'output'
+            pathlib.Path(__file__).parent
+            / ".."
+            / ".."
+            / ".."
+            / "data_processing"
+            / "singapore_synthetic_grid_to_mesmo"
+            / "output"
         )
     )
     mesmo.data_interface.recreate_database()
 
     # Obtain problems.
-    problem_dict = (
-        mesmo.problems.ProblemDict({
-            'Baseline scenario': mesmo.problems.NominalOperationProblem(f'{scenario_basename}_no_charging'),
-            '25% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
-            '75% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
-            '100% EVs (uncontrolled)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '25% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_25percent'),
-            '75% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_75percent'),
-            '100% EVs (smart charging)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '100% EVs (peak shaving)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-            '100% EVs (price based)': mesmo.problems.OptimalOperationProblem(f'{scenario_basename}_100percent'),
-        })
+    problem_dict = mesmo.problems.ProblemDict(
+        {
+            "Baseline scenario": mesmo.problems.NominalOperationProblem(f"{scenario_basename}_no_charging"),
+            "25% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_25percent"),
+            "75% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_75percent"),
+            "100% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
+            "25% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_25percent"),
+            "75% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_75percent"),
+            "100% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
+            "100% EVs (peak shaving)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
+            "100% EVs (price based)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
+        }
     )
 
     # Modify problems.
     for key in problem_dict:
-        if key in ['25% EVs (smart charging)', '75% EVs (smart charging)', '100% EVs (smart charging)']:
+        if key in ["25% EVs (smart charging)", "75% EVs (smart charging)", "100% EVs (smart charging)"]:
             problem_dict[key].optimization_problem.define_variable(
-                'branch_peak_power', branch=problem_dict[key].electric_grid_model.branches
+                "branch_peak_power", branch=problem_dict[key].electric_grid_model.branches
             )
             for branch_index in range(len(problem_dict[key].electric_grid_model.branches)):
                 problem_dict[key].optimization_problem.define_constraint(
-                    ('variable', np.ones((len(problem_dict[key].timesteps), 1)), dict(
-                        name='branch_peak_power', branch=problem_dict[key].electric_grid_model.branches[branch_index]
-                    )),
-                    '>=',
-                    ('variable', sp.eye(len(problem_dict[key].timesteps)), dict(
-                        name='branch_power_magnitude_vector_1', timestep=problem_dict[key].timesteps,
-                        branch=problem_dict[key].electric_grid_model.branches[branch_index]
-                    )),
-                    ('variable', sp.eye(len(problem_dict[key].timesteps)), dict(
-                        name='branch_power_magnitude_vector_2', timestep=problem_dict[key].timesteps,
-                        branch=problem_dict[key].electric_grid_model.branches[branch_index]
-                    ))
+                    (
+                        "variable",
+                        np.ones((len(problem_dict[key].timesteps), 1)),
+                        dict(
+                            name="branch_peak_power",
+                            branch=problem_dict[key].electric_grid_model.branches[branch_index],
+                        ),
+                    ),
+                    ">=",
+                    (
+                        "variable",
+                        sp.eye(len(problem_dict[key].timesteps)),
+                        dict(
+                            name="branch_power_magnitude_vector_1",
+                            timestep=problem_dict[key].timesteps,
+                            branch=problem_dict[key].electric_grid_model.branches[branch_index],
+                        ),
+                    ),
+                    (
+                        "variable",
+                        sp.eye(len(problem_dict[key].timesteps)),
+                        dict(
+                            name="branch_power_magnitude_vector_2",
+                            timestep=problem_dict[key].timesteps,
+                            branch=problem_dict[key].electric_grid_model.branches[branch_index],
+                        ),
+                    ),
                 )
-            problem_dict[key].optimization_problem.define_objective(
-                ('variable', 1e9, dict(name='branch_peak_power'))
-            )
-        elif key in ['100% EVs (peak shaving)']:
+            problem_dict[key].optimization_problem.define_objective(("variable", 1e9, dict(name="branch_peak_power")))
+        elif key in ["100% EVs (peak shaving)"]:
             # TODO: Label optimization variables with 'per_unit' for better understanding?
-            problem_dict[key].optimization_problem.define_variable('der_peak_power')
+            problem_dict[key].optimization_problem.define_variable("der_peak_power")
             problem_dict[key].optimization_problem.define_constraint(
-                ('variable', np.ones((len(problem_dict[key].timesteps), 1)), dict(name='der_peak_power')),
-                '<=',
-                ('variable', (
-                    sp.block_diag(
-                        [np.array([np.real(problem_dict[key].electric_grid_model.der_power_vector_reference)])]
-                        * len(problem_dict[key].timesteps)
-                    )
-                ), dict(
-                    name='der_active_power_vector', timestep=problem_dict[key].timesteps,
-                    der=problem_dict[key].electric_grid_model.ders
-                ))
+                ("variable", np.ones((len(problem_dict[key].timesteps), 1)), dict(name="der_peak_power")),
+                "<=",
+                (
+                    "variable",
+                    (
+                        sp.block_diag(
+                            [np.array([np.real(problem_dict[key].electric_grid_model.der_power_vector_reference)])]
+                            * len(problem_dict[key].timesteps)
+                        )
+                    ),
+                    dict(
+                        name="der_active_power_vector",
+                        timestep=problem_dict[key].timesteps,
+                        der=problem_dict[key].electric_grid_model.ders,
+                    ),
+                ),
             )
-            problem_dict[key].optimization_problem.define_objective(
-                ('variable', -1e9, dict(name='der_peak_power'))
-            )
-        elif key in ['100% EVs (price based)']:
+            problem_dict[key].optimization_problem.define_objective(("variable", -1e9, dict(name="der_peak_power")))
+        elif key in ["100% EVs (price based)"]:
             price_data = mesmo.data_interface.PriceData(
-                f'{scenario_basename}_100percent',
-                price_type='singapore_wholesale'
+                f"{scenario_basename}_100percent", price_type="singapore_wholesale"
             )
             problem_dict[key].linear_electric_grid_model_set.define_optimization_parameters(
-                problem_dict[key].optimization_problem,
-                price_data
+                problem_dict[key].optimization_problem, price_data
             )
             problem_dict[key].der_model_set.define_optimization_parameters(
-                problem_dict[key].optimization_problem,
-                price_data
+                problem_dict[key].optimization_problem, price_data
             )
 
     # Solve problems.
@@ -103,87 +121,50 @@ def main():
     # Obtain results.
     results_dict = problem_dict.get_results()
     results_sets = dict()
-    results_sets['_nominal'] = {
+    results_sets["_nominal"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            'Baseline scenario',
-            '25% EVs (uncontrolled)',
-            '75% EVs (uncontrolled)',
-            '100% EVs (uncontrolled)'
-        ]
+        if key in ["Baseline scenario", "25% EVs (uncontrolled)", "75% EVs (uncontrolled)", "100% EVs (uncontrolled)"]
     }
-    results_sets['_nominal_ev_only'] = {
+    results_sets["_nominal_ev_only"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            '25% EVs (uncontrolled)',
-            '75% EVs (uncontrolled)',
-            '100% EVs (uncontrolled)'
-        ]
+        if key in ["25% EVs (uncontrolled)", "75% EVs (uncontrolled)", "100% EVs (uncontrolled)"]
     }
-    results_sets['_optimal25'] = {
+    results_sets["_optimal25"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            'Baseline scenario',
-            '25% EVs (uncontrolled)',
-            '25% EVs (smart charging)'
-        ]
+        if key in ["Baseline scenario", "25% EVs (uncontrolled)", "25% EVs (smart charging)"]
     }
-    results_sets['_optimal75'] = {
+    results_sets["_optimal75"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            'Baseline scenario',
-            '75% EVs (uncontrolled)',
-            '75% EVs (smart charging)'
-        ]
+        if key in ["Baseline scenario", "75% EVs (uncontrolled)", "75% EVs (smart charging)"]
     }
-    results_sets['_optimal100'] = {
+    results_sets["_optimal100"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            'Baseline scenario',
-            '100% EVs (uncontrolled)',
-            '100% EVs (smart charging)'
-        ]
+        if key in ["Baseline scenario", "100% EVs (uncontrolled)", "100% EVs (smart charging)"]
     }
-    results_sets['_peak_shaving'] = {
+    results_sets["_peak_shaving"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            '100% EVs (uncontrolled)',
-            '100% EVs (peak shaving)',
-            '100% EVs (smart charging)'
-        ]
+        if key in ["100% EVs (uncontrolled)", "100% EVs (peak shaving)", "100% EVs (smart charging)"]
     }
-    results_sets['_price_based'] = {
+    results_sets["_price_based"] = {
         key: value
         for key, value in results_dict.items()
-        if key in [
-            '100% EVs (uncontrolled)',
-            '100% EVs (price based)',
-            '100% EVs (smart charging)'
-        ]
+        if key in ["100% EVs (uncontrolled)", "100% EVs (price based)", "100% EVs (smart charging)"]
     }
 
     # Make plots.
     for results_label, results_set in results_sets.items():
         if len(results_set) > 0:
             mesmo.plots.plot_histogram_cumulative_branch_utilization(
-                results_set,
-                results_path,
-                filename_suffix=results_label,
-                branch_type='transformer',
-                vertical_line=0.9
+                results_set, results_path, filename_suffix=results_label, branch_type="transformer", vertical_line=0.9
             )
             mesmo.plots.plot_histogram_cumulative_branch_utilization(
-                results_set,
-                results_path,
-                filename_suffix=results_label,
-                branch_type='line',
-                vertical_line=0.9
+                results_set, results_path, filename_suffix=results_label, branch_type="line", vertical_line=0.9
             )
             mesmo.plots.plot_histogram_node_utilization(
                 results_set,
@@ -194,8 +175,8 @@ def main():
                 results_set,
                 results_path,
                 filename_suffix=results_label,
-                value_unit_label='MW',
-                der_type_labels={'fixed_load': 'Base load', 'flexible_ev_charger': 'EV charging'}
+                value_unit_label="MW",
+                der_type_labels={"fixed_load": "Base load", "flexible_ev_charger": "EV charging"},
             )
 
     # # Plot individual DER results.
@@ -248,5 +229,5 @@ def main():
     print(f"Results are stored in: {results_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

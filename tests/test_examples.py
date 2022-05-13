@@ -11,12 +11,11 @@ logger = mesmo.config.get_logger(__name__)
 
 
 class TestExamples(unittest.TestCase):
-
     def test_example(self):
-        mesmo.utils.log_time("test_example", log_level='info', logger_object=logger)
+        mesmo.utils.log_time("test_example", log_level="info", logger_object=logger)
         # Find example scripts.
         example_files = [
-            *((pathlib.Path(mesmo.config.base_path) / 'examples').glob('*.py')),
+            *((pathlib.Path(mesmo.config.base_path) / "examples").glob("*.py")),
             # TODO: Excluded publication scripts from tests due to HiGHS solver errors.
             # *((pathlib.Path(mesmo.config.base_path) / 'examples' / 'publications').glob('*.py'))
         ]
@@ -34,4 +33,4 @@ class TestExamples(unittest.TestCase):
                 spec.loader.exec_module(module)
                 # Run main(), which will fail if it doesn't exist.
                 module.main()
-        mesmo.utils.log_time("test_example", log_level='info', logger_object=logger)
+        mesmo.utils.log_time("test_example", log_level="info", logger_object=logger)

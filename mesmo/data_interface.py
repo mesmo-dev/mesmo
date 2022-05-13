@@ -84,7 +84,7 @@ def recreate_database():
     # Recreate CoBMo database.
     # - Using set instead of list to avoid duplicate entries.
     cobmo_data_paths = {
-        str(csv_file.parent) # TODO: Change to pathlib.Path, once cobmo updated.
+        str(csv_file.parent)  # TODO: Change to pathlib.Path, once cobmo updated.
         for data_path in data_paths
         for csv_file in data_path.rglob("**/*.csv")
         if any(folder in csv_file.parts for folder in ["cobmo", "cobmo_data"])

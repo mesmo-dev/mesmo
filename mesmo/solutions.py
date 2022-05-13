@@ -28,11 +28,11 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
       Available at: https://web.stanford.edu/~boyd/cvxbook/
     - The optimization problem object currently supports convex optimization problems in the form of
       1) linear program (LP) or 2) quadratic program (QP) with only linear constraints.
-    - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
-      convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
-      to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces are
-      assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as a fallback to
-      allow a high degree of compatibility with various solvers.
+    - The solve method currently implements interfaces to 1) HiGHS, 2) Gurobi and 3) CVXPY, where the latter is a
+      high-level convex optimization interface, which in turn allows interfacing further third-party solvers. The
+      intention is to implement more direct solver interfaces on as-need basis (please raise an issue!), as these
+      interfaces are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept
+      as a fallback to allow a high degree of compatibility with various solvers.
 
     The optimization problem object internally translates optimizations into LP / QP standard form. Where the following
     formulation is assumed for the standard form:
@@ -1000,20 +1000,21 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         - The solve method compiles the standard form of the optimization problem
           (see :class:`OptimizationProblem`) and passes the standard-form problem to the optimization
           solver interface.
-        - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
-          convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
-          to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces
-          are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as
-          a fallback to allow a high degree of compatibility with various solvers.
+        - The solve method currently implements interfaces to 1) HiGHS, 2) Gurobi and 3) CVXPY, where the latter is a
+          high-level convex optimization interface, which in turn allows interfacing further third-party solvers. The
+          intention is to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these
+          interfaces are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is
+          kept as a fallback to allow a high degree of compatibility with various solvers.
         - The choice of solver and solver interface can be controlled through the config parameters
           ``optimization > solver_name`` and ``optimization > solver_interface`` (see ``mesmo/config_default.yml``).
 
         The default workflow of the solve method is as follows:
 
         1. Obtain problem definition through selected solver interface via :meth:`get_cvxpy_problem()` or
-           :meth:`get_gurobi_problem()`.
-        2. Solve optimization problem and obtain standard-form results via :meth:`solve_cvxpy()` or
-           :meth:`solve_gurobi()`. The standard-form results include the 1) :math:`\boldsymbol{x}` variable vector
+           :meth:`get_gurobi_problem()`. Note that this step is skipped for HiGHS, as there is currently no native
+           Python interface for HiGHS and hence no persistent problem object.
+        2. Solve optimization problem and obtain standard-form results via :meth:`solve_highs()`, :meth:`solve_cvxpy()`
+           or :meth:`solve_gurobi()`. The standard-form results include the 1) :math:`\boldsymbol{x}` variable vector
            value, 2) :math:`\boldsymbol{\mu}` dual vector value and 3) objective value, which are stored into the
            object attributes :attr:`x_vector`, :attr:`mu_vector` and :attr:`objective`.
         3. Obtain results with respect to the original problem formulation via :meth:`get_results()` and

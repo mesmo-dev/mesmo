@@ -1,6 +1,7 @@
 """MESMO tutorial: Example 1."""
 
 import os
+import pathlib
 import plotly.graph_objects as go
 
 import mesmo
@@ -48,7 +49,7 @@ def main():
     figure.update_layout(
         title='Branch Power Magnitude at Line 1 (Phase 1)'
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'branch_power_line_1_phase_1'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'branch_power_line_1_phase_1'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

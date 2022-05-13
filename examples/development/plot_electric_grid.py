@@ -6,7 +6,6 @@
 
 import contextily as ctx
 import numpy as np
-import os
 import pandas as pd
 import PIL.Image
 import plotly.express as px
@@ -56,94 +55,10 @@ def main():
     latitude_min = nodes_values.loc[:, 'latitude'].min()
 
     # Obtain zoom / center for interactive plot.
-    zoom_longitude = np.log2(360 * 2.0 / (longitude_max - longitude_min))
-    zoom_latitude = np.log2(360 * 2.0 / (latitude_max - latitude_min))
-    zoom_correction = 1.035
-    zoom = zoom_correction * np.min([zoom_longitude, zoom_latitude])
-    center = dict(lon=0.5 * (longitude_max + longitude_min), lat=0.5 * (latitude_max + latitude_min))
-
-    # Obtain background map image for static plot.
-    image_bounds = (longitude_min, latitude_min, longitude_max, latitude_max)
-    image, image_bounds = (
-        ctx.bounds2img(
-            *image_bounds,
-            zoom=14,
-            source=ctx.providers.CartoDB.Positron,
-            ll=True
-        )
+    zoom, center = mesmo.utils.get_plotly_mapbox_zoom_center(
+        nodes_values.loc[:, 'longitude'].dropna().tolist(),
+        nodes_values.loc[:, 'latitude'].dropna().tolist()
     )
-    # Reorder image bounds, because it's jumbled up in bounds2img. # TODO: Raise issue.
-    image_bounds = (image_bounds[0], image_bounds[2], image_bounds[1], image_bounds[3])
-    image_bounds = (
-        rasterio.warp.transform_bounds(
-            {'init': 'epsg:3857'},
-            {'init': 'epsg:4326'},
-            *image_bounds
-        )
-    )
-    width, height = image.shape[1], image.shape[0]
-    image = PIL.Image.fromarray(image)
-
-    # Create static plot.
-    figure = go.Figure()
-    figure.add_trace(go.Scatter(
-        x=lines_values.loc[:, 'longitude'],
-        y=lines_values.loc[:, 'latitude'],
-        line=dict(color='black', width=0.25),
-        hoverinfo='none',
-        mode='lines'
-    ))
-    figure.add_trace(go.Scatter(
-        x=nodes_values.loc[:, 'longitude'],
-        y=nodes_values.loc[:, 'latitude'],
-        text=list(electric_grid_graph.nodes),
-        mode='markers+text',
-        hoverinfo='none',
-        marker=dict(color='lightskyblue', size=4),
-        textfont=dict(size=1)
-    ))
-    figure.add_trace(go.Scatter(
-        x=nodes_values.loc[nodes_substation, 'longitude'],
-        y=nodes_values.loc[nodes_substation, 'latitude'],
-        text=nodes_substation,
-        mode='markers+text',
-        hoverinfo='none',
-        marker=dict(color='lightpink', size=4),
-        textfont=dict(size=1)
-    ))
-    figure.add_layout_image(
-        dict(
-            source=image,
-            xref='x',
-            yref='y',
-            x=image_bounds[0],
-            y=image_bounds[1],
-            sizex=image_bounds[2] - image_bounds[0],
-            sizey=image_bounds[3] - image_bounds[1],
-            xanchor='left',
-            yanchor='bottom',
-            sizing='stretch',
-            opacity=1.0,
-            layer='below'
-        )
-    )
-    figure.update(layout=go.Layout(
-        width=width, height=height,
-        showlegend=False,
-        hovermode='closest',
-        margin=dict(b=0, l=0, r=0, t=0),
-        xaxis=go.layout.XAxis(
-            showgrid=False, zeroline=False, showticklabels=False, ticks='',
-            range=(image_bounds[0], image_bounds[2])
-        ),
-        yaxis=dict(
-            showgrid=False, zeroline=False, showticklabels=False, ticks='',
-            scaleanchor='x', scaleratio=1,
-            range=(image_bounds[1], image_bounds[3])
-        )
-    ))
-    figure.write_image(os.path.join(results_path, 'electric_grid.pdf'))
-    mesmo.utils.launch(os.path.join(results_path, 'electric_grid.pdf'))
 
     # Create interactive plot.
     figure = go.Figure()
@@ -178,8 +93,104 @@ def main():
         xaxis=go.layout.XAxis(showgrid=False, zeroline=False, showticklabels=False, ticks=''),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, ticks='')
     ))
-    figure.write_html(os.path.join(results_path, 'electric_grid.html'))
-    mesmo.utils.launch(os.path.join(results_path, 'electric_grid.html'))
+    figure.write_html(results_path / 'electric_grid.html')
+    mesmo.utils.launch(results_path / 'electric_grid.html')
+
+    # Obtain background map image for static plot.
+    longitude_padding = 0.01 * (longitude_max - longitude_min)
+    latitude_padding = 0.01 * (latitude_max - latitude_min)
+    image_bounds = (
+        longitude_min - longitude_padding,
+        latitude_min - latitude_padding,
+        longitude_max + longitude_padding,
+        latitude_max + latitude_padding
+    )
+    image, image_bounds = (
+        ctx.bounds2img(
+            *image_bounds,
+            zoom=14,
+            source=ctx.providers.CartoDB.Positron,
+            ll=True
+        )
+    )
+    # Reorder image bounds, because bounds2img uses a different order.
+    image_bounds = (image_bounds[0], image_bounds[2], image_bounds[1], image_bounds[3])
+    image_bounds = (
+        rasterio.warp.transform_bounds(
+            {'init': 'epsg:3857'},
+            {'init': 'epsg:4326'},
+            *image_bounds
+        )
+    )
+    width, height = image.shape[1], image.shape[0]
+    image = PIL.Image.fromarray(image)
+
+    # Create static plot.
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=lines_values.loc[:, 'longitude'],
+        y=lines_values.loc[:, 'latitude'],
+        line=dict(color='black', width=0.25),
+        hoverinfo='none',
+        mode='lines'
+    ))
+    figure.add_trace(go.Scatter(
+        x=nodes_values.loc[:, 'longitude'],
+        y=nodes_values.loc[:, 'latitude'],
+        # text=list(electric_grid_graph.nodes),
+        # mode='markers+text',
+        mode='markers',
+        hoverinfo='none',
+        # marker=dict(color='lightskyblue', size=4),
+        marker=dict(color='royalblue', size=4),
+        textfont=dict(size=1)
+    ))
+    figure.add_trace(go.Scatter(
+        x=nodes_values.loc[nodes_substation, 'longitude'],
+        y=nodes_values.loc[nodes_substation, 'latitude'],
+        # text=nodes_substation,
+        # mode='markers+text',
+        mode='markers',
+        hoverinfo='none',
+        # marker=dict(color='lightpink', size=4),
+        marker=dict(color='crimson', size=6),
+        textfont=dict(size=1)
+    ))
+    figure.add_layout_image(
+        dict(
+            source=image,
+            xref='x',
+            yref='y',
+            x=image_bounds[0],
+            y=image_bounds[1],
+            sizex=image_bounds[2] - image_bounds[0],
+            sizey=image_bounds[3] - image_bounds[1],
+            xanchor='left',
+            yanchor='bottom',
+            sizing='stretch',
+            opacity=1.0,
+            layer='below'
+        )
+    )
+    figure.update(layout=go.Layout(
+        width=width, height=height,
+        showlegend=False,
+        hovermode='closest',
+        margin=dict(b=0, l=0, r=0, t=0),
+        xaxis=go.layout.XAxis(
+            showgrid=False, zeroline=False, showticklabels=False, ticks='',
+            range=(image_bounds[0], image_bounds[2])
+        ),
+        yaxis=dict(
+            showgrid=False, zeroline=False, showticklabels=False, ticks='',
+            scaleanchor='x', scaleratio=1,
+            range=(image_bounds[1], image_bounds[3])
+        )
+    ))
+    mesmo.utils.write_figure_plotly(
+        figure, (results_path / 'electric_grid'), file_format='pdf', width=width, height=height
+    )
+    mesmo.utils.launch(results_path / 'electric_grid.pdf')
 
     # Print results path.
     mesmo.utils.launch(results_path)

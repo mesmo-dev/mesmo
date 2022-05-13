@@ -4,7 +4,6 @@ import matplotlib.dates
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import os
 import pandas as pd
 
 import mesmo
@@ -262,7 +261,7 @@ def main(
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
         lax.axis("off")
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'thermal_grid_der_dlmp_{der}.png'))
+        plt.savefig(results_path / f'thermal_grid_der_dlmp_{der}.png')
         # plt.show()
         plt.close()
 
@@ -349,7 +348,7 @@ def main(
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
         lax.axis("off")
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'electric_grid_der_dlmp_{der}.png'))
+        plt.savefig(results_path / f'electric_grid_der_dlmp_{der}.png')
         # plt.show()
         plt.close()
 
@@ -406,7 +405,7 @@ def main(
             cb = plt.colorbar(sm, shrink=0.9)
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
-            plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+            plt.savefig(results_path / f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png')
             # plt.show()
             plt.close()
 
@@ -459,7 +458,7 @@ def main(
             cb = plt.colorbar(sm, shrink=0.9)
             cb.set_label('Price [S$/MWh]')
             plt.tight_layout()
-            plt.savefig(os.path.join(results_path, f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png'))
+            plt.savefig(results_path / f'{dlmp_type}_{timestep.strftime("%H-%M-%S")}.png')
             # plt.show()
             plt.close()
 

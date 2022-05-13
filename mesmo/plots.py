@@ -6,7 +6,6 @@ from multimethod import multimethod
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import os
 import pandas as pd
 import plotly
 import plotly.express as px
@@ -137,7 +136,7 @@ def create_video(name: str, labels: pd.Index, results_path: str):
     for label in labels:
         if type(label) is pd.Timestamp:
             filename = f"{name}_{mesmo.utils.get_alphanumeric_string(f'{label}')}.png"
-            images.append(cv2.imread(os.path.join(results_path, filename)))
+            images.append(cv2.imread((results_path / filename)))
         if len(images) == 0:
             raise FileNotFoundError(
                 f"No images / frames found for video of '{name}'. Check if given labels are valid timesteps."
@@ -145,7 +144,7 @@ def create_video(name: str, labels: pd.Index, results_path: str):
 
     # Setup video.
     video_writer = cv2.VideoWriter(
-        os.path.join(results_path, f"{name}.avi"),  # Filename.
+        (results_path / f"{name}.avi"),  # Filename.
         cv2.VideoWriter_fourcc(*"XVID"),  # Format.
         2.0,  # FPS.
         images[0].shape[1::-1],  # Size.
@@ -242,7 +241,7 @@ def plot_line_utilization(
     plt.ylim([vmin, vmax])
     plt.ylabel(y_label)
     plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
+    plt.savefig((results_path / filename))
     # plt.show()
     plt.close()
 
@@ -334,7 +333,7 @@ def plot_transformer_utilization(
     plt.ylim([vmin, vmax])
     plt.ylabel(y_label)
     plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
+    plt.savefig((results_path / filename))
     # plt.show()
     plt.close()
 
@@ -440,7 +439,7 @@ def plot_node_utilization(
     plt.ylim([vmin, vmax])
     plt.ylabel(f"{y_label} [{value_unit}]")
     plt.tight_layout()
-    plt.savefig(os.path.join(results_path, filename))
+    plt.savefig((results_path / filename))
     # plt.show()
     plt.close()
 
@@ -564,7 +563,7 @@ def plot_grid_line_utilization(
         )
 
     # Store / show / close figure.
-    plt.savefig(os.path.join(results_path, filename), bbox_inches="tight")
+    plt.savefig((results_path / filename), bbox_inches="tight")
     # plt.show()
     plt.close()
 
@@ -676,7 +675,7 @@ def plot_grid_transformer_utilization(
         )
 
     # Store / show / close figure.
-    plt.savefig(os.path.join(results_path, filename), bbox_inches="tight")
+    plt.savefig((results_path / filename), bbox_inches="tight")
     # plt.show()
     plt.close()
 
@@ -814,7 +813,7 @@ def plot_grid_node_utilization(
         )
 
     # Store / show / close figure.
-    plt.savefig(os.path.join(results_path, filename), bbox_inches="tight")
+    plt.savefig((results_path / filename), bbox_inches="tight")
     # plt.show()
     plt.close()
 
@@ -856,7 +855,7 @@ def plot_total_active_power(values_dict: dict, results_path: str):
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
+    figure.write_image((results_path / filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_line_utilization_histogram(
@@ -897,7 +896,7 @@ def plot_line_utilization_histogram(
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.99, yanchor="auto"),
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
+    figure.write_image((results_path / filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_line_utilization_histogram_cumulative(
@@ -946,7 +945,7 @@ def plot_line_utilization_histogram_cumulative(
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
+    figure.write_image((results_path / filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_transformer_utilization_histogram(
@@ -996,7 +995,7 @@ def plot_transformer_utilization_histogram(
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.99, yanchor="auto"),
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
+    figure.write_image((results_path / filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_transformer_utilization_histogram_cumulative(
@@ -1054,7 +1053,7 @@ def plot_transformer_utilization_histogram_cumulative(
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
     )
     # figure.show()
-    figure.write_image(os.path.join(results_path, filename + f".{mesmo.config.config['plots']['file_format']}"))
+    figure.write_image((results_path / filename + f".{mesmo.config.config['plots']['file_format']}"))
 
 
 def plot_histogram_cumulative_branch_utilization(
@@ -1196,7 +1195,7 @@ def plot_histogram_cumulative_branch_utilization(
         yaxis2_title="Cumulative proportion",
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.05, yanchor="auto"),
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, (results_path / filename))
 
 
 def plot_histogram_node_utilization(
@@ -1264,7 +1263,7 @@ def plot_histogram_node_utilization(
         yaxis2_title="Frequency",
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.05, yanchor="auto"),
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, (results_path / filename))
 
 
 def plot_aggregate_timeseries_der_power(
@@ -1336,4 +1335,4 @@ def plot_aggregate_timeseries_der_power(
         **{f"xaxis{len(values_dict)}_tickformat": "%H:%M"},
         **{f"yaxis{index}_range": [value_minimum, value_maximum] for index in range(1, len(values_dict) + 1)},
     )
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, (results_path / filename))

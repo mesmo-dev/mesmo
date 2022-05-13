@@ -2,6 +2,7 @@
 
 import numpy as np
 import os
+import pathlib
 import plotly.graph_objects as go
 
 import mesmo
@@ -59,7 +60,7 @@ def main():
         name='Optimal',
         line=go.scatter.Line(shape='hv')
     ))
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'comparison'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'comparison'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

@@ -3,12 +3,12 @@
 import copy
 import datetime
 import functools
-import glob
 import itertools
 import logging
 import numpy as np
 import os
 import pandas as pd
+import pathlib
 import pickle
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -112,7 +112,7 @@ class ResultsBase(ObjectBase):
             if attributes[attribute_name] is not None:
                 self.__setattr__(attribute_name, attributes[attribute_name])
 
-    def save(self, results_path: str):
+    def save(self, results_path: pathlib.Path):
         """Store results to files at given results path.
 
         - Each results variable / attribute will be stored as separate file with the attribute name as file name.
@@ -127,24 +127,24 @@ class ResultsBase(ObjectBase):
         for attribute_name in attributes:
             if type(attributes[attribute_name]) in (pd.Series, pd.DataFrame):
                 # Pandas Series / DataFrame are stored to CSV.
-                attributes[attribute_name].to_csv(os.path.join(results_path, f"{attribute_name}.csv"))
+                attributes[attribute_name].to_csv((results_path / f"{attribute_name}.csv"))
             else:
                 # Other objects are stored to pickle binary file (PKL).
-                with open(os.path.join(results_path, f"{attribute_name}.pkl"), "wb") as output_file:
+                with open((results_path / f"{attribute_name}.pkl"), "wb") as output_file:
                     pickle.dump(attributes[attribute_name], output_file, pickle.HIGHEST_PROTOCOL)
 
-    def load(self, results_path: str):
+    def load(self, results_path: pathlib.Path):
         """Load results from given path."""
 
         # Obtain all CSV and PKL files at results path.
-        files = glob.glob(os.path.join(results_path, "*.csv")) + glob.glob(os.path.join(results_path, "*.pkl"))
+        files = list(results_path.glob("*.csv")) + list(results_path.glob("*.pkl"))
 
         # Load all files which correspond to valid attributes.
         for file in files:
 
             # Obtain file extension / attribute name.
-            file_extension = os.path.splitext(file)[1]
-            attribute_name = os.path.basename(os.path.splitext(file)[0])
+            file_extension = file.suffix
+            attribute_name = file.stem
 
             # Load file and set attribute value.
             if attribute_name in typing.get_type_hints(type(self)):
@@ -429,16 +429,7 @@ def get_inverse_with_zeros(array: np.ndarray) -> np.ndarray:
     return array_inverse
 
 
-def get_timestamp(time: datetime.datetime = None) -> str:
-    """Generate formatted timestamp string, e.g., for saving results with timestamp."""
-
-    if time is None:
-        time = datetime.datetime.now()
-
-    return time.strftime("%Y-%m-%d_%H-%M-%S")
-
-
-def get_results_path(base_name: str, scenario_name: str = None) -> str:
+def get_results_path(base_name: str, scenario_name: str = None) -> pathlib.Path:
     """Generate results path, which is a new subfolder in the results directory. The subfolder name is
     assembled of the given base name, scenario name and current timestamp. The new subfolder is
     created on disk along with this.
@@ -449,16 +440,15 @@ def get_results_path(base_name: str, scenario_name: str = None) -> str:
     """
 
     # Preprocess results path name components, including removing non-alphanumeric characters.
-    base_name = re.sub(r"\W-+", "", os.path.basename(os.path.splitext(base_name)[0])) + "_"
+    base_name = re.sub(r"\W-+", "", pathlib.Path(base_name).stem) + "_"
     scenario_name = "" if scenario_name is None else re.sub(r"\W-+", "", scenario_name) + "_"
-    timestamp = mesmo.utils.get_timestamp()
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
 
     # Obtain results path.
-    results_path = os.path.join(mesmo.config.config["paths"]["results"], f"{base_name}{scenario_name}{timestamp}")
+    results_path = mesmo.config.config["paths"]["results"] / f"{base_name}{scenario_name}{timestamp}"
 
     # Instantiate results directory.
-    # TODO: Catch error if dir exists.
-    os.mkdir(results_path)
+    results_path.mkdir(parents=True)
 
     return results_path
 
@@ -469,21 +459,76 @@ def get_alphanumeric_string(string: str):
     return re.sub(r"[^0-9a-zA-Z_]+", "_", string).strip("_").lower()
 
 
-def launch(path):
+def get_plotly_mapbox_zoom_center(
+        longitudes: tuple,
+        latitudes: tuple,
+        width_to_height: float = 2.0,
+) -> (float, dict):
+    """Get optimal zoom and centering for a plotly mapbox plot, given lists of longitude and latitude values.
+
+    - Assumes that longitude and latitude are in Mercator projection.
+    - Temporary solution awaiting official implementation, see: https://github.com/plotly/plotly.js/issues/3434
+    - Source: https://github.com/richieVil/rv_packages/blob/master/rv_geojson.py
+
+    Arguments:
+        longitudes (tuple): Longitude component of each location.
+        latitudes (tuple): Latitude component of each location.
+
+    Keyword Arguments:
+        width_to_height (float): Expected ratio of final graph's with to height, used to select the constrained axis.
+
+    Returns:
+        float: Zoom value from 1 to 20.
+        dict: Center position with 'lon' and 'lat' keys.
+    """
+
+    # Get center.
+    longitude_max, longitude_min = max(longitudes), min(longitudes)
+    latitude_max, latitude_min = max(latitudes), min(latitudes)
+    center = {
+        'lon': round((longitude_max + longitude_min) / 2, 6),
+        'lat': round((latitude_max + latitude_min) / 2, 6)
+    }
+
+    # Define longitudinal range by zoom level (20 to 1) in degrees, if centered at equator.
+    longitude_zoom_range = np.array([
+        0.0007, 0.0014, 0.003, 0.006, 0.012, 0.024, 0.048, 0.096,
+        0.192, 0.3712, 0.768, 1.536, 3.072, 6.144, 11.8784, 23.7568,
+        47.5136, 98.304, 190.0544, 360.0
+    ])
+
+    # Get zoom level.
+    margin = 1.2
+    height = (latitude_max - latitude_min) * margin * width_to_height
+    width = (longitude_max - longitude_min) * margin
+    longitude_zoom = np.interp(width, longitude_zoom_range, range(20, 0, -1))
+    latitude_zoom = np.interp(height, longitude_zoom_range, range(20, 0, -1))
+    zoom = round(min(longitude_zoom, latitude_zoom), 2)
+
+    return zoom, center
+
+
+def launch(path: pathlib.Path):
     """Launch the file at given path with its associated application. If path is a directory, open in file explorer."""
 
-    if not os.path.exists(path):
+    if not path.exists():
         raise FileNotFoundError(f"Cannot launch file or directory that does not exist: {path}")
 
     if sys.platform == "win32":
-        os.startfile(path)
+        os.startfile(str(path))
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
-        subprocess.Popen(["xdg-open", path], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["xdg-open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-def write_figure_plotly(figure: go.Figure, results_path: str, file_format=mesmo.config.config["plots"]["file_format"]):
+def write_figure_plotly(
+        figure: go.Figure,
+        results_path: pathlib.Path,
+        file_format=mesmo.config.config["plots"]["file_format"],
+        width=mesmo.config.config["plots"]["plotly_figure_width"],
+        height=mesmo.config.config["plots"]["plotly_figure_height"],
+):
     """Utility function for writing / storing plotly figure to output file. File format can be given with
     `file_format` keyword argument, otherwise the default is obtained from config parameter `plots/file_format`.
 
@@ -496,8 +541,8 @@ def write_figure_plotly(figure: go.Figure, results_path: str, file_format=mesmo.
         pio.write_image(
             figure,
             f"{results_path}.{file_format}",
-            width=mesmo.config.config["plots"]["plotly_figure_width"],
-            height=mesmo.config.config["plots"]["plotly_figure_height"],
+            width=width,
+            height=height,
         )
     elif file_format in ["html"]:
         pio.write_html(figure, f"{results_path}.{file_format}")

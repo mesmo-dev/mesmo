@@ -5,7 +5,6 @@ and Electric Grid Operation'.
 import matplotlib.dates
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
 
 import mesmo
@@ -173,7 +172,7 @@ def main():
         lax.legend((*h1, *h2), (*l1, *l2), borderaxespad=0)
         lax.axis("off")
         plt.tight_layout()
-        plt.savefig(os.path.join(results_path, f'thermal_grid_dlmp_{der}.pdf'))
+        plt.savefig((results_path / f'thermal_grid_dlmp_{der}.pdf'))
         plt.close()
 
     # Print results path.

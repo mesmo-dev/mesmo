@@ -6,8 +6,8 @@ import gurobipy as gp
 import itertools
 import numpy as np
 import pandas as pd
-import scipy.optimize
 import scipy.sparse as sp
+import subprocess
 import typing
 
 import mesmo.config
@@ -28,11 +28,11 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
       Available at: https://web.stanford.edu/~boyd/cvxbook/
     - The optimization problem object currently supports convex optimization problems in the form of
       1) linear program (LP) or 2) quadratic program (QP) with only linear constraints.
-    - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
-      convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
-      to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces are
-      assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as a fallback to
-      allow a high degree of compatibility with various solvers.
+    - The solve method currently implements interfaces to 1) HiGHS, 2) Gurobi and 3) CVXPY, where the latter is a
+      high-level convex optimization interface, which in turn allows interfacing further third-party solvers. The
+      intention is to implement more direct solver interfaces on as-need basis (please raise an issue!), as these
+      interfaces are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept
+      as a fallback to allow a high degree of compatibility with various solvers.
 
     The optimization problem object internally translates optimizations into LP / QP standard form. Where the following
     formulation is assumed for the standard form:
@@ -538,7 +538,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
                     )
                 # Add new constraints to index.
                 new_constraints.index = constraint_index
-                self.constraints = self.constraints.append(new_constraints)
+                self.constraints = pd.concat([self.constraints, new_constraints])
                 self.constraints_len += len(constraint_index)
             else:
                 # Only change constraints size, if no ``keys`` defined.
@@ -944,10 +944,15 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
                 rows, columns, values = sp.find(values)
                 rows = np.array(variable_1_index)[rows]
                 columns = np.array(variable_2_index)[columns]
-                # Insert entry in collections.
+                # Insert entries in collections.
                 values_list.append(values)
                 rows_list.append(rows)
                 columns_list.append(columns)
+                # Insert entries for opposite-diagonal side in collections.
+                # - Terms need to be added on both off-diagonal sides of Q for symmetry.
+                values_list.append(values)
+                rows_list.append(columns)
+                columns_list.append(rows)
 
         # Instantiate Q matrix.
         q_matrix = (
@@ -995,20 +1000,21 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         - The solve method compiles the standard form of the optimization problem
           (see :class:`OptimizationProblem`) and passes the standard-form problem to the optimization
           solver interface.
-        - The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level
-          convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is
-          to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these interfaces
-          are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as
-          a fallback to allow a high degree of compatibility with various solvers.
+        - The solve method currently implements interfaces to 1) HiGHS, 2) Gurobi and 3) CVXPY, where the latter is a
+          high-level convex optimization interface, which in turn allows interfacing further third-party solvers. The
+          intention is to implement more direct solver interfaces on a as-need basis (please raise an issue!), as these
+          interfaces are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is
+          kept as a fallback to allow a high degree of compatibility with various solvers.
         - The choice of solver and solver interface can be controlled through the config parameters
           ``optimization > solver_name`` and ``optimization > solver_interface`` (see ``mesmo/config_default.yml``).
 
         The default workflow of the solve method is as follows:
 
         1. Obtain problem definition through selected solver interface via :meth:`get_cvxpy_problem()` or
-           :meth:`get_gurobi_problem()`.
-        2. Solve optimization problem and obtain standard-form results via :meth:`solve_cvxpy()` or
-           :meth:`solve_gurobi()`. The standard-form results include the 1) :math:`\boldsymbol{x}` variable vector
+           :meth:`get_gurobi_problem()`. Note that this step is skipped for HiGHS, as there is currently no native
+           Python interface for HiGHS and hence no persistent problem object.
+        2. Solve optimization problem and obtain standard-form results via :meth:`solve_highs()`, :meth:`solve_cvxpy()`
+           or :meth:`solve_gurobi()`. The standard-form results include the 1) :math:`\boldsymbol{x}` variable vector
            value, 2) :math:`\boldsymbol{\mu}` dual vector value and 3) objective value, which are stored into the
            object attributes :attr:`x_vector`, :attr:`mu_vector` and :attr:`objective`.
         3. Obtain results with respect to the original problem formulation via :meth:`get_results()` and
@@ -1069,10 +1075,16 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
     def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
         """Obtain standard-form problem via Gurobi direct interface."""
 
+        # Instantiate Gurobi environment.
+        gurobipy_env = gp.Env(empty=True)
+        # Set solver output flag. This allows suppressing license information, which is printed upon model creation.
+        gurobipy_env.setParam('OutputFlag', int(mesmo.config.config["optimization"]["show_solver_output"]))
+        gurobipy_env.start()
+
         # Instantiate Gurobi model.
         # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
         #   and the associated attributes.
-        gurobipy_problem = gp.Model()
+        gurobipy_problem = gp.Model(env=gurobipy_env)
         # Set solver parameters.
         gurobipy_problem.setParam("OutputFlag", int(mesmo.config.config["optimization"]["show_solver_output"]))
         for key, value in mesmo.config.solver_parameters.items():
@@ -1149,6 +1161,96 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         return gurobipy_problem
 
+    def solve_highs(self):
+        """Solve optimization problem via HiGHS solver interface."""
+
+        # Get temporary file path for passing model file to HiGHS.
+        temp_path = mesmo.utils.get_results_path('temp')
+
+        # Write optimization problem to model file via Gurobi.
+        if mesmo.config.config["optimization"]["show_solver_output"]:
+            # Preface Gurobi outputs, to avoid confusion.
+            print("Writing model file for HiGHS via Gurobi. Please ignore Gurobi license information.")
+        gurobipy_problem, _, _, _ = self.get_gurobi_problem()
+        gurobipy_problem.write(str(temp_path / 'problem.mps'))
+
+        # Write options file.
+        # - Reference: https://www.maths.ed.ac.uk/hall/HiGHS/HighsOptions.html
+        options = [
+            f"log_file = {temp_path / 'log.txt'}\n",
+            "write_solution_style = 0\n",  # Write solutions in machine-readable format.
+            f"time_limit = {mesmo.config.config['optimization']['time_limit']}\n"
+            if mesmo.config.config['optimization']['time_limit'] is not None else "",
+        ]
+        with open(temp_path / 'options.txt', 'w') as file:
+            file.writelines(options)
+
+        # Run HiGHS.
+        command = " ".join([
+            f"{mesmo.config.config['paths']['highs_solver']}",
+            "--model_file",
+            f"{temp_path / 'problem.mps'}",
+            "--options_file",
+            f"{temp_path / 'options.txt'}",
+            "--solution_file",
+            f"{temp_path / 'solution.txt'}",
+        ])
+        output = []
+        with subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                encoding='utf-8',
+                errors='replace',
+        ) as process:
+            for line in process.stdout:
+                if mesmo.config.config["optimization"]["show_solver_output"]:
+                    logger.info(line.replace('\n', ''))
+                output.append(line)
+
+        # Retrieve solution status and raise error if non-optimal.
+        try:
+            status = next(line for line in output if line.startswith('Model   status      : '))
+            status = status.replace('Model   status      : ', '').replace('\n', '')
+        except StopIteration:
+            raise RuntimeError(f"HiGHS solution status could not be retrieved:\n{command}\n{''.join(output)}")
+        if status != 'Optimal':
+            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {status}\n{''.join(output)}")
+
+        # Read solution.
+        with open(temp_path / 'solution.txt', 'r') as file:
+            solution_lines = file.readlines()
+        x_vector_start = solution_lines.index(f'# Columns {len(self.variables)}\n') + 1
+        x_vector_end = solution_lines.index(f'# Rows {self.constraints_len}\n')
+        duals_start = solution_lines.index(f'# Dual solution values\n')
+        mu_vector_start = solution_lines.index(f'# Rows {self.constraints_len}\n', duals_start) + 1
+        mu_vector_end = solution_lines.index('\n', duals_start)
+
+        # Retrieve objective.
+        objective = next(line for line in solution_lines if line.startswith('Objective '))
+        objective = float(objective.replace('Objective ', '').replace('\n', ''))
+        self.objective = objective
+
+        # Retrieve x_vector.
+        x_vector = pd.Series(solution_lines[x_vector_start:x_vector_end])
+        x_vector = x_vector.str.replace('x_vector[', '', regex=False).str.replace(']', '', regex=False).str.replace('\n', '')
+        x_vector = x_vector.str.split(' ', expand=True).set_index(0).loc[:, 1]
+        x_vector.index = x_vector.index.astype(int)
+        x_vector = x_vector.astype(float)
+        x_vector = x_vector.sort_index()
+        self.x_vector = np.transpose([x_vector.values])
+
+        # Retrieve mu_vector.
+        mu_vector = pd.Series(solution_lines[mu_vector_start:mu_vector_end])
+        mu_vector = mu_vector.str.replace('constraints[', '', regex=False).str.replace(']', '', regex=False).str.replace('\n', '')
+        mu_vector = mu_vector.str.split(' ', expand=True).set_index(0).loc[:, 1]
+        mu_vector.index = mu_vector.index.astype(int)
+        mu_vector = mu_vector.astype(float)
+        mu_vector = mu_vector.sort_index()
+        self.mu_vector = np.transpose([mu_vector.values])
+
     def get_cvxpy_problem(
         self,
     ) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
@@ -1216,42 +1318,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.objective = float(cvxpy_problem.objective.value)
 
         return cvxpy_problem
-
-    def solve_highs(self) -> scipy.optimize.OptimizeResult:
-        """Solve optimization problem via SciPy HiGHS interface."""
-
-        # Raise warning if Q matrix is not zero, because HiGHS interface below doesn't consider QP expressions yet.
-        if any((self.get_q_matrix() != 0).data):
-            logger.warning(f"Found QP expression: The HiGHS solver interface does not yet support QP solution.")
-
-        # Replace infinite values in b vector with maximum floating point value.
-        # - Reason: SciPy optimization interface doesn't accept infinite values.
-        b_vector = self.get_b_vector().ravel()
-        b_vector[b_vector == np.inf] = np.finfo(float).max
-
-        # Solve optimization problem.
-        scipy_result = scipy.optimize.linprog(
-            self.get_c_vector().ravel(),
-            A_ub=self.get_a_matrix(),
-            b_ub=b_vector,
-            bounds=(None, None),
-            method="highs",
-            options=dict(
-                disp=mesmo.config.config["optimization"]["show_solver_output"],
-                time_limit=mesmo.config.config["optimization"]["time_limit"],
-            ),
-        )
-
-        # Assert that solver exited with an optimal solution. If not, raise an error.
-        if not (scipy_result.status == 0):
-            raise RuntimeError(f"HiGHS exited with non-optimal solution status: {scipy_result.message}")
-
-        # Store results.
-        self.x_vector = np.transpose([scipy_result.x])
-        self.mu_vector = np.transpose([scipy_result.ineqlin.marginals])
-        self.objective = scipy_result.fun
-
-        return scipy_result
 
     def get_results(self, x_vector: typing.Union[cp.Variable, np.ndarray] = None) -> dict:
         """Obtain results for decisions variables.

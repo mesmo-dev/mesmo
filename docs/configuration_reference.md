@@ -69,7 +69,7 @@ paths:
 
 ```yaml
 optimization:
-  solver_name: gurobi
+  solver_name: highs
   solver_interface: direct
   show_solver_output: true
   time_limit:
@@ -77,9 +77,9 @@ optimization:
 
 ### Configuration keys
 
-- `solver_name`: Defines the optimization solver. Choices are 'gurobi' or any valid solver name [for CVXPY](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver). Solver name should be defined in lower caps.
-- `solver_interface`: Defines the interface for sending the optimization problem to the solver. Choices are 'direct' or 'cvxpy'. If 'direct', MESMO will use a direct solver interface, which is currently only implemented for Gurobi. If no direct solver interface is available for the selected solver, MESMO will automatically fall back to CVXPY. If 'cvxpy', MESMO will always use CVXPY without checking for a direct solver interface. If not defined, will use 'direct'.
-- `time_limit`: Solver time limit in seconds. If not defined, the value is set to infinite. Currently only implemented for Gurobi and CPLEX.
+- `solver_name`: Defines the optimization solver. Choices are 'highs', 'gurobi' or any valid solver name [for CVXPY](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver). Solver name should be defined in lower caps.
+- `solver_interface`: Defines the interface for sending the optimization problem to the solver. Choices are 'direct' or 'cvxpy'. If 'direct', MESMO will use a direct solver interface, which is currently implemented for HiGHS and Gurobi. If no direct solver interface is available for the selected solver, MESMO will automatically fall back to CVXPY. If 'cvxpy', MESMO will always use CVXPY without checking for a direct solver interface. If not defined, will use 'direct'.
+- `time_limit`: Solver time limit in seconds. If not defined, the value is set to infinite. Currently only implemented for HiGHS, Gurobi and CPLEX.
 - `show_solver_output`: Choices are 'true' or 'false'. If 'true', activate verbose solver output. If 'false', silence any solver outputs.
 
 ### Setting CPLEX as optimization solver

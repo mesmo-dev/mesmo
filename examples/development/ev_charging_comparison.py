@@ -1,8 +1,8 @@
 """Example script for EV charging study."""
 
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse as sp
@@ -18,9 +18,9 @@ def main():
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
     mesmo.config.config['paths']['additional_data'].append(
-        os.path.join(
-            os.path.dirname(os.path.normpath(__file__)),
-            '..', '..', '..', 'data_processing', 'singapore_synthetic_grid_to_mesmo', 'output'
+        (
+            pathlib.Path(__file__).parent /
+            '..' / '..' / '..' / 'data_processing' / 'singapore_synthetic_grid_to_mesmo' / 'output'
         )
     )
     mesmo.data_interface.recreate_database()
@@ -227,7 +227,7 @@ def main():
     #                 legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
     #             )
     #             # figure.show()
-    #             mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'output_{der_name}_{output}'))
+    #             mesmo.utils.write_figure_plotly(figure, (results_path / f'output_{der_name}_{output}'))
     #         for disturbance in der_model.disturbances:
     #             figure = go.Figure()
     #             figure.add_trace(go.Scatter(
@@ -241,7 +241,7 @@ def main():
     #                 showlegend=False
     #             )
     #             # figure.show()
-    #             mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'disturbance_{der_name}_{disturbance}'))
+    #             mesmo.utils.write_figure_plotly(figure, (results_path / f'disturbance_{der_name}_{disturbance}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

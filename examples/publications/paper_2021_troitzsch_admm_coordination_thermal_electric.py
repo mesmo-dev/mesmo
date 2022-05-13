@@ -4,7 +4,6 @@ Distribution Grid Operation'.
 
 import cvxpy as cp
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -618,8 +617,8 @@ def main(
     )
 
     # Store residuals.
-    admm_primal_residuals.to_csv(os.path.join(results_path, 'admm_primal_residuals.csv'))
-    admm_dual_residuals.to_csv(os.path.join(results_path, 'admm_dual_residuals.csv'))
+    admm_primal_residuals.to_csv((results_path / 'admm_primal_residuals.csv'))
+    admm_dual_residuals.to_csv((results_path / 'admm_dual_residuals.csv'))
 
     # Plots.
 
@@ -647,7 +646,7 @@ def main(
         margin=go.layout.Margin(l=120, b=50, r=10, t=10)
     )
     # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_primal_residuals'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'admm_primal_residuals'))
 
     # Dual residuals.
     figure = px.line(admm_dual_residuals)
@@ -660,7 +659,7 @@ def main(
         margin=go.layout.Margin(b=50, r=10, t=10)
     )
     # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, 'admm_dual_residuals'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / 'admm_dual_residuals'))
 
     # Thermal power.
     for der_name in der_model_set.der_names:
@@ -698,7 +697,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'thermal_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'thermal_power_{der_name}'))
 
     # Active power.
     for der_name in der_model_set.der_names:
@@ -736,7 +735,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'active_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'active_power_{der_name}'))
 
     # Reactive power.
     for der_name in der_model_set.der_names:
@@ -775,7 +774,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'reactive_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'reactive_power_{der_name}'))
 
     # Thermal power price.
     for der_name in der_model_set.der_names:
@@ -819,7 +818,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_thermal_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'price_thermal_power_{der_name}'))
 
     # Active power price.
     for der_name in der_model_set.der_names:
@@ -863,7 +862,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_active_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'price_active_power_{der_name}'))
 
     # Reactive power price.
     for der_name in der_model_set.der_names:
@@ -908,7 +907,7 @@ def main(
             margin=go.layout.Margin(b=30, r=30, t=10)
         )
         # figure.show()
-        mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'price_reactive_power_{der_name}'))
+        mesmo.utils.write_figure_plotly(figure, (results_path / f'price_reactive_power_{der_name}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

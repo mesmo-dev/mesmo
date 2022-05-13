@@ -1,8 +1,8 @@
 """Stochastic optimization (SO) problem equivalent for DRO problem."""
 
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -42,7 +42,7 @@ def main():
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Obtain data objects.
-    dro_data_set = DRODataSet(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'dro_data'))
+    dro_data_set = DRODataSet((pathlib.Path(__file__).parent / 'dro_data'))
 
     # Obtain individual stage optimization problems.
     stage_1 = Stage1(scenario_name, dro_data_set, enable_electric_grid_model=enable_electric_grid_model)
@@ -120,12 +120,12 @@ def main():
     x_vector_value = optimization_problem.x_vector
     stage_1_index = mesmo.utils.get_index(optimization_problem.variables, name='stage_1_vector')
     stage_1_results = x_vector_value[stage_1_index]
-    pd.DataFrame(stage_1_results).to_csv(os.path.join(results_path, f's_1_vector_so.csv'))
+    pd.DataFrame(stage_1_results).to_csv((results_path / f's_1_vector_so.csv'))
 
     objective_so = {'objective_value': objective_array}
 
     objective_so_df = pd.DataFrame(data=objective_so)
-    objective_so_df.to_csv(os.path.join(results_path, f'objective_so.csv'))
+    objective_so_df.to_csv((results_path / f'objective_so.csv'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

@@ -3,8 +3,8 @@
 import csv
 import gurobipy as gp
 import numpy as np
-import os
 import pandas as pd
+import pathlib
 import plotly.express as px
 import plotly.graph_objects as go
 import scipy.sparse as sp
@@ -28,7 +28,7 @@ def main():
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
     # Obtain data objects.
-    dro_data_set = DRODataSet(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'dro_data'))
+    dro_data_set = DRODataSet((pathlib.Path(__file__).parent / 'dro_data'))
 
     # Define scenario sets.
     price_categories = ['energy', 'up_reserve', 'down_reserve']
@@ -337,8 +337,8 @@ def main():
     ]
 
     mesmo.utils.logger.info("Modify Gurobi problem.")
-    gurobipy_problem.write(os.path.join(results_path, 'gurobi.lp'))
-    gurobi_lp_file = pd.read_csv(os.path.join(results_path, 'gurobi.lp'), header=None).iloc[:, 0]
+    gurobipy_problem.write(str(results_path / 'gurobi.lp'))
+    gurobi_lp_file = pd.read_csv((results_path / 'gurobi.lp'), header=None).iloc[:, 0]
     bounds_line = gurobi_lp_file.index[gurobi_lp_file.str.contains('Bounds')][0]
     gurobi_lp_file = (
         pd.concat([
@@ -349,9 +349,9 @@ def main():
         ], ignore_index=True)
     )
     gurobi_lp_file.to_csv(
-        os.path.join(results_path, 'gurobi.lp'), header=False, index=False, quoting=csv.QUOTE_NONE
+        (results_path / 'gurobi.lp'), header=False, index=False, quoting=csv.QUOTE_NONE
     )
-    gurobipy_problem = gp.read(os.path.join(results_path, 'gurobi.lp'))
+    gurobipy_problem = gp.read((results_path / 'gurobi.lp'))
     x_vector = gp.MVar(gurobipy_problem.getVars())
     x_vector = (
         # Sort x_vector entries, because they are unordered after modifying the Gurobi problem.
@@ -373,19 +373,19 @@ def main():
     # Obtain results.
     x_vector_value = optimization_problem.x_vector
     stage_1_index = mesmo.utils.get_index(optimization_problem.variables, name='stage_1_vector')
-    pd.DataFrame(x_vector_value[stage_1_index]).to_csv(os.path.join(results_path, f's_1_vector_dro.csv'))
+    pd.DataFrame(x_vector_value[stage_1_index]).to_csv((results_path / f's_1_vector_dro.csv'))
     stage_1_results = stage_1.optimization_problem.get_results(x_vector_value[stage_1_index])
     energy_stage_1 = stage_1_results['energy_stage_1']
     up_reserve_stage_1 = stage_1_results['up_reserve_stage_1']
     down_reserve_stage_1 = stage_1_results['down_reserve_stage_1']
 
     #
-    pd.DataFrame(energy_stage_1).to_csv(os.path.join(results_path, f'energy_dro.csv'))
-    pd.DataFrame(up_reserve_stage_1).to_csv(os.path.join(results_path, f'up_reserve_dro.csv'))
-    pd.DataFrame(down_reserve_stage_1).to_csv(os.path.join(results_path, f'down_reserve_dro.csv'))
+    pd.DataFrame(energy_stage_1).to_csv((results_path / f'energy_dro.csv'))
+    pd.DataFrame(up_reserve_stage_1).to_csv((results_path / f'up_reserve_dro.csv'))
+    pd.DataFrame(down_reserve_stage_1).to_csv((results_path / f'down_reserve_dro.csv'))
     objective_dro = {'objective_value': [optimization_problem.objective]}
     objective_dro_df = pd.DataFrame(data=objective_dro)
-    objective_dro_df.to_csv(os.path.join(results_path, f'objective_dro.csv'))
+    objective_dro_df.to_csv((results_path / f'objective_dro.csv'))
 
     # Plot some results.
     figure = go.Figure()
@@ -425,7 +425,7 @@ def main():
         legend=go.layout.Legend(x=0.01, xanchor='auto', y=0.99, yanchor='auto')
     )
     # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, f'0_power_balance'))
+    mesmo.utils.write_figure_plotly(figure, (results_path / f'0_power_balance'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

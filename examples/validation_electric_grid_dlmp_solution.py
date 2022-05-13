@@ -1,8 +1,6 @@
 """Validation script for solving a decentralized DER operation problem based on DLMPs from the centralized problem."""
 
-import cvxpy as cp
 import numpy as np
-import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -87,6 +85,7 @@ def main():
 
     # Validate DLMPs.
     der_name = '4_2'
+    der = electric_grid_model.ders[mesmo.utils.get_index(electric_grid_model.ders, der_name=der_name)[0]]
     price_data_dlmps = price_data.copy()
     price_data_dlmps.price_timeseries = dlmps['electric_grid_total_dlmp_price_timeseries']
 
@@ -108,15 +107,15 @@ def main():
     # Plot: Price comparison.
     price_active_wholesale = (
         1e6 / scenario_data.scenario.at['base_apparent_power']
-        * price_data.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+        * price_data.price_timeseries.loc[:, ('active_power', *der)]
     )
     price_active_dlmp = (
         1e6 / scenario_data.scenario.at['base_apparent_power']
-        * price_data_dlmps.price_timeseries.loc[:, ('active_power', slice(None), der_name)].iloc[:, 0]
+        * price_data_dlmps.price_timeseries.loc[:, ('active_power', *der)]
     )
     price_reactive_dlmp = (
         1e6 / scenario_data.scenario.at['base_apparent_power']
-        * price_data_dlmps.price_timeseries.loc[:, ('reactive_power', slice(None), der_name)].iloc[:, 0]
+        * price_data_dlmps.price_timeseries.loc[:, ('reactive_power', *der)]
     )
 
     title = 'Price comparison'
@@ -152,17 +151,16 @@ def main():
         xaxis=go.layout.XAxis(tickformat='%H:%M'),
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.5, yanchor='auto')
     )
-    # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, (results_path / filename))
 
     # Plot: Active power comparison.
     active_power_centralized = (
         1e-6 * scenario_data.scenario.at['base_apparent_power']
-        * results_centralized['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+        * results_centralized['der_active_power_vector'].loc[:, [der]].iloc[:, 0].abs()
     )
     active_power_decentralized = (
         1e-6 * scenario_data.scenario.at['base_apparent_power']
-        * results_decentralized['der_active_power_vector'].loc[:, (slice(None), der_name)].iloc[:, 0].abs()
+        * results_decentralized['der_active_power_vector'].loc[:, [der]].iloc[:, 0].abs()
     )
 
     title = 'Active power comparison'
@@ -191,8 +189,7 @@ def main():
         xaxis=go.layout.XAxis(tickformat='%H:%M'),
         legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.01, yanchor='auto')
     )
-    # figure.show()
-    mesmo.utils.write_figure_plotly(figure, os.path.join(results_path, filename))
+    mesmo.utils.write_figure_plotly(figure, (results_path / filename))
 
     # Print results path.
     mesmo.utils.launch(results_path)

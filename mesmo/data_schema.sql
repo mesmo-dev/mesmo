@@ -45,6 +45,7 @@ CREATE TABLE der_models (
     heat_pump_efficiency TEXT,
     thermal_efficiency TEXT,
     electric_efficiency TEXT,
+    gas_consumption_nominal TEXT,
     PRIMARY KEY(der_type,der_model_name)
 );
 CREATE TABLE der_schedules (
@@ -181,12 +182,13 @@ CREATE TABLE electric_grids (
     PRIMARY KEY(electric_grid_name)
 );
 CREATE TABLE gas_grid_ders (
-    gas_grid_name TEXT,
+   gas_grid_name TEXT,
     der_name TEXT,
     node_name TEXT,
     der_type TEXT,
     der_model_name TEXT,
     gas_flow_nominal TEXT,
+    gas_consumption_nominal TEXT,
     in_service TEXT DEFAULT 1,
     PRIMARY KEY(gas_grid_name,der_name)
 );
@@ -216,8 +218,9 @@ CREATE TABLE gas_grid_nodes (
     PRIMARY KEY(gas_grid_name,node_name)
 );
 CREATE TABLE gas_grid_operation_limit_types (
-    gas_grid_operation_limit_type TEXT,
+   gas_grid_operation_limit_type TEXT,
     node_head_per_unit_maximum TEXT,
+    node_pressure_per_unit_maximum TEXT,
     pipe_flow_per_unit_maximum TEXT,
     PRIMARY KEY(gas_grid_operation_limit_type)
 );
@@ -228,6 +231,7 @@ CREATE TABLE gas_grids (
     enthalpy_difference_distribution_water TEXT,
     gas_density TEXT,
     gas_kinematic_viscosity TEXT,
+    gas_viscosity TEXT,
     source_der_type TEXT,
     source_der_model_name TEXT,
     PRIMARY KEY(gas_grid_name)
@@ -245,14 +249,16 @@ CREATE TABLE price_timeseries (
     PRIMARY KEY(price_type,time)
 );
 CREATE TABLE scenarios (
-    scenario_name TEXT,
+ scenario_name TEXT,
     electric_grid_name TEXT,
     thermal_grid_name TEXT,
+    gas_grid_name TEXT,
     parameter_set TEXT,
     price_type TEXT,
     price_sensitivity_coefficient REAL DEFAULT 0,
     electric_grid_operation_limit_type TEXT,
     thermal_grid_operation_limit_type TEXT,
+    gas_grid_operation_limit_type TEXT,
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,

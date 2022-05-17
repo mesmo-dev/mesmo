@@ -9,3 +9,4 @@ import mesmo.plots
 import mesmo.problems
 import mesmo.thermal_grid_models
 import mesmo.utils
+import mesmo.gas_grid_models

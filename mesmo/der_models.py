@@ -13,6 +13,8 @@ import typing
 import mesmo.config
 import mesmo.data_interface
 import mesmo.electric_grid_models
+import mesmo.thermal_grid_models
+import mesmo.gas_grid_models
 import mesmo.utils
 
 logger = mesmo.config.get_logger(__name__)
@@ -28,15 +30,19 @@ class DERModel(object):
     is_standalone: bool
     is_electric_grid_connected: bool
     is_thermal_grid_connected: bool
+    is_gas_grid_connected: bool
     electric_grid_der_index: typing.List[int]
     thermal_grid_der_index: typing.List[int]
+    gas_grid_der_index: typing.List[int]
     timesteps: pd.Index
     active_power_nominal: float
     reactive_power_nominal: float
     thermal_power_nominal: float
+    gas_consumption_nominal: float
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
+    gas_consumption_nominal_timeseries: pd.Series
 
     def __init__(
             self,
@@ -55,6 +61,7 @@ class DERModel(object):
         self.is_standalone = is_standalone
         self.is_electric_grid_connected = pd.notnull(der.at['electric_grid_name'])
         self.is_thermal_grid_connected = pd.notnull(der.at['thermal_grid_name'])
+        self.is_gas_grid_connected = pd.notnull(der.at['gas_grid_name'])
 
         # Obtain DER grid indexes.
         self.electric_grid_der_index = (
@@ -65,6 +72,11 @@ class DERModel(object):
         self.thermal_grid_der_index = (
             [der_data.ders.loc[der_data.ders.loc[:, 'thermal_grid_name'].notnull(), :].index.get_loc(der_name)]
             if self.is_thermal_grid_connected
+            else []
+        )
+        self.gas_grid_der_index = (
+            [der_data.ders.loc[der_data.ders.loc[:, 'gas_grid_name'].notnull(), :].index.get_loc(der_name)]
+            if self.is_gas_grid_connected
             else []
         )
 
@@ -80,6 +92,9 @@ class DERModel(object):
         )
         self.thermal_power_nominal = (
             der.at['thermal_power_nominal'] if pd.notnull(der.at['thermal_power_nominal']) else 0.0
+        )
+        self.gas_consumption_nominal = (
+            der.at['gas_consumption_nominal'] if pd.notnull(der.at['gas_consumption_nominal']) else 0.0
         )
 
         # Construct nominal active and reactive power timeseries.
@@ -149,6 +164,32 @@ class DERModel(object):
             self.thermal_power_nominal_timeseries = (
                 pd.Series(0.0, index=self.timesteps, name='thermal_power')
             )
+        # Construct nominal gas consumption timeseries.
+        if (
+                pd.notnull(der.at['definition_type'])
+                and (('schedule' in der.at['definition_type']) or ('timeseries' in der.at['definition_type']))
+                and self.is_gas_grid_connected
+        ):
+
+            # Construct nominal gas consumption timeseries.
+            self.gas_consumption_nominal_timeseries = (
+                der_data.der_definitions[
+                    der.at['definition_index']
+                ].loc[:, 'value'].copy().abs().rename('gas_consumption')
+            )
+            if 'per_unit' in der.at['definition_type']:
+                # If per unit definition, multiply nominal gas consumption.
+                self.gas_consumption_nominal_timeseries *= self.gas_consumption_nominal
+            else:
+                self.gas_consumption_nominal_timeseries *= (
+                        np.sign(self.gas_consumption_nominal)
+                        / der_data.scenario_data.scenario.at['base_gas_consumption']
+                )
+        else:
+            self.gas_consumption_nominal_timeseries = (
+                pd.Series(0.0, index=self.timesteps, name='gas_consumption')
+            )
+
 
         # Obtain marginal cost.
         self.marginal_cost = der.at['marginal_cost'] if pd.notnull(der.at['marginal_cost']) else 0.0
@@ -249,6 +290,7 @@ class FlexibleDERModel(DERModel):
     mapping_active_power_by_output: pd.DataFrame
     mapping_reactive_power_by_output: pd.DataFrame
     mapping_thermal_power_by_output: pd.DataFrame
+    mapping_gas_consumption_by_output: pd.DataFrame
     state_vector_initial: pd.Series
     state_matrix: pd.DataFrame
     control_matrix: pd.DataFrame
@@ -1447,6 +1489,7 @@ class DERModelSetBase:
     der_active_power_vector_reference: np.array
     der_reactive_power_vector_reference: np.array
     der_thermal_power_vector_reference: np.array
+    der_gas_consumption_vector_reference: np.array
 
 
 class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
@@ -1458,6 +1501,8 @@ class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROper
     # TODO: Add output constraint and disturbance timeseries.
     der_thermal_power_vector: pd.DataFrame
     der_thermal_power_vector_per_unit: pd.DataFrame
+    der_gas_consumption_vector: pd.DataFrame
+    der_gas_consumption_vector_per_unit: pd.DataFrame
 
 
 class DERModelSet(DERModelSetBase):
@@ -1503,6 +1548,7 @@ class DERModelSet(DERModelSetBase):
         self.ders = pd.MultiIndex.from_frame(ders.loc[:, ['der_type', 'der_name']])
         self.electric_ders = self.ders[pd.notnull(ders.loc[:, 'electric_grid_name'])]
         self.thermal_ders = self.ders[pd.notnull(ders.loc[:, 'thermal_grid_name'])]
+        self.gas_ders = self.ders[pd.notnull(ders.loc[:, 'gas_grid_name'])]
         self.der_names = ders.index
 
         # Obtain DER models.
@@ -1612,6 +1658,13 @@ class DERModelSet(DERModelSetBase):
                     for der_type, der_name in self.thermal_ders
                 ])
             )
+        if len(self.gas_ders) > 0:
+            self.der_gas_consumption_vector_reference = (
+                np.array([
+                    self.der_models[der_name].gas_consumption_nominal
+                    for der_type, der_name in self.gas_ders
+                ])
+            )
 
     def define_optimization_problem(
             self,
@@ -1669,6 +1722,13 @@ class DERModelSet(DERModelSetBase):
         ):
             optimization_problem.define_variable(
                 'der_thermal_power_vector', scenario=scenarios, timestep=self.timesteps, der=self.thermal_ders
+            )
+        if (
+                ('der_gas_consumption_vector' not in optimization_problem.variables.loc[:, 'name'].values)
+                and (len(self.gas_ders) > 0)
+        ):
+            optimization_problem.define.variable(
+                'der_gas_consumption_vector', scenario=scenarios, timestep=self.timesteps, der=self.thermal_ders
             )
 
     def define_optimization_parameters(
@@ -1883,6 +1943,47 @@ class DERModelSet(DERModelSetBase):
                 for der_name in self.flexible_der_names
             ], axis='columns').values.ravel()
         )
+        if len(self.gas_ders) > 0:
+            optimization_problem.define_parameter(
+                'gas_consumption_constant',
+                np.concatenate([
+                    np.transpose([
+                        self.fixed_der_models[der_name].gas_consumption_nominal_timeseries.values
+                        / (
+                            self.fixed_der_models[der_name].gas_consumption_nominal
+                            if self.fixed_der_models[der_name].gas_consumption_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.fixed_der_models[der_name].is_gas_grid_connected
+                        else 0.0 * self.fixed_der_models[der_name].gas_consumption_nominal_timeseries.values
+                    ])
+                    if der_name in self.fixed_der_names
+                    else np.zeros((len(self.timesteps), 1))
+                    for der_type, der_name in self.gas_ders
+                ], axis=1).ravel()
+            )
+            optimization_problem.define_parameter(
+                'mapping_gas_consumption_by_output',
+                sp.block_diag([
+                    (
+                        self.flexible_der_models[der_name].mapping_gas_consumption_by_output.values
+                        / (
+                            self.flexible_der_models[der_name].gas_consumption_nominal
+                            if self.flexible_der_models[der_name].gas_consumption_nominal != 0.0
+                            else 1.0
+                        )
+                        if self.flexible_der_models[der_name].is_gas_grid_connected
+                        else np.zeros((0, len(self.flexible_der_models[der_name].outputs)))
+                    )
+                    if der_name in self.flexible_der_names
+                    else (
+                        np.zeros((1, 0))
+                        if self.der_models[der_name].is_gas_grid_connected
+                        else np.zeros((0, 0))
+                    )
+                    for der_type, der_name in self.ders
+                ])
+            )
 
         # Define objective parameters.
         if len(self.electric_ders) > 0:
@@ -1956,6 +2057,30 @@ class DERModelSet(DERModelSetBase):
                     axis=1
                 )
             )
+        if len(self.gas_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_gas_consumption_cost',
+                np.array([(
+                                  (
+                                      price_data.price_timeseries.iloc[:, mesmo.utils.get_index(
+                                          price_data.price_timeseries.columns,
+                                          commodity_type='gas_consumption',
+                                          der_name=self.thermal_ders.get_level_values('der_name')
+                                      )].values
+                                  )
+                                  * -1.0 * timestep_interval_hours  # In Wh.
+                                  @ sp.block_diag(self.der_thermal_power_vector_reference)
+                          ).ravel()])
+            )
+            optimization_problem.define_parameter(
+                'der_gas_consumption_cost_sensitivity',
+                price_data.price_sensitivity_coefficient
+                * timestep_interval_hours  # In Wh.
+                * np.concatenate(
+                    [np.array([self.der_gas_consumption_vector_reference ** 2])] * len(self.timesteps),
+                    axis=1
+                )
+            )
         # TODO: Revise marginal cost implementation to split active / reactive / thermal power cost.
         # TODO: Related: Cost for CHP defined twice.
         if len(self.electric_ders) > 0:
@@ -1987,6 +2112,16 @@ class DERModelSet(DERModelSetBase):
                     * self.der_models[der_name].thermal_power_nominal
                     for der_type, der_name in self.thermal_ders
                 ] * len(self.timesteps)]], axis=1)
+            )
+        if len(self.gas_ders) > 0:
+            optimization_problem.define_parameter(
+                'der_gas_consumption_marginal_cost',
+                np.concatenate([[[
+                                     self.der_models[der_name].marginal_cost
+                                     * timestep_interval_hours  # In Wh.
+                                     * self.der_models[der_name].gas_consumption_nominal
+                                     for der_type, der_name in self.gas_ders
+                                 ] * len(self.timesteps)]], axis=1)
             )
 
     def define_optimization_constraints(
@@ -2108,6 +2243,19 @@ class DERModelSet(DERModelSetBase):
                 )),
                 broadcast=['timestep', 'scenario']
             )
+        if len(self.gas_ders) > 0:
+            optimization_problem.define_constraint(
+                ('variable', 1.0, dict(
+                    name='der_gas_consumption_vector', scenario=scenarios, timestep=self.timesteps,
+                    der=self.gas_ders
+                )),
+                '==',
+                ('constant', 'gas_consumption_constant', dict(scenario=scenarios)),
+                ('variable', 'mapping_gas_consumption_by_output', dict(
+                    name='output_vector', scenario=scenarios, timestep=self.timesteps
+                )),
+                broadcast=['timestep', 'scenario']
+            )
 
     def define_optimization_objective(
             self,
@@ -2213,13 +2361,15 @@ class DERModelSet(DERModelSetBase):
             results: DERModelSetOperationResults,
             price_data: mesmo.data_interface.PriceData,
             has_electric_grid_objective: bool = False,
-            has_thermal_grid_objective: bool = False
+            has_thermal_grid_objective: bool = False,
+            has_gas_grid_objetive: bool = False
     ) -> float:
 
         # Instantiate optimization problem.
         optimization_problem = mesmo.utils.OptimizationProblem()
         optimization_problem.flags['has_electric_grid_objective'] = has_electric_grid_objective
         optimization_problem.flags['has_thermal_grid_objective'] = has_thermal_grid_objective
+        optimization_problem.flags['has_gas_grid_objective'] = has_gas_grid_objetive
         self.define_optimization_variables(optimization_problem)
         self.define_optimization_parameters(optimization_problem, price_data)
         self.define_optimization_objective(optimization_problem)
@@ -2237,6 +2387,10 @@ class DERModelSet(DERModelSetBase):
         if len(self.thermal_ders) > 0:
             objective_variable_names.extend([
                 'der_thermal_power_vector_per_unit'
+            ])
+        if len(self.gas_ders) > 0:
+            objective_variable_names.extend([
+                'der_gas_consumption_vector_per_unit'
             ])
         for variable_name in objective_variable_names:
             index = mesmo.utils.get_index(optimization_problem.variables, name=variable_name.replace('_per_unit', ''))
@@ -2308,6 +2462,15 @@ class DERModelSet(DERModelSetBase):
             * np.concatenate([self.der_thermal_power_vector_reference] * len(scenarios))
             if len(thermal_ders) > 0 else None
         )
+        der_gas_consumption_vector_per_unit = (
+            optimization_problem.results['der_gas_consumption_vector'].loc[self.timesteps, thermal_ders]
+            if len(gas_ders) > 0 else None
+        )
+        der_gas_consumption_vector = (
+            der_gas_consumption_vector_per_unit
+            * np.concatenate([self.der_gas_consumption_vector_reference] * len(scenarios))
+            if len(gas_ders) > 0 else None
+        )
 
         return DERModelSetOperationResults(
             der_model_set=self,
@@ -2350,6 +2513,10 @@ class DERModelSet(DERModelSetBase):
             if self.der_models[der_name].is_thermal_grid_connected:
                 self.der_models[der_name].thermal_power_nominal_timeseries.loc[:] = (
                     results.der_thermal_power_vector.loc[:, (slice(None), der_name)].values[:, 0]
+                )
+            if self.der_models[der_name].is_gas_grid_connected:
+                self.der_models[der_name].gas_consumption_nominal_timeseries.loc[:] = (
+                    results.der_gas_consumption_vector.loc[:, (slice(None), der_name)].values[:, 0]
                 )
         self.update_data()
 

@@ -1,0 +1,3 @@
+transformer_type,resistance_percentage,reactance_percentage,tap_maximum_voltage_per_unit,tap_minimum_voltage_per_unit
+substation,1,8,1.1,0.9
+xfm_1,1.9,4.08,1.1,0.9

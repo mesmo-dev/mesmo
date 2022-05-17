@@ -7,6 +7,7 @@ import mesmo.der_models
 import mesmo.electric_grid_models
 import mesmo.plots
 import mesmo.problems
+import mesmo.solutions
 import mesmo.thermal_grid_models
 import mesmo.utils
 import mesmo.gas_grid_models

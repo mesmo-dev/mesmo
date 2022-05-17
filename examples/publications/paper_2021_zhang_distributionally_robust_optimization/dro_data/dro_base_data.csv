@@ -1,0 +1,2 @@
+﻿penalty_energy_deviation ($/kWh),prob_up_reserve_bidded,prob_down_reserve_bidded,prob_up_reserve_activated,prob_down_reserve_activated
+2.3,0.73,0.86,0.35,0.28

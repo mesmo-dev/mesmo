@@ -6,14 +6,17 @@ If you are keen to contribute to this project, please follow these guidelines:
 - Development is based on Python 3.8.
 - Git branches follow the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/).
 - Release versioning follows the [Semantic Versioning principle](https://semver.org/).
+- Code style follows the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and [Common Coding Conventions](https://github.com/tum-esi/common-coding-conventions), unless stated otherwise [below](#style-guide).
 
 ## Git branches
 
 Based on the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/) there are the following branches:
 
 1. `master` - Contains stable release versions of the repository. Only admins should send pull requests / commits to `master` when 1) fixing a critical bug or 2) publishing a new release.
-2. `develop` - This branch is intended as the main branch for development or improvement of features. Anyone can send pull requests to `develop`.
+2. `develop` - This branch is intended as the main branch for development or improvement of features. Anyone can send pull requests to `develop`. Pull requests must be discussed and approved by the administrators of this repository before merging into `develop`.
 3. `feature/xxx` - This branch is dedicated to developing feature `xxx`. The idea is to keep development or improvement works separate from the main `develop` branch. Once the work is finished, a pull request is created for feature `xxx` to be merged back into the `develop` branch.
+
+If in doubt, your code should be committed to a `feature/xxx` branch first.
 
 ## Release versioning
 
@@ -24,7 +27,7 @@ Every time the `master` branch changes, a new version number is defined accordin
 
 ## Style guide
 
-- Follow the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and check [this PEP8 Explainer](https://realpython.com/python-pep8/).
+- Follow the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and [Common Coding Conventions](https://github.com/tum-esi/common-coding-conventions). Also check [this PEP8 Explainer](https://realpython.com/python-pep8/).
 - Variable / function / object / class / module names:
     - Names are verbose and avoid abbreviations.
     - Variable / function / object names are in lowercase and underscore_case (all letters are lowercase and all words are separated by underscores).
@@ -56,28 +59,16 @@ Every time the `master` branch changes, a new version number is defined accordin
 
 Before pushing a new commit / release to the `master` branch, please go through the following steps:
 
-1. Update `environment.yml` (see below).
-2. Run tests locally and ensure that all tests complete successfully.
-3. Ensure that change log entry has been added for this version in `docs/change_log.md`.
-4. Ensure that version numbers and year numbers have been updated everywhere:
+1. Run tests locally and ensure that all tests complete successfully.
+2. Ensure that change log entry has been added for this version in `docs/change_log.md`.
+3. Ensure that version numbers and year numbers have been updated everywhere:
     - `setup.py` (at `version=`)
     - `docs/change_log.md`
-    - `docs/publications.md` (at example citation)
     - `docs/conf.py` (at `copyright =`)
+    - `CITATION.bib`
     - `LICENSE`
-5. After pushing a new commit / release, create a tag and publish a new release on Github: <https://github.com/mesmo-dev/mesmo/releases>
-6. After publishing a new release, edit the latest Zenodo entry: <https://doi.org/10.5281/zenodo.3562875>
+4. After pushing a new commit / release, create a tag and publish a new release on Github: <https://github.com/mesmo-dev/mesmo/releases>
+5. After publishing a new release, edit the latest Zenodo entry: <https://doi.org/10.5281/zenodo.3562875>
     - Set title to "MESMO - Multi-Energy System Modeling and Optimization".
     - Set correct author names.
-    - Set license needs to "MIT License".
-
-## Updating `environment.yml`
-
-The `environment.yml` file in the repository base directory provides a snapshot of an Anaconda environment with specific package versions which has been tested and is confirmed to work. The `environment.yml` file should be updated before releases, i.e. commits to the `master` branch. To update `environment.yml`, follow these steps:
-
-1. Uninstall MESMO / delete the existing `mesmo` Anaconda environment: `conda env remove -n mesmo`
-2. Reinstall MESMO / recreate the `mesmo` Anaconda environment based on the recommended installation steps in [Getting started](getting_started.md).
-3. Run **all test** and **all examples scripts** and fix any incompatibilities / bugs.
-4. Update `environment.yml`: `conda env export -n mesmo > path_to_repository/environment.yml`
-5. Remove `prefix: ...` line from `environment.yml`.
-6. Add line at the top of file: `# Last updated: DD Month YYYY (MESMO vX.X.X)`
+    - Set license to "MIT License".

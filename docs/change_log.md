@@ -1,13 +1,37 @@
 # Change log
 
-Note that version numbering follows the [Semantic Versioning principle](https://semver.org/).
+Version numbering follows the [Semantic Versioning principle](https://semver.org/).
 
-## [v0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/v0.5.0)
+## Next release
 
 ### New features
 
+- Added constant power DER model, which is intended as the most simplistic placeholder DER type. The constant power DER model now acts as default value if no DER model is defined in the scenario definition.
+- Work-in-progress: Added trust-region algorithm as solve method for the optimal operation problem.
+- Work-in-progress: Added support for meshed thermal grid models.
+
+### Changes
+
+- Revised "Examples" section in the documentation and added three tutorials.
+- Work-in-progress: Revised `thermal_grid_models` module structure:
+    - Revised `ThermalGridModel` attributes and added method `get_branch_loss_coefficient_vector()` method.
+    - The implementation of `ThermalPowerFlowSolution` is split into `ThermalPowerFlowSolutionBase` as base class and `ThermalPowerFlowSolutionExplicit` for the power flow solution algorithm.
+    - `ThermalPowerFlowSolution` now serves as high-level interface which passes calls to `ThermalPowerFlowSolutionExplicit` for radial grids and raises `NotImplementedError` for meshed grids.
+- Added aggregated attributes in `DERModels`: `der_active_power_nominal_timeseries`, `der_reactive_power_nominal_timeseries`, `der_thermal_power_nominal_timeseries`
+- Refactored `data` directory, to separate data items for default-type library definitions, template definitions, test-case scenario definitions and cobmo-related definitions.
+
+### Fixes
+
+- `OptimizationProblem.solve()` does not try to retrieve duals for non-convex problems anymore.
+
+## [0.5.0](https://github.com/mesmo-dev/mesmo/releases/tag/0.5.0)
+
+With this release, the Flexible Distribution Grid Demonstrator (FLEDGE) was renamed to Multi-Energy System Modeling and Optimization (MESMO).
+
+### New features
+
+- Added new optimization problem object (`utils.OptimizationProblem`) as main interface for defining optimization problems with functionality to 1) export the standard form for LP / QP, 2) directly interface Gurobi for better performance with large problems.
 - Overhead line types can now be defined in terms of conductor data and geometric arrangement (Arif Ahmed).
-- Added standard form object for generating the standard form of linear optimization problems.
 - Added local-approximation variant for linear electric grid model.
 - Added linear model set for electric grid model, which enables defining separate linear models for each time step.
 - Added power flow solution set, to obtain power flow solutions more conveniently for multiple time steps.
@@ -16,7 +40,9 @@ Note that version numbering follows the [Semantic Versioning principle](https://
 ### Changes
 
 - Improved / simplified `define_optimization...()` methods for most use cases.
+- Revised `define_optimization...()` methods for new optimization problem object.
 - Switched from `multiprocess` to `ray` for parallel processing for performance reasons.
+- Revised documentation structure, overhauled the architecture documentation and added the configuration reference.
 
 ## [v0.4.1](https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.1)
 

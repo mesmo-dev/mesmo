@@ -1,6 +1,6 @@
 # API reference
 
-```{warning}
+```{important}
 This reference is work in progress.
 ```
 
@@ -38,6 +38,12 @@ This reference is work in progress.
 
 ```{eval-rst}
 .. automodule:: mesmo.data_interface
+```
+
+## `mesmo.solutions`
+
+```{eval-rst}
+.. automodule:: mesmo.solutions
 ```
 
 ## `mesmo.utils`

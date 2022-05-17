@@ -1,0 +1,6 @@
+line_type,n_phases,maximum_current
+config300,3,230
+config301,3,180
+config302,1,140
+config303,1,140
+config304,1,180

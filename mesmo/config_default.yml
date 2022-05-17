@@ -1,30 +1,28 @@
 # Configuration default values.
+# - For documentation, see the configuration reference at `../docs/configuration_reference.md`.
 # - These values can be overwritten with a custom `config.yml` in the repository base directory.
-# - In the path settings, `./` denotes the repository base directory and is replaced upon loading.
+# - In the path parameters, `./` denotes the MESMO repository base directory as reference for relative path definitions.
 paths:
-  additional_data: []
-  ignore_data_folders: []
   data: ./data
   database: ./data/database.sqlite
   results: ./results
+  additional_data: []
+  ignore_data_folders: []
   cobmo_additional_data: []
+  highs_solver: ./highs/bin/highs
+optimization:
+  solver_name: highs  # Choices: 'highs', 'gurobi' or any valid solver name for CVXPY in lower caps.
+  solver_interface: direct # Choices: 'direct' or 'cvxpy'. If not defined, will use 'direct'.
+  show_solver_output: true # Choices: 'true' or 'false'. If 'true', activate verbose solver output.
+  time_limit:  # Solver time limit in seconds. If not defined, will use infinite. Only for Gurobi and CPLEX.
 multiprocessing:
   run_parallel: false  # Disabled by default to avoid unexpected issues.
-caching:
-  enable: false  # If false, no cache is created. Disabled by default to avoid unexpected issues.
-  reset_cache: false  # If true, reset the cache on each restart of MESMO, to incorporate changes in the database.
-  expiry_time: 3600  # Expiry time of the cache, in seconds.
-  get_building_model: true
-optimization:
-  solver_interface:  # If 'cvxpy', will use CVXPY. If not defined, will use direct solver interfaces.
-  solver_name: gurobi  # Choices: 'gurobi' or any valid solver name for CVXPY.
-  time_limit:  # Solver time limit in seconds. Infinite if not defined. Only for Gurobi / CPLEX.
-  show_solver_output: true  # If True, activate verbose solver output.
-tests:
-  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
+  cpu_share: 1.0  # Maximum share of CPU cores to use for parallel processing.
 logs:
   level: info  # Choices: `debug`, `info`, `warn`.
-  format: '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+  format: '%(asctime)s | %(levelname)s | %(message)s'
+tests:
+  scenario_name: singapore_6node  # Defines scenario which is considered in tests.
 plots:
   matplotlib_style: seaborn-colorblind
   matplotlib_colormap: viridis_r

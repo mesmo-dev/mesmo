@@ -45,7 +45,6 @@ CREATE TABLE der_models (
     heat_pump_efficiency TEXT,
     thermal_efficiency TEXT,
     electric_efficiency TEXT,
-    gas_consumption_nominal TEXT,
     PRIMARY KEY(der_type,der_model_name)
 );
 CREATE TABLE der_schedules (
@@ -63,23 +62,23 @@ CREATE TABLE der_timeseries (
 CREATE TABLE electric_grid_ders (
     electric_grid_name TEXT,
     der_name TEXT,
-    der_type TEXT,
+    der_type TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 'constant_power',
     der_model_name TEXT,
     node_name TEXT,
     is_phase_1_connected TEXT,
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     connection TEXT,
-    active_power_nominal TEXT,
-    reactive_power_nominal TEXT,
-    in_service TEXT DEFAULT 1,
+    active_power_nominal TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '0.0',
+    reactive_power_nominal TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '0.0',
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(electric_grid_name,der_name)
 );
 CREATE TABLE electric_grid_line_types (
     line_type TEXT,
     n_phases TEXT,
     maximum_current TEXT,
-    definition_type TEXT DEFAULT 'matrix',
+    definition_type TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 'matrix',
     PRIMARY KEY(line_type)
 );
 CREATE TABLE electric_grid_line_types_matrices (
@@ -130,7 +129,7 @@ CREATE TABLE electric_grid_lines (
     is_phase_2_connected TEXT,
     is_phase_3_connected TEXT,
     length TEXT,
-    in_service TEXT DEFAULT 1,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(electric_grid_name,line_name)
 );
 CREATE TABLE electric_grid_nodes (
@@ -142,7 +141,7 @@ CREATE TABLE electric_grid_nodes (
     voltage TEXT,
     latitude TEXT,
     longitude TEXT,
-    in_service TEXT DEFAULT 1,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(electric_grid_name,node_name)
 );
 CREATE TABLE electric_grid_operation_limit_types (
@@ -171,70 +170,15 @@ CREATE TABLE electric_grid_transformers (
     is_phase_3_connected TEXT,
     connection TEXT,
     apparent_power TEXT,
-    in_service TEXT DEFAULT 1,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(electric_grid_name,transformer_name)
 );
 CREATE TABLE electric_grids (
     electric_grid_name TEXT,
     source_node_name TEXT,
     base_frequency TEXT,
-    is_single_phase_equivalent TEXT DEFAULT 0,
+    is_single_phase_equivalent TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 0,
     PRIMARY KEY(electric_grid_name)
-);
-CREATE TABLE gas_grid_ders (
-   gas_grid_name TEXT,
-    der_name TEXT,
-    node_name TEXT,
-    der_type TEXT,
-    der_model_name TEXT,
-    gas_flow_nominal TEXT,
-    gas_consumption_nominal TEXT,
-    in_service TEXT DEFAULT 1,
-    PRIMARY KEY(gas_grid_name,der_name)
-);
-CREATE TABLE gas_grid_line_types (
-    line_type TEXT,
-    diameter TEXT,
-    absolute_roughness TEXT,
-    maximum_velocity TEXT,
-    PRIMARY KEY(line_type)
-);
-CREATE TABLE gas_grid_lines (
-    gas_grid_name TEXT,
-    line_name TEXT,
-    line_type TEXT,
-    node_1_name TEXT,
-    node_2_name TEXT,
-    length TEXT,
-    in_service TEXT DEFAULT 1,
-    PRIMARY KEY(gas_grid_name,line_name)
-);
-CREATE TABLE gas_grid_nodes (
-    gas_grid_name TEXT,
-    node_name TEXT,
-    latitude TEXT,
-    longitude TEXT,
-    in_service TEXT DEFAULT 1,
-    PRIMARY KEY(gas_grid_name,node_name)
-);
-CREATE TABLE gas_grid_operation_limit_types (
-   gas_grid_operation_limit_type TEXT,
-    node_head_per_unit_maximum TEXT,
-    node_pressure_per_unit_maximum TEXT,
-    pipe_flow_per_unit_maximum TEXT,
-    PRIMARY KEY(gas_grid_operation_limit_type)
-);
-CREATE TABLE gas_grids (
-    gas_grid_name TEXT,
-    source_node_name TEXT,
-    energy_transfer_station_head_loss TEXT,
-    enthalpy_difference_distribution_water TEXT,
-    gas_density TEXT,
-    gas_kinematic_viscosity TEXT,
-    gas_viscosity TEXT,
-    source_der_type TEXT,
-    source_der_model_name TEXT,
-    PRIMARY KEY(gas_grid_name)
 );
 CREATE TABLE parameters (
     parameter_set TEXT,
@@ -249,32 +193,31 @@ CREATE TABLE price_timeseries (
     PRIMARY KEY(price_type,time)
 );
 CREATE TABLE scenarios (
- scenario_name TEXT,
+    scenario_name TEXT,
     electric_grid_name TEXT,
     thermal_grid_name TEXT,
-    gas_grid_name TEXT,
     parameter_set TEXT,
     price_type TEXT,
-    price_sensitivity_coefficient REAL DEFAULT 0,
+    price_sensitivity_coefficient REAL NOT NULL ON CONFLICT REPLACE DEFAULT 0,
     electric_grid_operation_limit_type TEXT,
     thermal_grid_operation_limit_type TEXT,
-    gas_grid_operation_limit_type TEXT,
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,
-    base_apparent_power REAL DEFAULT 1,
-    base_voltage REAL DEFAULT 1,
-    base_thermal_power REAL DEFAULT 1,
+    base_apparent_power REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    base_voltage REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    base_thermal_power REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    trust_region_setting_type TEXT,
     PRIMARY KEY(scenario_name)
 );
 CREATE TABLE thermal_grid_ders (
     thermal_grid_name TEXT,
     der_name TEXT,
     node_name TEXT,
-    der_type TEXT,
+    der_type TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 'constant_power',
     der_model_name TEXT,
-    thermal_power_nominal TEXT,
-    in_service TEXT DEFAULT 1,
+    thermal_power_nominal TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '0.0',
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,der_name)
 );
 CREATE TABLE thermal_grid_line_types (
@@ -291,7 +234,7 @@ CREATE TABLE thermal_grid_lines (
     node_1_name TEXT,
     node_2_name TEXT,
     length TEXT,
-    in_service TEXT DEFAULT 1,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,line_name)
 );
 CREATE TABLE thermal_grid_nodes (
@@ -300,7 +243,7 @@ CREATE TABLE thermal_grid_nodes (
     node_type TEXT,
     latitude TEXT,
     longitude TEXT,
-    in_service TEXT DEFAULT 1,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     PRIMARY KEY(thermal_grid_name,node_name)
 );
 CREATE TABLE thermal_grid_operation_limit_types (
@@ -321,4 +264,15 @@ CREATE TABLE thermal_grids (
     source_der_model_name TEXT,
     PRIMARY KEY(thermal_grid_name)
 );
-
+CREATE TABLE trust_region_setting_types (
+    trust_region_setting_type TEXT,
+    delta REAL,
+    delta_max REAL,
+    gamma REAL,
+    eta REAL,
+    tau REAL,
+    epsilon REAL,
+    trust_region_iteration_limit INTEGER,
+    infeasible_iteration_limit INTEGER,
+    PRIMARY KEY(trust_region_setting_type)
+);

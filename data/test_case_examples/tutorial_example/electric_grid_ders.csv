@@ -1,0 +1,3 @@
+electric_grid_name,der_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal
+tutorial_example,1,fixed_load,mixed_commercial_residential,1,1,1,1,wye,-1000000,-500000
+tutorial_example,2,flexible_load,mixed_commercial_residential,1,1,1,1,wye,-2000000,-1000000

@@ -13,8 +13,6 @@
 
 .pytest_cache
 
-cache/
-
 *.sqlite
 
 *.sqlite-journal
@@ -26,5 +24,7 @@ docs/_build/
 results/*
 
 !results/README\.md
+
+highs/
 
 config.yml

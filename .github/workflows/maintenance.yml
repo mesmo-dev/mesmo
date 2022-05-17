@@ -33,7 +33,7 @@ jobs:
       run: |
         conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy
         conda activate mesmo
-        pip install -v -e .
+        python development_setup.py
     - name: Get new environment-${{ matrix.os }}.yml
       run: |
         rm -f environment-*

@@ -29,7 +29,7 @@ jobs:
       run: |
         conda create -n mesmo -c conda-forge python=${{ matrix.python-version }} contextily cvxpy numpy pandas scipy
         conda activate mesmo
-        pip install -v -e .
+        python development_setup.py
     - name: Lint with flake8
       run: |
         conda activate mesmo

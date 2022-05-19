@@ -19,7 +19,7 @@ setuptools.setup(
         "networkx",
         "natsort",
         "numpy",
-        "opencv-python",
+        "opencv-python-headless",
         "OpenDSSDirect.py",
         "pandas",
         "parameterized",  # For tests.

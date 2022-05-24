@@ -22,7 +22,6 @@ setuptools.setup(
         "opencv-python-headless",
         "OpenDSSDirect.py",
         "pandas",
-        "parameterized",  # For tests.
         "plotly",
         "pyyaml",
         "ray[default]",
@@ -31,4 +30,11 @@ setuptools.setup(
         "scipy",
         "tqdm",
     ],
+    extras_require={"tests": [
+        "flake8",
+        "parameterized",
+        "pytest",
+        "pytest-cov",
+        "pytest-subtests",
+    ]}
 )

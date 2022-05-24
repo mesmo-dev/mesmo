@@ -39,7 +39,7 @@ def main():
                         f"Please check if the submodule is loaded correctly."
                     )
 
-    # Install submodules in develop mode. Use `pip -v` to see subprocess outputs.
+    # Install submodules in develop mode.
     if run_all:
         print("Installing submodules in development mode.")
         for submodule in submodules:
@@ -48,7 +48,7 @@ def main():
     # Install MESMO.
     if run_all:
         print("Installing MESMO in development mode.")
-        subprocess.check_call([sys.executable, "-m" "pip", "install", "-e", f"{base_path}"])
+        subprocess.check_call([sys.executable, "-m" "pip", "install", "-e", f"{base_path}[tests]"])
 
     # Install HiGHS solver.
     if run_all or run_highs:

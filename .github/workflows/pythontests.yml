@@ -33,13 +33,11 @@ jobs:
     - name: Lint with flake8
       run: |
         conda activate mesmo
-        pip install flake8
         # Stop the build if there are Python syntax errors or undefined names.
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Run tests
       run: |
         conda activate mesmo
-        pip install pytest pytest-cov pytest-subtests
         pytest tests --cov=./ --cov-report=xml
     - name: Report coverage to Codecov
       if: always()

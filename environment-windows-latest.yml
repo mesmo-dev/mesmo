@@ -11,9 +11,9 @@ dependencies:
   - brotli-bin=1.0.9
   - brotlipy=0.7.0
   - bzip2=1.0.8
-  - ca-certificates=2021.10.8
+  - ca-certificates=2022.5.18.1
   - cairo=1.16.0
-  - certifi=2021.10.8
+  - certifi=2022.5.18.1
   - cffi=1.15.0
   - cfitsio=4.1.0
   - charset-normalizer=2.0.12
@@ -22,10 +22,10 @@ dependencies:
   - cligj=0.7.2
   - colorama=0.4.4
   - contextily=1.2.0
-  - cryptography=36.0.2
+  - cryptography=37.0.2
   - curl=7.83.1
-  - cvxpy=1.2.0
-  - cvxpy-base=1.2.0
+  - cvxpy=1.2.1
+  - cvxpy-base=1.2.1
   - cycler=0.11.0
   - ecos=2.0.10
   - expat=2.4.8
@@ -48,8 +48,7 @@ dependencies:
   - hdf5=1.12.1
   - icu=69.1
   - idna=3.3
-  - intel-openmp=2022.0.0
-  - jbig=2.1
+  - intel-openmp=2022.1.0
   - joblib=1.1.0
   - jpeg=9e
   - kealib=1.4.14
@@ -94,15 +93,15 @@ dependencies:
   - mkl=2022.0.0
   - msys2-conda-epoch=20160418
   - munkres=1.1.4
-  - numpy=1.22.3
+  - numpy=1.22.4
   - openjpeg=2.4.0
   - openssl=1.1.1o
   - osqp=0.6.2.post0
   - packaging=21.3
   - pandas=1.4.2
   - pcre=8.45
-  - pillow=9.1.0
-  - pip=22.1
+  - pillow=9.1.1
+  - pip=22.1.1
   - pixman=0.40.0
   - poppler=22.04.0
   - poppler-data=0.4.11
@@ -120,15 +119,15 @@ dependencies:
   - qdldl-python=0.1.5
   - rasterio=1.2.10
   - requests=2.27.1
-  - scipy=1.8.0
+  - scipy=1.8.1
   - scs=3.2.0
-  - setuptools=62.2.0
+  - setuptools=62.3.2
   - six=1.16.0
   - snappy=1.1.9
   - snuggs=1.4.7
   - sqlite=3.38.5
   - tbb=2021.5.0
-  - tiledb=2.8.2
+  - tiledb=2.8.3
   - tk=8.6.12
   - ucrt=10.0.20348.0
   - unicodedata2=14.0.0
@@ -150,69 +149,82 @@ dependencies:
     - aiosignal==1.2.0
     - ansicon==1.89.0
     - async-timeout==4.0.2
+    - atomicwrites==1.4.0
     - bleach==5.0.0
     - blessed==1.19.1
-    - bokeh==2.4.2
-    - cachetools==5.0.0
+    - bokeh==2.4.3
+    - cachetools==5.1.0
     - colorcet==3.0.0
     - colorful==0.5.4
+    - coverage==6.4
     - deprecated==1.2.13
-    - dill==0.3.4
+    - dill==0.3.5.1
     - distlib==0.3.4
     - dss-python==0.10.7.post1
     - dynaconf==3.1.8
-    - filelock==3.6.0
+    - filelock==3.7.0
+    - flake8==4.0.1
     - frozenlist==1.3.0
     - future==0.18.2
-    - google-api-core==2.7.3
+    - google-api-core==2.8.0
     - google-auth==2.6.6
     - googleapis-common-protos==1.56.1
     - gpustat==1.0.0b1
     - grpcio==1.43.0
     - gurobipy==9.5.1
-    - h5py==3.6.0
+    - h5py==3.7.0
     - holoviews==1.14.9
     - hvplot==0.8.0
-    - importlib-metadata==4.11.3
+    - importlib-metadata==4.11.4
     - importlib-resources==5.7.1
+    - iniconfig==1.1.1
     - jinja2==3.1.2
-    - jinxed==1.1.0
+    - jinxed==1.2.0
     - jsonschema==4.5.1
     - kaleido==0.2.1
     - markdown==3.3.7
     - markupsafe==2.1.1
+    - mccabe==0.6.1
     - msgpack==1.0.3
     - multidict==6.0.2
     - multimethod==1.8
     - natsort==8.1.0
-    - networkx==2.8
+    - networkx==2.8.2
     - nvidia-ml-py3==7.352.0
     - opencensus==0.9.0
     - opencensus-context==0.1.2
-    - opencv-python==4.5.5.64
+    - opencv-python-headless==4.5.5.64
     - opendssdirect-py==0.6.1
-    - panel==0.13.0
+    - panel==0.13.1
     - param==1.12.1
     - parameterized==0.8.1
     - platformdirs==2.5.2
     - plotly==5.8.0
+    - pluggy==1.0.0
     - prometheus-client==0.13.1
     - protobuf==3.20.1
-    - psutil==5.9.0
+    - psutil==5.9.1
     - psychrolib==2.5.0
     - pvlib==0.9.1
-    - py-spy==0.3.11
+    - py==1.11.0
+    - py-spy==0.3.12
     - pyasn1==0.4.8
     - pyasn1-modules==0.2.8
+    - pycodestyle==2.8.0
     - pyct==0.4.8
+    - pyflakes==2.4.0
     - pyrsistent==0.18.1
+    - pytest==7.1.2
+    - pytest-cov==3.0.0
+    - pytest-subtests==0.8.0
     - pyviz-comms==2.2.0
     - pyyaml==6.0
-    - ray==1.12.0
+    - ray==1.12.1
     - redis==4.3.1
     - rsa==4.8
     - smart-open==6.0.0
     - tenacity==8.0.1
+    - tomli==2.0.1
     - tornado==6.1
     - tqdm==4.64.0
     - typing-extensions==4.2.0

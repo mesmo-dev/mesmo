@@ -20,7 +20,6 @@ objects = [
 
 
 class TestElectricGridModels(unittest.TestCase):
-
     @parameterized.expand(objects)
     def test_electric_grid_models(self, object_name, object_handle):
         # Test initialization routines.

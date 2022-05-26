@@ -31,11 +31,13 @@ setuptools.setup(
         "scipy",
         "tqdm",
     ],
-    extras_require={"tests": [
-        "flake8",
-        "parameterized",
-        "pytest",
-        "pytest-cov",
-        "pytest-subtests",
-    ]}
+    extras_require={
+        "tests": [
+            "flake8",
+            "parameterized",
+            "pytest",
+            "pytest-cov",
+            "pytest-subtests",
+        ]
+    },
 )

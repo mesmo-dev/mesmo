@@ -23,7 +23,6 @@ logger.info(f"Found example script files:\n{example_files}")
 
 
 class TestExamples(unittest.TestCase):
-
     @parameterized.expand(example_files)
     def test_example(self, example_name, example_file):
         mesmo.utils.log_time(f"test_example_{example_name}", log_level="info", logger_object=logger)

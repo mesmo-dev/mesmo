@@ -23,6 +23,7 @@ setuptools.setup(
         "OpenDSSDirect.py",
         "pandas",
         "plotly",
+        "protobuf<3.21",  # Temporary fix for ray import error.
         "pyyaml",
         "ray[default]",
         "redis",  # Temporary fix for ray import error. See: https://github.com/ray-project/ray/issues/24169

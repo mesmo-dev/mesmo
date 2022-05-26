@@ -6,14 +6,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      max-parallel: 8
       matrix:
         os: [
           windows-latest,
           macos-latest,
           ubuntu-latest
         ]
-        python-version: [3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
     defaults:
       run:
         shell: bash -l {0}  # Required for conda commands.
@@ -29,17 +28,15 @@ jobs:
       run: |
         conda create -n mesmo -c conda-forge python=${{ matrix.python-version }} contextily cvxpy numpy pandas scipy
         conda activate mesmo
-        pip install -v -e .
+        python development_setup.py
     - name: Lint with flake8
       run: |
         conda activate mesmo
-        pip install flake8
         # Stop the build if there are Python syntax errors or undefined names.
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Run tests
       run: |
         conda activate mesmo
-        pip install pytest pytest-cov pytest-subtests
         pytest tests --cov=./ --cov-report=xml
     - name: Report coverage to Codecov
       if: always()

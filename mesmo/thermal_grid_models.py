@@ -441,7 +441,7 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
             (
                 thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
                 * self.branch_flow_vector
-                * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
+                * np.abs(self.branch_flow_vector)
             ),
         )
 

@@ -33,13 +33,20 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     branch_incidence_1_matrix: sp.spmatrix
     branch_incidence_2_matrix: sp.spmatrix
     branch_incidence_matrix: sp.spmatrix
+    branch_incidence_matrix_no_source: sp.spmatrix
+    branch_incidence_matrix_source: sp.spmatrix
     branch_incidence_matrix_no_source_no_loop: sp.spmatrix
     branch_incidence_matrix_no_source_loop: sp.spmatrix
     branch_loop_incidence_matrix: sp.spmatrix
     der_node_incidence_matrix: sp.spmatrix
+    der_node_incidence_matrix_no_source: sp.spmatrix
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
+    node_head_vector_reference_no_source: np.ndarray
+    node_head_vector_reference_source: np.ndarray
+    node_incidence_matrix_no_source: sp.spmatrix
+    node_incidence_matrix_source: sp.spmatrix
     # TODO: Revise / reduce use of parameter attributes if possible.
     line_parameters: pd.DataFrame
     energy_transfer_station_head_loss: float
@@ -122,7 +129,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             else:
                 if node_tree_index_1 == node_tree_index_2:
                     # Mark branch as loop, if both nodes are in the same tree.
-                    branches_loops.at[self.branches[branch_index], "loop_type"] = "loop"
+                    branches_loops.loc[self.branches[branch_index], "loop_type"] = "loop"
                 else:
                     # Merge trees, if the branch connects nodes on different trees.
                     node_trees[node_tree_index_1].extend(node_trees[node_tree_index_2])
@@ -146,7 +153,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
         if len(node_trees) > 1:
             raise ValueError(
-                f"The thermal grid contains disjoint sections of nodes:"
+                "The thermal grid contains disjoint sections of nodes:"
                 + "".join(
                     [
                         f"\nSection {node_tree_index}: {node_tree}"
@@ -250,7 +257,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
         # Define shorthands for no-source / source variables.
-        # TODO: Add in class documentation.
         # TODO: Replace local variables in power flow / linear models.
         node_incidence_matrix = sp.identity(len(self.nodes)).tocsr()
         self.node_incidence_matrix_no_source = node_incidence_matrix[
@@ -420,24 +426,18 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         # Obtain branch volume flow vector.
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
-                thermal_grid_model.branch_incidence_matrix[
-                    :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-                ].transpose(),
-                thermal_grid_model.der_node_incidence_matrix[
-                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"), :
-                ]
+                thermal_grid_model.branch_incidence_matrix_no_source.transpose(),
+                thermal_grid_model.der_node_incidence_matrix_no_source
                 @ np.transpose([der_flow_vector]),
             )
         ).ravel()
 
         # Obtain node head vector.
-        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
+        self.node_head_vector = thermal_grid_model.node_head_vector_reference.copy()
         self.node_head_vector[
             mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
         ] = scipy.sparse.linalg.spsolve(
-            thermal_grid_model.branch_incidence_matrix[
-                :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-            ].tocsc(),
+            thermal_grid_model.branch_incidence_matrix_no_source.tocsc(),
             (
                 thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
                 * self.branch_flow_vector
@@ -528,13 +528,13 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                         @ jacobian_branch_head_loss_inverse
                     ) @ (
                         (
-                        0.5
+                            0.5
                             * jacobian_branch_head_loss
                             @ branch_flow_vector_initial
-                    )
+                        )
                         - (
                             -1.0 * thermal_grid_model.branch_incidence_matrix_source  # TODO: Sign changed.
-                    @ thermal_grid_model.node_head_vector_reference_source
+                            @ thermal_grid_model.node_head_vector_reference_source
                         )
                     )
                     + node_flow_vector_candidate_no_source  # TODO: Sign changed.
@@ -551,13 +551,13 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                 - jacobian_branch_head_loss_inverse
                 @ (
                     (
-                    0.5
+                        0.5
                         * jacobian_branch_head_loss
                         @ branch_flow_vector_initial
-                )
+                    )
                     + (
                         -1.0 * thermal_grid_model.branch_incidence_matrix  # TODO: Sign changed.
-                @ node_head_vector_estimate
+                        @ node_head_vector_estimate
                     )
                 )
             )
@@ -709,7 +709,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         branch_node_incidence_matrix_inverse[
             np.ix_(range(len(self.thermal_grid_model.branches)), node_index_no_source)
         ] = scipy.sparse.linalg.inv(
-            self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].transpose()
+            self.thermal_grid_model.branch_incidence_matrix_no_source.transpose()
         )
         branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
         branch_node_incidence_matrix_transpose_inverse = sp.dok_matrix(
@@ -717,7 +717,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         )
         branch_node_incidence_matrix_transpose_inverse[
             np.ix_(node_index_no_source, range(len(self.thermal_grid_model.branches)))
-        ] = scipy.sparse.linalg.inv(self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].tocsc())
+        ] = scipy.sparse.linalg.inv(self.thermal_grid_model.branch_incidence_matrix_no_source.tocsc())
         branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()
         der_node_incidence_matrix_transpose = np.transpose(self.thermal_grid_model.der_node_incidence_matrix)
 

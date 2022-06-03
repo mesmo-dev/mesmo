@@ -789,6 +789,15 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     timesteps: pd.Index
 
     @multimethod
+    def __init__(self, scenario_name: str):
+
+        # Obtain electric grid model & reference power flow solution.
+        thermal_grid_model = ThermalGridModel(scenario_name)
+        thermal_power_flow_solution = ThermalPowerFlowSolution(thermal_grid_model)
+
+        self.__init__(thermal_grid_model, thermal_power_flow_solution)
+
+    @multimethod
     def __init__(
         self,
         thermal_grid_model: ThermalGridModel,

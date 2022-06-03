@@ -43,6 +43,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
+    node_head_source_value: float
     node_head_vector_reference_no_source: np.ndarray
     node_head_vector_reference_source: np.ndarray
     node_incidence_matrix_no_source: sp.spmatrix
@@ -229,7 +230,8 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
         # Obtain nominal branch flow vector.
         # TODO: Define proper node head reference vector.
-        self.node_head_vector_reference = np.zeros(len(self.nodes))
+        self.node_head_vector_reference = np.ones(len(self.nodes))
+        self.node_head_source_value = 0.0
 
         # Obtain line parameters.
         self.line_parameters = thermal_grid_data.thermal_grid_lines.loc[:, ["length", "diameter", "absolute_roughness"]]
@@ -433,16 +435,20 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         ).ravel()
 
         # Obtain node head vector.
-        self.node_head_vector = thermal_grid_model.node_head_vector_reference.copy()
-        self.node_head_vector[
-            mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-        ] = scipy.sparse.linalg.spsolve(
+        node_head_vector_no_source = scipy.sparse.linalg.spsolve(
             thermal_grid_model.branch_incidence_matrix_no_source.tocsc(),
             (
                 thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
                 * self.branch_flow_vector
                 * np.abs(self.branch_flow_vector)
             ),
+        )
+        self.node_head_vector = (
+            thermal_grid_model.node_incidence_matrix_no_source
+            @ node_head_vector_no_source
+            + thermal_grid_model.node_incidence_matrix_source
+            @ thermal_grid_model.node_head_vector_reference_source
+            * thermal_grid_model.node_head_source_value
         )
 
         # Obtain pump power loss.
@@ -546,14 +552,18 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                             -1.0
                             * thermal_grid_model.branch_incidence_matrix_source
                             @ thermal_grid_model.node_head_vector_reference_source
+                            * thermal_grid_model.node_head_source_value
                         )
                     )
                     + node_flow_vector_no_source
                 )
             )
             node_head_vector_estimate = (
-                thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_estimate_no_source
-                + thermal_grid_model.node_incidence_matrix_source @ thermal_grid_model.node_head_vector_reference_source
+                thermal_grid_model.node_incidence_matrix_no_source
+                @ node_head_vector_estimate_no_source
+                + thermal_grid_model.node_incidence_matrix_source
+                @ thermal_grid_model.node_head_vector_reference_source
+                * thermal_grid_model.node_head_source_value
             )
 
             # Calculate branch volume flow vector.

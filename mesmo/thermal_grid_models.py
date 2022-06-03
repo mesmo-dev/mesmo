@@ -472,31 +472,23 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         head_tolerance=1e-2,
     ):
 
-        # Obtain DER thermal power vector.
+        # Obtain DER thermal power vector and DER volume flow vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
-        # Define shorthand for DER volume flow vector.
         der_flow_vector = (
             self.der_thermal_power_vector
             / mesmo.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
         )
 
-        # Obtain nodal power vector.
+        # Obtain nodal volume flow vector.
         node_flow_vector_no_source = (
             thermal_grid_model.der_node_incidence_matrix_no_source @ np.transpose([der_flow_vector])
         ).ravel()
 
-        # Obtain initial nodal power and voltage vectors, assuming no load and no injection.
+        # Obtain initial nodal head and branch volume flow vectors for first iteration.
         # TODO: Enable passing previous solution for initialization.
-        node_flow_vector_initial_no_source = node_flow_vector_no_source.copy()
         node_head_vector_initial_no_source = thermal_grid_model.node_head_vector_reference_no_source.copy()
         branch_flow_vector_initial = thermal_grid_model.branch_flow_vector_reference.copy()
-        branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
-            branch_flow_vector_initial
-        )
-
-        # Define nodal power vector candidate to the desired nodal power vector.
-        node_flow_vector_candidate_no_source = node_flow_vector_initial_no_source.copy()
 
         # Instantiate Newton-Raphson iteration variables.
         head_iteration = 0
@@ -505,17 +497,34 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         # Run Newton-Raphson iterations.
         while (head_iteration < head_iteration_limit) & (head_change > head_tolerance):
 
+            # Detect zero branch volume flows.
+            branch_flow_vector_valid_index = branch_flow_vector_initial != 0.0
+
+            # Replace zero branch volume flows with very small value, based on minium absolute branch volume flow.
+            # - This is to avoid numerical issues due to singularity of the jacobian matrix.
+            branch_flow_abs_min = np.min(np.abs(branch_flow_vector_initial[branch_flow_vector_valid_index]))
+            if branch_flow_abs_min == 0.0:
+                branch_flow_abs_min = 1e-9
+            else:
+                branch_flow_abs_min *= 1e-9
+            branch_flow_vector_initial[~branch_flow_vector_valid_index] = branch_flow_abs_min
+
+            # Calculate branch loss coefficient and jacobian matrix.
+            branch_loss_coefficient_vector = thermal_grid_model.get_branch_loss_coefficient_vector(
+                branch_flow_vector_initial
+            )
             jacobian_branch_head_loss = (
                 2
                 * sp.diags(np.abs(branch_flow_vector_initial))
-                @ sp.diags(branch_loss_coefficient_vector_initial)
+                @ sp.diags(branch_loss_coefficient_vector)
             )
             jacobian_branch_head_loss_inverse = (
                 0.5
                 * sp.diags(np.abs(branch_flow_vector_initial) ** -1)
-                @ sp.diags(branch_loss_coefficient_vector_initial ** -1)
+                @ sp.diags(branch_loss_coefficient_vector ** -1)
             )
 
+            # Calculate nodal head vector.
             node_head_vector_estimate_no_source = scipy.sparse.linalg.spsolve(
                 (
                     np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
@@ -524,7 +533,8 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                 ),
                 (
                     (
-                        -1.0 * np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)  # TODO: Sign changed.
+                        -1.0
+                        * np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
                         @ jacobian_branch_head_loss_inverse
                     ) @ (
                         (
@@ -533,19 +543,20 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                             @ branch_flow_vector_initial
                         )
                         - (
-                            -1.0 * thermal_grid_model.branch_incidence_matrix_source  # TODO: Sign changed.
+                            -1.0
+                            * thermal_grid_model.branch_incidence_matrix_source
                             @ thermal_grid_model.node_head_vector_reference_source
                         )
                     )
-                    + node_flow_vector_candidate_no_source  # TODO: Sign changed.
+                    + node_flow_vector_no_source
                 )
             )
-
             node_head_vector_estimate = (
                 thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_estimate_no_source
                 + thermal_grid_model.node_incidence_matrix_source @ thermal_grid_model.node_head_vector_reference_source
             )
 
+            # Calculate branch volume flow vector.
             branch_flow_vector_estimate = (
                 branch_flow_vector_initial
                 - jacobian_branch_head_loss_inverse
@@ -556,20 +567,21 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                         @ branch_flow_vector_initial
                     )
                     + (
-                        -1.0 * thermal_grid_model.branch_incidence_matrix  # TODO: Sign changed.
+                        -1.0
+                        * thermal_grid_model.branch_incidence_matrix
                         @ node_head_vector_estimate
                     )
                 )
             )
 
+            # Update head change iteration variable.
             head_change = np.max(np.abs(node_head_vector_estimate_no_source - node_head_vector_initial_no_source))
 
+            # Update initial values for next iteration.
             node_head_vector_initial_no_source = node_head_vector_estimate_no_source.copy()
             branch_flow_vector_initial = branch_flow_vector_estimate.copy()
-            branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
-                branch_flow_vector_initial
-            )
 
+            # Update iteration counter.
             head_iteration += 1
 
         # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning

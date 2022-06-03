@@ -13,7 +13,7 @@ def main():
     # Settings.
     scenario_name = "singapore_tanjongpagar"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
-    power_multipliers = np.arange(0.2, 1.2, 0.1)  # TODO: Fix handling of zero branch flows in Newton-Raphson.
+    power_multipliers = np.arange(-0.2, 1.2, 0.1)  # TODO: Fix handling of zero branch flows in Newton-Raphson.
     power_flow_solution_method_1 = mesmo.thermal_grid_models.ThermalPowerFlowSolutionNewtonRaphson
     method_1_label = "Method 1: Newton Raphson"
     power_flow_solution_method_2 = mesmo.thermal_grid_models.ThermalPowerFlowSolutionExplicit

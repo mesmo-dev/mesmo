@@ -5,6 +5,7 @@ from multimethod import multimethod
 import natsort
 import numpy as np
 import pandas as pd
+import pathlib
 import sqlite3
 import typing
 
@@ -84,7 +85,7 @@ def recreate_database():
     # Recreate CoBMo database.
     # - Using set instead of list to avoid duplicate entries.
     cobmo_data_paths = {
-        str(csv_file.parent)  # TODO: Change to pathlib.Path, once cobmo updated.
+        csv_file.parent
         for data_path in data_paths
         for csv_file in data_path.rglob("**/*.csv")
         if any(folder in csv_file.parts for folder in ["cobmo", "cobmo_data"])
@@ -97,7 +98,7 @@ def recreate_database():
     cobmo.data_interface.recreate_database()
 
 
-def import_csv_file(csv_file, valid_table_names, database_connection=None):
+def import_csv_file(csv_file: pathlib.Path, valid_table_names: list, database_connection: sqlite3.Connection = None):
 
     # Obtain database connection.
     if database_connection is None:

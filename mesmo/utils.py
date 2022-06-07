@@ -533,9 +533,9 @@ def launch(path: pathlib.Path):
     if sys.platform == "win32":
         os.startfile(str(path))
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["open", str(path)], shell=True)
     else:
-        subprocess.Popen(["xdg-open", str(path)], cwd="/", stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen(["xdg-open", str(path)], shell=True)
 
 
 def write_figure_plotly(

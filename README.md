@@ -45,7 +45,7 @@ MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but c
     - `cd path_to_mesmo_repository`
     - `conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy`
     - `conda activate mesmo`
-    - `pip install -v -e .`
+    - `python development_setup.py`
     - On Intel CPUs²: `conda install -c conda-forge "libblas=*=*mkl"`
 
 MESMO ships with [HiGHS](https://highs.dev/) as default optimization solver³, but also supports [Gurobi](http://www.gurobi.com/) and [any CVXPY-supported solvers](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).

@@ -27,15 +27,11 @@ def main():
     scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
     price_data = mesmo.data_interface.PriceData(scenario_name)
 
-
-
     # Obtain models.
     mesmo.utils.log_time(f"model setup")
     electric_grid_model = mesmo.electric_grid_models.ElectricGridModel(scenario_name)
     power_flow_solution = mesmo.electric_grid_models.PowerFlowSolutionFixedPoint(electric_grid_model)
-    linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(
-        electric_grid_model, power_flow_solution
-    )
+    linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(electric_grid_model, power_flow_solution)
     thermal_grid_model = mesmo.thermal_grid_models.ThermalGridModel(scenario_name)
     thermal_power_flow_solution = mesmo.thermal_grid_models.ThermalPowerFlowSolution(thermal_grid_model)
     linear_thermal_grid_model_set = mesmo.thermal_grid_models.LinearThermalGridModelSet(

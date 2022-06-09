@@ -1350,7 +1350,7 @@ class CompressorStationModel(FlexibleDERModel):
     """Compressor station model object."""
 
     der_type = "compressor_station"
-    thermal_efficiency: float
+    compressor_station_efficiency: float
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
 
@@ -1405,7 +1405,7 @@ class CompressorStationModel(FlexibleDERModel):
         self.control_output_matrix.at["reactive_power", "active_power"] = (
             self.reactive_power_nominal / self.active_power_nominal if self.active_power_nominal != 0.0 else 0.0
         )
-        self.control_output_matrix.at["gas_consumption", "active_power"] = -1.0 * self.thermal_efficiency
+        self.control_output_matrix.at["gas_consumption", "active_power"] = -1.0 * self.compressor_station_efficiency
         self.disturbance_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
 
         # Instantiate disturbance timeseries.

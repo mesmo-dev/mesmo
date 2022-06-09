@@ -28,11 +28,32 @@ class GasGridModel(object):
     der_types: pd.Index
     nodes: pd.Index
     branches: pd.Index
-    ders = pd.Index
-    branch_node_incidence_matrix: sp.spmatrix
+    branch_loops: pd.Index
+    ders: pd.Index
+    branch_incidence_1_matrix: sp.spmatrix
+    branch_incidence_2_matrix: sp.spmatrix
+    branch_incidence_matrix: sp.spmatrix
+    branch_incidence_matrix_no_source: sp.spmatrix
+    branch_incidence_matrix_source: sp.spmatrix
+    branch_incidence_matrix_no_source_no_loop: sp.spmatrix
+    branch_incidence_matrix_no_source_loop: sp.spmatrix
+    branch_loop_incidence_matrix: sp.spmatrix
     der_node_incidence_matrix: sp.spmatrix
+    der_node_incidence_matrix_no_source: sp.spmatrix
+    der_gas_consumption_vector_reference: np.ndarray
     branch_gas_flow_vector_reference: np.ndarray
+    branch_gas_flow_vector: np.ndarray
+    gas_branch_velocity_vector: np.ndarray
     node_pressure_vector_reference: np.ndarray
+    node_pressure_source_value: float
+    node_pressure_vector_reference_no_source: np.ndarray
+    node_pressure_vector_reference_source: np.ndarray
+    node_incidence_matrix_no_source: sp.spmatrix
+    node_incidence_matrix_source: sp.spmatrix
+    # TODO: Revise / reduce use of parameter attributes if possible.
+    line_parameters: pd.DataFrame
+    source_der_model: mesmo.der_models.DERModel
+    plant_efficiency: float
 
     def __init__(
             self,
@@ -65,30 +86,136 @@ class GasGridModel(object):
             ], axis='columns')
         )
         self.nodes = pd.MultiIndex.from_frame(nodes)
-        self.branches = self.line_names.rename('branch_name')
-        self.ders = pd.MultiIndex.from_frame(gas_grid_data.gas_grid_ders[['der_type', 'der_name']])
+        self.branches = pd.MultiIndex.from_product([self.line_names, ["no_loop"]], names=["branch_name", "loop_type"])
+        self.branch_loops = pd.MultiIndex.from_tuples([], names=["loop_id", "branch_name"])  # Values are filled below.
+        self.ders = pd.MultiIndex.from_frame(gas_grid_data.gas_grid_ders[["der_type", "der_name"]])
 
         # Define branch to node incidence matrix.
-        self.branch_node_incidence_matrix = (
-            sp.dok_matrix((len(self.nodes), len(self.branches)), dtype=int)
-        )
-        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
-            for branch_index, branch in enumerate(self.branches):
-                if node_name == gas_grid_data.gas_grid_lines.at[branch, 'node_1_name']:
-                    self.branch_node_incidence_matrix[node_index, branch_index] += +1.0
-                elif node_name == gas_grid_data.gas_grid_lines.at[branch, 'node_2_name']:
-                    self.branch_node_incidence_matrix[node_index, branch_index] += -1.0
-        self.branch_node_incidence_matrix = self.branch_node_incidence_matrix.tocsr()
+        self.branch_incidence_1_matrix = sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
+        self.branch_incidence_2_matrix = sp.dok_matrix((len(self.branches), len(self.nodes)), dtype=int)
 
-        # Define DER to node incidence matrix.
-        self.der_node_incidence_matrix = (
-            sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
+        # Add lines to branch incidence matrices and identify any loops.
+        # - Uses temporary node tree variable to track construction of the network and identify any loops / cycles.
+        branches_loops = self.branches.to_frame()
+        node_trees = []
+        for line_index, line in gas_grid_data.gas_grid_lines.iterrows():
+
+            # Obtain indexes for positioning the line in the incidence matrices.
+            node_index_1 = mesmo.utils.get_index(self.nodes, node_name=line["node_1_name"])
+            node_index_2 = mesmo.utils.get_index(self.nodes, node_name=line["node_2_name"])
+            branch_index = mesmo.utils.get_index(self.branches, branch_name=line["line_name"])
+
+            # Insert connection indicators into incidence matrices.
+            self.branch_incidence_1_matrix[np.ix_(branch_index, node_index_1)] += 1
+            self.branch_incidence_2_matrix[np.ix_(branch_index, node_index_2)] += 1
+
+            # Check if node 1 or node 2 are in any node trees.
+            node_tree_index_1 = None
+            node_tree_index_2 = None
+            for node_tree_index, node_tree in enumerate(node_trees):
+                if line["node_1_name"] in node_tree:
+                    node_tree_index_1 = node_tree_index
+                if line["node_2_name"] in node_tree:
+                    node_tree_index_2 = node_tree_index
+            if (node_tree_index_1 is None) and (node_tree_index_2 is None):
+                # Create new tree, if neither node is on any tree.
+                node_trees.append([line["node_1_name"], line["node_2_name"]])
+            elif (node_tree_index_1 is not None) and (node_tree_index_2 is None):
+                # Add node to tree, if other node is on any tree.
+                node_trees[node_tree_index_1].append(line["node_2_name"])
+            elif (node_tree_index_1 is None) and (node_tree_index_2 is not None):
+                # Add node to tree, if other node is on any tree.
+                node_trees[node_tree_index_2].append(line["node_1_name"])
+            else:
+                if node_tree_index_1 == node_tree_index_2:
+                    # Mark branch as loop, if both nodes are in the same tree.
+                    branches_loops.loc[self.branches[branch_index], "loop_type"] = "loop"
+                else:
+                    # Merge trees, if the branch connects nodes on different trees.
+                    node_trees[node_tree_index_1].extend(node_trees[node_tree_index_2])
+                    node_trees[node_tree_index_2] = []
+
+        # Update branch / loop indexes.
+        self.branches = pd.MultiIndex.from_frame(branches_loops)
+        self.branch_loops = pd.MultiIndex.from_frame(
+            pd.concat(
+                [
+                    pd.Series(range(sum(branches_loops.loc[:, "loop_type"] == "loop")), name="loop_id", dtype=int),
+                    branches_loops.loc[branches_loops.loc[:, "loop_type"] == "loop", "branch_name"].reset_index(
+                        drop=True
+                    ),
+                ],
+                axis="columns",
+            )
         )
-        for node_index, node_name in enumerate(self.nodes.get_level_values('node_name')):
-            for der_index, der_name in enumerate(self.der_names):
-                if node_name == gas_grid_data.gas_grid_ders.at[der_name, 'node_name']:
-                    self.der_node_incidence_matrix[node_index, der_index] = 1.0
+
+        # Raise errors on invalid network configurations.
+        node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
+        if len(node_trees) > 1:
+            raise ValueError(
+                "The thermal grid contains disjoint sections of nodes:"
+                + "".join(
+                    [
+                        f"\nSection {node_tree_index}: {node_tree}"
+                        for node_tree_index, node_tree in enumerate(node_trees)
+                    ]
+                )
+            )
+        elif len(node_trees[0]) != len(self.node_names):
+            raise ValueError(
+                f"The thermal grid contains disconnected nodes:\n"
+                f"{[node_name for node_name in self.node_names if node_name not in node_trees[0]]}"
+            )
+
+        # Obtained combined branch incidence matrix.
+        self.branch_incidence_matrix = self.branch_incidence_1_matrix - self.branch_incidence_2_matrix
+
+        # Convert DOK matrices to CSR matrices.
+        self.branch_incidence_1_matrix = self.branch_incidence_1_matrix.tocsr()
+        self.branch_incidence_2_matrix = self.branch_incidence_2_matrix.tocsr()
+        self.branch_incidence_matrix = self.branch_incidence_matrix.tocsr()
+
+        # Obtain shorthand definitions.
+        self.branch_incidence_matrix_no_source_no_loop = self.branch_incidence_matrix[
+            np.ix_(
+                mesmo.utils.get_index(self.branches, loop_type="no_loop"),
+                mesmo.utils.get_index(self.nodes, node_type="no_source"),
+            )
+        ]
+        self.branch_incidence_matrix_no_source_loop = self.branch_incidence_matrix[
+            np.ix_(
+                mesmo.utils.get_index(self.branches, loop_type="loop", raise_empty_index_error=False),
+                mesmo.utils.get_index(self.nodes, node_type="no_source"),
+            )
+        ]
+
+        # Obtain branch-to-loop incidence matrix.
+        self.branch_loop_incidence_matrix = sp.vstack(
+            [
+                -1.0 * sp.linalg.inv(self.branch_incidence_matrix_no_source_no_loop.transpose())
+                # Using `sp.linalg.inv()` instead of `sp.linalg.spsolve()` to preserve dimensions in all cases.
+                @ self.branch_incidence_matrix_no_source_loop.transpose(),
+                sp.eye(len(self.branch_loops)),
+            ]
+        ).tocsr()
+
+
+        # Instantiate DER-to-node incidence matrix.
+        self.der_node_incidence_matrix = sp.dok_matrix((len(self.nodes), len(self.ders)), dtype=int)
+
+        # Add DERs into DER incidence matrix.
+        for der_name, der in gas_grid_data.gas_grid_ders.iterrows():
+
+            # Obtain indexes for positioning the DER in the incidence matrix.
+            node_index = mesmo.utils.get_index(self.nodes, node_name=der["node_name"])
+            der_index = mesmo.utils.get_index(self.ders, der_name=der["der_name"])
+
+            # Insert connection indicator into incidence matrices.
+            self.der_node_incidence_matrix[node_index, der_index] = 1
+
+        # Convert DOK matrices to CSR matrices.
         self.der_node_incidence_matrix = self.der_node_incidence_matrix.tocsr()
+
 
         # Obtain DER nominal gas consumption vector.
         self.der_gas_consumption_vector_reference = (
@@ -101,17 +228,17 @@ class GasGridModel(object):
             * (gas_grid_data.gas_grid_lines.loc[:, 'diameter'].values / 2) ** 2
             * gas_grid_data.gas_grid_lines.loc[:, 'maximum_velocity'].values
         )
+        self.node_pressure_vector_reference = np.ones(len(self.nodes))
+        self.node_pressure_source_value = 0.0
+
+        # Obtain line parameters.
+        self.line_parameters = gas_grid_data.gas_grid_lines.loc[:, ["length", "diameter", "absolute_roughness"]]
 
         # Obtain nominal node pressure vector.
         # TODO: Define proper node pressure reference vector.
         self.node_pressure_vector_reference = (
             np.ones(len(self.nodes))
         )
-
-        # Obtain line parameters.
-        self.line_length_vector = gas_grid_data.gas_grid_lines['length'].values
-        self.line_diameter_vector = gas_grid_data.gas_grid_lines['diameter'].values
-        self.line_roughness_vector = gas_grid_data.gas_grid_lines['absolute_roughness'].values
 
         # Obtain DER model source node.
         # TODO: Use state space model for simulation / optimization.
@@ -122,6 +249,97 @@ class GasGridModel(object):
                 is_standalone=True
             )
         )
+
+        # Define shorthands for no-source / source variables.
+        # TODO: Replace local variables in power flow / linear models.
+        node_incidence_matrix = sp.identity(len(self.nodes)).tocsr()
+        self.node_incidence_matrix_no_source = node_incidence_matrix[
+            np.ix_(range(len(self.nodes)), mesmo.utils.get_index(self.nodes, node_type="no_source"))
+        ]
+        self.node_incidence_matrix_source = node_incidence_matrix[
+            np.ix_(range(len(self.nodes)), mesmo.utils.get_index(self.nodes, node_type="source"))
+        ]
+        self.der_node_incidence_matrix_no_source = self.der_node_incidence_matrix[
+            np.ix_(mesmo.utils.get_index(self.nodes, node_type="no_source"), range(len(self.ders)))
+        ]
+        self.branch_incidence_matrix_no_source = self.branch_incidence_matrix[
+            np.ix_(range(len(self.branches)), mesmo.utils.get_index(self.nodes, node_type="no_source"))
+        ]
+        self.branch_incidence_matrix_source = self.branch_incidence_matrix[
+            np.ix_(range(len(self.branches)), mesmo.utils.get_index(self.nodes, node_type="source"))
+        ]
+        self.node_pressure_vector_reference_no_source = self.node_pressure_vector_reference[
+            mesmo.utils.get_index(self.nodes, node_type="no_source")
+        ]
+        self.node_pressure_vector_reference_source = self.node_pressure_vector_reference[
+            mesmo.utils.get_index(self.nodes, node_type="source")
+        ]
+
+    def get_branch_loss_coefficient_vector(self, branch_flow_vector: np.ndarray):
+
+            # Obtain branch velocity vector.
+            gas_branch_velocity_vector = (
+                    4.0 * branch_flow_vector / (np.pi * self.line_parameters.loc[:, "diameter"].values ** 2)
+            )
+
+            # Obtain branch Reynolds coefficient vector.
+            branch_reynold_vector = (
+                    np.abs(gas_branch_velocity_vector)
+                    * self.line_parameters.loc[:, "diameter"].values
+                    / mesmo.config.gas_viscosity
+            )
+
+            # Obtain branch friction factor vector.
+            @np.vectorize
+            def branch_friction_factor_vector(reynold, absolute_roughness, diameter):
+
+                # No flow.
+                if reynold == 0:
+                    friction_factor = 0
+
+                # Laminar Flow, based on Hagen-Poiseuille velocity profile, analytical correlation.
+                elif 0 < reynold < 4000:
+                    friction_factor = 64 / reynold
+
+                # Turbulent flow, Swamee-Jain formula, approximating correlation of Colebrook-White equation.
+                elif 4000 <= reynold:
+                    if not (reynold <= 100000000 and 0.000001 <= ((absolute_roughness / 1000) / diameter) <= 0.01):
+                        logger.warning(
+                            "Exceeding validity range of Swamee-Jain formula for calculation of friction factor."
+                        )
+                    friction_factor = 0.25 / (
+                        np.log(
+                            (absolute_roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold ** 0.9)
+                        )
+                    ) ** 2
+                else:
+                    raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
+
+                # Convert from 1/m to 1/km.
+                friction_factor *= 1.0e3
+
+                return friction_factor
+
+            # Obtain branch head loss coefficient vector.
+            # - Darcy-Weisbach Equation pressure-loss form.
+            branch_loss_coefficient_vector = (
+                branch_friction_factor_vector(
+                    branch_reynold_vector,
+                    self.line_parameters.loc[:, "absolute_roughness"].values,
+                    self.line_parameters.loc[:, "diameter"].values,
+                )
+                * self.line_parameters.loc[:, "length"].values
+                * gas_branch_velocity_vector ** 2
+                * mesmo.config.gas_density
+                / (
+                        2.0
+                        * self.line_parameters.loc[:, "diameter"].values
+                )
+            )
+
+            return branch_loss_coefficient_vector
+
+
 
 class GasGridDEROperationResults(mesmo.utils.ResultsBase):
 
@@ -147,7 +365,7 @@ class GasFlowSolution(object):
     gas_branch_velocity_vector: np.ndarray
     gas_branch_reynold_vector: np.ndarray
     gas_branch_friction_factor_vector: np.ndarray
-    gas_branch_pressure_vector: np.ndarray
+    branch_loss_coefficient_vector: np.ndarray
     source_pressure: float
     node_pressure_vector: np.ndarray
 
@@ -188,6 +406,11 @@ class GasFlowSolution(object):
         # Obtain DER gas consumption vector.
         self.der_gas_consumption_vector = der_gas_consumption_vector.ravel()
 
+        # Define shorthand for DER volume flow vector.
+        der_flow_vector = (
+            self.der_gas_consumption_vector
+            / mesmo.config.gas_density
+        )
         # Obtain DER / source volume flow vector.
 
         self.source_flow = (
@@ -197,105 +420,31 @@ class GasFlowSolution(object):
         # Obtain branch volume flow vector.
         self.branch_gas_flow_vector = (
             scipy.sparse.linalg.spsolve(
-                gas_grid_model.branch_node_incidence_matrix[
-                    mesmo.utils.get_index(gas_grid_model.nodes, node_type='no_source'),
-                    :
-                ],
-                gas_grid_model.der_node_incidence_matrix[
-                    mesmo.utils.get_index(gas_grid_model.nodes, node_type='no_source'),
-                    :
-                ]
-                @ np.transpose([self.der_gas_consumption_vector])
+                gas_grid_model.branch_incidence_matrix_no_source.transpose(),
+                gas_grid_model.der_node_incidence_matrix_no_source
+                @ np.transpose([der_flow_vector]),
             )
         ).ravel()
 
-        # Obtain branch velocity vector.
-        self.gas_branch_velocity_vector = (
-            4.0 * self.branch_gas_flow_vector
-            / (np.pi * self.line_parameters.loc[:, "diameter"].values ** 2)
-        )
-
-        # Obtain branch Reynolds coefficient vector.
-        self.gas_branch_reynold_vector = (
-            np.abs(self.gas_branch_velocity_vector)
-            * self.line_parameters.loc[:, "diameter"].values
-            / mesmo.config.gas_viscosity
-        )
-
-        # Obtain branch friction factor vector.
-        @np.vectorize
-        def get_friction_factor(
-                reynold,
-                roughness,
-                diameter
-        ):
-
-            # No flow.
-            if reynold == 0:
-                friction_factor = 0
-
-            # Laminar Flow, based on Hagen-Poiseuille velocity profile, analytical correlation.
-            elif 0 < reynold < 4000:
-                friction_factor = 64 / reynold
-
-            # Turbulent flow, Swamee-Jain formula, approximating correlation of Colebrook-White equation.
-            elif 4000 <= reynold:
-                if not (reynold <= 100000000 and 0.000001 <= ((roughness / 1000) / diameter) <= 0.01):
-                    logger.warning("Exceeding validity range of Swamee-Jain formula for calculation of friction factor.")
-                friction_factor = 0.25 / (
-                    np.log(
-                        (roughness / 1000) / (3.7 * diameter) + 5.74 / (reynold ** 0.9)
-                    )
-                ) ** 2
-
-            else:
-                raise ValueError(f"Invalid Reynolds coefficient: {reynold}")
-
-            # Convert from 1/m to 1/km.
-            friction_factor *= 1.0e3
-
-            return friction_factor
-
-        self.gas_branch_friction_factor_vector = (
-            get_friction_factor(
-                self.gas_branch_reynold_vector,
-                gas_grid_model.line_roughness_vector,
-                gas_grid_model.line_diameter_vector
-            )
-        )
-
-        # Obtain branch pressure loss vector.
-        # - Darcy-Weisbach Equation pressure-loss form.
-        self.gas_branch_pressure_vector = (
-            self.gas_branch_friction_factor_vector
-            * gas_grid_model.line_length_vector
-            * gas_grid_model.gas_branch_velocity_vector ** 2
-            * gas_grid_model.gas_density
-            / (
-                2.0
-                * gas_grid_model.line_diameter_vector
-            )
-        )
-
         # Obtain node / source pressure vector.
-        node_pressure_vector_no_source = (
-            scipy.sparse.linalg.spsolve(
-                np.transpose(
-                    gas_grid_model.branch_node_incidence_matrix[
-                        mesmo.utils.get_index(gas_grid_model.nodes, node_type='no_source'),
-                        :
-                    ]
-                ),
-                self.gas_branch_pressure_vector
-            )
+        node_pressure_vector_no_source = scipy.sparse.linalg.spsolve(
+            gas_grid_model.branch_incidence_matrix_no_source.tocsc(),
+            (
+                gas_grid_model.get_branch_loss_coefficient_vector(self.branch_gas_flow_vector)
+                * self.branch_gas_flow_vector
+                * np.abs(self.branch_gas_flow_vector)
+            ),
         )
-        self.source_pressure = (
-            np.max(np.abs(node_pressure_vector_no_source))
+        self.node_pressure_vector = (
+            gas_grid_model.node_incidence_matrix_no_source
+            @ node_pressure_vector_no_source
+            + gas_grid_model.node_incidence_matrix_source
+            @ gas_grid_model.node_pressure_vector_reference_source
+            * gas_grid_model.node_pressure_source_value
         )
-        self.node_pressure_vector = np.zeros(len(gas_grid_model.nodes), dtype=float)
-        self.node_pressure_vector[mesmo.utils.get_index(gas_grid_model.nodes, node_type='no_source')] = (
-            node_pressure_vector_no_source
-        )
+
+
+
 
 
 class GasFlowSolutionSet(object):

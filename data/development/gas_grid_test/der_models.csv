@@ -12,5 +12,4 @@ flexible_generator,solarthermal_isgt_2022,schedule_per_unit,solarthermal_isgt_20
 cooling_plant,cooling_plant_isgt_2022,cooling_plant,cooling_plant_isgt_2022,,,,,,,,,,
 heating_plant,heating_plant_isgt_2022,schedule_per_unit,heating_plant_isgt_2022,0,1,,,6,,,1,1.2,
 flexible_chp,flexible_chp_isgt_2022,schedule_per_unit,flexible_chp_isgt_2022,0,1,,,6,,,1,0.55,0.37
-flexible_load,gas_thermal_residential_isgt_2022,schedule_per_unit,gas_residential_isgt_2022,0.6,1.4,,,6,,,
 compressor_station,compressor_station_isgt_2022,schedule_per_unit,compressor_station_isgt_2022,0,1,,,6,,,1,,,0.8,0,1

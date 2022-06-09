@@ -5,6 +5,7 @@ import logging
 import matplotlib
 import matplotlib.pyplot as plt
 import multiprocessing
+import numpy as np
 import pandas as pd
 import pathlib
 import plotly.graph_objects as go
@@ -123,6 +124,9 @@ matplotlib.rc("pdf", fonttype=42)  # Avoid "Type 3 fonts" in PDFs for better com
 matplotlib.rc("ps", fonttype=42)  # See: http://phyletica.org/matplotlib-fonts/
 matplotlib.rc("savefig", format=config["plots"]["file_format"])
 pd.plotting.register_matplotlib_converters()  # Remove warning when plotting with pandas.
+
+# Modify numpy default settings.
+np.set_printoptions(threshold=np.inf, linewidth=np.inf)
 
 # Modify pandas default settings.
 # - These settings ensure that that data frames are always printed in full, rather than cropped.

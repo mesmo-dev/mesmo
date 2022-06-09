@@ -23,6 +23,7 @@ logs:
   format: '%(asctime)s | %(levelname)s | %(message)s'
 tests:
   scenario_name: singapore_6node  # Defines scenario which is considered in tests.
+  thermal_grid_scenario_name: singapore_tanjongpagar  # Defines scenario which is considered in thermal grid tests.
 plots:
   matplotlib_style: seaborn-colorblind
   matplotlib_colormap: viridis_r

@@ -1,2 +1,2 @@
 gas_grid_name,source_node_name,gas_density,gas_viscosity,source_der_type,source_der_model_name
-gas_grid_test,0,0.68,0.01,,
+paper_2022_kleinschmidt_isgt,0,0.68,0.01,,

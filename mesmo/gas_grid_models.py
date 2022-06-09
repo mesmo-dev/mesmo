@@ -143,7 +143,7 @@ class GasFlowSolution(object):
 
     der_gas_consumption_vector: np.ndarray
     source_flow: float
-    gas_branch_flow_vector: np.ndarray
+    branch_gas_flow_vector: np.ndarray
     gas_branch_velocity_vector: np.ndarray
     gas_branch_reynold_vector: np.ndarray
     gas_branch_friction_factor_vector: np.ndarray
@@ -195,7 +195,7 @@ class GasFlowSolution(object):
         )
 
         # Obtain branch volume flow vector.
-        self.gas_branch_flow_vector = (
+        self.branch_gas_flow_vector = (
             scipy.sparse.linalg.spsolve(
                 gas_grid_model.branch_node_incidence_matrix[
                     mesmo.utils.get_index(gas_grid_model.nodes, node_type='no_source'),
@@ -211,14 +211,14 @@ class GasFlowSolution(object):
 
         # Obtain branch velocity vector.
         self.gas_branch_velocity_vector = (
-            4.0 * self.gas_branch_flow_vector
-            / (np.pi * gas_grid_model.line_diameter_vector ** 2)
+            4.0 * self.branch_gas_flow_vector
+            / (np.pi * self.line_parameters.loc[:, "diameter"].values ** 2)
         )
 
         # Obtain branch Reynolds coefficient vector.
         self.gas_branch_reynold_vector = (
             np.abs(self.gas_branch_velocity_vector)
-            * gas_grid_model.line_diameter_vector
+            * self.line_parameters.loc[:, "diameter"].values
             / mesmo.config.gas_viscosity
         )
 

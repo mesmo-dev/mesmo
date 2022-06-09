@@ -1,4 +1,4 @@
-gas_grid_name,line_name,line_type,node_1_name,node_2_name,length
+thermal_grid_name,line_name,line_type,node_1_name,node_2_name,length
 paper_2022_kleinschmidt_isgt,0,isgt_2022_pipe_300,0,1,0.15
 paper_2022_kleinschmidt_isgt,1,isgt_2022_pipe_300,1,2,0.15
 paper_2022_kleinschmidt_isgt,2,isgt_2022_pipe_300,2,3,0.075

@@ -106,6 +106,8 @@ config = get_config()
 water_density = 998.31  # [kg/m^3]
 water_kinematic_viscosity = 1.3504e-6  # [m^2/s]
 gravitational_acceleration = 9.81  # [m^2/s]
+gas_density = 0.68   # [kg/m^3]
+gas_viscosity = 0.03   # [cp]
 
 # Instantiate multiprocessing / parallel computing pool.
 # - Pool is instantiated as None and only created on first use in `mesmo.utils.starmap`.

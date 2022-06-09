@@ -45,6 +45,9 @@ CREATE TABLE der_models (
     heat_pump_efficiency TEXT,
     thermal_efficiency TEXT,
     electric_efficiency TEXT,
+    compressor_station_efficiency TEXT,
+    gas_per_unit_minimum TEXT,
+    gas_per_unit_maximum TEXT,
     PRIMARY KEY(der_type,der_model_name)
 );
 CREATE TABLE der_schedules (
@@ -196,17 +199,20 @@ CREATE TABLE scenarios (
     scenario_name TEXT,
     electric_grid_name TEXT,
     thermal_grid_name TEXT,
+    gas_grid_name TEXT,
     parameter_set TEXT,
     price_type TEXT,
     price_sensitivity_coefficient REAL NOT NULL ON CONFLICT REPLACE DEFAULT 0,
     electric_grid_operation_limit_type TEXT,
     thermal_grid_operation_limit_type TEXT,
+    gas_grid_operation_limit_type TEXT,
     timestep_start TEXT,
     timestep_end TEXT,
     timestep_interval TEXT,
     base_apparent_power REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     base_voltage REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     base_thermal_power REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    base_gas_consumption REAL NOT NULL ON CONFLICT REPLACE DEFAULT 1,
     trust_region_setting_type TEXT,
     PRIMARY KEY(scenario_name)
 );
@@ -263,6 +269,58 @@ CREATE TABLE thermal_grids (
     source_der_type TEXT,
     source_der_model_name TEXT,
     PRIMARY KEY(thermal_grid_name)
+);
+CREATE TABLE gas_grid_ders (
+    gas_grid_name TEXT,
+    der_name TEXT,
+    node_name TEXT,
+    der_type TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 'constant_power',
+    der_model_name TEXT,
+    gas_consumption_nominal TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '0.0',
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,der_name)
+);
+CREATE TABLE gas_grid_line_types (
+    line_type TEXT,
+    diameter TEXT,
+    absolute_roughness TEXT,
+    maximum_velocity TEXT,
+    PRIMARY KEY(line_type)
+);
+CREATE TABLE gas_grid_lines (
+    gas_grid_name TEXT,
+    line_name TEXT,
+    line_type TEXT,
+    node_1_name TEXT,
+    node_2_name TEXT,
+    length TEXT,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,line_name)
+);
+CREATE TABLE gas_grid_nodes (
+    gas_grid_name TEXT,
+    node_name TEXT,
+    node_type TEXT,
+    latitude TEXT,
+    longitude TEXT,
+    in_service TEXT NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+    PRIMARY KEY(gas_grid_name,node_name)
+);
+CREATE TABLE gas_grid_operation_limit_types (
+    gas_grid_operation_limit_type TEXT,
+    node_pressure_per_unit_maximum TEXT,
+    gas_pipe_flow_per_unit_maximum TEXT,
+    PRIMARY KEY(gas_grid_operation_limit_type)
+);
+CREATE TABLE gas_grids
+(
+    gas_grid_name         TEXT,
+    source_node_name      TEXT,
+    gas_density           TEXT,
+    gas_viscosity         TEXT,
+    source_der_type       TEXT,
+    source_der_model_name TEXT,
+    PRIMARY KEY (gas_grid_name)
 );
 CREATE TABLE trust_region_setting_types (
     trust_region_setting_type TEXT,

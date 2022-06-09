@@ -30,15 +30,19 @@ class DERModel(mesmo.utils.ObjectBase):
     is_standalone: bool
     is_electric_grid_connected: bool
     is_thermal_grid_connected: bool
+    is_gas_grid_connected: bool
     electric_grid_der_index: typing.List[int]
     thermal_grid_der_index: typing.List[int]
+    gas_grid_der_index: typing.List[int]
     timesteps: pd.Index
     active_power_nominal: float
     reactive_power_nominal: float
     thermal_power_nominal: float
+    gas_consumption_nominal: float
     active_power_nominal_timeseries: pd.Series
     reactive_power_nominal_timeseries: pd.Series
     thermal_power_nominal_timeseries: pd.Series
+    gas_consumption_nominal_timeseries: pd.Series
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, is_standalone=False):
 
@@ -52,6 +56,7 @@ class DERModel(mesmo.utils.ObjectBase):
         self.is_standalone = is_standalone
         self.is_electric_grid_connected = pd.notnull(der.at["electric_grid_name"])
         self.is_thermal_grid_connected = pd.notnull(der.at["thermal_grid_name"])
+        self.is_gas_grid_connected = pd.notnull(der.at["gas_grid_name"])
 
         # Obtain DER grid indexes.
         self.electric_grid_der_index = (
@@ -62,6 +67,11 @@ class DERModel(mesmo.utils.ObjectBase):
         self.thermal_grid_der_index = (
             [der_data.ders.loc[der_data.ders.loc[:, "thermal_grid_name"].notnull(), :].index.get_loc(der_name)]
             if self.is_thermal_grid_connected
+            else []
+        )
+        self.gas_grid_der_index = (
+            [der_data.ders.loc[der_data.ders.loc[:, "gas_grid_name"].notnull(), :].index.get_loc(der_name)]
+            if self.is_gas_grid_connected
             else []
         )
 
@@ -77,6 +87,9 @@ class DERModel(mesmo.utils.ObjectBase):
         )
         self.thermal_power_nominal = (
             der.at["thermal_power_nominal"] if pd.notnull(der.at["thermal_power_nominal"]) else 0.0
+        )
+        self.gas_consumption_nominal = (
+            der.at["gas_consumption_nominal"] if pd.notnull(der.at["gas_consumption_nominal"]) else 0.0
         )
 
         # Construct nominal active and reactive power timeseries.
@@ -141,6 +154,33 @@ class DERModel(mesmo.utils.ObjectBase):
         else:
             self.thermal_power_nominal_timeseries = pd.Series(0.0, index=self.timesteps, name="thermal_power")
 
+
+        # Construct nominal gas consumption  timeseries.
+        if (
+                pd.notnull(der.at["definition_type"])
+                and (("schedule" in der.at["definition_type"]) or ("timeseries" in der.at["definition_type"]))
+                and self.is_gas_grid_connected
+        ):
+
+            # Construct nominal gas consumption timeseries.
+            self.gas_consumption_nominal_timeseries = (
+                der_data.der_definitions[der.at["definition_index"]]
+                    .loc[:, "value"]
+                    .copy()
+                    .abs()
+                    .rename("gas_consumption")
+            )
+            if "per_unit" in der.at["definition_type"]:
+                # If per unit definition, multiply nominal thermal power.
+                self.gas_consumption_nominal_timeseries *= self.gas_consumption_nominal
+            else:
+                self.gas_consumption_nominal_timeseries *= (
+                        np.sign(self.gas_consumption_nominal) / der_data.scenario_data.scenario.at[
+                        "base_gas_consumption"]
+                    )
+        else:
+            self.gas_consumption_nominal_timeseries = pd.Series(0.0, index=self.timesteps, name="gas_consumption")
+
         # Obtain marginal cost.
         self.marginal_cost = der.at["marginal_cost"] if pd.notnull(der.at["marginal_cost"]) else 0.0
 
@@ -186,6 +226,12 @@ class ConstantPowerModel(FixedDERModel):
         if self.is_thermal_grid_connected:
             self.thermal_power_nominal_timeseries = pd.Series(
                 self.thermal_power_nominal, index=self.timesteps, name="thermal_power"
+            )
+
+        # Redefine nominal gas consumption timeseries.
+        if self.is_gas_grid_connected:
+            self.gas_consumption_nominal_timeseries = pd.Series(
+                self.gas_consumption_nominal, index=self.timesteps, name="gas_consumption"
             )
 
 
@@ -255,6 +301,7 @@ class FlexibleDERModel(DERModel):
     mapping_active_power_by_output: pd.DataFrame
     mapping_reactive_power_by_output: pd.DataFrame
     mapping_thermal_power_by_output: pd.DataFrame
+    mapping_gas_consumption_by_output: pd.DataFrame
     state_vector_initial: pd.Series
     state_matrix: pd.DataFrame
     control_matrix: pd.DataFrame
@@ -282,9 +329,9 @@ class FlexibleLoadModel(FlexibleDERModel):
         der = der_data.ders.loc[self.der_name, :]
 
         # If connected to both electric and thermal grid, raise error.
-        if self.is_electric_grid_connected and self.is_thermal_grid_connected:
+        if (self.is_electric_grid_connected and self.is_thermal_grid_connected) or (self.is_gas_grid_connected and self.is_thermal_grid_connected) or (self.is_electric_grid_connected and self.is_gas_grid_connected):
             raise AssertionError(
-                f"Flexible load '{self.der_name}' can only be connected to either electric grid or thermal grid."
+                f"Flexible load '{self.der_name}' can only be connected to either electric grid, thermal grid or gas grid."
             )
 
         if self.is_electric_grid_connected:
@@ -457,6 +504,84 @@ class FlexibleLoadModel(FlexibleDERModel):
                 axis="columns",
             )
 
+        if self.is_gas_grid_connected:
+
+            # Instantiate indexes.
+            self.states = pd.Index(["state_of_charge"])
+            self.storage_states = pd.Index(["state_of_charge"])
+            self.controls = pd.Index(["gas_consumption"])
+            self.disturbances = pd.Index(["gas_consumption_reference"])
+            self.outputs = pd.Index(
+                ["state_of_charge", "gas_maximum_margin", "gas_minimum_margin", "gas_consumption"]
+            )
+
+            # Instantiate initial state.
+            # - Note that this is not used for `storage_states`, whose initial state is coupled with their final state.
+            self.state_vector_initial = pd.Series(0.0, index=self.states)
+
+            # Instantiate state space matrices.
+            # TODO: Add shifting losses / self discharge.
+            self.state_matrix = pd.DataFrame(0.0, index=self.states, columns=self.states)
+            self.state_matrix.at["state_of_charge", "state_of_charge"] = 1.0
+            self.control_matrix = pd.DataFrame(0.0, index=self.states, columns=self.controls)
+            self.control_matrix.at["state_of_charge", "gas_consumption"] = (
+                -1.0
+                * der_data.scenario_data.scenario.at["timestep_interval"]
+                / (der["energy_storage_capacity_per_unit"] * pd.Timedelta("1h"))
+            )
+            self.disturbance_matrix = pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+            self.disturbance_matrix.at["state_of_charge", "gas_consumption_reference"] = (
+                +1.0
+                * der_data.scenario_data.scenario.at["timestep_interval"]
+                / (der["energy_storage_capacity_per_unit"] * pd.Timedelta("1h"))
+            )
+            self.state_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+            self.state_output_matrix.at["state_of_charge", "state_of_charge"] = 1.0
+            self.control_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+            self.control_output_matrix.at["gas_maximum_margin", "gas_consumption"] = -1.0
+            self.control_output_matrix.at["gas_minimum_margin", "gas_consumption"] = +1.0
+            self.control_output_matrix.at["gas_consumption", "gas_consumption"] = (
+                1.0 if self.thermal_power_nominal != 0.0 else 0.0
+            )
+            self.disturbance_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+            self.disturbance_output_matrix.at["gas_maximum_margin", "gas_consumption_reference"] = (
+                +1.0 * der.at["gas_per_unit_maximum"]
+            )
+            self.disturbance_output_matrix.at["gas_minimum_margin", "gas_consumption_reference"] = (
+                -1.0 * der.at["gas_per_unit_minimum"]
+            )
+
+            # Instantiate disturbance timeseries.
+            self.disturbance_timeseries = pd.concat(
+                [
+                    self.gas_consumption_nominal_timeseries.rename("gas_consumption_reference") / self.gas_consumption_nominal
+                    if self.gas_consumption_nominal != 0
+                    else 1.0  # In per-unit.
+                ],
+                axis="columns",
+            )
+
+            # Construct output constraint timeseries
+            self.output_maximum_timeseries = pd.concat(
+                [
+                    pd.Series(1.0, index=self.timesteps, name="state_of_charge"),
+                    pd.Series(np.inf, index=self.timesteps, name="gas_maximum_margin"),
+                    pd.Series(np.inf, index=self.timesteps, name="gas_minimum_margin"),
+                    pd.Series(np.inf, index=self.timesteps, name="gas_consumption"),
+                ],
+                axis="columns",
+            )
+            self.output_minimum_timeseries = pd.concat(
+                [
+                    pd.Series(0.0, index=self.timesteps, name="state_of_charge"),
+                    pd.Series(0.0, index=self.timesteps, name="gas_maximum_margin"),
+                    pd.Series(0.0, index=self.timesteps, name="gas_minimum_margin"),
+                    pd.Series(0.0, index=self.timesteps, name="gas_consumption"),
+                ],
+                axis="columns",
+            )
+
+
         # Define power mapping matrices.
         self.mapping_active_power_by_output = pd.DataFrame(0.0, index=["active_power"], columns=self.outputs)
         if self.is_electric_grid_connected:
@@ -467,6 +592,9 @@ class FlexibleLoadModel(FlexibleDERModel):
         self.mapping_thermal_power_by_output = pd.DataFrame(0.0, index=["thermal_power"], columns=self.outputs)
         if self.is_thermal_grid_connected:
             self.mapping_thermal_power_by_output.at["thermal_power", "thermal_power"] = self.thermal_power_nominal
+        self.mapping_gas_consumption_by_output = pd.DataFrame(0.0, index=["gas_consumption"], columns=self.outputs)
+        if self.is_gas_grid_connected:
+            self.mapping_gas_consumption_by_output.at["gas_consumption", "gas_consumption"] = self.gas_consumption_nominal
 
 
 class FlexibleEVChargerModel(FlexibleDERModel):
@@ -1218,6 +1346,103 @@ class HeatingPlantModel(FlexibleDERModel):
             axis="columns",
         )
 
+class CompressorStationModel(FlexibleDERModel):
+    """Compressor station model object."""
+
+    der_type = "compressor_station"
+    thermal_efficiency: float
+
+    def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
+
+        # Common initializations are implemented in parent class.
+        super().__init__(der_data, der_name, **kwargs)
+
+        # Get shorthand for DER data.
+        der = der_data.ders.loc[self.der_name, :]
+
+        # If not connected to both thermal grid and electric grid, raise error.
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_gas_grid_connected)):
+            raise AssertionError(
+                f"Compressor station'{self.der_name}' must be connected to both gas grid and electric grid."
+            )
+
+        # Obtain compressor station efficiency.
+        self.compressor_station_efficiency = der.at["compressor_station_efficiency"]
+
+        # Store timesteps index.
+        self.timesteps = der_data.scenario_data.timesteps
+
+        # Manipulate gas consumption timeseries.
+        self.gas_consumption_nominal_timeseries *= self.compressor_station_efficiency
+
+        # Instantiate indexes.
+        self.states = pd.Index(["_"])  # Define placeholder '_' to avoid issues in the optimization problem definition.
+        self.controls = pd.Index(["active_power"])
+        self.disturbances = pd.Index([])
+        self.outputs = pd.Index(["active_power", "reactive_power", "gas_consumption"])
+
+        # Define power mapping matrices.
+        self.mapping_active_power_by_output = pd.DataFrame(0.0, index=["active_power"], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_active_power_by_output.at["active_power", "active_power"] = 1.0
+        self.mapping_reactive_power_by_output = pd.DataFrame(0.0, index=["reactive_power"], columns=self.outputs)
+        if self.is_electric_grid_connected:
+            self.mapping_reactive_power_by_output.at["reactive_power", "reactive_power"] = 1.0
+        self.mapping_gas_consumption_by_output = pd.DataFrame(0.0, index=["gas_consumption"], columns=self.outputs)
+        if self.is_gas_grid_connected:
+            self.mapping_gas_consumption_by_output.at["gas_consumption", "gas_consumption"] = 1.0
+
+        # Instantiate initial state.
+        self.state_vector_initial = pd.Series(0.0, index=self.states)
+
+        # Instantiate state space matrices.
+        self.state_matrix = pd.DataFrame(0.0, index=self.states, columns=self.states)
+        self.control_matrix = pd.DataFrame(0.0, index=self.states, columns=self.controls)
+        self.disturbance_matrix = pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
+        self.state_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.states)
+        self.control_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
+        self.control_output_matrix.at["active_power", "active_power"] = 1.0
+        self.control_output_matrix.at["reactive_power", "active_power"] = (
+            self.reactive_power_nominal / self.active_power_nominal if self.active_power_nominal != 0.0 else 0.0
+        )
+        self.control_output_matrix.at["gas_consumption", "active_power"] = -1.0 * self.thermal_efficiency
+        self.disturbance_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)
+
+        # Instantiate disturbance timeseries.
+        self.disturbance_timeseries = pd.DataFrame(0.0, index=self.timesteps, columns=self.disturbances)
+
+        # Construct output constraint timeseries.
+        # TODO: Confirm the maximum / minimum definitions.
+        self.output_maximum_timeseries = pd.concat(
+            [
+                (
+                    der["gas_per_unit_minimum"]  # Take minimum, because load is negative power.
+                    * self.active_power_nominal_timeseries
+                ),
+                (
+                    der["gas_per_unit_minimum"]  # Take minimum, because load is negative power.
+                    * self.reactive_power_nominal_timeseries
+                ),
+                (self.gas_consumption_nominal * self.gas_consumption_nominal_timeseries),
+            ],
+            axis="columns",
+        )
+        self.output_minimum_timeseries = pd.concat(
+            [
+                (
+                    der["gas_per_unit_maximum"]  # Take maximum, because load is negative power.
+                    * self.active_power_nominal_timeseries
+                ),
+                (
+                    der["gas_per_unit_maximum"]  # Take maximum, because load is negative power.
+                    * self.reactive_power_nominal_timeseries
+                ),
+                (0.0 * self.gas_consumption_nominal_timeseries),
+            ],
+            axis="columns",
+        )
+
+
 
 class FlexibleCHP(FlexibleDERModel):
 
@@ -1235,8 +1460,8 @@ class FlexibleCHP(FlexibleDERModel):
         der = der_data.ders.loc[self.der_name, :]
 
         # If not connected to both thermal grid and electric grid, raise error.
-        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected)):
-            raise AssertionError(f"CHP '{self.der_name}' must be connected to both thermal grid and electric grid.")
+        if not (self.is_standalone or (self.is_electric_grid_connected and self.is_thermal_grid_connected and self.is_gas_grid_connected)):
+            raise AssertionError(f"CHP '{self.der_name}' must be connected to both thermal grid, gas grid and electric grid.")
 
         # Store timesteps index.
         self.timesteps = der_data.scenario_data.timesteps
@@ -1251,7 +1476,7 @@ class FlexibleCHP(FlexibleDERModel):
 
         # Instantiate indexes.
         self.states = pd.Index(["_"])  # Define placeholder '_' to avoid issues in the optimization problem definition.
-        self.controls = pd.Index(["active_power"])
+        self.controls = pd.Index(["gas_consumption"])
         self.disturbances = pd.Index([])
         self.outputs = pd.Index(["active_power", "reactive_power", "thermal_power"])
 
@@ -1275,11 +1500,11 @@ class FlexibleCHP(FlexibleDERModel):
         self.disturbance_matrix = pd.DataFrame(0.0, index=self.states, columns=self.disturbances)
         self.state_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.states)
         self.control_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.controls)
-        self.control_output_matrix.at["active_power", "active_power"] = 1.0
-        self.control_output_matrix.at["reactive_power", "active_power"] = (
-            self.reactive_power_nominal / self.active_power_nominal if self.active_power_nominal != 0.0 else 0.0
+        self.control_output_matrix.at["active_power", "gas_consumption"] = 1.0
+        self.control_output_matrix.at["reactive_power", "gas_consumption"] = (
+            self.reactive_power_nominal / self.gas_consumption_nominal if self.gas_consumption_nominal != 0.0 else 0.0
         )
-        self.control_output_matrix.at["thermal_power", "active_power"] = 1.0 * (
+        self.control_output_matrix.at["thermal_power", "gas_consumption"] = 1.0 * (
             self.thermal_efficiency / self.electric_efficiency
         )
         self.disturbance_output_matrix = pd.DataFrame(0.0, index=self.outputs, columns=self.disturbances)

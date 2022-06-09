@@ -1,4 +1,4 @@
-gas_grid_name,node_name,latitude,longitude
+thermal_grid_name,node_name,latitude,longitude
 paper_2022_kleinschmidt_isgt,0,48.267354,11.667887
 paper_2022_kleinschmidt_isgt,1,48.267429,11.667887
 paper_2022_kleinschmidt_isgt,2,48.267579,11.667887

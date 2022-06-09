@@ -10,3 +10,4 @@ import mesmo.problems as problems
 import mesmo.solutions as solutions
 import mesmo.thermal_grid_models as thermal_grid_models
 import mesmo.utils as utils
+import mesmo.gas_grid_models as gas_grid_models

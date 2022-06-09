@@ -132,6 +132,7 @@ def connect_database() -> sqlite3.Connection:
     return database_connection
 
 
+
 class ScenarioData(mesmo.utils.ObjectBase):
     """Scenario data object."""
 
@@ -170,6 +171,7 @@ class ScenarioData(mesmo.utils.ObjectBase):
                 SELECT * FROM scenarios
                 LEFT JOIN electric_grid_operation_limit_types USING (electric_grid_operation_limit_type)
                 LEFT JOIN thermal_grid_operation_limit_types USING (thermal_grid_operation_limit_type)
+                LEFT JOIN gas_grid_operation_limit_types USING (gas_grid_operation_limit_type)
                 LEFT JOIN trust_region_setting_types USING (trust_region_setting_type)
                 WHERE scenario_name = ?
                 """,
@@ -281,6 +283,8 @@ class ScenarioData(mesmo.utils.ObjectBase):
             dataframe.loc[:, "plant_pump_efficiency"] *= self.scenario.at["base_thermal_power"]
         if "thermal_power_nominal" in dataframe.columns:
             dataframe.loc[:, "thermal_power_nominal"] /= self.scenario.at["base_thermal_power"]
+        if "gas_consumption_nominal" in dataframe.columns:
+            dataframe.loc[:, "gas_consumption_nominal"] /= self.scenario.at["base_gas_consumption"]
 
         # If dataframe contains `in_service` column, remove all not-in-service elements.
         # - This operation should be last, to avoid pandas warnings for operation on copy of dataframe.
@@ -310,7 +314,7 @@ class DERData(mesmo.utils.ObjectBase):
         # Obtain DERs.
         # - Obtain DERs for electric grid / thermal grid separately and perform full outer join via `pandas.merge()`,
         #   due to SQLITE missing full outer join syntax.
-        ders = pd.merge(
+        ders = pd.merge(pd.merge(
             self.scenario_data.parse_parameters_dataframe(
                 pd.read_sql(
                     """
@@ -340,7 +344,25 @@ class DERData(mesmo.utils.ObjectBase):
             how="outer",
             on=["der_name", "der_type", "der_model_name"],
             suffixes=("_electric_grid", "_thermal_grid"),
+        ),
+            self.scenario_data.parse_parameters_dataframe(
+                pd.read_sql(
+                    """
+                    SELECT * FROM gas_grid_ders
+                    WHERE gas_grid_name = (
+                        SELECT gas_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                    """,
+                    con=database_connection,
+                    params=[scenario_name],
+                )
+            ),
+            how="outer",
+            on=["der_name", "der_type", "der_model_name"],
+            suffixes=("_electric_grid", "_thermal_grid", "_gas_grid"),
         )
+
         der_models = self.scenario_data.parse_parameters_dataframe(
             pd.read_sql(
                 """
@@ -361,9 +383,17 @@ class DERData(mesmo.utils.ObjectBase):
                         WHERE scenario_name = ?
                     )
                 )
+                OR (der_type, der_model_name) IN (
+                    SELECT der_type, der_model_name
+                    FROM gas_grid_ders
+                    WHERE gas_grid_name = (
+                        SELECT gas_grid_name FROM scenarios
+                        WHERE scenario_name = ?
+                    )
+                )
                 """,
                 con=database_connection,
-                params=[scenario_name, scenario_name],
+                params=[scenario_name, scenario_name, scenario_name],
             )
         )
 
@@ -384,12 +414,14 @@ class DERData(mesmo.utils.ObjectBase):
             {
                 "electric_grid_name": None,
                 "thermal_grid_name": None,
+                "gas_grid_name": None,
                 "der_name": der_model_name,
                 "der_type": der_type,
                 "der_model_name": der_model_name,
                 "active_power_nominal": None,
                 "reactive_power_nominal": None,
                 "thermal_power_nominal": None,
+                "gas_consumption_nominal": None,
             },
             index=[0],
         )
@@ -1019,6 +1051,98 @@ class ThermalGridData(mesmo.utils.ObjectBase):
             scenario_name,
             self.thermal_grid.at["source_der_type"],
             self.thermal_grid.at["source_der_model_name"],
+            database_connection,
+        )
+
+
+class GasGridData(mesmo.utils.ObjectBase):
+    """Thermal grid data object."""
+
+    scenario_data: ScenarioData
+    gas_grid: pd.DataFrame
+    gas_grid_nodes: pd.DataFrame
+    gas_grid_ders: pd.DataFrame
+    gas_grid_lines: pd.DataFrame
+    der_data: DERData
+
+    def __init__(self, scenario_name: str, database_connection=None):
+
+        # Obtain database connection.
+        if database_connection is None:
+            database_connection = connect_database()
+
+        # Obtain scenario data.
+        self.scenario_data = ScenarioData(scenario_name)
+
+        self.gas_grid = self.scenario_data.parse_parameters_dataframe(
+            pd.read_sql(
+                """
+                SELECT * FROM gas_grids
+                WHERE gas_grid_name = (
+                    SELECT gas_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name],
+            )
+        ).iloc[0]
+        self.gas_grid_nodes = self.scenario_data.parse_parameters_dataframe(
+            pd.read_sql(
+                """
+                SELECT * FROM gas_grid_nodes
+                WHERE gas_grid_name = (
+                    SELECT gas_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name],
+            )
+        )
+        self.gas_grid_nodes.index = self.gas_grid_nodes["node_name"]
+        self.gas_grid_nodes = self.gas_grid_nodes.reindex(
+            index=natsort.natsorted(self.gas_grid_nodes.index)
+        )
+        self.gas_grid_ders = self.scenario_data.parse_parameters_dataframe(
+            pd.read_sql(
+                """
+                SELECT * FROM gas_grid_ders
+                WHERE gas_grid_name = (
+                    SELECT gas_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name],
+            )
+        )
+        self.gas_grid_ders.index = self.gas_grid_ders["der_name"]
+        self.gas_grid_ders = self.gas_grid_ders.reindex(index=natsort.natsorted(self.gas_grid_ders.index))
+        self.gas_grid_lines = self.scenario_data.parse_parameters_dataframe(
+            pd.read_sql(
+                """
+                SELECT * FROM gas_grid_lines
+                LEFT JOIN gas_grid_line_types USING (line_type)
+                WHERE gas_grid_name = (
+                    SELECT gas_grid_name FROM scenarios
+                    WHERE scenario_name = ?
+                )
+                """,
+                con=database_connection,
+                params=[scenario_name],
+            )
+        )
+        self.gas_grid_lines.index = self.gas_grid_lines["line_name"]
+        self.gas_grid_lines = self.gas_grid_lines.reindex(
+            index=natsort.natsorted(self.gas_grid_lines.index)
+        )
+
+        # Obtain DER data.
+        self.der_data = DERData(
+            scenario_name,
+            self.gas_grid.at["source_der_type"],
+            self.gas_grid.at["source_der_model_name"],
             database_connection,
         )
 

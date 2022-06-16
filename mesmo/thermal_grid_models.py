@@ -429,8 +429,7 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
                 thermal_grid_model.branch_incidence_matrix_no_source.transpose(),
-                thermal_grid_model.der_node_incidence_matrix_no_source
-                @ np.transpose([der_flow_vector]),
+                thermal_grid_model.der_node_incidence_matrix_no_source @ np.transpose([der_flow_vector]),
             )
         ).ravel()
 
@@ -444,8 +443,7 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
             ),
         )
         self.node_head_vector = (
-            thermal_grid_model.node_incidence_matrix_no_source
-            @ node_head_vector_no_source
+            thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_no_source
             + thermal_grid_model.node_incidence_matrix_source
             @ thermal_grid_model.node_head_vector_reference_source
             * thermal_grid_model.node_head_source_value
@@ -520,14 +518,12 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                 branch_flow_vector_initial
             )
             jacobian_branch_head_loss = (
-                2
-                * sp.diags(np.abs(branch_flow_vector_initial))
-                @ sp.diags(branch_loss_coefficient_vector)
+                2 * sp.diags(np.abs(branch_flow_vector_initial)) @ sp.diags(branch_loss_coefficient_vector)
             )
             jacobian_branch_head_loss_inverse = (
                 0.5
                 * sp.diags(np.abs(branch_flow_vector_initial) ** -1)
-                @ sp.diags(branch_loss_coefficient_vector ** -1)
+                @ sp.diags(branch_loss_coefficient_vector**-1)
             )
 
             # Calculate nodal head vector.
@@ -542,12 +538,9 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                         -1.0
                         * np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
                         @ jacobian_branch_head_loss_inverse
-                    ) @ (
-                        (
-                            0.5
-                            * jacobian_branch_head_loss
-                            @ branch_flow_vector_initial
-                        )
+                    )
+                    @ (
+                        (0.5 * jacobian_branch_head_loss @ branch_flow_vector_initial)
                         - (
                             -1.0
                             * thermal_grid_model.branch_incidence_matrix_source
@@ -556,32 +549,19 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
                         )
                     )
                     + node_flow_vector_no_source
-                )
+                ),
             )
             node_head_vector_estimate = (
-                thermal_grid_model.node_incidence_matrix_no_source
-                @ node_head_vector_estimate_no_source
+                thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_estimate_no_source
                 + thermal_grid_model.node_incidence_matrix_source
                 @ thermal_grid_model.node_head_vector_reference_source
                 * thermal_grid_model.node_head_source_value
             )
 
             # Calculate branch volume flow vector.
-            branch_flow_vector_estimate = (
-                branch_flow_vector_initial
-                - jacobian_branch_head_loss_inverse
-                @ (
-                    (
-                        0.5
-                        * jacobian_branch_head_loss
-                        @ branch_flow_vector_initial
-                    )
-                    + (
-                        -1.0
-                        * thermal_grid_model.branch_incidence_matrix
-                        @ node_head_vector_estimate
-                    )
-                )
+            branch_flow_vector_estimate = branch_flow_vector_initial - jacobian_branch_head_loss_inverse @ (
+                (0.5 * jacobian_branch_head_loss @ branch_flow_vector_initial)
+                + (-1.0 * thermal_grid_model.branch_incidence_matrix @ node_head_vector_estimate)
             )
 
             # Update head change iteration variable.
@@ -746,9 +726,7 @@ class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
             branch_flow_vector_reference
         )
         jacobian_branch_head_loss_inverse = (
-            0.5
-            * sp.diags(np.abs(branch_flow_vector_reference) ** -1)
-            @ sp.diags(branch_loss_coefficient_vector ** -1)
+            0.5 * sp.diags(np.abs(branch_flow_vector_reference) ** -1) @ sp.diags(branch_loss_coefficient_vector**-1)
         )
 
         # Obtain sensitivity matrices.
@@ -761,7 +739,7 @@ class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
                 mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"),
             )
         ] = (
-            (2.0 ** -1.5)
+            (2.0**-1.5)
             * scipy.sparse.linalg.inv(
                 np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
                 @ jacobian_branch_head_loss_inverse

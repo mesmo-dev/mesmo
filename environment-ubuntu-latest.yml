@@ -14,13 +14,12 @@ dependencies:
   - brotlipy=0.7.0
   - bzip2=1.0.8
   - c-ares=1.18.1
-  - ca-certificates=2022.5.18.1
+  - ca-certificates=2022.6.15
   - cairo=1.16.0
-  - certifi=2022.5.18.1
+  - certifi=2022.6.15
   - cffi=1.15.0
   - cfitsio=4.1.0
   - charset-normalizer=2.0.12
-  - click=8.1.3
   - click-plugins=1.1.1
   - cligj=0.7.2
   - contextily=1.2.0
@@ -56,7 +55,7 @@ dependencies:
   - json-c=0.16
   - kealib=1.4.14
   - keyutils=1.6.1
-  - kiwisolver=1.4.2
+  - kiwisolver=1.4.3
   - krb5=1.19.3
   - lcms2=2.12
   - ld_impl_linux-64=2.36.1
@@ -68,7 +67,7 @@ dependencies:
   - libcblas=3.9.0
   - libcurl=7.83.1
   - libdap4=3.20.6
-  - libdeflate=1.10
+  - libdeflate=1.12
   - libedit=3.1.20191231
   - libev=4.33
   - libffi=3.4.2
@@ -91,14 +90,14 @@ dependencies:
   - libspatialite=5.0.1
   - libssh2=1.10.0
   - libstdcxx-ng=12.1.0
-  - libtiff=4.3.0
+  - libtiff=4.4.0
   - libuuid=2.32.1
   - libwebp=1.2.2
   - libwebp-base=1.2.2
   - libxcb=1.13
   - libxml2=2.9.12
   - libzip=1.8.0
-  - libzlib=1.2.11
+  - libzlib=1.2.12
   - lz4-c=1.9.3
   - matplotlib-base=3.5.2
   - mercantile=1.2.1
@@ -114,7 +113,7 @@ dependencies:
   - pandas=1.4.2
   - pcre=8.45
   - pillow=9.1.1
-  - pip=22.1.1
+  - pip=22.1.2
   - pixman=0.40.0
   - poppler=22.04.0
   - poppler-data=0.4.11
@@ -131,11 +130,11 @@ dependencies:
   - pytz=2022.1
   - qdldl-python=0.1.5
   - rasterio=1.2.10
-  - readline=8.1
-  - requests=2.27.1
+  - readline=8.1.2
+  - requests=2.28.0
   - scipy=1.8.1
   - scs=3.2.0
-  - setuptools=62.3.2
+  - setuptools=62.3.4
   - six=1.16.0
   - snappy=1.1.9
   - snuggs=1.4.7
@@ -161,7 +160,7 @@ dependencies:
   - xorg-xproto=7.0.31
   - xyzservices=2022.4.0
   - xz=5.2.5
-  - zlib=1.2.11
+  - zlib=1.2.12
   - zstd=1.5.2
   - pip:
     - aiohttp==3.8.1
@@ -171,22 +170,23 @@ dependencies:
     - bleach==5.0.0
     - blessed==1.19.1
     - bokeh==2.4.3
-    - cachetools==5.1.0
+    - cachetools==5.2.0
+    - click==8.0.4
     - colorcet==3.0.0
     - colorful==0.5.4
-    - coverage==6.4
+    - coverage==6.4.1
     - deprecated==1.2.13
     - dill==0.3.5.1
     - distlib==0.3.4
     - dss-python==0.10.7.post1
-    - dynaconf==3.1.8
-    - filelock==3.7.0
+    - dynaconf==3.1.9
+    - filelock==3.7.1
     - flake8==4.0.1
     - frozenlist==1.3.0
     - future==0.18.2
-    - google-api-core==2.8.0
-    - google-auth==2.6.6
-    - googleapis-common-protos==1.56.1
+    - google-api-core==2.8.2
+    - google-auth==2.8.0
+    - googleapis-common-protos==1.56.2
     - gpustat==1.0.0b1
     - grpcio==1.43.0
     - gurobipy==9.5.1
@@ -194,29 +194,29 @@ dependencies:
     - holoviews==1.14.9
     - hvplot==0.8.0
     - importlib-metadata==4.11.4
-    - importlib-resources==5.7.1
+    - importlib-resources==5.8.0
     - iniconfig==1.1.1
     - jinja2==3.1.2
-    - jsonschema==4.5.1
+    - jsonschema==4.6.0
     - kaleido==0.2.1
     - markdown==3.3.7
     - markupsafe==2.1.1
     - mccabe==0.6.1
-    - msgpack==1.0.3
+    - msgpack==1.0.4
     - multidict==6.0.2
     - multimethod==1.8
     - natsort==8.1.0
-    - networkx==2.8.2
+    - networkx==2.8.4
     - nvidia-ml-py3==7.352.0
     - opencensus==0.9.0
     - opencensus-context==0.1.2
-    - opencv-python-headless==4.5.5.64
+    - opencv-python-headless==4.6.0.66
     - opendssdirect-py==0.6.1
     - panel==0.13.1
     - param==1.12.1
     - parameterized==0.8.1
     - platformdirs==2.5.2
-    - plotly==5.8.0
+    - plotly==5.8.2
     - pluggy==1.0.0
     - prometheus-client==0.13.1
     - protobuf==3.20.1
@@ -236,8 +236,8 @@ dependencies:
     - pytest-subtests==0.8.0
     - pyviz-comms==2.2.0
     - pyyaml==6.0
-    - ray==1.12.1
-    - redis==4.3.1
+    - ray==1.13.0
+    - redis==4.3.3
     - rsa==4.8
     - smart-open==6.0.0
     - tenacity==8.0.1

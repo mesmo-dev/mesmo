@@ -41,12 +41,8 @@ def main():
     der_thermal_power_vector_change = pd.DataFrame(
         index=power_multipliers, columns=thermal_grid_model.ders, dtype=float
     )
-    node_head_vector_power_flow = pd.DataFrame(
-        index=power_multipliers, columns=thermal_grid_model.nodes, dtype=float
-    )
-    node_head_vector_linear_model = pd.DataFrame(
-        index=power_multipliers, columns=thermal_grid_model.nodes, dtype=float
-    )
+    node_head_vector_power_flow = pd.DataFrame(index=power_multipliers, columns=thermal_grid_model.nodes, dtype=float)
+    node_head_vector_linear_model = pd.DataFrame(index=power_multipliers, columns=thermal_grid_model.nodes, dtype=float)
     branch_flow_vector_power_flow = pd.DataFrame(
         index=power_multipliers, columns=thermal_grid_model.branches, dtype=float
     )
@@ -98,8 +94,7 @@ def main():
         (node_head_vector_linear_model - node_head_vector_power_flow) / node_head_vector_power_flow
     ).abs().mean(axis="columns")
     branch_flow_vector_error = 100.0 * (
-        (branch_flow_vector_linear_model - branch_flow_vector_power_flow)
-        / branch_flow_vector_power_flow
+        (branch_flow_vector_linear_model - branch_flow_vector_power_flow) / branch_flow_vector_power_flow
     ).mean(axis="columns")
     pump_power_error = 100.0 * ((pump_power_linear_model - pump_power_power_flow) / pump_power_power_flow)
 
@@ -150,13 +145,9 @@ def main():
     for node_index, node in enumerate(thermal_grid_model.nodes):
 
         figure = go.Figure()
+        figure.add_trace(go.Scatter(x=power_multipliers, y=node_head_vector_power_flow.loc[:, node], name="Power flow"))
         figure.add_trace(
-            go.Scatter(x=power_multipliers, y=node_head_vector_power_flow.loc[:, node], name="Power flow")
-        )
-        figure.add_trace(
-            go.Scatter(
-                x=power_multipliers, y=node_head_vector_linear_model.loc[:, node], name="Linear model"
-            )
+            go.Scatter(x=power_multipliers, y=node_head_vector_linear_model.loc[:, node], name="Linear model")
         )
         figure.add_trace(
             go.Scatter(
@@ -189,14 +180,10 @@ def main():
 
         figure = go.Figure()
         figure.add_trace(
-            go.Scatter(
-                x=power_multipliers, y=branch_flow_vector_power_flow.loc[:, branch], name="Power flow"
-            )
+            go.Scatter(x=power_multipliers, y=branch_flow_vector_power_flow.loc[:, branch], name="Power flow")
         )
         figure.add_trace(
-            go.Scatter(
-                x=power_multipliers, y=branch_flow_vector_linear_model.loc[:, branch], name="Linear model"
-            )
+            go.Scatter(x=power_multipliers, y=branch_flow_vector_linear_model.loc[:, branch], name="Linear model")
         )
         figure.add_trace(
             go.Scatter(

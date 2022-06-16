@@ -677,7 +677,7 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
         raise NotImplementedError
 
 
-class LinearThermalGridModel(mesmo.utils.ObjectBase):
+class LinearThermalGridModelBase(mesmo.utils.ObjectBase):
     """Linear thermal grid model object."""
 
     thermal_grid_model: ThermalGridModel
@@ -707,7 +707,7 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         self.__init__(thermal_grid_model, thermal_power_flow_solution)
 
 
-class LinearThermalGridModelGlobal(LinearThermalGridModel):
+class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
 
     # Enable calls to `__init__` method definitions in parent class.
     @multimethod
@@ -832,7 +832,7 @@ class LinearThermalGridModelLocal(LinearThermalGridModelGlobal):
 
 class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
-    linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
+    linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase]
     thermal_grid_model: ThermalGridModel
     timesteps: pd.Index
 
@@ -850,7 +850,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         self,
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution_set: ThermalPowerFlowSolutionSet,
-        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal,
+        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
 
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
@@ -869,7 +869,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         self,
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution: ThermalPowerFlowSolution,
-        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal,
+        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
 
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
@@ -886,7 +886,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def __init__(
         self,
         thermal_grid_model: ThermalGridModel,
-        linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel],
+        linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase],
     ):
 
         # Store attributes.
@@ -897,7 +897,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     @staticmethod
     def check_linear_thermal_grid_model_method(linear_thermal_grid_model_method):
 
-        if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModel):
+        if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModelBase):
             raise ValueError(f"Invalid linear thermal grid model method: {linear_thermal_grid_model_method}")
 
     def define_optimization_problem(

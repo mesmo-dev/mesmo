@@ -529,12 +529,12 @@ class OptimalOperationProblem(ProblemBase):
 
         # TODO: Remove warning once trust-region method has been tested properly.
         logger.warning(
-            f"Experimental feature:"
-            f" Please note that the trust-region method is experimental and has not yet been extensively tested."
+            "Experimental feature:"
+            " Please note that the trust-region method is experimental and has not yet been extensively tested."
         )
 
         # Instantiate trust-region iteration variables.
-        logger.debug(f"Solving problem with trust-region algorithm.")
+        logger.debug("Solving problem with trust-region algorithm.")
         sigma = 0.0
         error_control = np.inf
         trust_region_iteration_count = 0
@@ -625,7 +625,8 @@ class OptimalOperationProblem(ProblemBase):
                     / np.imag(self.electric_grid_model.der_power_vector_reference)
                 )
 
-                # Get the new reference values for voltage and branch flow which are used in the Trust-Region constraints
+                # Get the new reference values for voltage and branch flow which are used in the
+                # Trust-Region constraints.
                 node_voltage_vector_reference = power_flow_results.node_voltage_magnitude_vector_per_unit
                 branch_power_magnitude_vector_1_reference = power_flow_results.branch_power_magnitude_vector_1_per_unit
                 branch_power_magnitude_vector_2_reference = power_flow_results.branch_power_magnitude_vector_2_per_unit
@@ -696,8 +697,8 @@ class OptimalOperationProblem(ProblemBase):
 
                 # Define trust-region constraints.
                 if first_iteration:
-                    # The trust-region permissible value for variables to move is determined by radius delta, which is included
-                    # in all inequality constraints [1].
+                    # The trust-region permissible value for variables to move is determined by radius delta, which
+                    # is included in all inequality constraints [1].
                     # -> Branch flow and voltage limits
                     # -> DER power output limits
                     # We redefine the approximate state and dispatch quantities as the measure of change in their
@@ -774,7 +775,7 @@ class OptimalOperationProblem(ProblemBase):
                     logger.debug(f"Optimization problem for scenario {self.scenario_name} infeasible")
                     return [None, None, self.linear_electric_grid_model_set]
                 else:
-                    logger.debug(f"Optimization problem infeasible, increasing delta to maximum")
+                    logger.debug("Optimization problem infeasible, increasing delta to maximum")
                     logger.debug(f"Trying to solve again #{infeasible_count}")
                     # delta = min(2 * delta, delta_max)
                     logger.debug(f"new delta = {delta}")

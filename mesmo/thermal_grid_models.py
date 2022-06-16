@@ -33,13 +33,21 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     branch_incidence_1_matrix: sp.spmatrix
     branch_incidence_2_matrix: sp.spmatrix
     branch_incidence_matrix: sp.spmatrix
+    branch_incidence_matrix_no_source: sp.spmatrix
+    branch_incidence_matrix_source: sp.spmatrix
     branch_incidence_matrix_no_source_no_loop: sp.spmatrix
     branch_incidence_matrix_no_source_loop: sp.spmatrix
     branch_loop_incidence_matrix: sp.spmatrix
     der_node_incidence_matrix: sp.spmatrix
+    der_node_incidence_matrix_no_source: sp.spmatrix
     der_thermal_power_vector_reference: np.ndarray
     branch_flow_vector_reference: np.ndarray
     node_head_vector_reference: np.ndarray
+    node_head_source_value: float
+    node_head_vector_reference_no_source: np.ndarray
+    node_head_vector_reference_source: np.ndarray
+    node_incidence_matrix_no_source: sp.spmatrix
+    node_incidence_matrix_source: sp.spmatrix
     # TODO: Revise / reduce use of parameter attributes if possible.
     line_parameters: pd.DataFrame
     energy_transfer_station_head_loss: float
@@ -122,7 +130,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             else:
                 if node_tree_index_1 == node_tree_index_2:
                     # Mark branch as loop, if both nodes are in the same tree.
-                    branches_loops.at[self.branches[branch_index], "loop_type"] = "loop"
+                    branches_loops.loc[self.branches[branch_index], "loop_type"] = "loop"
                 else:
                     # Merge trees, if the branch connects nodes on different trees.
                     node_trees[node_tree_index_1].extend(node_trees[node_tree_index_2])
@@ -146,7 +154,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         node_trees = [node_tree for node_tree in node_trees if len(node_tree) > 0]
         if len(node_trees) > 1:
             raise ValueError(
-                f"The thermal grid contains disjoint sections of nodes:"
+                "The thermal grid contains disjoint sections of nodes:"
                 + "".join(
                     [
                         f"\nSection {node_tree_index}: {node_tree}"
@@ -223,6 +231,7 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         # Obtain nominal branch flow vector.
         # TODO: Define proper node head reference vector.
         self.node_head_vector_reference = np.ones(len(self.nodes))
+        self.node_head_source_value = 0.0
 
         # Obtain line parameters.
         self.line_parameters = thermal_grid_data.thermal_grid_lines.loc[:, ["length", "diameter", "absolute_roughness"]]
@@ -250,7 +259,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
             raise ValueError(f"Incompatible der model type: {thermal_grid_data.thermal_grid.at['source_der_type']}")
 
         # Define shorthands for no-source / source variables.
-        # TODO: Add in class documentation.
         # TODO: Replace local variables in power flow / linear models.
         node_incidence_matrix = sp.identity(len(self.nodes)).tocsr()
         self.node_incidence_matrix_no_source = node_incidence_matrix[
@@ -420,29 +428,27 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
         # Obtain branch volume flow vector.
         self.branch_flow_vector = (
             scipy.sparse.linalg.spsolve(
-                thermal_grid_model.branch_incidence_matrix[
-                    :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-                ].transpose(),
-                thermal_grid_model.der_node_incidence_matrix[
-                    mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"), :
-                ]
+                thermal_grid_model.branch_incidence_matrix_no_source.transpose(),
+                thermal_grid_model.der_node_incidence_matrix_no_source
                 @ np.transpose([der_flow_vector]),
             )
         ).ravel()
 
         # Obtain node head vector.
-        self.node_head_vector = np.zeros(len(thermal_grid_model.nodes), dtype=float)
-        self.node_head_vector[
-            mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-        ] = scipy.sparse.linalg.spsolve(
-            thermal_grid_model.branch_incidence_matrix[
-                :, mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source")
-            ].tocsc(),
+        node_head_vector_no_source = scipy.sparse.linalg.spsolve(
+            thermal_grid_model.branch_incidence_matrix_no_source.tocsc(),
             (
                 thermal_grid_model.get_branch_loss_coefficient_vector(self.branch_flow_vector)
                 * self.branch_flow_vector
-                * np.abs(self.branch_flow_vector)  # TODO: Check if absolute value needed.
+                * np.abs(self.branch_flow_vector)
             ),
+        )
+        self.node_head_vector = (
+            thermal_grid_model.node_incidence_matrix_no_source
+            @ node_head_vector_no_source
+            + thermal_grid_model.node_incidence_matrix_source
+            @ thermal_grid_model.node_head_vector_reference_source
+            * thermal_grid_model.node_head_source_value
         )
 
         # Obtain pump power loss.
@@ -472,31 +478,23 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         head_tolerance=1e-2,
     ):
 
-        # Obtain DER thermal power vector.
+        # Obtain DER thermal power vector and DER volume flow vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
-        # Define shorthand for DER volume flow vector.
         der_flow_vector = (
             self.der_thermal_power_vector
             / mesmo.config.water_density
             / thermal_grid_model.enthalpy_difference_distribution_water
         )
 
-        # Obtain nodal power vector.
+        # Obtain nodal volume flow vector.
         node_flow_vector_no_source = (
-            thermal_grid_model.der_node_incidence_matrix_no_source @ np.transpose([der_thermal_power_vector])
+            thermal_grid_model.der_node_incidence_matrix_no_source @ np.transpose([der_flow_vector])
         ).ravel()
 
-        # Obtain initial nodal power and voltage vectors, assuming no load and no injection.
+        # Obtain initial nodal head and branch volume flow vectors for first iteration.
         # TODO: Enable passing previous solution for initialization.
-        node_flow_vector_initial_no_source = np.zeros(node_flow_vector_no_source.shape)
         node_head_vector_initial_no_source = thermal_grid_model.node_head_vector_reference_no_source.copy()
         branch_flow_vector_initial = thermal_grid_model.branch_flow_vector_reference.copy()
-        branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
-            branch_flow_vector_initial
-        )
-
-        # Define nodal power vector candidate to the desired nodal power vector.
-        node_flow_vector_candidate_no_source = node_flow_vector_initial_no_source.copy()
 
         # Instantiate Newton-Raphson iteration variables.
         head_iteration = 0
@@ -505,55 +503,95 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         # Run Newton-Raphson iterations.
         while (head_iteration < head_iteration_limit) & (head_change > head_tolerance):
 
+            # Detect zero branch volume flows.
+            branch_flow_vector_valid_index = branch_flow_vector_initial != 0.0
+
+            # Replace zero branch volume flows with very small value, based on minium absolute branch volume flow.
+            # - This is to avoid numerical issues due to singularity of the jacobian matrix.
+            branch_flow_abs_min = np.min(np.abs(branch_flow_vector_initial[branch_flow_vector_valid_index]))
+            if branch_flow_abs_min == 0.0:
+                branch_flow_abs_min = 1e-9
+            else:
+                branch_flow_abs_min *= 1e-9
+            branch_flow_vector_initial[~branch_flow_vector_valid_index] = branch_flow_abs_min
+
+            # Calculate branch loss coefficient and jacobian matrix.
+            branch_loss_coefficient_vector = thermal_grid_model.get_branch_loss_coefficient_vector(
+                branch_flow_vector_initial
+            )
+            jacobian_branch_head_loss = (
+                2
+                * sp.diags(np.abs(branch_flow_vector_initial))
+                @ sp.diags(branch_loss_coefficient_vector)
+            )
+            jacobian_branch_head_loss_inverse = (
+                0.5
+                * sp.diags(np.abs(branch_flow_vector_initial) ** -1)
+                @ sp.diags(branch_loss_coefficient_vector ** -1)
+            )
+
+            # Calculate nodal head vector.
             node_head_vector_estimate_no_source = scipy.sparse.linalg.spsolve(
                 (
                     np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                    @ (
-                        0.5
-                        * sp.diags(branch_flow_vector_initial**-1)
-                        @ sp.diags(branch_loss_coefficient_vector_initial**-1)
-                    )
+                    @ jacobian_branch_head_loss_inverse
                     @ thermal_grid_model.branch_incidence_matrix_no_source
                 ),
                 (
-                    np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                    @ (0.5 * (branch_flow_vector_initial**-1))
-                    - np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
-                    @ (
-                        0.5
-                        * sp.diags(branch_flow_vector_initial**-1)
-                        @ sp.diags(branch_loss_coefficient_vector_initial**-1)
+                    (
+                        -1.0
+                        * np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                        @ jacobian_branch_head_loss_inverse
+                    ) @ (
+                        (
+                            0.5
+                            * jacobian_branch_head_loss
+                            @ branch_flow_vector_initial
+                        )
+                        - (
+                            -1.0
+                            * thermal_grid_model.branch_incidence_matrix_source
+                            @ thermal_grid_model.node_head_vector_reference_source
+                            * thermal_grid_model.node_head_source_value
+                        )
                     )
-                    @ thermal_grid_model.branch_incidence_matrix_source
-                    @ thermal_grid_model.node_head_vector_reference_source
-                    + node_flow_vector_candidate_no_source
-                ),
-            )
-
-            node_head_vector_estimate = (
-                thermal_grid_model.node_incidence_matrix_no_source @ node_head_vector_estimate_no_source
-                + thermal_grid_model.node_incidence_matrix_source @ thermal_grid_model.node_head_vector_reference_source
-            )
-
-            branch_flow_vector_estimate = (
-                0.5 * branch_flow_vector_initial
-                - (
-                    0.5
-                    * sp.diags(branch_flow_vector_initial**-1)
-                    @ sp.diags(branch_loss_coefficient_vector_initial**-1)
+                    + node_flow_vector_no_source
                 )
-                @ thermal_grid_model.branch_incidence_matrix
-                @ node_head_vector_estimate
+            )
+            node_head_vector_estimate = (
+                thermal_grid_model.node_incidence_matrix_no_source
+                @ node_head_vector_estimate_no_source
+                + thermal_grid_model.node_incidence_matrix_source
+                @ thermal_grid_model.node_head_vector_reference_source
+                * thermal_grid_model.node_head_source_value
             )
 
+            # Calculate branch volume flow vector.
+            branch_flow_vector_estimate = (
+                branch_flow_vector_initial
+                - jacobian_branch_head_loss_inverse
+                @ (
+                    (
+                        0.5
+                        * jacobian_branch_head_loss
+                        @ branch_flow_vector_initial
+                    )
+                    + (
+                        -1.0
+                        * thermal_grid_model.branch_incidence_matrix
+                        @ node_head_vector_estimate
+                    )
+                )
+            )
+
+            # Update head change iteration variable.
             head_change = np.max(np.abs(node_head_vector_estimate_no_source - node_head_vector_initial_no_source))
 
+            # Update initial values for next iteration.
             node_head_vector_initial_no_source = node_head_vector_estimate_no_source.copy()
             branch_flow_vector_initial = branch_flow_vector_estimate.copy()
-            branch_loss_coefficient_vector_initial = thermal_grid_model.get_branch_loss_coefficient_vector(
-                branch_flow_vector_initial
-            )
 
+            # Update iteration counter.
             head_iteration += 1
 
         # For fixed-point algorithm, reaching the iteration limit is considered undesired and triggers a warning
@@ -595,7 +633,8 @@ class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
             # Use explicit thermal power flow solution method.
             ThermalPowerFlowSolutionExplicit.__init__(self, thermal_grid_model, der_thermal_power_vector)
         else:
-            raise NotImplementedError("Thermal power flow solution for meshed networks has not yet been implemented.")
+            # Use Newton-Raphson method.
+            ThermalPowerFlowSolutionNewtonRaphson.__init__(self, thermal_grid_model, der_thermal_power_vector)
 
 
 class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
@@ -638,7 +677,7 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
         raise NotImplementedError
 
 
-class LinearThermalGridModel(mesmo.utils.ObjectBase):
+class LinearThermalGridModelBase(mesmo.utils.ObjectBase):
     """Linear thermal grid model object."""
 
     thermal_grid_model: ThermalGridModel
@@ -667,6 +706,14 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
 
         self.__init__(thermal_grid_model, thermal_power_flow_solution)
 
+
+class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
+
+    # Enable calls to `__init__` method definitions in parent class.
+    @multimethod
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @multimethod
     def __init__(
         self,
@@ -680,60 +727,71 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
         # Store thermal power flow solution.
         self.thermal_power_flow_solution = thermal_power_flow_solution
 
-        # Obtain inverse / transpose incidence matrices.
-        node_index_no_source = mesmo.utils.get_index(
-            self.thermal_grid_model.nodes, node_type="no_source"
-        )  # Define shorthand.
-        branch_node_incidence_matrix_inverse = sp.dok_matrix(
-            (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)), dtype=float
+        # Obtain linearization reference point.
+        der_power_vector_reference = self.thermal_power_flow_solution.der_thermal_power_vector
+        branch_flow_vector_reference = self.thermal_power_flow_solution.branch_flow_vector.copy()
+
+        # Replace zero branch volume flows with very small value, based on minium absolute branch volume flow.
+        # - This is to avoid numerical issues due to singularity of the jacobian matrix.
+        branch_flow_vector_valid_index = branch_flow_vector_reference != 0.0
+        branch_flow_abs_min = np.min(np.abs(branch_flow_vector_reference[branch_flow_vector_valid_index]))
+        if branch_flow_abs_min == 0.0:
+            branch_flow_abs_min = 1e-9
+        else:
+            branch_flow_abs_min *= 1e-9
+        branch_flow_vector_reference[~branch_flow_vector_valid_index] = branch_flow_abs_min
+
+        # Calculate branch loss coefficient and jacobian matrix.
+        branch_loss_coefficient_vector = thermal_grid_model.get_branch_loss_coefficient_vector(
+            branch_flow_vector_reference
         )
-        branch_node_incidence_matrix_inverse = sp.dok_matrix(
-            (len(self.thermal_grid_model.branches), len(self.thermal_grid_model.nodes)), dtype=float
+        jacobian_branch_head_loss_inverse = (
+            0.5
+            * sp.diags(np.abs(branch_flow_vector_reference) ** -1)
+            @ sp.diags(branch_loss_coefficient_vector ** -1)
         )
-        branch_node_incidence_matrix_inverse[
-            np.ix_(range(len(self.thermal_grid_model.branches)), node_index_no_source)
-        ] = scipy.sparse.linalg.inv(
-            self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].transpose()
-        )
-        branch_node_incidence_matrix_inverse = branch_node_incidence_matrix_inverse.tocsr()
-        branch_node_incidence_matrix_transpose_inverse = sp.dok_matrix(
-            (len(self.thermal_grid_model.nodes), len(self.thermal_grid_model.branches)), dtype=float
-        )
-        branch_node_incidence_matrix_transpose_inverse[
-            np.ix_(node_index_no_source, range(len(self.thermal_grid_model.branches)))
-        ] = scipy.sparse.linalg.inv(self.thermal_grid_model.branch_incidence_matrix[:, node_index_no_source].tocsc())
-        branch_node_incidence_matrix_transpose_inverse = branch_node_incidence_matrix_transpose_inverse.tocsr()
-        der_node_incidence_matrix_transpose = np.transpose(self.thermal_grid_model.der_node_incidence_matrix)
 
         # Obtain sensitivity matrices.
-        self.sensitivity_node_power_by_der_power = self.thermal_grid_model.der_node_incidence_matrix
-        self.sensitivity_branch_flow_by_node_power = (
-            branch_node_incidence_matrix_inverse
-            / mesmo.config.water_density
-            / self.thermal_grid_model.enthalpy_difference_distribution_water
+        self.sensitivity_node_head_by_node_power = sp.dok_matrix(
+            (len(thermal_grid_model.nodes), len(thermal_grid_model.nodes)), dtype=float
         )
-        self.sensitivity_branch_flow_by_der_power = (
-            self.sensitivity_branch_flow_by_node_power @ self.sensitivity_node_power_by_der_power
-        )
-        self.sensitivity_node_head_by_node_power = (
-            branch_node_incidence_matrix_transpose_inverse
-            @ sp.diags(
-                np.abs(thermal_power_flow_solution.branch_flow_vector)
-                * thermal_grid_model.get_branch_loss_coefficient_vector(thermal_power_flow_solution.branch_flow_vector)
+        self.sensitivity_node_head_by_node_power[
+            np.ix_(
+                mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"),
+                mesmo.utils.get_index(thermal_grid_model.nodes, node_type="no_source"),
             )
-            @ self.sensitivity_branch_flow_by_node_power
+        ] = (
+            (2.0 ** -1.5)
+            * scipy.sparse.linalg.inv(
+                np.transpose(thermal_grid_model.branch_incidence_matrix_no_source)
+                @ jacobian_branch_head_loss_inverse
+                @ thermal_grid_model.branch_incidence_matrix_no_source
+            )
+            * self.thermal_grid_model.enthalpy_difference_distribution_water
         )
+        self.sensitivity_node_head_by_node_power = self.sensitivity_node_head_by_node_power.tocsr()
         self.sensitivity_node_head_by_der_power = (
-            self.sensitivity_node_head_by_node_power @ self.sensitivity_node_power_by_der_power
+            self.sensitivity_node_head_by_node_power @ self.thermal_grid_model.der_node_incidence_matrix
         )
+        self.sensitivity_branch_flow_by_node_power = (
+            2.0
+            * jacobian_branch_head_loss_inverse
+            @ thermal_grid_model.branch_incidence_matrix
+            @ self.sensitivity_node_head_by_node_power
+        )
+
+        self.sensitivity_branch_flow_by_der_power = (
+            self.sensitivity_branch_flow_by_node_power @ self.thermal_grid_model.der_node_incidence_matrix
+        )
+        # TODO: Revise pump power sensitivity equation.
         self.sensitivity_pump_power_by_node_power = (
             (
                 -1.0
-                * thermal_power_flow_solution.der_thermal_power_vector
+                * der_power_vector_reference
                 / mesmo.config.water_density
                 / thermal_grid_model.enthalpy_difference_distribution_water
             )  # DER volume flow vector.
-            @ (-2.0 * der_node_incidence_matrix_transpose)
+            @ (-2.0 * np.transpose(self.thermal_grid_model.der_node_incidence_matrix))
             @ self.sensitivity_node_head_by_node_power
             * mesmo.config.water_density
             * mesmo.config.gravitational_acceleration
@@ -746,26 +804,53 @@ class LinearThermalGridModel(mesmo.utils.ObjectBase):
             / self.thermal_grid_model.distribution_pump_efficiency
         )
         self.sensitivity_pump_power_by_der_power = np.array(
-            [self.sensitivity_pump_power_by_node_power @ self.sensitivity_node_power_by_der_power]
+            [self.sensitivity_pump_power_by_node_power @ self.thermal_grid_model.der_node_incidence_matrix]
         )
 
 
-# TODO: Split global / local approximation methods.
-LinearThermalGridModelGlobal = LinearThermalGridModel
+class LinearThermalGridModelLocal(LinearThermalGridModelGlobal):
+
+    # Enable calls to `__init__` method definitions in parent class.
+    @multimethod
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @multimethod
+    def __init__(
+        self,
+        thermal_grid_model: ThermalGridModel,
+        thermal_power_flow_solution: ThermalPowerFlowSolution,
+    ):
+
+        # Initialize linear model from global approximation method.
+        super().__init__(thermal_grid_model, thermal_power_flow_solution)
+
+        # Modify sensitivities for local approximation method.
+        self.sensitivity_node_head_by_node_power *= 2.0
+        self.sensitivity_node_head_by_der_power *= 2.0
 
 
 class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
-    linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel]
+    linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase]
     thermal_grid_model: ThermalGridModel
     timesteps: pd.Index
+
+    @multimethod
+    def __init__(self, scenario_name: str):
+
+        # Obtain electric grid model & reference power flow solution.
+        thermal_grid_model = ThermalGridModel(scenario_name)
+        thermal_power_flow_solution = ThermalPowerFlowSolution(thermal_grid_model)
+
+        self.__init__(thermal_grid_model, thermal_power_flow_solution)
 
     @multimethod
     def __init__(
         self,
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution_set: ThermalPowerFlowSolutionSet,
-        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal,
+        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
 
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
@@ -784,7 +869,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         self,
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution: ThermalPowerFlowSolution,
-        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModel] = LinearThermalGridModelGlobal,
+        linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
 
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
@@ -801,7 +886,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def __init__(
         self,
         thermal_grid_model: ThermalGridModel,
-        linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModel],
+        linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase],
     ):
 
         # Store attributes.
@@ -812,7 +897,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     @staticmethod
     def check_linear_thermal_grid_model_method(linear_thermal_grid_model_method):
 
-        if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModel):
+        if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModelBase):
             raise ValueError(f"Invalid linear thermal grid model method: {linear_thermal_grid_model_method}")
 
     def define_optimization_problem(

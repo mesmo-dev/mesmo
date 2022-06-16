@@ -14,11 +14,12 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import ray
 import re
+import shutil
+import subprocess
+import sys
 import time
 import tqdm
 import typing
-import subprocess
-import sys
 
 import mesmo.config
 
@@ -586,3 +587,14 @@ def OptimizationProblem() -> "mesmo.solutions.OptimizationProblem":
     )
 
     return mesmo.solutions.OptimizationProblem()
+
+
+def cleanup():
+    """Clear contents of the results directory."""
+
+    for content in mesmo.config.config.paths.results.iterdir():
+        if content.name not in ["README.md"]:
+            if content.is_dir():
+                shutil.rmtree(content)
+            else:
+                content.unlink()

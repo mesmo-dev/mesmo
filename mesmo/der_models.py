@@ -2177,7 +2177,7 @@ class DERModelSet(DERModelSetBase):
         # Define objective for thermal loads.
         # - Defined as cost of thermal power supply at the DER node.
         # - Only defined here, if not yet defined as cost of thermal supply at thermal grid source node
-        #   in `mesmo.electric_grid_models.LinearThermalGridModel.define_optimization_objective`.
+        #   in `mesmo.thermal_grid_models.LinearThermalGridModelSet.define_optimization_objective`.
         if (len(self.thermal_ders) > 0) and not optimization_problem.flags.get("has_thermal_grid_objective"):
             optimization_problem.define_objective(
                 (

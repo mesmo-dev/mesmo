@@ -13,7 +13,7 @@ def main():
     # Settings.
     scenario_name = "singapore_tanjongpagar"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
-    power_multipliers = np.arange(-0.2, 1.2, 0.1)
+    power_multipliers = np.arange(-0.2, 1.2, 0.1)  # TODO: Fix handling of zero branch flows in Newton-Raphson.
     power_flow_solution_method_1 = mesmo.thermal_grid_models.ThermalPowerFlowSolutionNewtonRaphson
     method_1_label = "Method 1: Newton Raphson"
     power_flow_solution_method_2 = mesmo.thermal_grid_models.ThermalPowerFlowSolutionExplicit
@@ -139,7 +139,7 @@ def main():
         )
     )
     figure.update_layout(
-        title=f"Node pressure head [m]",
+        title="Node pressure head [m]",
         yaxis_title="Pressure head [m]",
         xaxis_title="Node",
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
@@ -173,7 +173,7 @@ def main():
         )
     )
     figure.update_layout(
-        title=f"Branch flow magnitude [p.u.]",
+        title="Branch flow magnitude [p.u.]",
         yaxis_title="Branch flow magnitude [p.u.]",
         xaxis_title="Branch",
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
@@ -201,7 +201,7 @@ def main():
         )
     )
     figure.update_layout(
-        title=f"Total pump power [W]",
+        title="Total pump power [W]",
         yaxis_title="Total pump power [W]",
         xaxis=go.layout.XAxis(range=[-1, 2]),
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),
@@ -243,7 +243,7 @@ def main():
     figure.add_trace(go.Scatter(x=power_multipliers, y=pump_power_method_1, name=method_1_label))
     figure.add_trace(go.Scatter(x=power_multipliers, y=pump_power_method_2, name=method_2_label))
     figure.update_layout(
-        title=f"Total pump power [W]",
+        title="Total pump power [W]",
         yaxis_title="Total pump power [W]",
         xaxis_title="Power multiplier",
         legend=go.layout.Legend(x=0.99, xanchor="auto", y=0.01, yanchor="auto"),

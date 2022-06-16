@@ -121,6 +121,7 @@ logs:
   format: '%(asctime)s | %(levelname)s | %(message)s'
 tests:
   scenario_name: singapore_6node
+  thermal_grid_scenario_name: singapore_tanjongpagar
 ```
 
 ### Configuration keys
@@ -128,6 +129,7 @@ tests:
 - `level`: Defines the logging level for the [Python logging facility](https://docs.python.org/3/howto/logging.html). Choices: `debug`, `info`, `warn`. All log messages at or above the selected log level are printed, in the following order `debug` < `info` < `warn`.
 - `format`: Defines the format of the log message output. See [here](https://docs.python.org/3/library/logging.html#formatter-objects) and [here](https://docs.python.org/3/library/logging.html#logrecord-attributes) for additional information on how to define the format string.
 - `scenario_name`: Defines the scenario which is used when running automated testing scripts in the `tests` directory and some of the example scripts in the `examples` directory.
+- `thermal_grid_scenario_name`: Defines the scenario which is used for thermal-grid-related tests when running automated testing scripts in the `tests` directory.
 
 ## Plot configuration
 

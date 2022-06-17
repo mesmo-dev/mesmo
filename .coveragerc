@@ -1,6 +1,0 @@
-[report]
-include =
-    mesmo/*
-    examples/*
-omit =
-    examples/development/*

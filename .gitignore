@@ -21,6 +21,8 @@
 
 docs/_build/
 
+build/
+
 results/*
 
 !results/README\.md

@@ -36,11 +36,11 @@ jobs:
         coverage xml
     - name: Report coverage to Codecov
       if: always()
+      continue-on-error: true
       uses: codecov/codecov-action@v2
-      with:
-        fail_ci_if_error: true
     - name: Report coverage to Codacy
       if: always()
+      continue-on-error: true
       uses: codacy/codacy-coverage-reporter-action@v1
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}

@@ -14,7 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering"
 ]
-requires-python = ">=3.7,<3.10"
+requires-python = ">=3.7,<3.10"  # Restricted to <3.10 for ray compatibility.
 dependencies = [
     # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
     "cvxpy",
@@ -32,10 +32,8 @@ dependencies = [
     "OpenDSSDirect.py",
     "pandas",
     "plotly",
-    "protobuf<3.21",  # Temporary fix for ray import error.
     "pyyaml",
     "ray[default]",
-    "redis",  # Temporary fix for ray import error. See: https://github.com/ray-project/ray/issues/24169
     "requests",  # For HiGHS installation.
     "scipy",
     "tqdm",

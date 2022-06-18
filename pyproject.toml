@@ -14,7 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering"
 ]
-requires-python = ">=3.7,<3.11"
+requires-python = ">=3.7,<3.10"
 dependencies = [
     # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
     "cvxpy",

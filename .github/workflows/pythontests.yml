@@ -12,7 +12,7 @@ jobs:
           macos-latest,
           ubuntu-latest
         ]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ["3.7", "3.8", "3.9"]
     defaults:
       run:
         shell: bash -l {0}  # Required for conda commands.
@@ -29,22 +29,18 @@ jobs:
         conda create -n mesmo -c conda-forge python=${{ matrix.python-version }} contextily cvxpy numpy pandas scipy
         conda activate mesmo
         python development_setup.py
-    - name: Lint with flake8
+    - name: Run tests with coverage report
       run: |
         conda activate mesmo
-        # Stop the build if there are Python syntax errors or undefined names.
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Run tests
-      run: |
-        conda activate mesmo
-        pytest tests --cov=./ --cov-report=xml
+        coverage run -m unittest discover tests
+        coverage xml
     - name: Report coverage to Codecov
       if: always()
+      continue-on-error: true
       uses: codecov/codecov-action@v2
-      with:
-        fail_ci_if_error: true
     - name: Report coverage to Codacy
       if: always()
+      continue-on-error: true
       uses: codacy/codacy-coverage-reporter-action@v1
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}

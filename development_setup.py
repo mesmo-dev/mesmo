@@ -2,10 +2,11 @@
 
 import argparse
 import pathlib
-import requests
 import subprocess
 import sys
 import tarfile
+
+import requests
 
 submodules = [
     "cobmo",
@@ -33,22 +34,22 @@ def main():
             if not (base_path / submodule / "setup.py").is_file():
                 try:
                     subprocess.check_call(["git", "-C", f"{base_path}", "submodule", "update", "--init", "--recursive"])
-                except FileNotFoundError:
+                except FileNotFoundError as exception:
                     raise FileNotFoundError(
                         f"ERROR: No setup file found for submodule `{submodule}`. "
                         f"Please check if the submodule is loaded correctly."
-                    )
+                    ) from exception
 
     # Install submodules in develop mode.
     if run_all:
         print("Installing submodules in development mode.")
         for submodule in submodules:
-            subprocess.check_call([sys.executable, "-m" "pip", "install", "-e", f"{base_path / submodule}"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", f"{base_path / submodule}"])
 
     # Install MESMO.
     if run_all:
         print("Installing MESMO in development mode.")
-        subprocess.check_call([sys.executable, "-m" "pip", "install", "-e", f"{base_path}[tests]"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", f"{base_path}[tests]"])
 
     # Install HiGHS solver.
     if run_all or run_highs:

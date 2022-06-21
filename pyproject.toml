@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mesmo"
+version = "0.5.0"
+description = "Multi-Energy System Modeling and Optimization"
+keywords = ["optimal-power-flow", "smart-grid", "multi-energy-systems"]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering"
+]
+requires-python = ">=3.7,<3.10"  # Restricted to <3.10 for ray compatibility.
+dependencies = [
+    # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
+    "cvxpy",
+    "cobmo",  # Not on package index. Needs to be manually installed from https://github.com/mesmo-dev/cobmo
+    "dill",
+    "dynaconf",
+    "gurobipy",
+    "kaleido",  # For static plot output with plotly.
+    "matplotlib",
+    "multimethod",
+    "networkx",
+    "natsort",
+    "numpy",
+    "opencv-python-headless",
+    "OpenDSSDirect.py",
+    "pandas",
+    "plotly",
+    "pyyaml",
+    "ray[default]",
+    "requests",  # For HiGHS installation.
+    "scipy",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+"tests" = [
+    "coverage[toml]",
+    "parameterized",
+    "pylint",
+]
+
+[tool.setuptools]
+packages = ["mesmo"]
+
+[tool.coverage.report]
+include = [
+    "mesmo/*",
+    "examples/*",
+]
+omit = [
+    "examples/development/*",
+]
+
+[tool.pylint.FORMAT]
+max-line-length = 120
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = [
+    "function-redefined",
+    "logging-fstring-interpolation",
+    "no-value-for-parameter",
+    "non-parent-init-called",
+    "super-init-not-called",
+    "too-many-function-args",
+    "too-many-lines",
+]

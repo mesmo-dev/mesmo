@@ -1916,9 +1916,9 @@ class DERModelSet(DERModelSetBase):
         )
         # { Todo set the name of strategic generator
         set_strategic_der_disturbance_factor_to_zero_map = pd.DataFrame(0, index=self.outputs, columns=self.outputs)
-        index = [('pv_b10_strategic', 'active_power'),
-                 ('pv_b10_strategic', 'power_maximum_margin'),
-                 ('pv_b10_strategic', 'power_minimum_margin')]
+        index = [('pv_860_strategic', 'active_power'),
+                 ('pv_860_strategic', 'power_maximum_margin'),
+                 ('pv_860_strategic', 'power_minimum_margin')]
         for i in set_strategic_der_disturbance_factor_to_zero_map.index:
             for c in set_strategic_der_disturbance_factor_to_zero_map.columns:
                 if i == c and i not in index:

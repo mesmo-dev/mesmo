@@ -804,6 +804,7 @@ class StrategicMarket(object):
                 name='der_strategic_offer', scenario=scenarios, timestep=self.timesteps,
                 der=self.ders
             )),
+            # ('constant', 'der_active_power_marginal_cost_transposed', dict(scenario=scenarios)),
             ('constant', 'minus_electric_grid_active_power_cost_flexible_der', dict(scenario=scenarios)),
             ('variable', 1.0, dict(
                 name='output_to_active_power_mapping_mu', scenario=scenarios, timestep=self.timesteps,
@@ -1376,16 +1377,18 @@ class StrategicMarket(object):
             #       output=self.der_model_set.outputs
             #     ))
             # )
-            optimization_problem.define_objective(
-                # ('variable', 'active_power_constant_transposed', dict(
-                #     name='output_to_active_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
-                #     timestep=self.timesteps
-                # )),
-                # ('variable', 'reactive_power_constant_transposed', dict(
-                #     name='output_to_reactive_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
-                #     timestep=self.timesteps
-                # )),
-            )
+            # *********************************************8888
+            # optimization_problem.define_objective(
+            #     ('variable', 'active_power_constant_transposed', dict(
+            #         name='output_to_active_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
+            #         timestep=self.timesteps
+            #     )),
+            #     ('variable', 'reactive_power_constant_transposed', dict(
+            #         name='output_to_reactive_power_mapping_equation_mu', scenario=scenarios, der=self.ders,
+            #         timestep=self.timesteps
+            #     )),
+            # )
+            # **************************************************8
             # optimization_problem.define_objective(
             #     ('variable', 'minus_output_minimum_timeseries_transposed', dict(
             #         name='output_minimum_limit_mu', scenario=scenarios, timestep=self.timesteps,

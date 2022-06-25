@@ -1,2 +1,2 @@
 scenario_name,electric_grid_name,price_type,price_sensitivity_coefficient,timestep_start,timestep_end,timestep_interval,base_apparent_power,base_voltage,electric_grid_operation_limit_type
-polimi_test_case,oganda_grid,oganda_price,1e-9,2021-02-22T00:00:00,2021-02-23T00:00:00,01:00:00,1e6,15e3,default_limits
+polimi_test_case,oganda_grid,oganda_price,1e-9,2021-02-22T13:00:00,2021-02-22T15:00:00,01:00:00,1e6,15e3,default_limits

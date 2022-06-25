@@ -95,7 +95,7 @@ def main():
         der_model_set.define_optimization_problem(optimization_strategic,
                                                   price_data,
                                                   state_space_model=True,
-                                                  kkt_conditions=False,
+                                                  kkt_conditions=True,
                                                   grid_cost_coefficient=grid_cost_coefficient
                                                   )
 
@@ -105,7 +105,7 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            kkt_conditions=False,
+            kkt_conditions=True,
             grid_cost_coefficient=grid_cost_coefficient
         )
 
@@ -116,8 +116,8 @@ def main():
             node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
             node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
             branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            big_m=2500,
-            kkt_conditions=False,
+            big_m=1e6,
+            kkt_conditions=True,
             grid_cost_coefficient=grid_cost_coefficient
         )
 

@@ -2,7 +2,7 @@ der_type,der_model_name,definition_type,definition_name,power_per_unit_minimum,p
 fixed_load,singapore_base_load,schedule_per_unit,singapore_base_load,,,,,,,,,,
 fixed_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,,,,,,,,,,
 fixed_load,residential_landed,schedule_per_unit,residential_landed,,,,,,,,,,
-flexible_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,0.6,1.4,,,6,,,,,
+flexible_load,mixed_commercial_residential,schedule_per_unit,mixed_commercial_residential,0.6,1.4,,,6,,,0.1,,
 flexible_load,residential_landed,schedule_per_unit,residential_landed,0.6,1.4,,,6,,,,,
 fixed_generator,photovoltaic_generic,schedule_per_unit,photovoltaic_generic,,,,,,,,,,
 fixed_generator,solarthermal_generic,schedule_per_unit,solarthermal_generic,,,,,,,,,,

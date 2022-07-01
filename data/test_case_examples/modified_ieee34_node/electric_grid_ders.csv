@@ -1,0 +1,13 @@
+electric_grid_name,der_name,der_type,der_model_name,node_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,connection,active_power_nominal,reactive_power_nominal,in_service
+modified_ieee34_node,fx_818_1_y,flexible_load,mixed_commercial_residential,818,1,0,0,wye,-3.40E+04,-1.70E+04,1
+modified_ieee34_node,fx_828_1_y,fixed_load,mixed_commercial_residential,828,1,0,0,wye,-7.00E+03,-3.00E+03,1
+modified_ieee34_node,fx_810_2_y,flexible_load,mixed_commercial_residential,810,0,1,0,wye,-1.60E+04,-8.00E+03,1
+modified_ieee34_node,fx_816_2_y,fixed_load,mixed_commercial_residential,816,0,1,0,wye,-5.00E+03,-2.00E+03,1
+modified_ieee34_node,fl_826_2_y,flexible_load,mixed_commercial_residential,826,0,1,0,wye,-4.00E+04,-2.00E+04,1
+modified_ieee34_node,fx_856_2_y,fixed_load,mixed_commercial_residential,856,0,1,0,wye,-4.00E+03,-2.00E+03,1
+modified_ieee34_node,fx_824_3_y,fixed_load,mixed_commercial_residential,824,0,0,1,wye,-4.00E+03,-2.00E+03,1
+modified_ieee34_node,fl_830_y,flexible_load,mixed_commercial_residential,830,1,1,1,wye,-5.50E+04,-2.00E+04,1
+modified_ieee34_node,fl_806_1_d,flexible_load,mixed_commercial_residential,806,0,1,1,delta,-5.50E+04,-2.90E+04,1
+modified_ieee34_node,pv_828,flexible_generator,photovoltaic_generic,828,1,1,1,wye,1.50E+05,1.32E+05,1
+modified_ieee34_node,pv_806,fixed_generator,photovoltaic_generic,806,1,1,1,wye,1.00E+05,0.00E+00,1
+modified_ieee34_node,pv_812,flexible_generator,photovoltaic_generic,812,1,1,1,wye,2.25E+05,1.09E+05,1

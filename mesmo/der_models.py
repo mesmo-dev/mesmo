@@ -1919,6 +1919,9 @@ class DERModelSet(DERModelSetBase):
         index = [('pv_860_strategic', 'active_power'),
                  ('pv_860_strategic', 'power_maximum_margin'),
                  ('pv_860_strategic', 'power_minimum_margin')]
+        # index = [('pv_890', 'active_power'),
+        #          ('pv_890', 'power_maximum_margin'),
+        #          ('pv_890', 'power_minimum_margin')]
         for i in set_strategic_der_disturbance_factor_to_zero_map.index:
             for c in set_strategic_der_disturbance_factor_to_zero_map.columns:
                 if i == c and i not in index:

@@ -8,9 +8,9 @@ import mesmo
 
 def main():
     # Settings.
-    scenario_name = 'ieee_34node'
+    scenario_name = 'modified_ieee34_node'
     flexible_der_type = ['flexible_generator', 'flexible_load']
-    sample_time = '2021-02-22 14:00:00'
+    # sample_time = '2021-02-22 14:00:00'
 
     nominal_operation = mesmo.api.run_nominal_operation_problem(scenario_name, store_results=False)
     nominal_branch_power_1 = nominal_operation.branch_power_magnitude_vector_1_per_unit.max()

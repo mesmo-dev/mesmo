@@ -1,2 +1,2 @@
 scenario_name,electric_grid_name,thermal_grid_name,base_voltage,price_type,electric_grid_operation_limit_type,base_apparent_power,timestep_start,timestep_end,timestep_interval
-ieee_34node,ieee_34node,,24.9e3,singapore_wholesale,testing_limits,1e6,2019-07-17T11:00:00,2019-07-17T16:00:00,01:00:00
+modified_ieee34_node,modified_ieee34_node,,24.9e3,singapore_wholesale,testing_limits,1e6,2019-07-17T00:00:00,2019-07-18T00:00:00,01:00:00

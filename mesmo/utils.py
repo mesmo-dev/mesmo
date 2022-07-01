@@ -1272,7 +1272,7 @@ class OptimizationProblem(ObjectBase):
         #   and the associated attributes.
         gurobipy_problem = gp.Model()
         # Set solver parameters.
-        gurobipy_problem.setParam('IntFeasTol', 1e-5)
+        gurobipy_problem.setParam('IntFeasTol', 1e-6)
         gurobipy_problem.setParam('OutputFlag', int(mesmo.config.config['optimization']['show_solver_output']))
         for key, value in mesmo.config.solver_parameters.items():
             gurobipy_problem.setParam(key, value)

@@ -50,7 +50,7 @@ def main():
     #                              0.926, 0.803, 0.810, 0.708, 0.708,
     #                              0.789, 0.789, 0.789, 0.789, 0.789, 0.789,
     #                              0.538, 0.538, 0.538, 0.538])
-    max_branch_power = 1
+    max_branch_power = 0.8
     max_branch_power = pd.Series(1.0, index=electric_grid_model.branches)
     max_branch_power['transformer'] = 10
 
@@ -62,7 +62,7 @@ def main():
 
     jump_here = True
     grid_cost_coefficient = 1
-    report_time = '2019-07-17 16:00:00'
+    report_time = '2019-07-17 20:00:00'
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -194,8 +194,8 @@ def main():
     axes[1].tick_params(axis='both', which='major', labelsize=14)
     fig.set_tight_layout(True)
     # fig.suptitle('Mixed-commercial residential load and Generic PV profile', fontsize=18)
-    # fig.show()
-    # fig.savefig('results kkt/load_and_pv_profiles.svg')
+    fig.show()
+    fig.savefig('results kkt/load_and_pv_profiles.svg')
 
     gsp_price_timeseries = price_data.price_timeseries.loc[:, ('active_power', 'source', 'source')] \
                            * 1e3/ scenario_data.scenario.at['base_apparent_power']
@@ -224,8 +224,8 @@ def main():
     axes.tick_params(axis='both', which='major', labelsize=10)
     fig.set_tight_layout(True)
     # fig.suptitle('Mixed-commercial residential load and Generic PV profile', fontsize=18)
-    # fig.show()
-    # fig.savefig('results kkt/energy_price_at_gsp.svg')
+    fig.show()
+    fig.savefig('results kkt/energy_price_at_gsp.svg')
 
 
 
@@ -257,7 +257,7 @@ def main():
     plt.grid(axis='x')
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('results kkt/kkt_active_losses.svg')
+    fig.savefig('results kkt/kkt_active_losses.svg')
 
 
     x = np.arange(len(flexible_der_active_power_non_strategic.columns))
@@ -284,7 +284,7 @@ def main():
     axes.legend()
     axes.grid()
     fig.show()
-    # fig.savefig('results kkt/kkt_flexible_der_active_power_dispatch_report_time.svg')
+    fig.savefig('results kkt/kkt_flexible_der_active_power_dispatch_report_time.svg')
 
     # DLMPs in non-strategic scenario Timeseries for Node 10 for three phases
     # Energy portion of DLMP:
@@ -362,7 +362,7 @@ def main():
         fig.set_tight_layout(True)
     fig.suptitle('DLMP timeseries at strategic node 860', fontsize=20)
     fig.show()
-    # fig.savefig('results kkt/kkt_DLMP_time_series_at_strategic_node_860.svg')
+    fig.savefig('results kkt/kkt_DLMP_time_series_at_strategic_node_860.svg')
 
 
     # fig.savefig('dlmp_timeseries_node_10.svg')
@@ -453,8 +453,8 @@ def main():
         fig.set_tight_layout(True)
         axes[0].set_ylabel('DLMP [$/MW]', fontsize=18)
         axes[1].set_ylabel('DLMP [$/MW]', fontsize=18)
-        axes[0].set_ylim([0., 0.3])
-        axes[1].set_ylim([0., 0.3])
+        axes[0].set_ylim([0., 0.2])
+        axes[1].set_ylim([0., 0.2])
         axes[0].title.set_text(f"DSO primal problem nodal DLMPs at {report_time} for phase {i}")
         axes[0].title.set_fontsize(18)
         axes[1].title.set_text(f"DSO KKT problem nodal DLMPs at {report_time} for phase {i}")
@@ -468,7 +468,7 @@ def main():
         # axes[0].set_ylim([0, 0.2])
         # axes[1].set_ylim([0, 0.2])
         fig.show()
-        # fig.savefig('results kkt/kkt_contributions_to_DLMP.svg')
+        fig.savefig(f'results kkt/kkt_contributions_to_DLMP_{i}.svg')
 
 
     fig, axes = plt.subplots(3, sharex=False, sharey=True, figsize=(12, 12))
@@ -501,7 +501,7 @@ def main():
         fig.set_tight_layout(True)
     fig.suptitle(f'Nodal DLMPs at {report_time}')
     fig.show()
-    # fig.savefig('results kkt/kkt_nodal_dlmp_at_18_pm.svg')
+    fig.savefig('results kkt/kkt_nodal_dlmp_at_18_pm.svg')
 
 
     # Figures for strategic DER offers:
@@ -568,7 +568,7 @@ def main():
     fig.set_tight_layout(True)
     plt.xticks(rotation=-90, fontsize=8)
     fig.show()
-    # fig.savefig('strategic_der_active_power.svg')
+    fig.savefig('strategic_der_active_power.svg')
 
     # Plot Offer and power dispatch together:
     fig, ax = plt.subplots(figsize=(8,6))
@@ -598,23 +598,23 @@ def main():
     fig.set_tight_layout(True)
     plt.xticks(rotation=-90, fontsize=12)
     fig.show()
-    # fig.savefig('results kkt/kkt_DER_890_active_power_offer.svg')
+    fig.savefig('results kkt/kkt_DER_890_active_power_offer.svg')
 
-    voltage_profile_non_strategic = results_non_strategic.node_voltage_magnitude_vector_per_unit.min()
-    voltage_profile_strategic = results_strategic.node_voltage_magnitude_vector_per_unit.min()
+    voltage_profile_non_strategic = results_non_strategic.node_voltage_magnitude_vector_per_unit.loc[report_time]
+    voltage_profile_strategic = results_strategic.node_voltage_magnitude_vector_per_unit.loc[report_time]
 
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
         voltage_profile_non_strategic[:, :, i].plot(
             ax=axes[i - 1],
-            label=f'DSO primal min voltage profile of phase {i}',
+            label=f'DSO primal voltage profile of phase {i} at {report_time}',
             # y=(slice(None), slice(None), 3),
             color='b',
             marker='s'
         )
         voltage_profile_strategic[:, :, i].plot(
             ax=axes[i - 1],
-            label=f'DSO kkt min voltage profile of phase {i}',
+            label=f'DSO kkt voltage profile of phase {i} at {report_time}',
             # y=(slice(None), slice(None), 3),
             color='r',
             marker='^'
@@ -631,23 +631,23 @@ def main():
         axes[i - 1].grid(axis='x')
     fig.set_tight_layout(True)
     fig.set_tight_layout(True)
-    fig.suptitle('Minimum Nodal Voltage Profile', fontsize=20)
+    fig.suptitle(f'Nodal Voltage Profile at {report_time}', fontsize=20)
     fig.show()
-    # fig.savefig('results kkt/kkt_min_voltage_profile.svg')
+    fig.savefig('results kkt/kkt_min_voltage_profile.svg')
 
-    line_loading_non_strategic1 = results_non_strategic.branch_power_magnitude_vector_1_per_unit.max()
-    line_loading_strategic1 = results_strategic.branch_power_magnitude_vector_1_per_unit.max()
+    line_loading_non_strategic1 = results_non_strategic.branch_power_magnitude_vector_1_per_unit.loc[report_time]
+    line_loading_strategic1 = results_strategic.branch_power_magnitude_vector_1_per_unit.loc[report_time]
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
         line_loading_non_strategic1.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
-            label=f'Max line loading of phase {i} for DSO primal',
+            label=f'Line loading of phase {i} for DSO primal',
             color='b',
             marker='s'
         )
         line_loading_strategic1.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
-            label=f'Max line loading of phase {i} for DSO kkt',
+            label=f'Line loading of phase {i} for DSO kkt',
             color='r',
             marker='^'
         )
@@ -662,24 +662,24 @@ def main():
         axes[i - 1].grid(axis='y')
         axes[i - 1].grid(axis='x')
     fig.set_tight_layout(True)
-    fig.suptitle('Maximum Line  loading in "From" direction', fontsize=20)
+    fig.suptitle(f'Line  loading in "From" direction at {report_time}', fontsize=20)
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('results kkt/kkt_line_loading_from.svg')
+    fig.savefig('results kkt/kkt_line_loading_from.svg')
 
-    line_loading_non_strategic2 = results_non_strategic.branch_power_magnitude_vector_2_per_unit.max()
-    line_loading_strategic2 = results_strategic.branch_power_magnitude_vector_2_per_unit.max()
+    line_loading_non_strategic2 = results_non_strategic.branch_power_magnitude_vector_2_per_unit.loc[report_time]
+    line_loading_strategic2 = results_strategic.branch_power_magnitude_vector_2_per_unit.loc[report_time]
     fig, axes = plt.subplots(3, figsize=(12, 12))
     for i in [1, 2, 3]:
         line_loading_non_strategic2.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
-            label=f'Max line loading of phase {i} for DSO primal',
+            label=f'Line loading of phase {i} for DSO primal',
             color='b',
             marker='s'
         )
         line_loading_strategic2.loc['line', slice(None), i].plot(
             ax=axes[i - 1],
-            label=f'Max line loading of phase {i} for DSO kkt',
+            label=f'Line loading of phase {i} for DSO kkt',
             color='r',
             marker='^'
         )
@@ -695,10 +695,10 @@ def main():
         axes[i - 1].grid(axis='y')
         axes[i - 1].grid(axis='x')
     fig.set_tight_layout(True)
-    fig.suptitle('Maximum Line  loading in "To" direction', fontsize=20)
+    fig.suptitle(f'Line  loading in "To" direction at {report_time}', fontsize=20)
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('results kkt/kkt_line_loading_to.svg')
+    fig.savefig('results kkt/kkt_line_loading_to.svg')
 
     # ******************************************
     dlmps_non_strategic.electric_grid_total_dlmp_node_active_power.index = np.arange(25)
@@ -718,7 +718,7 @@ def main():
     axes.tick_params(axis='both', which='major', labelsize=14)
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('results kkt/heatmap_DLMP nodal_timeseries_non_strategic.svg')
+    fig.savefig('results kkt/heatmap_DLMP nodal_timeseries_non_strategic.svg')
 
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 15))
     axes = sns.heatmap(dlmps_strategic.electric_grid_total_dlmp_node_active_power, annot=False, cmap="YlGnBu")
@@ -730,7 +730,7 @@ def main():
     axes.tick_params(axis='both', which='major', labelsize=14)
     fig.set_tight_layout(True)
     fig.show()
-    # fig.savefig('results kkt/heatmap_DLMP_nodal_timeseries_strategic.svg')
+    fig.savefig('results kkt/heatmap_DLMP_nodal_timeseries_strategic.svg')
 
 
 

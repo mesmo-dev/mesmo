@@ -1,0 +1,4 @@
+electric_grid_name,line_name,line_type,node_1_name,node_2_name,is_phase_1_connected,is_phase_2_connected,is_phase_3_connected,length
+paper_2021_zhang_dro,1,ieee_123node_line_type1,1,2,1,1,1,0.05
+paper_2021_zhang_dro,2,ieee_123node_line_type1,3,4,1,1,1,0.5
+paper_2021_zhang_dro,3,ieee_123node_line_type1,5,6,1,1,1,0.05

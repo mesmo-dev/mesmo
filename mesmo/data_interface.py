@@ -1028,6 +1028,7 @@ class PriceData(mesmo.utils.ObjectBase):
 
     price_sensitivity_coefficient: float
     price_timeseries: pd.DataFrame
+    price_timeseries_raw: pd.DataFrame
 
     @multimethod
     def __init__(self, scenario_name: str, **kwargs):
@@ -1137,6 +1138,7 @@ class PriceData(mesmo.utils.ObjectBase):
         )
         # TODO: Initialize more efficiently for large number of DERs.
         # TODO: In 1/MWh.
+        self.price_timeseries_raw = price_timeseries
         self.price_timeseries = pd.DataFrame(0.0, index=scenario_data.timesteps, columns=prices)
         self.price_timeseries.loc[:, prices.get_level_values("commodity_type") == "active_power"] += (
             price_timeseries.values[:, None] / 1e3 * scenario_data.scenario.at["base_apparent_power"]  # 1/kWh in 1/Wh.

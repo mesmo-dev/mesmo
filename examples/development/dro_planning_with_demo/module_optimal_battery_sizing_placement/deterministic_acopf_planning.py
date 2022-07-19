@@ -10,17 +10,15 @@ import mesmo
 # To be commented out if deployed as a module
 from data_interface import data_battery_sizing_placement
 
-from pymoo.algorithms.soo.nonconvex.de import DE
-from pymoo.algorithms.soo.nonconvex.ga import GA
-from pymoo.core.problem import Problem, ElementwiseProblem
-from pymoo.operators.sampling.lhs import LHS
-from pymoo.optimize import minimize
-from pymoo.factory import get_sampling, get_crossover, get_mutation
-from pymoo.operators.mixed_variable_operator import MixedVariableSampling, MixedVariableMutation, MixedVariableCrossover
+# from pymoo.algorithms.soo.nonconvex.de import DE
+# from pymoo.algorithms.soo.nonconvex.ga import GA
+# from pymoo.core.problem import Problem, ElementwiseProblem
+# from pymoo.operators.sampling.lhs import LHS
+# from pymoo.optimize import minimize
+# from pymoo.factory import get_sampling, get_crossover, get_mutation
+# from pymoo.operators.mixed_variable_operator import MixedVariableSampling, MixedVariableMutation, MixedVariableCrossover
 
 import numpy as np
-
-
 
 class deterministic_acopf_battery_placement_sizing(object):
 
@@ -699,20 +697,20 @@ class deterministic_acopf_battery_placement_sizing(object):
         #self.optimization_problem.solve()
 
 
-class ConstrainedQuadraticProblem(ElementwiseProblem):
-
-    def __init__(self, Q, c, d, A, b):
-        self.Q = Q
-        self.c = c
-        self.d = d
-        self.A = A
-        self.b = b
-
-        super().__init__(n_var=len(Q), n_obj=1, n_constr=1, xl=-1e5, xu=1e5)
-
-    def _evaluate(self, x, out, *args, **kwargs):
-        out["F"] = x.T @ (0.5 * self.Q) @ x + x @ self.c + self.d
-        out["G"] = self.A @ x - self.b
+# class ConstrainedQuadraticProblem(ElementwiseProblem):
+#
+#     def __init__(self, Q, c, d, A, b):
+#         self.Q = Q
+#         self.c = c
+#         self.d = d
+#         self.A = A
+#         self.b = b
+#
+#         super().__init__(n_var=len(Q), n_obj=1, n_constr=1, xl=-1e5, xu=1e5)
+#
+#     def _evaluate(self, x, out, *args, **kwargs):
+#         out["F"] = x.T @ (0.5 * self.Q) @ x + x @ self.c + self.d
+#         out["G"] = self.A @ x - self.b
 
 
 def main():
@@ -739,53 +737,53 @@ def main():
     q_matrix = optimal_sizing_problem.optimization_problem.get_q_matrix()
     d_vector = np.array([optimal_sizing_problem.optimization_problem.get_d_constant()])
 
-    problem = ConstrainedQuadraticProblem(q_matrix.toarray(), c_vector, d_vector, a_matrix.toarray(), b_vector)
-
-    # algorithm = DE(
-    #     pop_size=100,
-    #     sampling=LHS(),
-    #     variant="DE/rand/1/bin",
-    #     CR=0.3,
-    #     dither="vector",
-    #     jitter=False
+    # problem = ConstrainedQuadraticProblem(q_matrix.toarray(), c_vector, d_vector, a_matrix.toarray(), b_vector)
+    #
+    # # algorithm = DE(
+    # #     pop_size=100,
+    # #     sampling=LHS(),
+    # #     variant="DE/rand/1/bin",
+    # #     CR=0.3,
+    # #     dither="vector",
+    # #     jitter=False
+    # # )
+    #
+    # # algorithm = GA()
+    #
+    # binary_indices = optimal_sizing_problem.optimization_problem.variables.loc[:, "variable_type"] == "binary"
+    # # mask = ["int", "real"]
+    # mask = pd.array(["real" for i in range(binary_indices.size)])
+    # mask[binary_indices.values.nonzero()] = 'int'
+    #
+    # mask_list = mask.tolist()
+    # #
+    # sampling = MixedVariableSampling(mask_list, {
+    #     "real": get_sampling("real_random"),
+    #     "int": get_sampling("bin_random")
+    # })
+    #
+    # crossover = MixedVariableCrossover(mask_list, {
+    #     "real": get_crossover("real_sbx", prob=1.0, eta=3.0),
+    #     "int": get_crossover("int_sbx", prob=1.0, eta=3.0)
+    # })
+    #
+    # mutation = MixedVariableMutation(mask_list, {
+    #     "real": get_mutation("real_pm", eta=3.0),
+    #     "int": get_mutation("int_pm", eta=3.0)
+    # })
+    # #
+    # algorithm = GA(
+    #     pop_size=200,
+    #     sampling=sampling,
+    #     crossover=crossover,
+    #     mutation=mutation,
+    #     eliminate_duplicates=True,
     # )
-
-    # algorithm = GA()
-
-    binary_indices = optimal_sizing_problem.optimization_problem.variables.loc[:, "variable_type"] == "binary"
-    # mask = ["int", "real"]
-    mask = pd.array(["real" for i in range(binary_indices.size)])
-    mask[binary_indices.values.nonzero()] = 'int'
-
-    mask_list = mask.tolist()
-    #
-    sampling = MixedVariableSampling(mask_list, {
-        "real": get_sampling("real_random"),
-        "int": get_sampling("bin_random")
-    })
-
-    crossover = MixedVariableCrossover(mask_list, {
-        "real": get_crossover("real_sbx", prob=1.0, eta=3.0),
-        "int": get_crossover("int_sbx", prob=1.0, eta=3.0)
-    })
-
-    mutation = MixedVariableMutation(mask_list, {
-        "real": get_mutation("real_pm", eta=3.0),
-        "int": get_mutation("int_pm", eta=3.0)
-    })
-    #
-    algorithm = GA(
-        pop_size=200,
-        sampling=sampling,
-        crossover=crossover,
-        mutation=mutation,
-        eliminate_duplicates=True,
-    )
-    #
-    res = minimize(problem,
-                   algorithm,
-                   seed=1,
-                   verbose=True)
+    # #
+    # res = minimize(problem,
+    #                algorithm,
+    #                seed=1,
+    #                verbose=True)
 
     # # solve the problem with GA
     # file = 'a_matrix'

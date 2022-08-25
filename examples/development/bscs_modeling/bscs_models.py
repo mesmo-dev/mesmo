@@ -7,7 +7,7 @@ import scipy.sparse as sp
 import mesmo
 
 # To be commented out if deployed as a module
-from examples.development.dro_planning_with_demo.module_optimal_battery_sizing_placement import data_battery_sizing_placement
+from bscs_data_interface import data_bscs
 import numpy as np
 
 class deterministic_acopf_battery_placement_sizing(object):
@@ -589,10 +589,16 @@ def main():
     mesmo.data_interface.recreate_database()
 
     # Obtain data.
-    data_set = data_battery_sizing_placement(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'test_case_customized'))
+    data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
+
+    samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
+    fig = px.line(samples_to_plot['RegDTest'])
+    fig.show()
 
     # Get results path.
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
+
+
 
     # Get standard form of stage 1.
     optimal_sizing_problem = deterministic_acopf_battery_placement_sizing(scenario_name, data_set)

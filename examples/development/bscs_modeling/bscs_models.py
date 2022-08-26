@@ -584,6 +584,8 @@ class deterministic_acopf_battery_placement_sizing(object):
 
 def main():
 
+    # regulation signal time step
+    reg_time_constant = 0.02
     # Settings.
     scenario_name = 'paper_2021_zhang_dro'
     mesmo.data_interface.recreate_database()
@@ -592,26 +594,46 @@ def main():
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 
     samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
-    fig = px.line(samples_to_plot['RegDTest'])
+    fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
+    fig.show()
+
+    # RegD data per day
+    day_1_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)]
+    day_2_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 2, 0, 0)]
+    day_3_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 3, 0, 0)]
+    day_4_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 4, 0, 0)]
+    day_5_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 5, 0, 0)]
+
+    # dict for the dataframes and their names
+    dfs = {"day_1_CRS": day_1_reD.cumsum().values * reg_time_constant,
+           "day_2_CRS": day_2_reD.cumsum().values * reg_time_constant,
+           "day_3_CRS": day_3_reD.cumsum().values * reg_time_constant,
+           "day_4_CRS": day_4_reD.cumsum().values * reg_time_constant,
+           "day_5_CRS": day_5_reD.cumsum().values * reg_time_constant}
+
+    dfs = pd.DataFrame(dfs)
+
+    # plot the data
+    fig = go.Figure()
+
+    fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS"],
+                  labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
     fig.show()
 
     # Get results path.
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
-
-
     # Get standard form of stage 1.
-    optimal_sizing_problem = deterministic_acopf_battery_placement_sizing(scenario_name, data_set)
-
-    optimal_sizing_problem.optimization_problem.solve()
-    results = optimal_sizing_problem.optimization_problem.get_results()
-
-    a_matrix = optimal_sizing_problem.optimization_problem.get_a_matrix()
-    b_vector = optimal_sizing_problem.optimization_problem.get_b_vector().transpose()[0]
-    c_vector = optimal_sizing_problem.optimization_problem.get_c_vector()[0]
-    q_matrix = optimal_sizing_problem.optimization_problem.get_q_matrix()
-    d_vector = np.array([optimal_sizing_problem.optimization_problem.get_d_constant()])
-
+    # optimal_sizing_problem = deterministic_acopf_battery_placement_sizing(scenario_name, data_set)
+    #
+    # optimal_sizing_problem.optimization_problem.solve()
+    # results = optimal_sizing_problem.optimization_problem.get_results()
+    #
+    # a_matrix = optimal_sizing_problem.optimization_problem.get_a_matrix()
+    # b_vector = optimal_sizing_problem.optimization_problem.get_b_vector().transpose()[0]
+    # c_vector = optimal_sizing_problem.optimization_problem.get_c_vector()[0]
+    # q_matrix = optimal_sizing_problem.optimization_problem.get_q_matrix()
+    # d_vector = np.array([optimal_sizing_problem.optimization_problem.get_d_constant()])
 
 
 if __name__ == '__main__':

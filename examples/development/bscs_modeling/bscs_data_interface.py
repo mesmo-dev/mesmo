@@ -12,6 +12,8 @@ class data_bscs(object):
     reserve_price_data: pd.DataFrame
     regulation_price_data: pd.DataFrame
     reg_d_data_whole_day: pd.DataFrame
+    battery_cell_data: pd.DataFrame
+
 
     def __init__(
             self,
@@ -54,9 +56,12 @@ class data_bscs(object):
 
         self.regulation_price_data = pd.concat(li, axis=0, ignore_index=True)
 
+        # Battery data
+        self.battery_cell_data = pd.read_csv(os.path.join(data_path, 'Battery_data', 'battery_cell_base_data.csv'))
+
 def main():
 
-    data_bscs = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)),'test_case_customized'))
+    #data_bscs = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)),'test_case_customized'))
 
     print('pause')
 

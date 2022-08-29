@@ -21,7 +21,7 @@ class data_battery_sizing_placement(object):
 
         self.annual_average_energy_price = self.price_raw['USEP($/MWh)'] / 100
 
-        self.battery_data = pd.read_csv(os.path.join(data_path, 'config_battery_base_data.csv'))
+        self.battery_data = pd.read_csv(os.path.join(data_path, 'battery_cell_base_data.csv'))
 
 
 

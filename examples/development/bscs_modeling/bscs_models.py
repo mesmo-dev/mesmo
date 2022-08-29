@@ -593,30 +593,23 @@ def main():
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 
+    # plot reg D signals 
     samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
     fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
     fig.show()
 
-    # RegD data per day
-    day_1_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)]
-    day_2_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 2, 0, 0)]
-    day_3_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 3, 0, 0)]
-    day_4_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 4, 0, 0)]
-    day_5_reD = data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 5, 0, 0)]
+    dfs = {"day_1_CRS": data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)].cumsum().values * reg_time_constant}
 
-    # dict for the dataframes and their names
-    dfs = {"day_1_CRS": day_1_reD.cumsum().values * reg_time_constant,
-           "day_2_CRS": day_2_reD.cumsum().values * reg_time_constant,
-           "day_3_CRS": day_3_reD.cumsum().values * reg_time_constant,
-           "day_4_CRS": day_4_reD.cumsum().values * reg_time_constant,
-           "day_5_CRS": day_5_reD.cumsum().values * reg_time_constant}
+    for i in range(1, 11):
+        dfs.update({"day_{}_CRS".format(i): data_set.reg_d_data_whole_day[pd.datetime(2020, 1, i, 0, 0)].cumsum().values*reg_time_constant})
 
     dfs = pd.DataFrame(dfs)
 
     # plot the data
     fig = go.Figure()
 
-    fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS"],
+    fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS",
+                                              "day_6_CRS", "day_7_CRS", "day_8_CRS", "day_9_CRS", "day_10_CRS"],
                   labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
     fig.show()
 

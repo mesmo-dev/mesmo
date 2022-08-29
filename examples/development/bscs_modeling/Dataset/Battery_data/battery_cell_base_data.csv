@@ -1,0 +1,2 @@
+﻿battery_investment cost ($/kWh),battery life span (years),battery degradation coefficient ($/kWh^2),max battery number,min battery capacity (kWh),max battery capacity (kWh),daily battery investment depreciation ($/d),battery efficiency,soc init,soc min,soc max,charging power max (kW)
+0.13,30,0.06,4,50,600,1.53,0.9,0.2,0.15,1,32

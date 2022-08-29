@@ -15,10 +15,10 @@ class bscs_wep_optimization_model(object):
             self,
             scenario_name,
             data_set,
-            enable_electric_grid_model=True
+            enable_electric_grid_model=False
     ):
 
-        mesmo.utils.logger.info('Initializing battery sizing placement')
+        mesmo.utils.logger.info('Initializing BSCS model...')
 
         # Obtain price data object.
         price_data = mesmo.data_interface.PriceData(scenario_name)
@@ -30,6 +30,11 @@ class bscs_wep_optimization_model(object):
 
         # settings
         self.scenarios = ['deterministic']
+
+        number_of_battery_slot = 6
+        battery_slot_index = list(range(number_of_battery_slot))
+        self.battery_slot = ['battery_no_index_{}'.format(x) for x in battery_slot_index]
+
         self.timesteps = self.der_model_set.timesteps
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (
@@ -496,26 +501,6 @@ class bscs_wep_optimization_model(object):
             broadcast=["timestep", "scenario", "node"],
         )
 
-        # self.optimization_problem.define_constraint(
-        #     (
-        #         "variable",
-        #         1,
-        #         dict(
-        #             name="battery_capacity", scenario=self.scenarios,
-        #             node=linear_electric_grid_model_set.electric_grid_model.nodes,
-        #         ),
-        #     ),
-        #     "<=",
-        #     (
-        #         "variable",
-        #         self.big_M_constant,
-        #         dict(
-        #             name="battery_placement_binary", scenario=self.scenarios,
-        #             node=linear_electric_grid_model_set.electric_grid_model.nodes,
-        #         )
-        #     ),
-        #     broadcast=["scenario", "node"],
-        # )
 
         # Define power balance constraints.
         self.optimization_problem.define_constraint(
@@ -582,42 +567,7 @@ class bscs_wep_optimization_model(object):
 
 
 def main():
-
-    # regulation signal time step
-    reg_time_constant = 0.02
-    # Settings.
-    scenario_name = 'paper_2021_zhang_dro'
-    mesmo.data_interface.recreate_database()
-
-    # Obtain data.
-    data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
-
-    # plot reg D signals
-    samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
-    fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
-    fig.show()
-
-    dfs = {"day_1_CRS": data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)].cumsum().values * reg_time_constant}
-
-    for i in range(1, 11):
-        dfs.update({"day_{}_CRS".format(i): data_set.reg_d_data_whole_day[pd.datetime(2020, 1, i, 0, 0)].cumsum().values*reg_time_constant})
-
-    dfs = pd.DataFrame(dfs)
-
-    # plot the data
-    fig = go.Figure()
-
-    fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS",
-                                              "day_6_CRS", "day_7_CRS", "day_8_CRS", "day_9_CRS", "day_10_CRS"],
-                  labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
-    fig.show()
-
-    # Get results path.
-    results_path = mesmo.utils.get_results_path(__file__, scenario_name)
-
-    # Get standard form of stage 1.
-    # optimal_sizing_problem = deterministic_acopf_battery_placement_sizing(scenario_name, data_set)
-
+    ...
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import mesmo
 
 from bscs_data_interface import data_bscs
+from bscs_models import bscs_wep_optimization_model
 import numpy as np
 
 def main():
@@ -12,7 +13,7 @@ def main():
     # regulation signal time step
     reg_time_constant = 0.02
     # Settings.
-    scenario_name = 'paper_2021_zhang_dro'
+    scenario_name = 'bscs_modelling'
     mesmo.data_interface.recreate_database()
 
     # Obtain data.
@@ -39,6 +40,8 @@ def main():
     fig.show()
 
     # Get results path.
+    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set)
+
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 
 

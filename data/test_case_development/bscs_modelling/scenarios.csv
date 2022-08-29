@@ -1,0 +1,2 @@
+scenario_name,electric_grid_name,thermal_grid_name,price_type,price_sensitivity_coefficient,parameter_set,timestep_start,timestep_end,timestep_interval,base_apparent_power,base_voltage
+bscs_modelling,bscs_modelling,,singapore_wholesale,1e-9,,2017-01-02T07:00:00,2017-01-02T18:00:00,00:30:00,10e3,10e3

@@ -10,8 +10,7 @@ import mesmo
 from bscs_data_interface import data_bscs
 import numpy as np
 
-class deterministic_acopf_battery_placement_sizing(object):
-
+class bscs_wep_optimization_model(object):
     def __init__(
             self,
             scenario_name,
@@ -593,7 +592,7 @@ def main():
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 
-    # plot reg D signals 
+    # plot reg D signals
     samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
     fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
     fig.show()
@@ -618,15 +617,7 @@ def main():
 
     # Get standard form of stage 1.
     # optimal_sizing_problem = deterministic_acopf_battery_placement_sizing(scenario_name, data_set)
-    #
-    # optimal_sizing_problem.optimization_problem.solve()
-    # results = optimal_sizing_problem.optimization_problem.get_results()
-    #
-    # a_matrix = optimal_sizing_problem.optimization_problem.get_a_matrix()
-    # b_vector = optimal_sizing_problem.optimization_problem.get_b_vector().transpose()[0]
-    # c_vector = optimal_sizing_problem.optimization_problem.get_c_vector()[0]
-    # q_matrix = optimal_sizing_problem.optimization_problem.get_q_matrix()
-    # d_vector = np.array([optimal_sizing_problem.optimization_problem.get_d_constant()])
+
 
 
 if __name__ == '__main__':

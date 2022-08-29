@@ -14,7 +14,6 @@ class data_bscs(object):
     reg_d_data_whole_day: pd.DataFrame
     battery_cell_data: pd.DataFrame
 
-
     def __init__(
             self,
             data_path: str,
@@ -57,7 +56,7 @@ class data_bscs(object):
         self.regulation_price_data = pd.concat(li, axis=0, ignore_index=True)
 
         # Battery data
-        self.battery_cell_data = pd.read_csv(os.path.join(data_path, 'Battery_data', 'battery_cell_base_data.csv'))
+        self.battery_cell_data = pd.read_csv(os.path.join(data_path, 'BSCS_data', 'Battery_data', 'battery_cell_base_data.csv'))
 
 def main():
 

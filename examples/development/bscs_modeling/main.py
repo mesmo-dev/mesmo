@@ -16,6 +16,10 @@ def main():
     scenario_name = 'bscs_modelling'
     mesmo.data_interface.recreate_database()
 
+    # get time steps for market
+    der_model_set = mesmo.der_models.DERModelSet(scenario_name)
+    time_step = der_model_set.timesteps
+
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 

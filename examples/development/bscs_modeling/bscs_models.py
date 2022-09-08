@@ -17,6 +17,7 @@ class bscs_wep_optimization_model(object):
             time_step,
             enable_electric_grid_model=False
     ):
+        big_M_constant = 10000
 
         mesmo.utils.logger.info('Initializing BSCS model...')
 
@@ -75,14 +76,15 @@ class bscs_wep_optimization_model(object):
         )
 
         # Define A_t matrix
-        # Define price arbitrage variables.
-        self.optimization_problem.define_variable(
-            'A_matrix',
-            timestep=self.timesteps,
-            scenario=self.scenarios,
-            battery_slot=self.battery_slot,
-        )
-
+        # number of incoming batteries:  data_set_swapping_demand.data_number_ev_to_be_swapped_dict[time_step[3]]
+        for time_step_temp in self.timesteps:
+            self.optimization_problem.define_variable(
+                'A_matrix',
+                timestep=time_step_temp,
+                scenario=self.scenarios,
+                battery_slot=self.battery_slot,
+                ev_index=np.array(list(range(int(data_set_swapping_demand.data_number_ev_to_be_swapped_dict[time_step_temp])))),
+            )
 
 
 

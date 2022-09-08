@@ -27,6 +27,8 @@ def main():
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 
+    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set, data_set_swapping_demand, time_step)
+
     # # plot reg D signals
     # samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
     # fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
@@ -48,7 +50,7 @@ def main():
     # fig.show()
 
     # Get results path.
-    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set, data_set_swapping_demand, time_step)
+
 
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 

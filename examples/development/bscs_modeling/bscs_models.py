@@ -13,6 +13,7 @@ class bscs_wep_optimization_model(object):
             self,
             scenario_name,
             data_set,
+            data_set_swapping_demand,
             enable_electric_grid_model=False
     ):
 

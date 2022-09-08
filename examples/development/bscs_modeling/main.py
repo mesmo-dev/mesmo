@@ -9,7 +9,6 @@ from bscs_models import bscs_wep_optimization_model
 import numpy as np
 
 def main():
-
     # regulation signal time step
     reg_time_constant = 0.02
     # Settings.
@@ -23,31 +22,33 @@ def main():
     # EV swapping demand simulation
     data_set_swapping_demand = data_ev_swapping_demand_simulation(time_step)
 
+    # pd.DataFrame.from_dict(data_set_swapping_demand.data_number_ev_to_be_swapped_dict)
+
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))
 
-    # plot reg D signals
-    samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
-    fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
-    fig.show()
-
-    dfs = {"day_1_CRS": data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)].cumsum().values * reg_time_constant}
-
-    for i in range(1, 11):
-        dfs.update({"day_{}_CRS".format(i): data_set.reg_d_data_whole_day[pd.datetime(2020, 1, i, 0, 0)].cumsum().values*reg_time_constant})
-
-    dfs = pd.DataFrame(dfs)
-
-    # plot the data
-    fig = go.Figure()
-
-    fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS",
-                                              "day_6_CRS", "day_7_CRS", "day_8_CRS", "day_9_CRS", "day_10_CRS"],
-                  labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
-    fig.show()
+    # # plot reg D signals
+    # samples_to_plot = data_set.reg_d_data_40min_sample.iloc[0:-1]
+    # fig = px.line(samples_to_plot['RegDTest'], labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
+    # fig.show()
+    #
+    # dfs = {"day_1_CRS": data_set.reg_d_data_whole_day[pd.datetime(2020, 1, 1, 0, 0)].cumsum().values * reg_time_constant}
+    #
+    # for i in range(1, 11):
+    #     dfs.update({"day_{}_CRS".format(i): data_set.reg_d_data_whole_day[pd.datetime(2020, 1, i, 0, 0)].cumsum().values*reg_time_constant})
+    #
+    # dfs = pd.DataFrame(dfs)
+    #
+    # # plot the data
+    # fig = go.Figure()
+    #
+    # fig = px.line(dfs, x=dfs.index.values, y=["day_1_CRS", "day_2_CRS", "day_3_CRS", "day_4_CRS", "day_5_CRS",
+    #                                           "day_6_CRS", "day_7_CRS", "day_8_CRS", "day_9_CRS", "day_10_CRS"],
+    #               labels=dict(x="time step (0.2s)", value="CRS", variable="Day index"))
+    # fig.show()
 
     # Get results path.
-    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set)
+    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set, data_set_swapping_demand)
 
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 

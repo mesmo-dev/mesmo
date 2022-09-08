@@ -59,9 +59,11 @@ class data_bscs(object):
         # Battery data
         self.battery_cell_data = pd.read_csv(os.path.join(data_path, 'BSCS_data', 'Battery_data', 'battery_cell_base_data.csv'))
 
-
+# hard-coded parameter for random EV swapping station demand generation
 class data_ev_swapping_demand_simulation(object):
-    battery_inventory: pd.DataFrame
+
+    data_number_ev_to_be_swapped_dict: dict
+    data_SOC_ev_to_be_swapped_dict: dict
 
     def __init__(
             self,
@@ -72,16 +74,13 @@ class data_ev_swapping_demand_simulation(object):
         for i in range(time_step.values.size):
             data_number_of_ev_to_be_swapped[i] = randint(1, 3)  # generate random ev number from 1-3
 
-        data_number_ev_to_be_swapped_dict = {}
+        self.data_number_ev_to_be_swapped_dict = {}
         for i in range(time_step.values.size):
-            data_number_ev_to_be_swapped_dict[time_step[i]] = data_number_of_ev_to_be_swapped[i]
+            self.data_number_ev_to_be_swapped_dict[time_step[i]] = data_number_of_ev_to_be_swapped[i]
 
-        data_SOC_ev_to_be_swapped_dict = {}
+        self.data_SOC_ev_to_be_swapped_dict = {}
         for i in range(time_step.values.size):
-            data_SOC_ev_to_be_swapped_dict[time_step[i]] = np.random.rand(int(data_number_of_ev_to_be_swapped[i]))*10 + 15 # scaled by 10 with 15 as bias
-
-        print('hello')
-        print(time_step)
+            self.data_SOC_ev_to_be_swapped_dict[time_step[i]] = np.random.rand(int(data_number_of_ev_to_be_swapped[i]))*10 + 15 # scaled by 10 with 15 as bias
 
 def main():
 

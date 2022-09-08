@@ -14,6 +14,7 @@ class bscs_wep_optimization_model(object):
             scenario_name,
             data_set,
             data_set_swapping_demand,
+            time_step,
             enable_electric_grid_model=False
     ):
 
@@ -31,35 +32,38 @@ class bscs_wep_optimization_model(object):
         self.scenarios = ['deterministic']
 
         # battery slot index
-        number_of_battery_slot = 6
+        number_of_battery_slot = data_set.bscs_data['number_of_battery_slots'].values[0]
         battery_slot_index = list(range(number_of_battery_slot))
         self.battery_slot = ['battery_slot_no_{}'.format(x) for x in battery_slot_index]
 
         # time steps for electricity market participation
-        self.timesteps = self.der_model_set.timesteps
+        self.timesteps = time_step
         # Obtain timestep interval in hours, for conversion of power to energy.
         timestep_interval_hours = (
-            (self.der_model_set.timesteps[1] - self.der_model_set.timesteps[0]) / pd.Timedelta('1h')
+            (self.timesteps[1] - self.timesteps[0]) / pd.Timedelta('1h')
         )
 
-        self.optimization_problem.define_variable(
-            "battery_regulation_power",
-            scenario=self.scenarios,
-            timestep=self.der_model_set.timesteps,
-            battery_slot=self.battery_slot,
-        )
+        # Instantiate optimization problem.
+        self.optimization_problem = mesmo.utils.OptimizationProblem()
+
+        # self.optimization_problem.define_variable(
+        #     "battery_regulation_power",
+        #     scenario=self.scenarios,
+        #     timestep=self.der_model_set.timesteps,
+        #     battery_slot=self.battery_slot,
+        # )
 
         self.optimization_problem.define_variable(
             "battery_charge_power",
             scenario=self.scenarios,
-            timestep=self.der_model_set.timesteps,
+            timestep=self.timesteps,
             battery_slot=self.battery_slot,
         )
 
         self.optimization_problem.define_variable(
             "battery_discharge_power",
             scenario=self.scenarios,
-            timestep=self.der_model_set.timesteps,
+            timestep=self.timesteps,
             battery_slot=self.battery_slot,
         )
 
@@ -70,13 +74,14 @@ class bscs_wep_optimization_model(object):
             scenario=self.scenarios,
         )
 
+        # Define A_t matrix
         # Define price arbitrage variables.
         self.optimization_problem.define_variable(
-            'swapping_station_regulation_power',
+            'A_matrix',
             timestep=self.timesteps,
             scenario=self.scenarios,
+            battery_slot=self.battery_slot,
         )
-
 
 
 

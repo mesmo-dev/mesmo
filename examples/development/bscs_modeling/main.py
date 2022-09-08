@@ -48,7 +48,7 @@ def main():
     # fig.show()
 
     # Get results path.
-    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set, data_set_swapping_demand)
+    optimal_sizing_problem = bscs_wep_optimization_model(scenario_name, data_set, data_set_swapping_demand, time_step)
 
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
 

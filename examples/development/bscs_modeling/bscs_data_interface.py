@@ -14,6 +14,7 @@ class data_bscs(object):
     regulation_price_data: pd.DataFrame
     reg_d_data_whole_day: pd.DataFrame
     battery_cell_data: pd.DataFrame
+    bscs_data: pd.DataFrame
 
     def __init__(
             self,
@@ -58,6 +59,9 @@ class data_bscs(object):
 
         # Battery data
         self.battery_cell_data = pd.read_csv(os.path.join(data_path, 'BSCS_data', 'Battery_data', 'battery_cell_base_data.csv'))
+
+        # BSCS parameter
+        self.bscs_data = pd.read_csv(os.path.join(data_path, 'BSCS_data', 'Swapping_station_parameters', 'battery_swapping_charging_station_data.csv'))
 
 # hard-coded parameter for random EV swapping station demand generation
 class data_ev_swapping_demand_simulation(object):

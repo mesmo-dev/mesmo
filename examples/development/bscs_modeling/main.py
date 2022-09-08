@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import mesmo
 
-from bscs_data_interface import data_bscs
+from bscs_data_interface import data_bscs, data_ev_swapping_demand_simulation
 from bscs_models import bscs_wep_optimization_model
 import numpy as np
 
@@ -19,6 +19,9 @@ def main():
     # get time steps for market
     der_model_set = mesmo.der_models.DERModelSet(scenario_name)
     time_step = der_model_set.timesteps
+
+    # EV swapping demand simulation
+    data_set_swapping_demand = data_ev_swapping_demand_simulation(time_step)
 
     # Obtain data.
     data_set = data_bscs(os.path.join(os.path.dirname(os.path.normpath(__file__)), 'Dataset'))

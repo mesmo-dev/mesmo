@@ -58,14 +58,28 @@ class bscs_wep_optimization_model(object):
             "battery_charge_power",
             scenario=self.scenarios,
             timestep=self.timesteps,
-            battery_slot=self.battery_slot,
+            battery_slot_indices=self.battery_slot,
         )
 
         self.optimization_problem.define_variable(
             "battery_discharge_power",
             scenario=self.scenarios,
             timestep=self.timesteps,
-            battery_slot=self.battery_slot,
+            battery_slot_indices=self.battery_slot,
+        )
+
+        self.optimization_problem.define_variable(
+            "battery_slot_energy",
+            scenario=self.scenarios,
+            timestep=self.timesteps,
+            battery_slot_indices=self.battery_slot,
+        )
+
+        self.optimization_problem.define_variable(
+            "battery_slot_soc",
+            scenario=self.scenarios,
+            timestep=self.timesteps,
+            battery_slot_indices=self.battery_slot,
         )
 
         # Define price arbitrage variables.
@@ -80,31 +94,79 @@ class bscs_wep_optimization_model(object):
         for time_step_temp in self.timesteps:
             self.optimization_problem.define_variable(
                 'A_matrix',
+                variable_type='binary',
                 timestep=time_step_temp,
                 scenario=self.scenarios,
-                battery_slot=self.battery_slot,
-                ev_index=np.array(list(range(int(data_set_swapping_demand.data_number_ev_to_be_swapped_dict[time_step_temp])))),
+                battery_slot_indices=self.battery_slot,
+                ev_indices=np.array(list(range(int(data_set_swapping_demand.data_number_ev_to_be_swapped_dict[time_step_temp])))),
+            )
+
+        # Define Z_t matrix
+        for time_step_temp in self.timesteps:
+            self.optimization_problem.define_variable(
+                'Z_matrix',
+                timestep=time_step_temp,
+                scenario=self.scenarios,
+                battery_slot_indices=self.battery_slot,
+                ev_indices=np.array(list(range(int(data_set_swapping_demand.data_number_ev_to_be_swapped_dict[time_step_temp])))),
+            )
+
+        # Define constraints
+        # TODO
+        # Define energy constraints
+        for timestep_temp in time_step:
+            # number of incoming EVs per timestep
+            number_ev_per_step = data_set_swapping_demand.data_SOC_ev_to_be_swapped_dict[timestep_temp].size
+            A_coefficient_matrix = np.zeros([number_of_battery_slot, number_of_battery_slot*number_ev_per_step])
+
+            for index_temp in range(number_of_battery_slot):
+                A_coefficient_matrix[index_temp, index_temp*number_ev_per_step: (index_temp+1)*number_ev_per_step] = \
+                    data_set_swapping_demand.data_energy_ev_to_be_swapped_dict[timestep_temp]
+
+            ## Debug print('debug')
+            # self.optimization_problem.get_variable_index(name='A_matrix', timestep=timestep_temp)
+
+            # TODO + add time step plus+
+            self.optimization_problem.define_constraint(
+                (
+                    "variable",
+                    1,
+                    dict(
+                            name="battery_slot_energy", scenario=self.scenarios,
+                            timestep=timestep_temp, #TODO
+                    )
+                ),
+                "==",
+                (
+                    "variable",
+                    A_coefficient_matrix,
+                    dict(
+                            name="battery_slot_energy",
+                            scenario=self.scenarios,
+                            timestep=timestep_temp,
+                    )
+                ),
+                (
+                    "variable",
+                    data_set.battery_data['battery efficiency'].values * timestep_interval_hours * np.ones(t+1),
+                    dict(
+                            name="battery_charge_power", scenario=self.scenarios, timestep=self.timesteps[:t+1],
+                            node=linear_electric_grid_model_set.electric_grid_model.nodes,
+                    ),
+                ),
+                (
+                    "variable",
+                    -1/data_set.battery_data['battery efficiency'].values * timestep_interval_hours * np.ones(t+1),
+                    dict(
+                            name="battery_discharge_power", scenario=self.scenarios, timestep=self.timesteps[:t+1],
+                            node=linear_electric_grid_model_set.electric_grid_model.nodes,
+                    ),
+                ),
+                broadcast=["node", "scenario"],
             )
 
 
 
-
-
-        # Manipulate building model to avoid over-consumption for up-reserves.
-        for der_name, der_model in self.der_model_set.der_models.items():
-            if isinstance(der_model, mesmo.der_models.FlexibleBuildingModel):
-                der_model.output_maximum_timeseries.loc[
-                    :, der_model.output_maximum_timeseries.columns.str.contains('_heat_')
-                ] = 0.0
-                der_model.output_maximum_timeseries.iloc[
-                    -1, der_model.output_maximum_timeseries.columns.str.contains('_cool_')
-                ] = 0.0
-                der_model.output_minimum_timeseries.iloc[
-                    -1, der_model.output_minimum_timeseries.columns.str.contains('_air_flow')
-                ] = 0.0
-
-        # Instantiate optimization problem.
-        self.optimization_problem = mesmo.utils.OptimizationProblem()
 
         # Define BESS placement variables/constraints
         self.optimization_problem.define_variable(

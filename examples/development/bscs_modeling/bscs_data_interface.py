@@ -68,6 +68,7 @@ class data_ev_swapping_demand_simulation(object):
 
     data_number_ev_to_be_swapped_dict: dict
     data_SOC_ev_to_be_swapped_dict: dict
+    data_energy_ev_to_be_swapped_dict: dict
 
     def __init__(
             self,
@@ -85,6 +86,10 @@ class data_ev_swapping_demand_simulation(object):
         self.data_SOC_ev_to_be_swapped_dict = {}
         for i in range(time_step.values.size):
             self.data_SOC_ev_to_be_swapped_dict[time_step[i]] = np.random.rand(int(data_number_of_ev_to_be_swapped[i]))*10 + 15 # scaled by 10 with 15 as bias
+
+        self.data_energy_ev_to_be_swapped_dict = {}
+        for i in range(time_step.values.size):
+            self.data_energy_ev_to_be_swapped_dict[time_step[i]] = np.random.rand(int(data_number_of_ev_to_be_swapped[i]))*5 + 10 #10 +-5 kWh
 
 def main():
 

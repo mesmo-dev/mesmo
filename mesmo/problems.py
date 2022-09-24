@@ -177,7 +177,7 @@ class NominalOperationProblem(ProblemBase):
                     1.0j * self.der_model_set.der_models[der_name].reactive_power_nominal_timeseries
                 )
         if self.thermal_grid_model is not None:
-            for der in self.electric_grid_model.ders:
+            for der in self.thermal_grid_model.ders:
                 der_name = der[1]
                 der_thermal_power_vector.loc[:, der] = self.der_model_set.der_models[
                     der_name

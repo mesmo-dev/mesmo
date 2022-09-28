@@ -3,8 +3,11 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import scipy.sparse as sp
 import matplotlib.pyplot as plt
 # plt.style.use(['science','ieee'])
+from future.backports.datetime import time
+
 plt.style.use(['science'])
 from matplotlib.ticker import FormatStrFormatter
 pd.options.plotting.backend = "matplotlib"
@@ -65,6 +68,20 @@ def main():
     jump_here = True
     grid_cost_coefficient = 1
     report_time = '2019-07-17 14:00:00'
+    flexible_der_type = ['flexible_generator', 'flexible_load']
+    time_index = [scenario_data.timesteps]
+    price_correction = 1e3 / scenario_data.scenario.at['base_apparent_power']
+    admm_max_iteration = 40
+
+    # """
+    # Set seller and buyer ders for P2P market
+    seller_der_name = ['pv_806', 'pv_812']
+    buyer_der_name = ['fx_818_1_y', 'fx_856_2_y', 'fl_840_y', 'fx_810_2_y', 'fx_824_3_y', 'fx_842_1_y']
+    seller_ders = pd.Index(
+        [der_name for der_type, der_name in electric_grid_model.ders if der_name in seller_der_name])
+    buyer_ders = pd.Index([der_name for der_type, der_name in electric_grid_model.ders if der_name in buyer_der_name])
+    peers = seller_ders.append(buyer_ders)
+
 
     der_model_set.define_optimization_problem(optimization_non_strategic,
                                               price_data,
@@ -82,79 +99,700 @@ def main():
         grid_cost_coefficient=grid_cost_coefficient
         # kkt_conditions=False
     )
-
-    if strategic_scenario:
-        optimization_strategic = mesmo.utils.OptimizationProblem()
-
-        der_model_set.define_optimization_problem(optimization_strategic,
-                                                  price_data,
-                                                  kkt_conditions=kkt_conditions,
-                                                  grid_cost_coefficient=grid_cost_coefficient
-                                                  # state_space_model=True
-                                                  )
-
-        linear_electric_grid_model_set.define_optimization_problem(
-            optimization_strategic,
-            price_data,
-            node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
-            node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
-            branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            kkt_conditions=kkt_conditions,
-            grid_cost_coefficient=grid_cost_coefficient
-        )
-
-        strategic_der_model_set = StrategicMarket(scenario_name, strategic_der=strategic_der_name)
-        strategic_der_model_set.strategic_optimization_problem(
-            optimization_strategic,
-            price_data,
-            node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
-            node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
-            branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
-            big_m=1e3,
-            kkt_conditions=kkt_conditions,
-            grid_cost_coefficient=grid_cost_coefficient
-        )
-
-    # Define DER problem.
-
-    # Solve centralized optimization problem.
     optimization_non_strategic.solve()
-    optimization_strategic.solve()
-
-    # Obtain results.
-    flexible_der_type = ['flexible_generator', 'flexible_load']
-    time_index = [scenario_data.timesteps]
-    price_correction = 1e3/scenario_data.scenario.at['base_apparent_power']
-
-
     results_non_strategic = mesmo.problems.Results()
-    results_strategic = mesmo.problems.Results()
-
     results_non_strategic.update(linear_electric_grid_model_set.get_optimization_results(optimization_non_strategic))
     results_non_strategic.update(der_model_set.get_optimization_results(optimization_non_strategic))
+    dlmps_non_strategic = linear_electric_grid_model_set.get_optimization_dlmps(optimization_non_strategic, price_data)
+    flexible_der_active_power_non_strategic = results_non_strategic.der_active_power_vector_per_unit[flexible_der_type]
+    flexible_der_reactive_power_non_strategic = results_non_strategic.der_reactive_power_vector_per_unit[
+        flexible_der_type]
+
+    seller_dlmp_non_strategic = dlmps_non_strategic.electric_grid_total_dlmp_der_active_power.loc[:, (slice(None), seller_ders)]
+    buyer_dlmp_non_strategic = dlmps_non_strategic.electric_grid_total_dlmp_der_active_power.loc[:, (slice(None), buyer_ders)]
+
+    grid_using_price_non_strategic = pd.DataFrame(0, index=seller_dlmp_non_strategic.index,
+                                                  columns=pd.MultiIndex.from_product([seller_ders, buyer_ders]))
+    for x, b in buyer_dlmp_non_strategic.columns:
+        for y, s in seller_dlmp_non_strategic.columns:  # for y, b in grid_using_price_strategic.columns:
+            grid_using_price_non_strategic.at[:, (s, b)] = buyer_dlmp_non_strategic.loc[:, (x, b)].values - seller_dlmp_non_strategic.loc[:,
+                                                                                          (y, s)].values
+
+    # grid_using_price_strategic *=-1
+
+    seller_optimization_problem_sets_non_strategic = pd.Series(data=None, index=seller_ders, dtype=object)
+    for seller in seller_optimization_problem_sets_non_strategic.index:
+        seller_optimization_problem_sets_non_strategic.at[seller] = mesmo.utils.OptimizationProblem()
+
+        # Define seller's ADMM variable
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_variable(
+            f'energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders, timestep=scenario_data.timesteps
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_variable(
+            f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders,
+            timestep=scenario_data.timesteps
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_variable(
+            f'seller_{seller}_active_power_vector', timestep=scenario_data.timesteps
+        )
+        # Define seller's ADMMM parameter
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'admm_lambda_seller_{seller}_to_buyers_active_power',
+            np.zeros(len(scenario_data.timesteps) * len(buyer_ders))
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_local_copy',
+            np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_zeros',
+            np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'seller_{seller}_max_power',
+            # np.array([1.0] * len(scenario_data.timesteps))
+            np.transpose([der_model_set.der_models[seller].active_power_nominal_timeseries.values])
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'seller_{seller}_min_power',
+            np.array([0.0] * len(scenario_data.timesteps))
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'half_of_grid_using_price_for_seller_{seller}',
+            0.5 * pd.concat([grid_using_price_non_strategic.loc[:, (seller, buyer)] for buyer in buyer_ders]).values
+        )
+        seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+            f'buyer_sized_ones_for_{seller}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(buyer_ders))
+        )
+
+    buyer_optimization_problem_sets_non_strategic = pd.Series(data=None, index=buyer_ders, dtype=object)
+    for buyer in buyer_optimization_problem_sets_non_strategic.index:
+        buyer_optimization_problem_sets_non_strategic.loc[buyer] = mesmo.utils.OptimizationProblem()
+
+        # Define seller's ADMM variable
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_variable(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders, timestep=scenario_data.timesteps
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_variable(
+            f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders,
+            timestep=scenario_data.timesteps
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_variable(
+            f'buyer_{buyer}_active_power_vector', timestep=scenario_data.timesteps
+        )
+        # Define seller's ADMMM parameter
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy',
+            np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
+            np.zeros(len(scenario_data.timesteps) * len(seller_ders))
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros',
+            np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'buyer_{buyer}_min_power',
+            # np.array([1.0] * len(scenario_data.timesteps))
+            np.transpose([der_model_set.der_models[buyer].active_power_nominal_timeseries.values])
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'buyer_{buyer}_max_power',
+            np.array([0.0] * len(scenario_data.timesteps))
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'half_of_grid_using_price_for_buyer_{buyer}',
+            0.5 * pd.concat([grid_using_price_non_strategic.loc[:, (seller, buyer)] for seller in seller_ders]).values
+        )
+        buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+            f'seller_sized_ones_for_{buyer}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(seller_ders))
+        )
+
+    admm_iteration_non_strategic = 0
+    admm_rho = 800
+    radius_non_strategic = 1
+    radius_non_strategic_save = []
+    peers_active_power_non_strategic = pd.DataFrame(index=scenario_data.timesteps, columns=peers)
+
+    while radius_non_strategic >= 0.0001:
+
+        # Defining optimization constraints and objectives for sellers:
+        for seller in seller_optimization_problem_sets_non_strategic.index:
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_constraint(
+                ('variable', f'buyer_sized_ones_for_{seller}_energy_transaction',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers',
+                      buyer=buyer_ders, timestep=scenario_data.timesteps)),
+                '==',
+                ('variable', 1.0,
+                 dict(name=f'seller_{seller}_active_power_vector'))
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers',
+                                       buyer=buyer_ders, timestep=scenario_data.timesteps)),
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'),
+                '==',
+                ('variable', 1.0, dict(name=f'energy_transacted_from_seller_{seller}_to_buyers',
+                                       buyer=buyer_ders, timestep=scenario_data.timesteps))
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
+                '>=',
+                ('constant', f'seller_{seller}_min_power')
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
+                '<=',
+                ('constant', f'seller_{seller}_max_power')
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(
+                    name=f'energy_transacted_from_seller_{seller}_to_buyers')),
+                '>=',
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_zeros')
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_objective(
+                ('variable', f'half_of_grid_using_price_for_seller_{seller}',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', f'admm_lambda_seller_{seller}_to_buyers_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', 0.5 * admm_rho,
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'),
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'))
+            )
+            seller_optimization_problem_sets_non_strategic.loc[seller].solve()
+            peers_active_power_non_strategic.at[:, seller] = \
+            seller_optimization_problem_sets_non_strategic[seller].results[
+                f'seller_{seller}_active_power_vector'].values / \
+            der_model_set.fixed_der_models[seller].active_power_nominal
+
+        # Defining optimization constraints and objectives for sellers:
+        for buyer in buyer_optimization_problem_sets_non_strategic.index:
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_constraint(
+                ('variable', f'seller_sized_ones_for_{buyer}_energy_transaction',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                '==',
+                ('variable', -1.0,
+                 dict(name=f'buyer_{buyer}_active_power_vector'))
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'),
+                '==',
+                ('variable', 1.0, dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}'))
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
+                '>=',
+                ('constant', f'buyer_{buyer}_min_power')
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
+                '<=',
+                ('constant', f'buyer_{buyer}_max_power')
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(
+                    name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                '>=',
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros')
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_objective(
+                ('variable', f'half_of_grid_using_price_for_buyer_{buyer}',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', 0.5 * admm_rho,
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'),
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'))
+            )
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].solve()
+
+            peers_active_power_non_strategic.at[:, buyer] = \
+            buyer_optimization_problem_sets_non_strategic[buyer].results[
+                f'buyer_{buyer}_active_power_vector'].values / \
+            der_model_set.fixed_der_models[buyer].active_power_nominal
+
+        # ====================================
+        optimization_non_strategic.define_parameter(
+            'active_power_constant',
+            np.concatenate([
+                np.transpose([
+                    der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                    / (
+                        der_model_set.fixed_der_models[der_name].active_power_nominal
+                        if der_model_set.fixed_der_models[der_name].active_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if der_model_set.fixed_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                ])
+                if der_name in der_model_set.fixed_der_names.drop(peers)
+                else np.zeros((len(der_model_set.timesteps), 1))
+                for der_type, der_name in der_model_set.electric_ders
+            ], axis=1).ravel() + np.concatenate([
+                np.transpose([
+                    peers_active_power_non_strategic[der_name].values
+                    if der_model_set.fixed_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                ])
+                if der_name in peers
+                else np.zeros((len(der_model_set.timesteps), 1))
+                for der_type, der_name in der_model_set.electric_ders
+            ], axis=1).ravel()
+        )
+        optimization_non_strategic.solve()
+
+        dlmps_non_strategic = linear_electric_grid_model_set.get_optimization_dlmps(optimization_non_strategic,
+                                                                                    price_data)
+
+        seller_dlmp_non_strategic = dlmps_non_strategic.electric_grid_total_dlmp_der_active_power.loc[:,
+                                    (slice(None), seller_ders)]
+        buyer_dlmp_non_strategic = dlmps_non_strategic.electric_grid_total_dlmp_der_active_power.loc[:,
+                                   (slice(None), buyer_ders)]
+
+        for x, b in buyer_dlmp_non_strategic.columns:
+            for y, s in seller_dlmp_non_strategic.columns:  # for y, b in grid_using_price_strategic.columns:
+                grid_using_price_non_strategic.at[:, (s, b)] = buyer_dlmp_non_strategic.loc[:,
+                                                               (x, b)].values - seller_dlmp_non_strategic.loc[:,
+                                                                                (y, s)].values
+        # =====================================
+
+        # Update admm parameters for seller optimization:
+        for seller in seller_optimization_problem_sets_non_strategic.index:
+            seller_optimization_problem_sets_non_strategic.loc[seller].parameters[
+                f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'] = 0.5 * np.transpose([
+                pd.concat([
+                    seller_optimization_problem_sets_non_strategic.loc[seller].results[
+                        f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for buyer in buyer_ders
+                ]).values + pd.concat([
+                    buyer_optimization_problem_sets_non_strategic.loc[buyer].results[
+                        f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for buyer in buyer_ders]).values
+            ])
+
+            seller_optimization_problem_sets_non_strategic.loc[seller].parameters[
+                f'admm_lambda_seller_{seller}_to_buyers_active_power'] += admm_rho * (pd.concat([
+                seller_optimization_problem_sets_non_strategic.loc[seller].results[
+                    f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for buyer in buyer_ders
+            ]).values - seller_optimization_problem_sets_non_strategic.loc[seller].parameters[
+                                    f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'].ravel())
+            seller_optimization_problem_sets_non_strategic.loc[seller].define_parameter(
+                f'half_of_grid_using_price_for_seller_{seller}',
+                0.5 * pd.concat([grid_using_price_non_strategic.loc[:, (seller, buyer)] for buyer in buyer_ders]).values
+            )
+
+        # Update admm parameters for buyer optimization:
+        for buyer in buyer_optimization_problem_sets_non_strategic.index:
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].parameters[
+                f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'] = 0.5 * np.transpose([
+                pd.concat([
+                    buyer_optimization_problem_sets_non_strategic.loc[buyer].results[
+                        f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for seller in seller_ders
+                ]).values + pd.concat([
+                    seller_optimization_problem_sets_non_strategic.loc[seller].results[
+                        f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for seller in
+                    seller_ders]).values
+            ])
+
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].parameters[
+                f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power'] += admm_rho * (pd.concat([
+                buyer_optimization_problem_sets_non_strategic.loc[buyer].results[
+                    f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for seller in seller_ders
+            ]).values - buyer_optimization_problem_sets_non_strategic.loc[buyer].parameters[
+                                        f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'].ravel())
+            buyer_optimization_problem_sets_non_strategic.loc[buyer].define_parameter(
+                f'half_of_grid_using_price_for_buyer_{buyer}',
+                0.5 * pd.concat([grid_using_price_non_strategic.loc[:, (seller, buyer)] for seller in seller_ders]).values
+            )
+
+        radius_non_strategic = np.linalg.norm(
+            np.concatenate(
+            [seller_optimization_problem_sets_non_strategic.loc[seller].results[
+                 f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers']
+             for seller in seller_ders]).ravel().__abs__()
+             + np.concatenate(
+            [buyer_optimization_problem_sets_non_strategic.loc[buyer].results[
+                 f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}']
+             for buyer in buyer_ders]).ravel().__abs__()
+        )
+
+        admm_iteration_non_strategic += 1
+
+        radius_non_strategic_save.append(radius_non_strategic)
+        print(radius_non_strategic)
+        print(admm_iteration_non_strategic)
+        if admm_iteration_non_strategic >= admm_max_iteration:
+            break
+
+
+    # if strategic_scenario:
+    optimization_strategic = mesmo.utils.OptimizationProblem()
+    der_model_set.define_optimization_problem(optimization_strategic,
+                                              price_data,
+                                              kkt_conditions=kkt_conditions,
+                                              grid_cost_coefficient=grid_cost_coefficient
+                                              # state_space_model=True
+                                              )
+
+    linear_electric_grid_model_set.define_optimization_problem(
+        optimization_strategic,
+        price_data,
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
+        kkt_conditions=kkt_conditions,
+        grid_cost_coefficient=grid_cost_coefficient
+    )
+
+    strategic_der_model_set = StrategicMarket(scenario_name, strategic_der=strategic_der_name)
+    strategic_der_model_set.strategic_optimization_problem(
+        optimization_strategic,
+        price_data,
+        node_voltage_magnitude_vector_minimum=node_voltage_magnitude_vector_minimum,
+        node_voltage_magnitude_vector_maximum=node_voltage_magnitude_vector_maximum,
+        branch_power_magnitude_vector_maximum=branch_power_magnitude_vector_maximum,
+        big_m=1e3,
+        kkt_conditions=kkt_conditions,
+        grid_cost_coefficient=grid_cost_coefficient
+    )
+
+    optimization_strategic.solve()
+
+
+    results_strategic = mesmo.problems.Results()
     results_strategic.update(linear_electric_grid_model_set.get_optimization_results(optimization_strategic))
     results_strategic.update(der_model_set.get_optimization_results(optimization_strategic))
 
-    # Print results.
-    # print(results_centralized)
-
-    # Store results to CSV.
-    # results_non_strategic.save(results_path)
-    # results_strategic.save(results_path)
-
     # Obtain DLMPs.
-    dlmps_non_strategic = linear_electric_grid_model_set.get_optimization_dlmps(optimization_non_strategic, price_data)
-    dlmps_strategic = dlmps_strategic = strategic_der_model_set.get_optimization_dlmps(optimization_strategic, price_data)
+
+    dlmps_strategic = strategic_der_model_set.get_optimization_dlmps(optimization_strategic, price_data)
     dlmp_difference = dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power - \
                       dlmps_non_strategic.electric_grid_total_dlmp_node_active_power
 
-    flexible_der_active_power_non_strategic = results_non_strategic.der_active_power_vector_per_unit[flexible_der_type]
-    flexible_der_active_power_strategic = results_strategic.der_active_power_vector_per_unit[flexible_der_type]
 
-    flexible_der_reactive_power_non_strategic = results_non_strategic.der_reactive_power_vector_per_unit[
-        flexible_der_type]
+    flexible_der_active_power_strategic = results_strategic.der_active_power_vector_per_unit[flexible_der_type]
     flexible_der_reactive_power_strategic = results_strategic.der_reactive_power_vector_per_unit[flexible_der_type]
 
+    # =======================================================================================
+
+    seller_dlmp_strategic = dlmps_strategic.strategic_electric_grid_total_dlmp_der_active_power.loc[:, (slice(None), seller_ders)]
+    buyer_dlmp_strategic = dlmps_strategic.strategic_electric_grid_total_dlmp_der_active_power.loc[:, (slice(None), buyer_ders)]
+
+    grid_using_price_strategic = pd.DataFrame(0, index=seller_dlmp_strategic.index,
+                                    columns=pd.MultiIndex.from_product([seller_ders, buyer_ders]))
+    for x, b in buyer_dlmp_strategic.columns:
+        for y, s in seller_dlmp_strategic.columns:  # for y, b in grid_using_price_strategic.columns:
+            grid_using_price_strategic.at[:, (s, b)] = buyer_dlmp_strategic.loc[:, (x, b)].values - seller_dlmp_strategic.loc[:,
+                                                                                          (y, s)].values
+
+    # grid_using_price_strategic *=-1
+
+    seller_optimization_problem_sets_strategic = pd.Series(data=None, index=seller_ders, dtype=object)
+    for seller in seller_optimization_problem_sets_strategic.index:
+        seller_optimization_problem_sets_strategic.at[seller] = mesmo.utils.OptimizationProblem()
+
+        # Define seller's ADMM variable
+        seller_optimization_problem_sets_strategic.loc[seller].define_variable(
+            f'energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders, timestep=scenario_data.timesteps
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_variable(
+            f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers', buyer=buyer_ders,
+            timestep=scenario_data.timesteps
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_variable(
+            f'seller_{seller}_active_power_vector', timestep=scenario_data.timesteps
+        )
+        # Define seller's ADMMM parameter
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'admm_lambda_seller_{seller}_to_buyers_active_power',
+            np.zeros(len(scenario_data.timesteps) * len(buyer_ders))
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_local_copy',
+            np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'energy_transacted_from_seller_{seller}_to_buyers_zeros',
+            np.zeros((len(scenario_data.timesteps) * len(buyer_ders), 1))
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'seller_{seller}_max_power',
+            # np.array([1.0] * len(scenario_data.timesteps))
+            np.transpose([der_model_set.der_models[seller].active_power_nominal_timeseries.values])
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'seller_{seller}_min_power',
+            np.array([0.0] * len(scenario_data.timesteps))
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'half_of_grid_using_price_for_seller_{seller}',
+            0.5 * pd.concat([grid_using_price_strategic.loc[:, (seller, buyer)] for buyer in buyer_ders]).values
+        )
+        seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+            f'buyer_sized_ones_for_{seller}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(buyer_ders))
+        )
+
+    buyer_optimization_problem_sets_strategic = pd.Series(data=None, index=buyer_ders, dtype=object)
+    for buyer in buyer_optimization_problem_sets_strategic.index:
+        buyer_optimization_problem_sets_strategic.loc[buyer] = mesmo.utils.OptimizationProblem()
+
+        # Define seller's ADMM variable
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_variable(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders, timestep=scenario_data.timesteps
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_variable(
+            f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}', seller=seller_ders,
+            timestep=scenario_data.timesteps
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_variable(
+            f'buyer_{buyer}_active_power_vector', timestep=scenario_data.timesteps
+        )
+        # Define seller's ADMMM parameter
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy',
+            np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
+            np.zeros(len(scenario_data.timesteps) * len(seller_ders))
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros',
+            np.zeros((len(scenario_data.timesteps) * len(seller_ders), 1))
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'buyer_{buyer}_min_power',
+            # np.array([1.0] * len(scenario_data.timesteps))
+            np.transpose([der_model_set.der_models[buyer].active_power_nominal_timeseries.values])
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'buyer_{buyer}_max_power',
+            np.array([0.0] * len(scenario_data.timesteps))
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'half_of_grid_using_price_for_buyer_{buyer}',
+            0.5 * pd.concat([grid_using_price_strategic.loc[:, (seller, buyer)] for seller in seller_ders]).values
+        )
+        buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+            f'seller_sized_ones_for_{buyer}_energy_transaction',
+            np.tile(np.diag(np.ones(len(scenario_data.timesteps))), len(seller_ders))
+        )
+
+    admm_iteration_strategic = 0
+    admm_rho = 800
+    radius_strategic = 1
+    radius_strategic_save = []
+    peers_active_power_strategic = pd.DataFrame(index=scenario_data.timesteps, columns=peers)
+
+    while radius_strategic >= 0.00005:
+
+        # Defining optimization constraints and objectives for sellers:
+        for seller in seller_optimization_problem_sets_strategic.index:
+            seller_optimization_problem_sets_strategic.loc[seller].define_constraint(
+                ('variable', f'buyer_sized_ones_for_{seller}_energy_transaction',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers',
+                      buyer=buyer_ders, timestep=scenario_data.timesteps)),
+                '==',
+                ('variable', 1.0,
+                 dict(name=f'seller_{seller}_active_power_vector'))
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers',
+                                       buyer=buyer_ders, timestep=scenario_data.timesteps)),
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'),
+                '==',
+                ('variable', 1.0, dict(name=f'energy_transacted_from_seller_{seller}_to_buyers',
+                                       buyer=buyer_ders, timestep=scenario_data.timesteps))
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
+                '>=',
+                ('constant', f'seller_{seller}_min_power')
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(name=f'seller_{seller}_active_power_vector')),
+                '<=',
+                ('constant', f'seller_{seller}_max_power')
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].define_constraint(
+                ('variable', 1.0, dict(
+                    name=f'energy_transacted_from_seller_{seller}_to_buyers')),
+                '>=',
+                ('constant', f'energy_transacted_from_seller_{seller}_to_buyers_zeros')
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].define_objective(
+                ('variable', f'half_of_grid_using_price_for_seller_{seller}',
+                 dict(name=f'energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', f'admm_lambda_seller_{seller}_to_buyers_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers')),
+                ('variable', 0.5 * admm_rho,
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'),
+                 dict(name=f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers'))
+            )
+            seller_optimization_problem_sets_strategic.loc[seller].solve()
+            peers_active_power_strategic.at[:, seller] = seller_optimization_problem_sets_strategic[seller].results[
+                                                             f'seller_{seller}_active_power_vector'].values / \
+                                                         der_model_set.fixed_der_models[seller].active_power_nominal
+
+        # Defining optimization constraints and objectives for sellers:
+        for buyer in buyer_optimization_problem_sets_strategic.index:
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_constraint(
+                ('variable', f'seller_sized_ones_for_{buyer}_energy_transaction',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                '==',
+                ('variable', -1.0,
+                 dict(name=f'buyer_{buyer}_active_power_vector'))
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'),
+                '==',
+                ('variable', 1.0, dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}'))
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
+                '>=',
+                ('constant', f'buyer_{buyer}_min_power')
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(name=f'buyer_{buyer}_active_power_vector')),
+                '<=',
+                ('constant', f'buyer_{buyer}_max_power')
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_constraint(
+                ('variable', 1.0, dict(
+                    name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                '>=',
+                ('constant', f'energy_transacted_from_sellers_to_buyer_{buyer}_zeros')
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_objective(
+                ('variable', f'half_of_grid_using_price_for_buyer_{buyer}',
+                 dict(name=f'energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power',
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}')),
+                ('variable', 0.5 * admm_rho,
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'),
+                 dict(name=f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}'))
+            )
+            buyer_optimization_problem_sets_strategic.loc[buyer].solve()
+            peers_active_power_strategic.at[:, buyer] = buyer_optimization_problem_sets_strategic[buyer].results[
+                                                            f'buyer_{buyer}_active_power_vector'].values / \
+                                                        der_model_set.fixed_der_models[buyer].active_power_nominal
+        optimization_strategic.define_parameter(
+            'active_power_constant',
+            np.concatenate([
+                np.transpose([
+                    der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                    / (
+                        der_model_set.fixed_der_models[der_name].active_power_nominal
+                        if der_model_set.fixed_der_models[der_name].active_power_nominal != 0.0
+                        else 1.0
+                    )
+                    if der_model_set.fixed_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                ])
+                if der_name in der_model_set.fixed_der_names.drop(peers)
+                else np.zeros((len(der_model_set.timesteps), 1))
+                for der_type, der_name in der_model_set.electric_ders
+            ], axis=1).ravel() + np.concatenate([
+                np.transpose([
+                    peers_active_power_strategic[der_name].values
+                    if der_model_set.fixed_der_models[der_name].is_electric_grid_connected
+                    else 0.0 * der_model_set.fixed_der_models[der_name].active_power_nominal_timeseries.values
+                ])
+                if der_name in peers
+                else np.zeros((len(der_model_set.timesteps), 1))
+                for der_type, der_name in der_model_set.electric_ders
+            ], axis=1).ravel()
+        )
+        optimization_strategic.solve()
+
+        dlmps_strategic = strategic_der_model_set.get_optimization_dlmps(optimization_strategic, price_data)
+
+        seller_dlmp_strategic = dlmps_strategic.strategic_electric_grid_total_dlmp_der_active_power.loc[:,
+                                (slice(None), seller_ders)]
+        buyer_dlmp_strategic = dlmps_strategic.strategic_electric_grid_total_dlmp_der_active_power.loc[:,
+                               (slice(None), buyer_ders)]
+
+        for x, b in buyer_dlmp_strategic.columns:
+            for y, s in seller_dlmp_strategic.columns:  # for y, b in grid_using_price_strategic.columns:
+                grid_using_price_strategic.at[:, (s, b)] = buyer_dlmp_strategic.loc[:,
+                                                           (x, b)].values - seller_dlmp_strategic.loc[:,
+                                                                            (y, s)].values
+
+        # Update admm parameters for seller optimization:
+        for seller in seller_optimization_problem_sets_strategic.index:
+            seller_optimization_problem_sets_strategic.loc[seller].parameters[
+                f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'] = 0.5 * np.transpose([
+                pd.concat([
+                    seller_optimization_problem_sets_strategic.loc[seller].results[
+                        f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for buyer in buyer_ders
+                ]).values + pd.concat([
+                    buyer_optimization_problem_sets_strategic.loc[buyer].results[
+                        f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for buyer in buyer_ders]).values
+            ])
+
+            seller_optimization_problem_sets_strategic.loc[seller].parameters[
+                f'admm_lambda_seller_{seller}_to_buyers_active_power'] += admm_rho * (pd.concat([
+                seller_optimization_problem_sets_strategic.loc[seller].results[
+                    f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for buyer in buyer_ders
+            ]).values - seller_optimization_problem_sets_strategic.loc[seller].parameters[
+                                    f'energy_transacted_from_seller_{seller}_to_buyers_local_copy'].ravel())
+            seller_optimization_problem_sets_strategic.loc[seller].define_parameter(
+                f'half_of_grid_using_price_for_seller_{seller}',
+                0.5 * pd.concat([grid_using_price_strategic.loc[:, (seller, buyer)] for buyer in buyer_ders]).values
+            )
+
+        # Update admm parameters for buyer optimization:
+        for buyer in buyer_optimization_problem_sets_strategic.index:
+            buyer_optimization_problem_sets_strategic.loc[buyer].parameters[
+                f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'] = 0.5 * np.transpose([
+                pd.concat([
+                    buyer_optimization_problem_sets_strategic.loc[buyer].results[
+                        f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for seller in seller_ders
+                ]).values + pd.concat([
+                    seller_optimization_problem_sets_strategic.loc[seller].results[
+                        f'energy_transacted_from_seller_{seller}_to_buyers'][buyer] for seller in
+                    seller_ders]).values
+            ])
+
+            buyer_optimization_problem_sets_strategic.loc[buyer].parameters[
+                f'admm_lambda_from_sellers_to_buyer_{buyer}_active_power'] += admm_rho * (pd.concat([
+                buyer_optimization_problem_sets_strategic.loc[buyer].results[
+                    f'energy_transacted_from_sellers_to_buyer_{buyer}'][seller] for seller in seller_ders
+            ]).values - buyer_optimization_problem_sets_strategic.loc[buyer].parameters[
+                                        f'energy_transacted_from_sellers_to_buyer_{buyer}_local_copy'].ravel())
+            buyer_optimization_problem_sets_strategic.loc[buyer].define_parameter(
+                f'half_of_grid_using_price_for_buyer_{buyer}',
+                0.5 * pd.concat([grid_using_price_strategic.loc[:, (seller, buyer)] for seller in seller_ders]).values
+            )
+
+
+        radius_strategic = np.linalg.norm(
+            np.concatenate(
+            [seller_optimization_problem_sets_strategic.loc[seller].results[
+                 f'deviation_of_energy_transacted_from_seller_{seller}_to_buyers']
+             for seller in seller_ders]).ravel().__abs__()
+                                          + np.concatenate(
+            [buyer_optimization_problem_sets_strategic.loc[buyer].results[
+                 f'deviation_of_energy_transacted_from_sellers_to_buyer_{buyer}']
+             for buyer in buyer_ders]).ravel().__abs__()
+        )
+
+        admm_iteration_strategic += 1
+        radius_strategic_save.append(radius_strategic)
+        print(radius_strategic)
+        print(admm_iteration_strategic)
+        if admm_iteration_strategic >= admm_max_iteration:
+            break
+
+    print('Done!')
+
+    """
     # =========================================================
     load_profile = 100 * scenario_profiles.der_definitions[('schedule_per_unit', 'mixed_commercial_residential')]
     pv_profile = 100 * scenario_profiles.der_definitions[('schedule_per_unit', 'photovoltaic_generic')]
@@ -228,39 +866,50 @@ def main():
     # fig.suptitle('Mixed-commercial residential load and Generic PV profile', fontsize=18)
     # fig.show()
     # fig.savefig('strategic results/energy_price_at_gsp.pdf')
+    """
+    results_non_strategic = mesmo.problems.Results()
+    results_non_strategic.update(linear_electric_grid_model_set.get_optimization_results(optimization_non_strategic))
+    results_non_strategic.update(der_model_set.get_optimization_results(optimization_non_strategic))
+    dlmps_non_strategic = linear_electric_grid_model_set.get_optimization_dlmps(optimization_non_strategic, price_data)
+    flexible_der_active_power_non_strategic = results_non_strategic.der_active_power_vector_per_unit[flexible_der_type]
 
+    results_strategic = mesmo.problems.Results()
+    results_strategic.update(linear_electric_grid_model_set.get_optimization_results(optimization_strategic))
+    results_strategic.update(der_model_set.get_optimization_results(optimization_strategic))
+    dlmps_strategic = strategic_der_model_set.get_optimization_dlmps(optimization_strategic, price_data)
+    dlmp_difference = dlmps_strategic.strategic_electric_grid_total_dlmp_node_active_power - \
+                      dlmps_non_strategic.electric_grid_total_dlmp_node_active_power
 
+    flexible_der_active_power_strategic = results_strategic.der_active_power_vector_per_unit[flexible_der_type]
 
     primal_active_losses = results_non_strategic.loss_active
     primal_active_losses.index = scenario_data.timesteps
     strategic_scenario_active_losses = results_strategic.loss_active
     strategic_scenario_active_losses.index = scenario_data.timesteps
+
+    flat_time_index = np.array(['13:00', '14:00', '15:00'])
     fig, ax = plt.subplots(figsize=(5,2.3))
-    primal_active_losses.plot(
-        ax=ax,
+    ax.plot(
+        primal_active_losses.values,
         label='Non-strategic scenario',
         color='b',
         marker='s'
     )
-    strategic_scenario_active_losses.plot(
-        ax=ax,
+    ax.plot(
+        strategic_scenario_active_losses.values,
         label='Strategic_scenario',
         color='r',
         marker='^'
     )
-    # fig.suptitle('Active losses non-strategic vs strategic scenario', fontsize=18)
-    # x = np.arange(len(strategic_scenario_active_losses.index))
-    # axes[1].set_xticks(x, strategic_scenario_active_losses.index)
-    # plt.xticks( fontsize=8)
-    # ax.set_xticks(x)
-    # ax.set_xticklabels(x, fontsize=10, minor=False)
+    ax.set_xticks(np.arange(len(flat_time_index)))
+    ax.set_xticklabels(flat_time_index)
     ax.set_ylabel('Losses [p.u.]'
                   # fontsize=12
                   )
     ax.set_xlabel('Time [h]'
                   # , fontsize=12
                   )
-    # axes.tick_params(axis='both', which='major', labelsize=14)
+    # ax.tick_params(which='major')
     # axes.tick_params(axis='both', which='minor', labelsize=14)
     plt.legend(ncol=2, loc='lower right')
     plt.grid(axis='y')
@@ -356,21 +1005,21 @@ def main():
                              , figsize=(5, 4)
                              )
     for i in phases:
-        node_860_total_dlmps_non_strategic_active_power[('no_source', '860', i)].plot(
-            ax=axes[i-1],
+        axes[i-1].plot(
+            node_860_total_dlmps_non_strategic_active_power[('no_source', '860', i)].values,
             label=f'Non-strategic phase {i}',
             color='b',
             marker='s'
         )
-        node_860_total_dlmps_strategic_active_power[('no_source', '860', i)].plot(
-            ax=axes[i-1],
+        axes[i-1].plot(
+            node_860_total_dlmps_strategic_active_power[('no_source', '860', i)].values,
             label=f'Strategic_phase_{i}',
             color='r',
             marker='^'
         )
-        # x = np.arange(len(node_860_total_dlmps_strategic_active_power.index))
-        # axes[i - 1].set_xticks(x)
-        # axes[i - 1].set_xticklabels(time_index,
+        x = np.arange(len(node_860_total_dlmps_strategic_active_power.index))
+        axes[i - 1].set_xticks(x)
+        axes[i - 1].set_xticklabels(flat_time_index)
         #                             rotation=-30, fontsize=8, minor=False)
         axes[i - 1].title.set_text(f'Node 860 phase {i} total DLMP')
         # axes[i - 1].title.set_fontsize(18)
@@ -567,18 +1216,20 @@ def main():
 
 
     fig, ax = plt.subplots(figsize=(5,2.3))
-    der_active_power_marginal_offers_timeseries.plot(
-        ax=ax,
+    ax.plot(
+        der_active_power_marginal_offers_timeseries.values,
         label='DER active power marginal cost',
         color='b',
         marker='s'
     )
-    der_active_power_strategic_marginal_offers_timeseries.plot(
-        ax=ax,
+    ax.plot(
+        der_active_power_strategic_marginal_offers_timeseries.values,
         label='DER offered marginal cost',
         color='r',
         marker='^'
     )
+    ax.set_xticks(np.arange(len(flat_time_index)))
+    ax.set_xticklabels(flat_time_index)
     fig.suptitle('Offer comparison for the strategic generator')
     ax.set_ylabel('Offer price [\$/MWh]')
     ax.set_xlabel('Time [h]')
@@ -591,18 +1242,20 @@ def main():
     fig.savefig('strategic results/strategic_offers.pdf')
 
     fig, ax = plt.subplots(figsize=(5,2.3))
-    strategic_der_active_power_vector_non_strategic_scenario.plot(
-        ax=ax,
+    ax.plot(
+        strategic_der_active_power_vector_non_strategic_scenario.values,
         label="Non-strategic scenario ",
         color='b',
         marker='s'
     )
-    strategic_der_active_power_vector_strategic_scenario.plot(
-        ax=ax,
+    ax.plot(
+        strategic_der_active_power_vector_strategic_scenario.values,
         label='Strategic scenario',
         color='r',
         marker='^'
     )
+    ax.set_xticks(np.arange(len(flat_time_index)))
+    ax.set_xticklabels(flat_time_index)
     fig.suptitle("Strategic der's active power generation")
     ax.set_ylabel('Active power dispatched [p.u.]')
     ax.set_xlabel('Time [h]')
@@ -611,9 +1264,9 @@ def main():
     plt.grid(axis='y')
     plt.grid(axis='x')
     fig.set_tight_layout(True)
-    plt.xticks(rotation=-90
-               # , fontsize=8
-               )
+    # plt.xticks(rotation=-90
+    #            # , fontsize=8
+    #            )
     fig.show()
     fig.savefig('strategic results/strategic_der_active_power.pdf')
 
@@ -621,15 +1274,15 @@ def main():
     fig, ax = plt.subplots(
         figsize=(5,2.3)
     )
-    strategic_der_active_power_vector_strategic_scenario.plot(
-        ax=ax,
+    ax.plot(
+        strategic_der_active_power_vector_strategic_scenario.values,
         label="Strategic DER power dispatch",
         color='b',
         marker='s'
     )
     ax2 = ax.twinx()
-    der_active_power_strategic_marginal_offers_timeseries.plot(
-        ax=ax2,
+    ax2.plot(
+        der_active_power_strategic_marginal_offers_timeseries.values,
         label='DER marginal offer',
         color='r',
         marker='^'
@@ -650,12 +1303,14 @@ def main():
     ax2.legend(loc='lower right')
     plt.grid(axis='y')
     plt.grid(axis='x')
+    ax.set_xticks(np.arange(len(flat_time_index)))
+    ax.set_xticklabels(flat_time_index)
     # ax2.tick_params(axis='both', which='major', labelsize=14)
     # ax.tick_params(axis='both', which='major', labelsize=14)
     fig.set_tight_layout(True)
-    plt.xticks(rotation=-90
-               # , fontsize=12
-               )
+    # plt.xticks(rotation=-90
+    #            # , fontsize=12
+    #            )
     fig.show()
     fig.savefig('strategic results/strategic_DER_890_active_power_offer.pdf')
 
@@ -828,7 +1483,133 @@ def main():
     # fig.show()
     # fig.savefig('strategic results/heatmap_DLMP_nodal_timeseries_strategic.pdf')
 
+    x = np.arange(len(buyer_ders))
+    width = 0.2
+    fig, axes = plt.subplots(ncols=1, nrows=2, sharey=True, sharex=True
+                             , figsize=(5, 2.5)
+                             )
+    for seller in seller_ders:
+        axes[seller_ders.get_loc(seller)].bar(x + width / 2,
+                 seller_optimization_problem_sets_non_strategic[seller].results[
+                     f'energy_transacted_from_seller_{seller}_to_buyers'].loc[report_time],
+                 width=width,
+                 color='b',
+                 label='Non-strategic scenario')
+        axes[seller_ders.get_loc(seller)].bar(x - width / 2,
+                 seller_optimization_problem_sets_strategic[seller].results[
+                     f'energy_transacted_from_seller_{seller}_to_buyers'].loc[report_time],
+                 width=width,
+                 color='r',
+                 label='Strategic scenario')
+        axes[seller_ders.get_loc(seller)].set_xticks(x, seller_optimization_problem_sets_non_strategic[seller].results[
+                     f'energy_transacted_from_seller_{seller}_to_buyers'].columns)
+        axes[seller_ders.get_loc(seller)].title.set_text(f"From seller {seller} to the byers at {report_time}")
+        # axes.title.set_fontsize(18)
+        axes[seller_ders.get_loc(seller)].grid()
+        plt.xticks(rotation=0
+                   # , fontsize=8
+                   )
+        # plt.yticks(fontsize=10)
+        axes[seller_ders.get_loc(seller)].legend()
+    plt.xlabel('Buyer name'
+               # , fontsize=18
+               )
+    fig.supylabel('Power transacted [p.u]')
+    fig.set_tight_layout(True)
+    fig.show()
+    fig.savefig('strategic results/energy_transacted_from_sellers_to_buyers.pdf')
 
+
+    x = np.arange(len(seller_ders))
+    width = 0.2
+    fig, axes = plt.subplots(nrows=2, ncols=3
+                             , sharey=True, sharex=True
+                             , figsize=(5.5, 2.5)
+                             )
+    for buyer in buyer_ders:
+        axes.ravel()[buyer_ders.get_loc(buyer)].bar(x + width / 2,
+                 buyer_optimization_problem_sets_non_strategic[buyer].results[
+                     f'energy_transacted_from_sellers_to_buyer_{buyer}'].loc[report_time],
+                 width=width,
+                 color='b',
+                 label='Non-strategic scenario')
+        axes.ravel()[buyer_ders.get_loc(buyer)].bar(x - width / 2,
+                 buyer_optimization_problem_sets_strategic[buyer].results[
+                     f'energy_transacted_from_sellers_to_buyer_{buyer}'].loc[report_time],
+                 width=width,
+                 color='r',
+                 label='Strategic scenario')
+        axes.ravel()[buyer_ders.get_loc(buyer)].set_xticks(x, buyer_optimization_problem_sets_non_strategic[buyer].results[
+                     f'energy_transacted_from_sellers_to_buyer_{buyer}'].columns)
+        axes.ravel()[buyer_ders.get_loc(buyer)].title.set_text(f"To buyer {buyer}")
+        axes.ravel()[buyer_ders.get_loc(buyer)].title.set_fontsize(8)
+        axes.ravel()[buyer_ders.get_loc(buyer)].grid()
+    fig.set_tight_layout(True)
+    plt.xticks(rotation=0
+               # , fontsize=8
+               )
+    axes.ravel()[1].legend(loc="upper left")
+    fig.supylabel('Power transacted [p.u]')
+    fig.supxlabel('Buyer name')
+    # fig.show()
+    # fig.savefig('strategic results/strategic_scenario_active_losses.pdf')
+
+
+    fig,axes = plt.subplots(2
+                            ,sharex=True, sharey=True
+                            ,figsize=(5,3)
+                            )
+    for seller in seller_ders:
+        axes[seller_ders.get_loc(seller)].plot(
+            price_correction * grid_using_price_non_strategic.loc[report_time, (seller, slice(None))].values,
+            label=f'GUP non-strategic',
+            color='b',
+            marker='s'
+        )
+        axes[seller_ders.get_loc(seller)].plot(
+            price_correction * grid_using_price_strategic.loc[report_time, (seller, slice(None))].values,
+            label=f'GUP strategic',
+            color='r',
+            marker='^'
+        )
+        x = np.arange(len(buyer_ders))
+        axes[seller_ders.get_loc(seller)].set_xticks(x)
+        axes[seller_ders.get_loc(seller)].set_xticklabels(buyer_ders
+                                    , rotation=0
+                                    # , fontsize=10, minor=False
+                                    )
+        axes[seller_ders.get_loc(seller)].title.set_text(f"GUP from seller {seller} to the buyers")
+        axes[seller_ders.get_loc(seller)].title.set_fontsize(10)
+        axes[seller_ders.get_loc(seller)].grid()
+    axes[0].legend(ncol=2, loc='upper right')
+    axes[1].legend(ncol=2, loc='lower right')
+    fig.supylabel('GUP [\$/kWh] [p.u]')
+    fig.supxlabel('Buyer name')
+    fig.set_tight_layout(True)
+    fig.show()
+    fig.savefig('strategic results/gup_from_seller_to_buyers.pdf')
+
+    fig, axes = plt.subplots(1)
+    axes.plot(
+        np.array(radius_non_strategic_save),
+        label=f'Non-strategic',
+        color='b',
+        marker='*')
+    axes.plot(
+        np.array(radius_strategic_save),
+        label=f'Non-strategic',
+        color='r',
+        marker='o')
+    axes.legend()
+    axes.set_ylabel('Residue')
+    axes.set_xlabel('Iteration')
+    axes.legend(loc="upper right")
+    axes.grid(axis='y')
+    axes.grid(axis='x')
+    fig.set_tight_layout(True)
+    fig.suptitle(f'Convergence rate of ADMM in non-strategic vs strategic problems')
+    fig.show()
+    fig.savefig('strategic results/convergence_rate_of_ADMM.pdf')
 
     print(1)
 

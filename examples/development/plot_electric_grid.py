@@ -16,7 +16,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_all"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)

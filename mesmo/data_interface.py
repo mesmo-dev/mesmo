@@ -99,7 +99,6 @@ def recreate_database():
 
 
 def import_csv_file(csv_file: pathlib.Path, valid_table_names: list, database_connection: sqlite3.Connection = None):
-
     # Obtain database connection.
     if database_connection is None:
         database_connection = connect_database()
@@ -141,7 +140,6 @@ class ScenarioData(mesmo.utils.ObjectBase):
     parameters: pd.Series
 
     def __init__(self, scenario_name: str, database_connection=None):
-
         # Store scenario name.
         self.scenario_name = scenario_name
 
@@ -299,7 +297,6 @@ class DERData(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str, database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -371,7 +368,6 @@ class DERData(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str, der_type: str, der_model_name: str, database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -409,7 +405,6 @@ class DERData(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str, ders: pd.DataFrame, der_models: pd.DataFrame, database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -453,9 +448,7 @@ class DERData(mesmo.utils.ObjectBase):
 
         # Load DER definitions, first for special definition types, e.g. `cooling_plant`, `flexible_ev_charger`.
         for definition_index in self.der_definitions:
-
             if definition_index[0] == "cooling_plant":
-
                 self.der_definitions[definition_index] = pd.concat(
                     [
                         self.scenario_data.parse_parameters_dataframe(
@@ -487,7 +480,6 @@ class DERData(mesmo.utils.ObjectBase):
                 )  # Remove `thermal_grid_name` to avoid duplicate index in `der_models`.
 
             elif definition_index[0] == "flexible_ev_charger":
-
                 self.der_definitions[definition_index] = self.scenario_data.parse_parameters_dataframe(
                     pd.read_sql(
                         """
@@ -565,7 +557,6 @@ class DERData(mesmo.utils.ObjectBase):
 
     @staticmethod
     def load_der_timeseries_schedules(der_definitions: dict, timestep_frequency: str, timesteps):
-
         timestep_start = timesteps[0]
         timestep_end = timesteps[-1]
         timestep_interval = timesteps[1] - timesteps[0]
@@ -597,9 +588,7 @@ class DERData(mesmo.utils.ObjectBase):
         )
 
         for definition_index in der_definitions:
-
             if "timeseries" in definition_index[0]:
-
                 der_timeseries = der_timeseries_all.loc[
                     der_timeseries_all.loc[:, "definition_name"] == definition_index[1], :
                 ]
@@ -610,7 +599,6 @@ class DERData(mesmo.utils.ObjectBase):
 
                 # Resample / interpolate / fill values.
                 if "accumulative" in definition_index[0]:
-
                     # Resample to scenario timestep interval, using sum to aggregate. Missing values are filled with 0.
                     der_timeseries = der_timeseries.resample(timestep_interval, origin=timestep_start).sum()
                     der_timeseries = der_timeseries.reindex(timesteps)
@@ -618,9 +606,10 @@ class DERData(mesmo.utils.ObjectBase):
                     der_timeseries = der_timeseries.fillna(0.0)
 
                 else:
-
                     # Resample to scenario timestep interval, using mean to aggregate. Missing values are interpolated.
-                    der_timeseries = der_timeseries.resample(timestep_interval, origin=timestep_start).mean(numeric_only=True)
+                    der_timeseries = der_timeseries.resample(timestep_interval, origin=timestep_start).mean(
+                        numeric_only=True
+                    )
                     der_timeseries = der_timeseries.reindex(timesteps)
                     der_timeseries = der_timeseries.interpolate(method="linear")
 
@@ -642,7 +631,6 @@ class DERData(mesmo.utils.ObjectBase):
                 der_definitions[definition_index] = der_timeseries
 
             elif "schedule" in definition_index[0]:
-
                 der_schedule = der_schedules_all.loc[
                     der_schedules_all.loc[:, "definition_name"] == definition_index[1], :
                 ]
@@ -674,7 +662,6 @@ class DERData(mesmo.utils.ObjectBase):
 
                 # Resample / interpolate / fill values to obtain complete schedule.
                 if "accumulative" in definition_index[0]:
-
                     # Resample to scenario timestep interval, using sum to aggregate. Missing values are filled with 0.
                     der_schedule_complete = der_schedule_complete.resample(timestep_interval).sum()
                     der_schedule_complete = der_schedule_complete.reindex(
@@ -692,7 +679,6 @@ class DERData(mesmo.utils.ObjectBase):
                     der_schedule_complete = der_schedule_complete.ffill()
 
                 else:
-
                     # Resample to required timestep frequency, using mean to aggregate. Missing values are interpolated.
                     der_schedule_complete = der_schedule_complete.resample(timestep_frequency).mean(numeric_only=True)
                     der_schedule_complete = der_schedule_complete.reindex(
@@ -740,7 +726,6 @@ class ElectricGridData(mesmo.utils.ObjectBase):
     electric_grid_transformers: pd.DataFrame
 
     def __init__(self, scenario_name: str, database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -907,7 +892,6 @@ class ElectricGridData(mesmo.utils.ObjectBase):
         self.validate()
 
     def validate(self):
-
         # If not all line types defined, raise error.
         if (
             not self.electric_grid_lines.loc[:, "line_type"]
@@ -942,7 +926,6 @@ class ThermalGridData(mesmo.utils.ObjectBase):
     der_data: DERData
 
     def __init__(self, scenario_name: str, database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -1031,7 +1014,6 @@ class PriceData(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str, **kwargs):
-
         # Obtain DER data.
         der_data = DERData(scenario_name)
 
@@ -1039,7 +1021,6 @@ class PriceData(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str, der_data: DERData, price_type="", database_connection=None):
-
         # Obtain database connection.
         if database_connection is None:
             database_connection = connect_database()
@@ -1147,5 +1128,4 @@ class PriceData(mesmo.utils.ObjectBase):
         )
 
     def copy(self):
-
         return copy.deepcopy(self)

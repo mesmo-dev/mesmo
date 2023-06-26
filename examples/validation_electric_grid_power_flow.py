@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = mesmo.config.config["tests"]["scenario_name"]
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)

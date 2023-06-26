@@ -8,7 +8,6 @@ logger = mesmo.config.get_logger(__name__)
 
 
 class TestDERModels(unittest.TestCase):
-
     # TODO: Add tests for new DER ode types.
 
     def test_constant_power_model(self):

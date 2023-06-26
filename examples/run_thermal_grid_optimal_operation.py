@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_tanjongpagar_thermal_only"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)

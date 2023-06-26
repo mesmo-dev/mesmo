@@ -41,7 +41,6 @@ class DERModel(mesmo.utils.ObjectBase):
     thermal_power_nominal_timeseries: pd.Series
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, is_standalone=False):
-
         # Get shorthand for DER data.
         der = der_data.ders.loc[der_name, :]
 
@@ -122,7 +121,6 @@ class DERModel(mesmo.utils.ObjectBase):
             and (("schedule" in der.at["definition_type"]) or ("timeseries" in der.at["definition_type"]))
             and self.is_thermal_grid_connected
         ):
-
             # Construct nominal thermal power timeseries.
             self.thermal_power_nominal_timeseries = (
                 der_data.der_definitions[der.at["definition_index"]]
@@ -146,7 +144,6 @@ class DERModel(mesmo.utils.ObjectBase):
 
 
 class DERModelOperationResults(mesmo.utils.ResultsBase):
-
     der_model: DERModel
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame
@@ -169,7 +166,6 @@ class ConstantPowerModel(FixedDERModel):
     der_type = "constant_power"
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -230,7 +226,6 @@ class FixedGeneratorModel(FixedDERModel):
     marginal_cost: float
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -288,7 +283,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
 
         if self.is_electric_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(["state_of_charge"])
             self.storage_states = pd.Index(["state_of_charge"])
@@ -381,7 +375,6 @@ class FlexibleLoadModel(FlexibleDERModel):
             )
 
         if self.is_thermal_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(["state_of_charge"])
             self.storage_states = pd.Index(["state_of_charge"])
@@ -648,7 +641,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
     marginal_cost: float
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -662,7 +654,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
 
         if self.is_electric_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(["_"])  # Define placeholder '_' to avoid issues in optimization problem definition.
             self.controls = pd.Index(["apparent_power"])
@@ -736,7 +727,6 @@ class FlexibleGeneratorModel(FlexibleDERModel):
             )
 
         if self.is_thermal_grid_connected:
-
             # Instantiate indexes.
             self.states = pd.Index(["_"])  # Define placeholder '_' to avoid issues in optimization problem definition.
             self.controls = pd.Index(["thermal_power"])
@@ -811,7 +801,6 @@ class StorageModel(FlexibleDERModel):
     der_type = "storage"
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # TODO: Define for thermal grid.
 
         # Common initializations are implemented in parent class.
@@ -1129,7 +1118,6 @@ class HeatingPlantModel(FlexibleDERModel):
     thermal_efficiency: float
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -1220,14 +1208,12 @@ class HeatingPlantModel(FlexibleDERModel):
 
 
 class FlexibleCHP(FlexibleDERModel):
-
     der_type = "flexible_chp"
     marginal_cost: float
     thermal_efficiency: float
     electric_efficiency: float
 
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str, **kwargs):
-
         # Common initializations are implemented in parent class.
         super().__init__(der_data, der_name, **kwargs)
 
@@ -1308,7 +1294,6 @@ class FlexibleCHP(FlexibleDERModel):
 
 
 class DERModelSetBase:
-
     timesteps: pd.Index
     ders: pd.Index
     electric_ders: pd.Index
@@ -1332,7 +1317,6 @@ class DERModelSetBase:
 
 
 class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
-
     der_model_set: DERModelSetBase
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame
@@ -1347,7 +1331,6 @@ class DERModelSet(DERModelSetBase):
 
     @multimethod
     def __init__(self, scenario_name: str, **kwargs):
-
         # Obtain data.
         der_data = mesmo.data_interface.DERData(scenario_name)
 
@@ -1355,7 +1338,6 @@ class DERModelSet(DERModelSetBase):
 
     @multimethod
     def __init__(self, der_data: mesmo.data_interface.DERData, der_name: str = None):
-
         # Filter DER data, if passing `der_name` to select specific DER.
         if der_name is not None:
             if der_name not in der_data.ders.index:
@@ -1411,7 +1393,6 @@ class DERModelSet(DERModelSetBase):
         self.update_data()
 
     def update_data(self):
-
         # Obtain flexible DER state space indexes.
         self.states = (
             pd.MultiIndex.from_tuples(
@@ -1517,7 +1498,6 @@ class DERModelSet(DERModelSetBase):
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
-
         # Define optimization problem definitions through respective sub-methods.
         self.define_optimization_variables(optimization_problem, scenarios=scenarios)
         self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios)
@@ -1527,7 +1507,6 @@ class DERModelSet(DERModelSetBase):
     def define_optimization_variables(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -1562,7 +1541,6 @@ class DERModelSet(DERModelSetBase):
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -1941,7 +1919,6 @@ class DERModelSet(DERModelSetBase):
     def define_optimization_constraints(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -2101,7 +2078,6 @@ class DERModelSet(DERModelSetBase):
     def define_optimization_objective(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -2265,7 +2241,6 @@ class DERModelSet(DERModelSetBase):
         has_electric_grid_objective: bool = False,
         has_thermal_grid_objective: bool = False,
     ) -> float:
-
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
         optimization_problem.flags["has_electric_grid_objective"] = has_electric_grid_objective
@@ -2295,7 +2270,6 @@ class DERModelSet(DERModelSetBase):
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ) -> DERModelSetOperationResults:
-
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -2368,7 +2342,6 @@ class DERModelSet(DERModelSetBase):
         )
 
     def pre_solve(self, price_data: mesmo.data_interface.PriceData) -> DERModelSetOperationResults:
-
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)
@@ -2399,7 +2372,6 @@ class DERModelSet(DERModelSetBase):
 
 
 def make_der_models(der_names: typing.List[str], der_data: mesmo.data_interface.DERData) -> typing.Dict[str, DERModel]:
-
     der_models = dict.fromkeys(der_names)
 
     for der_name in der_names:

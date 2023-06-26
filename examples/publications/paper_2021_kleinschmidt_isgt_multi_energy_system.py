@@ -12,7 +12,6 @@ import mesmo
 
 
 def main(scenario_number=1):
-
     # Settings.
     if scenario_number in [1]:
         scenario_name = "paper_2021_kleinschmidt_isgt_scenario_1"
@@ -127,7 +126,6 @@ def main(scenario_number=1):
     )
     colors = list(color["color"] for color in matplotlib.rcParams["axes.prop_cycle"])
     for der in thermal_grid_model.ders:
-
         # Obtain corresponding node.
         node = thermal_grid_model.nodes[
             thermal_grid_model.der_node_incidence_matrix[:, thermal_grid_model.ders.get_loc(der)].toarray().ravel() != 0
@@ -202,7 +200,6 @@ def main(scenario_number=1):
     )
     colors = list(color["color"] for color in matplotlib.rcParams["axes.prop_cycle"])
     for der in electric_grid_model.ders:
-
         # Obtain corresponding node.
         # TODO: Consider delta connected DERs.
         node = electric_grid_model.nodes[
@@ -372,7 +369,6 @@ def main(scenario_number=1):
 
 
 if __name__ == "__main__":
-
     run_all = True
 
     if run_all:

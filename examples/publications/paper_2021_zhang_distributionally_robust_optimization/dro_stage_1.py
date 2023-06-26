@@ -13,7 +13,6 @@ from dro_data_interface import DRODataSet
 
 class Stage1(object):
     def __init__(self, scenario_name, dro_data_set, enable_electric_grid_model=True):
-
         mesmo.utils.logger.info("Initializing stage 1 problem...")
 
         # Settings.
@@ -187,7 +186,6 @@ class Stage1(object):
 
 
 def main():
-
     # Settings.
     scenario_name = "paper_2021_zhang_dro"
     mesmo.data_interface.recreate_database()
@@ -293,7 +291,6 @@ def main():
     mesmo.utils.write_figure_plotly(figure, (results_path / f"0_power_balance"))
 
     for der_name, der_model in stage_1.der_model_set.flexible_der_models.items():
-
         for output in der_model.outputs:
             figure = go.Figure()
             figure.add_scatter(

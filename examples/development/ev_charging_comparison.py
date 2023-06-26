@@ -11,7 +11,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_basename = "singapore_geylang"
     results_path = mesmo.utils.get_results_path(__file__, scenario_basename)

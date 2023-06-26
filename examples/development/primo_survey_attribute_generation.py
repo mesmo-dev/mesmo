@@ -11,7 +11,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "primo_survey"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -121,7 +120,6 @@ def main():
 
     # Plot prices.
     for commodity_type in ["active_power", "reactive_power", "thermal_power"]:
-
         if commodity_type in price_data.price_timeseries.columns.get_level_values("commodity_type"):
             figure = go.Figure()
             figure.add_trace(
@@ -143,7 +141,6 @@ def main():
 def solve_problem(
     flexible_der_model: mesmo.der_models.FlexibleDERModel, price_data: mesmo.data_interface.PriceData
 ) -> mesmo.der_models.DERModelOperationResults:
-
     # Enforce storage states, initial state is linked to final state.
     flexible_der_model.storage_states = flexible_der_model.states
 
@@ -172,9 +169,7 @@ def solve_problem(
 
 
 def save_results(results: dict, results_path: pathlib.Path):
-
     for label, result in results.items():
-
         # Parse label.
         label = mesmo.utils.get_alphanumeric_string(str(label))
 
@@ -189,14 +184,12 @@ def save_results(results: dict, results_path: pathlib.Path):
 
 @multimethod
 def plot_results(results: dict, results_path: str):
-
     for label, result in results.items():
         plot_results(result, results_path, label)
 
 
 @multimethod
 def plot_results(results: mesmo.der_models.DERModelOperationResults, results_path: pathlib.Path, label: tuple):
-
     # Parse label.
     label = mesmo.utils.get_alphanumeric_string(str(label))
 
@@ -208,7 +201,6 @@ def plot_results(results: mesmo.der_models.DERModelOperationResults, results_pat
 
     # Plot outputs.
     for output in results.der_model.outputs:
-
         figure = go.Figure()
         figure.add_trace(
             go.Scatter(
@@ -244,7 +236,6 @@ def plot_results(results: mesmo.der_models.DERModelOperationResults, results_pat
 
     # Plot disturbances.
     for disturbance in results.der_model.disturbances:
-
         figure = go.Figure()
         figure.add_trace(
             go.Scatter(

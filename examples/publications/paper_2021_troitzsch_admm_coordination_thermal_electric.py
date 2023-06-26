@@ -14,7 +14,6 @@ import mesmo
 
 
 def main(scenario_number=None, admm_rho=None):
-
     # TODO: Review convergence parameters / result value units.
 
     # Settings.
@@ -401,7 +400,6 @@ def main(scenario_number=None, admm_rho=None):
 
     try:
         while admm_continue:
-
             # Iterate ADMM counter.
             admm_iteration += 1
 
@@ -944,7 +942,6 @@ def main(scenario_number=None, admm_rho=None):
 
 
 if __name__ == "__main__":
-
     run_all = False
 
     # Recreate / overwrite database, to incorporate changes in the CSV files.
@@ -980,7 +977,6 @@ if __name__ == "__main__":
                 1e-12,
             ]:
                 try:
-
                     # Reset timings.
                     mesmo.utils.log_times = dict()
 

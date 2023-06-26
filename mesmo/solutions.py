@@ -130,7 +130,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
     objective: float
 
     def __init__(self):
-
         # Instantiate index sets.
         # - Variables are instantiated with 'name' and 'timestep' keys, but more may be added in ``define_variable()``.
         # - Constraints are instantiated with 'name', 'timestep' and 'constraint_type' keys,
@@ -257,10 +256,8 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Aggregate constraint elements.
         for element in elements:
-
             # Tuples are variables / constants.
             if isinstance(element, tuple):
-
                 # Obtain element attributes.
                 element_type = element[0]
                 element_value = element[1]
@@ -268,7 +265,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
                 # Identify variables.
                 if element_type in ("variable", "var", "v"):
-
                     # Move right-hand variables to left-hand side.
                     if side == "right":
                         factor = -1.0
@@ -284,7 +280,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
                 # Identify constants.
                 elif element_type in ("constant", "con", "c"):
-
                     # Move left-hand constants to right-hand side.
                     if side == "left":
                         factor = -1.0
@@ -300,7 +295,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
             # Strings are operators.
             elif element in ["==", "<=", ">="]:
-
                 # Raise error if operator is first element.
                 if element == elements[0]:
                     ValueError(f"Operator is first element of a constraint.")
@@ -337,14 +331,12 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         keys: dict = None,
         broadcast: typing.Union[str, list, tuple] = None,
     ):
-
         # Raise error if no variables in constraint.
         if len(variables) == 0:
             raise ValueError(f"Cannot define constraint without variables.")
 
         # Run checks for constraint index keys.
         if keys is not None:
-
             # Raise error if ``keys`` is not a dictionary.
             if type(keys) is not dict:
                 raise TypeError(f"Constraint `keys` parameter must be a dictionary, but instead is: {type(keys)}")
@@ -364,7 +356,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # For equality constraint, define separate upper / lower inequality.
         if operator in ["=="]:
-
             # Define upper inequality.
             self.define_constraint_low_level(
                 variables,
@@ -385,7 +376,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # For inequality constraint, add into A matrix / b vector dictionaries.
         elif operator in ["<=", ">="]:
-
             # If greater-than-equal, invert signs.
             if operator == ">=":
                 operator_factor = -1.0
@@ -397,7 +387,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
             # Process variables.
             for variable_factor, variable_value, variable_keys in variables:
-
                 # If any variable key values are empty, ignore variable & do not add any A matrix entry.
                 for key_value in variable_keys.values():
                     if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
@@ -459,7 +448,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
             # Process constants.
             for constant_factor, constant_value, constant_keys in constants:
-
                 # If constant value is string, it is interpreted as parameter.
                 if type(constant_value) is str:
                     parameter_name = constant_value
@@ -582,10 +570,8 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Aggregate objective elements.
         for element in elements:
-
             # Tuples are variables / constants.
             if isinstance(element, tuple):
-
                 # Obtain element attributes.
                 element_type = element[0]
                 element_value = element[1]
@@ -594,7 +580,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
                 # Identify variables.
                 if element_type in ("variable", "var", "v"):
-
                     # Append element to variables / quadratic variables.
                     if element_keys_2 is None:
                         variables.append((element_value, element_keys_1))
@@ -603,7 +588,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
                 # Identify constants.
                 elif element_type in ("constant", "con", "c"):
-
                     # Add element to constant.
                     constants.append((element_value, element_keys_1))
 
@@ -624,7 +608,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         constants: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
         broadcast: typing.Union[str, list, tuple] = None,
     ):
-
         # Run type checks for broadcast argument.
         if broadcast is not None:
             if type(broadcast) is str:
@@ -634,7 +617,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Process variables.
         for variable_value, variable_keys in variables:
-
             # If any variable key values are empty, ignore variable & do not add any c vector entry.
             for key_value in variable_keys.values():
                 if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
@@ -697,7 +679,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Process quadratic variables.
         for variable_value, variable_keys_1, variable_keys_2 in variables_quadratic:
-
             # If any variable key values are empty, ignore variable & do not add any c vector entry.
             for key_value in list(variable_keys_1.values()) + list(variable_keys_2.values()):
                 if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
@@ -761,7 +742,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Process constants.
         for constant_value, constant_keys in constants:
-
             # If constant value is string, it is interpreted as parameter.
             if type(constant_value) is str:
                 parameter_name = constant_value
@@ -1348,7 +1328,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Obtain results for each variable.
         for name in results:
-
             # Get variable dimensions.
             variable_dimensions = (
                 self.variables.iloc[self.get_variable_index(name), :]
@@ -1358,7 +1337,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             )
 
             if len(variable_dimensions.columns) > 0:
-
                 # Get results from x vector as pandas series.
                 results[name] = pd.Series(
                     x_vector[self.get_variable_index(name), 0], index=pd.MultiIndex.from_frame(variable_dimensions)
@@ -1375,7 +1353,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
                     results[name] = pd.DataFrame(results[name], columns=[name])
 
             else:
-
                 # Scalar values are obtained as float.
                 results[name] = float(x_vector[self.get_variable_index(name), 0])
 
@@ -1398,7 +1375,6 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Obtain results for each constraint.
         for name in results:
-
             # Get constraint dimensions & constraint type.
             # TODO: Check if this works for scalar constraints without timesteps.
             constraint_dimensions = pd.MultiIndex.from_frame(

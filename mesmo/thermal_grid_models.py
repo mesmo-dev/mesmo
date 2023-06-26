@@ -57,7 +57,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
     plant_efficiency: float
 
     def __init__(self, scenario_name: str):
-
         # Obtain thermal grid data.
         thermal_grid_data = mesmo.data_interface.ThermalGridData(scenario_name)
 
@@ -100,7 +99,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         branches_loops = self.branches.to_frame()
         node_trees = []
         for line_index, line in thermal_grid_data.thermal_grid_lines.iterrows():
-
             # Obtain indexes for positioning the line in the incidence matrices.
             node_index_1 = mesmo.utils.get_index(self.nodes, node_name=line["node_1_name"])
             node_index_2 = mesmo.utils.get_index(self.nodes, node_name=line["node_2_name"])
@@ -205,7 +203,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
         # Add DERs into DER incidence matrix.
         for der_name, der in thermal_grid_data.thermal_grid_ders.iterrows():
-
             # Obtain indexes for positioning the DER in the incidence matrix.
             node_index = mesmo.utils.get_index(self.nodes, node_name=der["node_name"])
             der_index = mesmo.utils.get_index(self.ders, der_name=der["der_name"])
@@ -284,7 +281,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         ]
 
     def get_branch_loss_coefficient_vector(self, branch_flow_vector: np.ndarray):
-
         # Obtain branch velocity vector.
         branch_velocity_vector = (
             4.0 * branch_flow_vector / (np.pi * self.line_parameters.loc[:, "diameter"].values ** 2)
@@ -300,7 +296,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         # Obtain branch friction factor vector.
         @np.vectorize
         def branch_friction_factor_vector(reynold, absolute_roughness, diameter):
-
             # No flow.
             if reynold == 0:
                 friction_factor = 0
@@ -347,13 +342,11 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
 
 
 class ThermalGridDEROperationResults(mesmo.utils.ResultsBase):
-
     der_thermal_power_vector: pd.DataFrame
     der_thermal_power_vector_per_unit: pd.DataFrame
 
 
 class ThermalGridOperationResults(ThermalGridDEROperationResults):
-
     thermal_grid_model: ThermalGridModel
     node_head_vector: pd.DataFrame
     node_head_vector_per_unit: pd.DataFrame
@@ -363,7 +356,6 @@ class ThermalGridOperationResults(ThermalGridDEROperationResults):
 
 
 class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
-
     thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame
     thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame
     thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame
@@ -387,7 +379,6 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain thermal grid model.
         thermal_grid_model = ThermalGridModel(scenario_name)
 
@@ -395,7 +386,6 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(self, thermal_grid_model: ThermalGridModel):
-
         # Obtain DER thermal power vector.
         der_thermal_power_vector = thermal_grid_model.der_thermal_power_vector_reference
 
@@ -407,7 +397,6 @@ class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):
 
 
 class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
-
     # Enable calls to `__init__` method definitions in parent class.
     @multimethod
     def __init__(self, *args, **kwargs):
@@ -415,7 +404,6 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
 
     @multimethod
     def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
-
         # Obtain DER thermal power vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
         # Define shorthand for DER volume flow vector.
@@ -461,7 +449,6 @@ class ThermalPowerFlowSolutionExplicit(ThermalPowerFlowSolutionBase):
 
 
 class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
-
     # Enable calls to `__init__` method definitions in parent class.
     @multimethod
     def __init__(self, *args, **kwargs):
@@ -475,7 +462,6 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
         head_iteration_limit=100,
         head_tolerance=1e-2,
     ):
-
         # Obtain DER thermal power vector and DER volume flow vector.
         self.der_thermal_power_vector = der_thermal_power_vector.ravel()
         der_flow_vector = (
@@ -500,7 +486,6 @@ class ThermalPowerFlowSolutionNewtonRaphson(ThermalPowerFlowSolutionBase):
 
         # Run Newton-Raphson iterations.
         while (head_iteration < head_iteration_limit) & (head_change > head_tolerance):
-
             # Detect zero branch volume flows.
             branch_flow_vector_valid_index = branch_flow_vector_initial != 0.0
 
@@ -607,7 +592,6 @@ class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
 
     @multimethod
     def __init__(self, thermal_grid_model: ThermalGridModel, der_thermal_power_vector: np.ndarray):
-
         # Select power flow solution method, depending on whether network is radial or meshed.
         if len(thermal_grid_model.branch_loops) == 0:
             # Use explicit thermal power flow solution method.
@@ -618,7 +602,6 @@ class ThermalPowerFlowSolution(ThermalPowerFlowSolutionBase):
 
 
 class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
-
     power_flow_solutions: typing.Dict[pd.Timestamp, ThermalPowerFlowSolution]
     thermal_grid_model: ThermalGridModel
     der_thermal_power_vector: pd.DataFrame
@@ -628,7 +611,6 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
     def __init__(
         self, thermal_grid_model: ThermalGridModel, der_operation_results: ThermalGridDEROperationResults, **kwargs
     ):
-
         der_thermal_power_vector = der_operation_results.der_thermal_power_vector
 
         self.__init__(thermal_grid_model, der_thermal_power_vector, **kwargs)
@@ -640,7 +622,6 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
         der_thermal_power_vector: pd.DataFrame,
         power_flow_solution_method=ThermalPowerFlowSolution,
     ):
-
         # Store attributes.
         self.thermal_grid_model = thermal_grid_model
         self.der_thermal_power_vector = der_thermal_power_vector
@@ -653,7 +634,6 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
         self.power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
 
     def get_results(self) -> ThermalGridOperationResults:
-
         raise NotImplementedError
 
 
@@ -674,7 +654,6 @@ class LinearThermalGridModelBase(mesmo.utils.ObjectBase):
         self,
         scenario_name: str,
     ):
-
         # Obtain thermal grid model.
         thermal_grid_model = ThermalGridModel(scenario_name)
 
@@ -688,7 +667,6 @@ class LinearThermalGridModelBase(mesmo.utils.ObjectBase):
 
 
 class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
-
     # Enable calls to `__init__` method definitions in parent class.
     @multimethod
     def __init__(self, *args, **kwargs):
@@ -700,7 +678,6 @@ class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution: ThermalPowerFlowSolution,
     ):
-
         # Store thermal grid model.
         self.thermal_grid_model = thermal_grid_model
 
@@ -787,7 +764,6 @@ class LinearThermalGridModelGlobal(LinearThermalGridModelBase):
 
 
 class LinearThermalGridModelLocal(LinearThermalGridModelGlobal):
-
     # Enable calls to `__init__` method definitions in parent class.
     @multimethod
     def __init__(self, *args, **kwargs):
@@ -799,7 +775,6 @@ class LinearThermalGridModelLocal(LinearThermalGridModelGlobal):
         thermal_grid_model: ThermalGridModel,
         thermal_power_flow_solution: ThermalPowerFlowSolution,
     ):
-
         # Initialize linear model from global approximation method.
         super().__init__(thermal_grid_model, thermal_power_flow_solution)
 
@@ -809,14 +784,12 @@ class LinearThermalGridModelLocal(LinearThermalGridModelGlobal):
 
 
 class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
-
     linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase]
     thermal_grid_model: ThermalGridModel
     timesteps: pd.Index
 
     @multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain electric grid model & reference power flow solution.
         thermal_grid_model = ThermalGridModel(scenario_name)
         thermal_power_flow_solution = ThermalPowerFlowSolution(thermal_grid_model)
@@ -830,7 +803,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         thermal_power_flow_solution_set: ThermalPowerFlowSolutionSet,
         linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
-
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
 
         # Obtain linear thermal grid models.
@@ -849,7 +821,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         thermal_power_flow_solution: ThermalPowerFlowSolution,
         linear_thermal_grid_model_method: typing.Type[LinearThermalGridModelBase] = LinearThermalGridModelGlobal,
     ):
-
         self.check_linear_thermal_grid_model_method(linear_thermal_grid_model_method)
 
         # Obtain linear thermal grid models.
@@ -866,7 +837,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         thermal_grid_model: ThermalGridModel,
         linear_thermal_grid_models: typing.Dict[pd.Timestamp, LinearThermalGridModelBase],
     ):
-
         # Store attributes.
         self.thermal_grid_model = thermal_grid_model
         self.timesteps = self.thermal_grid_model.timesteps
@@ -874,7 +844,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     @staticmethod
     def check_linear_thermal_grid_model_method(linear_thermal_grid_model_method):
-
         if not issubclass(linear_thermal_grid_model_method, LinearThermalGridModelBase):
             raise ValueError(f"Invalid linear thermal grid model method: {linear_thermal_grid_model_method}")
 
@@ -885,7 +854,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         scenarios: typing.Union[list, pd.Index] = None,
         **kwargs,
     ):
-
         # Defined optimization problem definitions through respective sub-methods.
         self.define_optimization_variables(optimization_problem, scenarios=scenarios)
         self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios, **kwargs)
@@ -895,7 +863,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_variables(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -922,7 +889,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         branch_flow_vector_maximum: np.ndarray = None,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -1085,7 +1051,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_constraints(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -1233,7 +1198,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_objective(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -1246,7 +1210,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         # - Only defined here, if not yet defined as cost of thermal power supply at the DER node
         #   in `mesmo.der_models.DERModel.define_optimization_objective`.
         if not optimization_problem.flags.get("has_der_objective"):
-
             # Thermal power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
             optimization_problem.define_objective(
@@ -1298,7 +1261,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def evaluate_optimization_objective(
         self, results: ThermalGridOperationResults, price_data: mesmo.data_interface.PriceData
     ) -> float:
-
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_parameters(optimization_problem, price_data)
@@ -1325,7 +1287,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ) -> ThermalGridDLMPResults:
-
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -1492,7 +1453,6 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ) -> ThermalGridOperationResults:
-
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]

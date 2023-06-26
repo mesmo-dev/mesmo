@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = mesmo.config.config["tests"]["thermal_grid_scenario_name"]
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -143,7 +142,6 @@ def main():
 
     # Head.
     for node_index, node in enumerate(thermal_grid_model.nodes):
-
         figure = go.Figure()
         figure.add_trace(go.Scatter(x=power_multipliers, y=node_head_vector_power_flow.loc[:, node], name="Power flow"))
         figure.add_trace(
@@ -177,7 +175,6 @@ def main():
 
     # Branch flow.
     for branch_index, branch in enumerate(thermal_grid_model.branches):
-
         figure = go.Figure()
         figure.add_trace(
             go.Scatter(x=power_multipliers, y=branch_flow_vector_power_flow.loc[:, branch], name="Power flow")

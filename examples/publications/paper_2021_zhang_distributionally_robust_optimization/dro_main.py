@@ -18,7 +18,6 @@ from dro_data_interface import DROAmbiguitySet
 
 
 def main():
-
     # Settings.
     scenario_name = "paper_2021_zhang_dro"
     enable_electric_grid_model = True

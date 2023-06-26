@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_tanjongpagar"
 

@@ -5,246 +5,257 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1
   - _openmp_mutex=4.5
-  - affine=2.3.1
-  - attrs=22.1.0
-  - blosc=1.21.1
+  - affine=2.4.0
+  - attrs=23.1.0
+  - blosc=1.21.4
   - boost-cpp=1.78.0
   - brotli=1.0.9
   - brotli-bin=1.0.9
-  - brotlipy=0.7.0
   - bzip2=1.0.8
-  - c-ares=1.18.1
-  - ca-certificates=2022.9.14
+  - c-ares=1.19.1
+  - ca-certificates=2023.5.7
   - cairo=1.16.0
-  - certifi=2022.9.14
-  - cffi=1.15.1
-  - cfitsio=4.1.0
-  - charset-normalizer=2.1.1
+  - certifi=2023.5.7
+  - cfitsio=4.2.0
+  - charset-normalizer=3.1.0
+  - click=8.1.3
   - click-plugins=1.1.1
   - cligj=0.7.2
-  - contextily=1.2.0
-  - contourpy=1.0.5
-  - cryptography=37.0.4
-  - curl=7.83.1
-  - cvxpy=1.2.1
-  - cvxpy-base=1.2.1
+  - contextily=1.3.0
+  - contourpy=1.1.0
+  - curl=8.1.2
+  - cvxpy=1.3.1
+  - cvxpy-base=1.3.1
   - cycler=0.11.0
-  - ecos=2.0.10
-  - expat=2.4.9
+  - ecos=2.0.11
+  - expat=2.5.0
   - font-ttf-dejavu-sans-mono=2.37
   - font-ttf-inconsolata=3.000
   - font-ttf-source-code-pro=2.038
   - font-ttf-ubuntu=0.83
-  - fontconfig=2.14.0
+  - fontconfig=2.14.2
   - fonts-conda-ecosystem=1
   - fonts-conda-forge=1
-  - fonttools=4.37.3
+  - fonttools=4.40.0
   - freetype=2.12.1
   - freexl=1.0.6
   - geographiclib=1.52
-  - geopy=2.2.0
-  - geos=3.11.0
+  - geopy=2.3.0
+  - geos=3.11.2
   - geotiff=1.7.1
-  - gettext=0.19.8.1
+  - gettext=0.21.1
   - giflib=5.2.1
   - hdf4=4.2.15
-  - hdf5=1.12.2
-  - icu=70.1
+  - hdf5=1.14.0
+  - icu=72.1
   - idna=3.4
   - joblib=1.2.0
-  - jpeg=9e
   - json-c=0.16
-  - kealib=1.4.15
+  - kealib=1.5.1
   - keyutils=1.6.1
   - kiwisolver=1.4.4
-  - krb5=1.19.3
-  - lcms2=2.12
-  - ld_impl_linux-64=2.36.1
+  - krb5=1.20.1
+  - lcms2=2.15
+  - ld_impl_linux-64=2.40
   - lerc=4.0.0
+  - libaec=1.0.6
+  - libarchive=3.6.2
   - libblas=3.9.0
   - libbrotlicommon=1.0.9
   - libbrotlidec=1.0.9
   - libbrotlienc=1.0.9
   - libcblas=3.9.0
-  - libcurl=7.83.1
-  - libdap4=3.20.6
-  - libdeflate=1.14
+  - libcurl=8.1.2
+  - libdeflate=1.18
   - libedit=3.1.20191231
   - libev=4.33
+  - libexpat=2.5.0
   - libffi=3.4.2
-  - libgcc-ng=12.1.0
-  - libgdal=3.5.2
-  - libgfortran-ng=12.1.0
-  - libgfortran5=12.1.0
-  - libglib=2.72.1
-  - libgomp=12.1.0
-  - libiconv=1.16
+  - libgcc-ng=13.1.0
+  - libgdal=3.7.0
+  - libgfortran-ng=13.1.0
+  - libgfortran5=13.1.0
+  - libglib=2.76.3
+  - libgomp=13.1.0
+  - libiconv=1.17
+  - libjpeg-turbo=2.1.5.1
   - libkml=1.3.0
   - liblapack=3.9.0
-  - libnetcdf=4.8.1
-  - libnghttp2=1.47.0
+  - libnetcdf=4.9.2
+  - libnghttp2=1.52.0
   - libnsl=2.0.0
-  - libopenblas=0.3.21
-  - libpng=1.6.38
-  - libpq=14.5
+  - libopenblas=0.3.23
+  - libosqp=0.6.3
+  - libpng=1.6.39
+  - libpq=15.3
+  - libqdldl=0.1.5
   - librttopo=1.1.0
   - libspatialite=5.0.1
-  - libsqlite=3.39.3
-  - libssh2=1.10.0
-  - libstdcxx-ng=12.1.0
-  - libtiff=4.4.0
-  - libuuid=2.32.1
-  - libwebp-base=1.2.4
-  - libxcb=1.13
-  - libxml2=2.9.14
+  - libsqlite=3.42.0
+  - libssh2=1.11.0
+  - libstdcxx-ng=13.1.0
+  - libtiff=4.5.1
+  - libuuid=2.38.1
+  - libwebp-base=1.3.0
+  - libxcb=1.15
+  - libxml2=2.11.4
   - libzip=1.9.2
-  - libzlib=1.2.12
-  - lz4-c=1.9.3
-  - matplotlib-base=3.6.0
+  - libzlib=1.2.13
+  - lz4-c=1.9.4
+  - lzo=2.10
+  - matplotlib-base=3.7.1
   - mercantile=1.2.1
   - munkres=1.1.4
-  - ncurses=6.3
-  - nspr=4.32
-  - nss=3.78
-  - numpy=1.23.3
+  - ncurses=6.4
+  - nspr=4.35
+  - nss=3.89
+  - numpy=1.25.0
   - openjpeg=2.5.0
-  - openssl=1.1.1q
-  - osqp=0.6.2.post0
-  - packaging=21.3
-  - pandas=1.5.0
-  - pcre=8.45
-  - pillow=9.2.0
-  - pip=22.2.2
+  - openssl=3.1.1
+  - osqp=0.6.3
+  - packaging=23.1
+  - pandas=2.0.2
+  - pcre2=10.40
+  - pillow=9.5.0
+  - pip=23.1.2
   - pixman=0.40.0
-  - poppler=22.04.0
-  - poppler-data=0.4.11
-  - postgresql=14.5
-  - proj=9.0.1
+  - platformdirs=3.8.0
+  - pooch=1.7.0
+  - poppler=23.05.0
+  - poppler-data=0.4.12
+  - postgresql=15.3
+  - proj=9.2.1
   - pthread-stubs=0.4
-  - pycparser=2.21
-  - pyopenssl=22.0.0
-  - pyparsing=3.0.9
+  - pyparsing=3.1.0
   - pysocks=1.7.1
-  - python=3.8.13
+  - python=3.10.12
   - python-dateutil=2.8.2
-  - python_abi=3.8
-  - pytz=2022.2.1
-  - qdldl-python=0.1.5
-  - rasterio=1.3.2
-  - readline=8.1.2
-  - requests=2.28.1
-  - scipy=1.9.1
-  - scs=3.2.0
-  - setuptools=65.3.0
+  - python-tzdata=2023.3
+  - python_abi=3.10
+  - pytz=2023.3
+  - qdldl-python=0.1.5.post2
+  - rasterio=1.3.7
+  - readline=8.2
+  - requests=2.31.0
+  - scs=3.2.3
+  - setuptools=68.0.0
   - six=1.16.0
-  - snappy=1.1.9
+  - snappy=1.1.10
   - snuggs=1.4.7
-  - sqlite=3.39.3
-  - tiledb=2.11.3
+  - sqlite=3.42.0
+  - tiledb=2.13.2
   - tk=8.6.12
-  - tzcode=2022c
-  - tzdata=2022c
-  - unicodedata2=14.0.0
-  - urllib3=1.26.11
-  - wheel=0.37.1
-  - xerces-c=3.2.3
+  - typing-extensions=4.6.3
+  - typing_extensions=4.6.3
+  - tzcode=2023c
+  - tzdata=2023c
+  - unicodedata2=15.0.0
+  - wheel=0.40.0
+  - xerces-c=3.2.4
   - xorg-kbproto=1.0.7
-  - xorg-libice=1.0.10
-  - xorg-libsm=1.2.3
-  - xorg-libx11=1.7.2
-  - xorg-libxau=1.0.9
+  - xorg-libice=1.1.1
+  - xorg-libsm=1.2.4
+  - xorg-libx11=1.8.6
+  - xorg-libxau=1.0.11
   - xorg-libxdmcp=1.1.3
   - xorg-libxext=1.3.4
   - xorg-libxrender=0.9.10
   - xorg-renderproto=0.11.1
   - xorg-xextproto=7.3.0
   - xorg-xproto=7.0.31
-  - xyzservices=2022.9.0
+  - xyzservices=2023.5.0
   - xz=5.2.6
-  - zlib=1.2.12
+  - zlib=1.2.13
   - zstd=1.5.2
   - pip:
-    - aiohttp==3.8.3
-    - aiohttp-cors==0.7.0
-    - aiosignal==1.2.0
-    - astroid==2.12.10
-    - async-timeout==4.0.2
-    - bleach==5.0.1
-    - blessed==1.19.1
-    - bokeh==2.4.3
-    - cachetools==5.2.0
-    - click==8.0.4
-    - colorcet==3.0.0
-    - colorful==0.5.4
-    - coverage==6.4.4
-    - dill==0.3.5.1
-    - distlib==0.3.6
-    - dss-python==0.12.1
-    - dynaconf==3.1.11
-    - filelock==3.8.0
-    - frozenlist==1.3.1
-    - google-api-core==2.10.1
-    - google-auth==2.11.1
-    - googleapis-common-protos==1.56.4
-    - gpustat==1.0.0
-    - grpcio==1.43.0
-    - gurobipy==9.5.2
-    - h5py==3.7.0
-    - holoviews==1.15.0
-    - hvplot==0.8.1
-    - importlib-metadata==4.12.0
-    - importlib-resources==5.9.0
-    - isort==5.10.1
-    - jinja2==3.1.2
-    - jsonschema==4.16.0
-    - kaleido==0.2.1
-    - lazy-object-proxy==1.7.1
-    - markdown==3.4.1
-    - markupsafe==2.1.1
-    - mccabe==0.7.0
-    - mesmo==0.5.0
-    - msgpack==1.0.4
-    - multidict==6.0.2
-    - multimethod==1.9
-    - natsort==8.2.0
-    - networkx==2.8.6
-    - nvidia-ml-py==11.495.46
-    - opencensus==0.11.0
-    - opencensus-context==0.1.3
-    - opencv-python-headless==4.6.0.66
-    - opendssdirect-py==0.7.0
-    - panel==0.13.1
-    - param==1.12.2
-    - parameterized==0.8.1
-    - pkgutil-resolve-name==1.3.10
-    - platformdirs==2.5.2
-    - plotly==5.10.0
-    - prometheus-client==0.13.1
-    - protobuf==3.20.2
-    - psutil==5.9.2
-    - psychrolib==2.5.0
-    - pvlib==0.9.3
-    - py-spy==0.3.14
-    - pyasn1==0.4.8
-    - pyasn1-modules==0.2.8
-    - pyct==0.4.8
-    - pydantic==1.10.2
-    - pylint==2.15.3
-    - pyrsistent==0.18.1
-    - pyviz-comms==2.2.1
-    - pyyaml==6.0
-    - ray==2.0.0
-    - rsa==4.9
-    - smart-open==6.2.0
-    - tenacity==8.1.0
-    - tomli==2.0.1
-    - tomlkit==0.11.4
-    - tornado==6.2
-    - tqdm==4.64.1
-    - typing-extensions==4.3.0
-    - virtualenv==20.16.5
-    - wcwidth==0.2.5
-    - webencodings==0.5.1
-    - wrapt==1.14.1
-    - yarl==1.8.1
-    - zipp==3.8.1
+      - aiohttp==3.8.4
+      - aiohttp-cors==0.7.0
+      - aiosignal==1.3.1
+      - astroid==2.15.5
+      - async-timeout==4.0.2
+      - bleach==6.0.0
+      - blessed==1.20.0
+      - bokeh==3.1.1
+      - cachetools==5.3.1
+      - cffi==1.15.1
+      - colorcet==3.0.1
+      - colorful==0.5.5
+      - coverage==7.2.7
+      - dill==0.3.6
+      - distlib==0.3.6
+      - dss-python==0.14.3
+      - dss-python-backend==0.13.3
+      - dynaconf==3.1.12
+      - exceptiongroup==1.1.1
+      - filelock==3.12.2
+      - frozenlist==1.3.3
+      - google-api-core==2.11.1
+      - google-auth==2.21.0
+      - googleapis-common-protos==1.59.1
+      - gpustat==1.1
+      - grpcio==1.51.3
+      - gurobipy==10.0.2
+      - h5py==3.9.0
+      - holoviews==1.16.2
+      - hvplot==0.8.4
+      - iniconfig==2.0.0
+      - isort==5.12.0
+      - jinja2==3.1.2
+      - jsonschema==4.17.3
+      - kaleido==0.2.1
+      - lazy-object-proxy==1.9.0
+      - linkify-it-py==2.0.2
+      - markdown==3.4.3
+      - markdown-it-py==2.2.0
+      - markupsafe==2.1.3
+      - mccabe==0.7.0
+      - mdit-py-plugins==0.4.0
+      - mdurl==0.1.2
+      - mesmo==0.5.0
+      - msgpack==1.0.5
+      - multidict==6.0.4
+      - multimethod==1.9.1
+      - natsort==8.4.0
+      - networkx==3.1
+      - nvidia-ml-py==11.525.112
+      - opencensus==0.11.2
+      - opencensus-context==0.1.3
+      - opencv-python-headless==4.7.0.72
+      - opendssdirect-py==0.8.3
+      - panel==1.1.1
+      - param==1.13.0
+      - parameterized==0.9.0
+      - plotly==5.15.0
+      - pluggy==1.2.0
+      - prometheus-client==0.17.0
+      - protobuf==4.23.3
+      - psutil==5.9.5
+      - psychrolib==2.5.0
+      - pvlib==0.9.5
+      - py-spy==0.3.14
+      - pyasn1==0.5.0
+      - pyasn1-modules==0.3.0
+      - pycparser==2.21
+      - pyct==0.5.0
+      - pydantic==1.10.9
+      - pylint==2.17.4
+      - pyrsistent==0.19.3
+      - pytest==7.4.0
+      - pyviz-comms==2.3.2
+      - pyyaml==6.0
+      - ray==2.5.1
+      - rsa==4.9
+      - scipy==1.10.1
+      - smart-open==6.3.0
+      - tenacity==8.2.2
+      - tomli==2.0.1
+      - tomlkit==0.11.8
+      - tornado==6.3.2
+      - tqdm==4.65.0
+      - uc-micro-py==1.0.2
+      - urllib3==1.26.16
+      - virtualenv==20.21.0
+      - wcwidth==0.2.6
+      - webencodings==0.5.1
+      - wrapt==1.15.0
+      - yarl==1.9.2

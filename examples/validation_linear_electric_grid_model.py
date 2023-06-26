@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = mesmo.config.config["tests"]["scenario_name"]
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -298,7 +297,6 @@ def main():
 
     # Voltage.
     for node_index, node in enumerate(electric_grid_model.nodes):
-
         # Voltage magnitude.
         figure = go.Figure()
         figure.add_trace(
@@ -409,7 +407,6 @@ def main():
 
     # Branch flow.
     for branch_index, branch in enumerate(electric_grid_model.branches):
-
         # Branch power active component 1.
         figure = go.Figure()
         figure.add_trace(

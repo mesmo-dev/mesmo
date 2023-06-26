@@ -8,7 +8,6 @@ import mesmo
 
 
 class DRODataSet(object):
-
     energy_price: pd.DataFrame
     contingency_reserve_price: pd.DataFrame
     forecast_price_raw: pd.DataFrame
@@ -25,7 +24,6 @@ class DRODataSet(object):
         self,
         data_path: pathlib.Path,
     ):
-
         self.forecast_price_raw = pd.read_csv((data_path / "price_forecast_2021_26_07.csv"))
         self.variance_building_disturbance = pd.read_csv((data_path / "flex_building_disturbance_timeseries_var.csv"))
         self.mean_building_disturbance = pd.read_csv((data_path / "flex_building_disturbance_timeseries_mean.csv"))
@@ -43,7 +41,6 @@ class DRODataSet(object):
 
 
 class DROAmbiguitySet(object):
-
     gamma: np.array
     delta_lower_bound: np.array
     delta_upper_bound: np.array
@@ -57,7 +54,6 @@ class DROAmbiguitySet(object):
         dro_data_set: DRODataSet,
         stage_2_delta_disturbances: pd.DataFrame,
     ):
-
         # Obtain DER model set.
         der_model_set = mesmo.der_models.DERModelSet(scenario_name)
 

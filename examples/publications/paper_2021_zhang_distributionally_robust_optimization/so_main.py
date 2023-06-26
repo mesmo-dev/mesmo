@@ -14,12 +14,10 @@ from dro_data_interface import DROAmbiguitySet
 
 
 class ScenarioGeneration(object):
-
     delta: np.array
     probability: float
 
     def __init__(self, scenario_number: int, delta_indices_stage2: pd.Index, dro_ambiguity_set: DROAmbiguitySet):
-
         self.delta = np.zeros((len(delta_indices_stage2), scenario_number))
         self.probability = 1 / scenario_number
         for index in range(len(delta_indices_stage2)):
@@ -27,7 +25,6 @@ class ScenarioGeneration(object):
 
 
 def main():
-
     scenario_name = "paper_2021_zhang_dro"
     enable_electric_grid_model = True
     mesmo.data_interface.recreate_database()
@@ -58,7 +55,6 @@ def main():
     scenario_uncertainty = ScenarioGeneration(scenario_number, stage_2.delta_index, dro_ambiguity_set)
 
     for test_index in range(so_test_number):
-
         mesmo.utils.logger.info(f"Cheap SO: {test_index} out of {so_test_number}")
 
         # Instantiate optimization problem.

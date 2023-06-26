@@ -51,7 +51,6 @@ class ObjectBase(object):
     """
 
     def __setattr__(self, attribute_name, value):
-
         # Assert that attribute name is valid.
         # - Valid attributes are those which are defined as results class attributes with type declaration.
         if not (attribute_name in typing.get_type_hints(type(self))):
@@ -89,7 +88,6 @@ class ResultsBase(ObjectBase):
     """Results object base class."""
 
     def __init__(self, **kwargs):
-
         # Set all keyword arguments as attributes.
         for attribute_name in kwargs:
             self.__setattr__(attribute_name, kwargs[attribute_name])
@@ -103,7 +101,6 @@ class ResultsBase(ObjectBase):
         self.__setattr__(key, value)
 
     def update(self, other_results):
-
         # Obtain attributes of other results object.
         attributes = vars(other_results)
 
@@ -142,7 +139,6 @@ class ResultsBase(ObjectBase):
 
         # Load all files which correspond to valid attributes.
         for file in files:
-
             # Obtain file extension / attribute name.
             file_extension = file.suffix
             attribute_name = file.stem
@@ -341,7 +337,6 @@ def get_index(index_set: typing.Union[pd.Index, pd.DataFrame], raise_empty_index
     # Obtain mask for each level / values combination keyword arguments.
     mask = np.ones(len(index_set), dtype=bool)
     for level, values in levels_values.items():
-
         # Ensure that values are passed as list.
         if isinstance(values, list):
             pass

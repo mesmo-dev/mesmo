@@ -36,7 +36,6 @@ class ElectricGridGraph(nx.DiGraph):
 
     @multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain electric grid data.
         electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
 
@@ -44,7 +43,6 @@ class ElectricGridGraph(nx.DiGraph):
 
     @multimethod
     def __init__(self, electric_grid_data: mesmo.data_interface.ElectricGridData):
-
         # Create electric grid graph.
         super().__init__()
         self.add_nodes_from(electric_grid_data.electric_grid_nodes.loc[:, "node_name"].tolist())
@@ -89,7 +87,6 @@ class ThermalGridGraph(nx.DiGraph):
 
     @multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain thermal grid data.
         thermal_grid_data = mesmo.data_interface.ThermalGridData(scenario_name)
 
@@ -97,7 +94,6 @@ class ThermalGridGraph(nx.DiGraph):
 
     @multimethod
     def __init__(self, thermal_grid_data: mesmo.data_interface.ThermalGridData):
-
         # Create thermal grid graph.
         super().__init__()
         self.add_nodes_from(thermal_grid_data.thermal_grid_nodes.loc[:, "node_name"].tolist())
@@ -130,7 +126,6 @@ class ThermalGridGraph(nx.DiGraph):
 
 
 def create_video(name: str, labels: pd.Index, results_path: str):
-
     # Obtain images / frames based on given name / labels.
     images = []
     for label in labels:
@@ -170,7 +165,6 @@ def plot_line_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -204,7 +198,6 @@ def plot_line_utilization(
     value_unit="W",
     horizontal_line_value=None,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -247,7 +240,6 @@ def plot_line_utilization(
 
 
 def wrapper_plot_line_utilization(*args, **kwargs):
-
     plot_line_utilization(*args, **kwargs)
 
 
@@ -262,7 +254,6 @@ def plot_transformer_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -296,7 +287,6 @@ def plot_transformer_utilization(
     value_unit="W",
     horizontal_line_value=None,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -339,7 +329,6 @@ def plot_transformer_utilization(
 
 
 def wrapper_plot_transformer_utilization(*args, **kwargs):
-
     plot_transformer_utilization(*args, **kwargs)
 
 
@@ -354,7 +343,6 @@ def plot_node_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -393,7 +381,6 @@ def plot_node_utilization(
     suffix=None,
     horizontal_line_value=None,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -445,7 +432,6 @@ def plot_node_utilization(
 
 
 def wrapper_plot_node_utilization(*args, **kwargs):
-
     plot_node_utilization(*args, **kwargs)
 
 
@@ -460,7 +446,6 @@ def plot_grid_line_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -493,7 +478,6 @@ def plot_grid_line_utilization(
     label=None,
     value_unit="W",
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -569,7 +553,6 @@ def plot_grid_line_utilization(
 
 
 def wrapper_plot_grid_line_utilization(*args, **kwargs):
-
     plot_grid_line_utilization(*args, **kwargs)
 
 
@@ -584,7 +567,6 @@ def plot_grid_transformer_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -617,7 +599,6 @@ def plot_grid_transformer_utilization(
     label=None,
     value_unit="W",
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -681,7 +662,6 @@ def plot_grid_transformer_utilization(
 
 
 def wrapper_plot_grid_transformer_utilization(*args, **kwargs):
-
     plot_grid_transformer_utilization(*args, **kwargs)
 
 
@@ -696,7 +676,6 @@ def plot_grid_node_utilization(
     make_video=False,
     **kwargs,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -734,7 +713,6 @@ def plot_grid_node_utilization(
     value_unit=None,
     suffix=None,
 ):
-
     # Obtain colorscale minimum / maximum value.
     vmin = value_vector.values.ravel().min() if vmin is None else vmin
     vmax = value_vector.values.ravel().max() if vmax is None else vmax
@@ -819,12 +797,10 @@ def plot_grid_node_utilization(
 
 
 def wrapper_plot_grid_node_utilization(*args, **kwargs):
-
     plot_grid_node_utilization(*args, **kwargs)
 
 
 def plot_total_active_power(values_dict: dict, results_path: str):
-
     # Pre-process values.
     for key in values_dict:
         values_dict[key] = values_dict[key].sum(axis="columns") / 1e6
@@ -861,7 +837,6 @@ def plot_total_active_power(values_dict: dict, results_path: str):
 def plot_line_utilization_histogram(
     values_dict: dict, results_path: str, histogram_minimum=0.0, histogram_maximum=1.0, histogram_bin_count=100
 ):
-
     # Obtain histogram bins.
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
@@ -902,7 +877,6 @@ def plot_line_utilization_histogram(
 def plot_line_utilization_histogram_cumulative(
     values_dict: dict, results_path: str, histogram_minimum=0.0, histogram_maximum=1.0, histogram_bin_count=100
 ):
-
     # Obtain histogram bins.
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
@@ -956,7 +930,6 @@ def plot_transformer_utilization_histogram(
     histogram_maximum=1.0,
     histogram_bin_count=100,
 ):
-
     # Obtain histogram bins.
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
@@ -1006,7 +979,6 @@ def plot_transformer_utilization_histogram_cumulative(
     histogram_maximum=1.0,
     histogram_bin_count=100,
 ):
-
     # Obtain histogram bins.
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
@@ -1070,7 +1042,6 @@ def plot_histogram_cumulative_branch_utilization(
     horizontal_line: float = None,
     x_tick_interval: float = 0.1,
 ):
-
     # Obtain histogram bins.
     histogram_interval = (histogram_maximum - histogram_minimum) / histogram_bin_count
     histogram_bins = np.arange(histogram_minimum, histogram_maximum + histogram_interval, histogram_interval)
@@ -1207,7 +1178,6 @@ def plot_histogram_node_utilization(
     histogram_bin_count: int = 30,
     x_tick_interval: float = None,
 ):
-
     # Pre-process values.
     values_dict = dict.fromkeys(results_dict.keys())
     box_values_dict = dict.fromkeys(results_dict.keys())
@@ -1276,7 +1246,6 @@ def plot_aggregate_timeseries_der_power(
     value_unit_label: str = None,
     der_type_labels: dict = None,
 ):
-
     # Pre-process values.
     values_dict = dict.fromkeys(results_dict.keys())
     value_minimum = 0.0

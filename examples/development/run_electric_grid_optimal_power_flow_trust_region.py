@@ -8,7 +8,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_6node"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -429,7 +428,6 @@ def define_trust_region_electric_grid_parameters(
     der_active_power_vector_reference,
     der_reactive_power_vector_reference,
 ):
-
     optimization_problem.define_parameter(
         name="node_voltage_vector_reference", value=(-1) * node_voltage_vector_reference.to_numpy().ravel()
     )
@@ -608,7 +606,6 @@ class OptimalOperationProblem(object):
         self.der_model_set.define_optimization_problem(self.optimization_problem, self.price_data)
 
     def update_linear_electric_grid_model_parameters(self):
-
         # Check if ScenarioData contains information on limits, otherwise set to None (no limits).
         node_voltage_magnitude_vector_minimum = (
             self.scenario_data.scenario["voltage_per_unit_minimum"]

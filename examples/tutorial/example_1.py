@@ -8,7 +8,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_6node"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)

@@ -11,7 +11,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "paper_2020_troitzsch_dlmp"
     scenario = 1  # Choices: 1 (unconstrained operation), 2 (constrained branch flow), 3 (constrained pressure head).
@@ -116,7 +115,6 @@ def main():
     )
     colors = list(color["color"] for color in matplotlib.rcParams["axes.prop_cycle"])
     for der in thermal_grid_model.ders:
-
         # Obtain corresponding node.
         node = thermal_grid_model.nodes[
             (thermal_grid_model.der_node_incidence_matrix[:, thermal_grid_model.ders.get_loc(der)]).toarray().ravel()

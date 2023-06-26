@@ -12,7 +12,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_tanjongpagar"
     results_path = mesmo.utils.get_results_path(__file__, scenario_name)
@@ -194,7 +193,6 @@ def main():
     # Plot results.
     for der_name, der_model in der_model_set.flexible_der_models.items():
         for output in der_model.outputs:
-
             figure = go.Figure()
             figure.add_trace(
                 go.Scatter(
@@ -238,7 +236,6 @@ def main():
 
     for der_name, der_model in der_model_set.flexible_der_models.items():
         for disturbance in der_model.disturbances:
-
             figure = go.Figure()
             figure.add_trace(
                 go.Scatter(
@@ -256,7 +253,6 @@ def main():
             mesmo.utils.write_figure_plotly(figure, (results_path / f"disturbance_{der_name}_{disturbance}"))
 
     for commodity_type in ["active_power", "reactive_power", "thermal_power"]:
-
         if commodity_type in price_data.price_timeseries.columns.get_level_values("commodity_type"):
             figure = go.Figure()
             figure.add_trace(
@@ -286,12 +282,10 @@ class OptimizationProblemCVXPY(object):
     cvxpy_problem: cp.Problem
 
     def __init__(self):
-
         self.constraints = []
         self.objective = cp.Constant(value=0.0)
 
     def solve(self, keep_problem=False, **kwargs):
-
         # Instantiate CVXPY problem object.
         if hasattr(self, "cvxpy_problem") and keep_problem:
             pass

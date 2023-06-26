@@ -14,7 +14,6 @@ from dro_stage_1 import Stage1
 
 class Stage2(object):
     def __init__(self, scenario_name, dro_data_set, enable_electric_grid_model=True):
-
         mesmo.utils.logger.info("Initializing stage 2 problem...")
 
         # Settings.
@@ -355,7 +354,6 @@ class Stage2(object):
             )
 
         for scenario in self.scenarios_stage_2:
-
             # State equation.
             self.optimization_problem.define_constraint(
                 (
@@ -560,7 +558,6 @@ class Stage2(object):
 
 
 def main():
-
     # Settings.
     scenario_name = "paper_2021_zhang_dro"
     mesmo.data_interface.recreate_database()
@@ -674,7 +671,7 @@ def main():
 
     # Plot some results.
     figure = go.Figure()
-    for (scenario_index, scenario) in enumerate(stage_2.scenarios_stage_2):
+    for scenario_index, scenario in enumerate(stage_2.scenarios_stage_2):
         figure.add_scatter(
             x=stage_2.der_model_set.timesteps,
             y=energy_deviation_up_stage_2.loc[:, scenario].values,

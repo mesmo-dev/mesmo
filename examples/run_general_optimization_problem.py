@@ -15,7 +15,6 @@ import mesmo
 
 
 def main():
-
     # Obtain random parameter matrix.
     dimension = 1000
     parameter_matrix = np.random.rand(dimension, dimension)

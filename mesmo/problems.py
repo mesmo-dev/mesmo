@@ -107,7 +107,6 @@ class NominalOperationProblem(ProblemBase):
         thermal_grid_model: mesmo.thermal_grid_models.ThermalGridModel = None,
         der_model_set: mesmo.der_models.DERModelSet = None,
     ):
-
         # Obtain data.
         scenario_data = mesmo.data_interface.ScenarioData(scenario_name)
         self.price_data = mesmo.data_interface.PriceData(scenario_name)
@@ -142,7 +141,6 @@ class NominalOperationProblem(ProblemBase):
             mesmo.utils.log_time("DER model instantiation")
 
     def solve(self):
-
         # Instantiate results variables.
         if self.electric_grid_model is not None:
             der_power_vector = pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
@@ -315,7 +313,6 @@ class NominalOperationProblem(ProblemBase):
             )
 
     def get_results(self):
-
         return self.results
 
 
@@ -361,7 +358,6 @@ class OptimalOperationProblem(ProblemBase):
         der_model_set: mesmo.der_models.DERModelSet = None,
         solve_method: str = None,
     ):
-
         # Obtain solve method.
         if solve_method in [None, "default"]:
             self.solve_method = "default"
@@ -481,7 +477,6 @@ class OptimalOperationProblem(ProblemBase):
         self.der_model_set.define_optimization_objective(self.optimization_problem)
 
     def solve(self):
-
         # Select solve method depending on `solve_method` attribute.
         if self.solve_method == "default":
             self.solve_default()
@@ -491,7 +486,6 @@ class OptimalOperationProblem(ProblemBase):
             raise ValueError(f"Unknown solve method for optimal operation problem: {self.solve_method}")
 
     def solve_default(self, do_raise_runtime_error: bool = True) -> bool:
-
         # If `do_raise_runtime_error`, solve optimization problem and raise any exceptions.
         if do_raise_runtime_error:
             self.optimization_problem.solve()
@@ -590,7 +584,6 @@ class OptimalOperationProblem(ProblemBase):
         # Start trust-region iterations.
         first_iteration = True
         while (trust_region_accepted_iteration_count < trust_region_iteration_limit) and (error_control > epsilon):
-
             # Print progress.
             logger.debug(f"Starting trust-region iteration #{trust_region_iteration_count}")
             logger.debug(f"Accepted iterations: {trust_region_accepted_iteration_count}")
@@ -918,7 +911,6 @@ class OptimalOperationProblem(ProblemBase):
         logger.debug(f"Trust-region iterations: {trust_region_iteration_count}")
 
     def get_results(self) -> Results:
-
         # Instantiate results.
         self.results = Results(price_data=self.price_data)
 

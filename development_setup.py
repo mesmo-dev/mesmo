@@ -22,7 +22,6 @@ args = parser.parse_args()
 
 
 def main():
-
     # Check which steps to be run.
     run_highs = args.highs
     run_all = not run_highs

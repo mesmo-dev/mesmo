@@ -9,7 +9,6 @@ import mesmo
 
 
 def main():
-
     # Settings.
     scenario_name = "singapore_6node"
     der_name = "4_2"  # Must be valid flexible DER from given scenario.
@@ -42,7 +41,6 @@ def main():
 
     # Plot results.
     for output in der_model_set.flexible_der_models[der_name].outputs:
-
         figure = go.Figure()
         figure.add_trace(
             go.Scatter(
@@ -76,7 +74,6 @@ def main():
         mesmo.utils.write_figure_plotly(figure, (results_path / output))
 
     for disturbance in der_model_set.flexible_der_models[der_name].disturbances:
-
         figure = go.Figure()
         figure.add_trace(
             go.Scatter(
@@ -91,7 +88,6 @@ def main():
         mesmo.utils.write_figure_plotly(figure, (results_path / disturbance))
 
     for commodity_type in ["active_power", "reactive_power", "thermal_power"]:
-
         if commodity_type in price_data.price_timeseries.columns.get_level_values("commodity_type"):
             figure = go.Figure()
             figure.add_trace(

@@ -112,7 +112,6 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
 
     @multimethod.multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain electric grid data.
         electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
 
@@ -124,7 +123,6 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
         self,
         electric_grid_data: mesmo.data_interface.ElectricGridData,
     ):
-
         # Process overhead line type definitions.
         # - This is implemented as direct modification on the electric grid data object and therefore done first.
         electric_grid_data = self.process_line_types_overhead(electric_grid_data)
@@ -663,7 +661,6 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
 
         # Process over-head line type definitions.
         for line_type, line_type_data in electric_grid_data.electric_grid_line_types_overhead.iterrows():
-
             # Obtain data shorthands.
             # - Only for phases which have `conductor_id` defined in `electric_grid_line_types_overhead`.
             phases = pd.Index(
@@ -883,7 +880,6 @@ class ElectricGridModelDefault(ElectricGridModel):
     """
 
     def __init__(self, *args, **kwargs):
-
         # Issue warning when using this class.
         logger.warning(
             "`ElectricGridModelDefault` is a placeholder for `ElectricGridModel` for backwards compatibility and will "
@@ -946,7 +942,6 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
     @multimethod.multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain electric grid data.
         electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
 
@@ -954,7 +949,6 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_data: mesmo.data_interface.ElectricGridData):
-
         # TODO: Add reset method to ensure correct circuit model is set in OpenDSS when handling multiple models.
 
         # Obtain electric grid indexes, via `ElectricGridModel.__init__()`.
@@ -1176,7 +1170,6 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
 
 
 class ElectricGridDEROperationResults(mesmo.utils.ResultsBase):
-
     der_active_power_vector: pd.DataFrame
     der_active_power_vector_per_unit: pd.DataFrame
     der_reactive_power_vector: pd.DataFrame
@@ -1184,7 +1177,6 @@ class ElectricGridDEROperationResults(mesmo.utils.ResultsBase):
 
 
 class ElectricGridOperationResults(ElectricGridDEROperationResults):
-
     electric_grid_model: ElectricGridModel
     node_voltage_magnitude_vector: pd.DataFrame
     node_voltage_magnitude_vector_per_unit: pd.DataFrame
@@ -1206,7 +1198,6 @@ class ElectricGridOperationResults(ElectricGridDEROperationResults):
 
 
 class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
-
     electric_grid_energy_dlmp_node_active_power: pd.DataFrame
     electric_grid_voltage_dlmp_node_active_power: pd.DataFrame
     electric_grid_congestion_dlmp_node_active_power: pd.DataFrame
@@ -1247,7 +1238,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, scenario_name: str, **kwargs):
-
         # Obtain `electric_grid_model`.
         electric_grid_model = ElectricGridModel(scenario_name)
 
@@ -1255,7 +1245,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModel, **kwargs):
-
         # Obtain `der_power_vector`, assuming nominal power conditions.
         der_power_vector = electric_grid_model.der_power_vector_reference
 
@@ -1263,7 +1252,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModel, der_power_vector: np.ndarray, **kwargs):
-
         # Store DER power vector.
         self.der_power_vector = der_power_vector.ravel()
 
@@ -1452,11 +1440,9 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
         # Outer iteration between power vector candidate selection and fixed point voltage solution algorithm
         # until a final solution is found.
         while ~is_final & (outer_iteration < outer_iteration_limit):
-
             # Outer solution algorithm based on fixed-point solution conditions check.
             # - Checks solution conditions and adjust power vector candidate if necessary, before solving for voltage.
             if outer_solution_algorithm == "check_conditions":
-
                 # Reset nodal power vector candidate to the desired nodal power vector.
                 node_power_vector_wye_candidate_no_source = node_power_vector_wye_no_source.copy()
                 node_power_vector_delta_candidate_no_source = node_power_vector_delta_no_source.copy()
@@ -1478,7 +1464,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
                 # If solution conditions are violated, iteratively reduce power to find a power vector candidate
                 # which satisfies the solution conditions.
                 while ~is_valid & (power_candidate_iteration < power_candidate_iteration_limit):
-
                     # Reduce nodal power vector candidate.
                     node_power_vector_wye_candidate_no_source -= power_candidate_reduction_factor * (
                         node_power_vector_wye_candidate_no_source - node_power_vector_wye_initial_no_source
@@ -1513,7 +1498,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
             voltage_iteration = 0
             voltage_change = np.inf
             while (voltage_iteration < voltage_iteration_limit) & (voltage_change > voltage_tolerance):
-
                 # Calculate fixed point equation.
                 node_voltage_vector_estimate_no_source = (
                     np.transpose([electric_grid_model.node_voltage_vector_reference_no_source])
@@ -1559,10 +1543,8 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
             # Outer solution algorithm based on voltage solution check.
             # - Checks if voltage solution exceeded iteration limit and adjusts power vector candidate if needed.
             if outer_solution_algorithm == "check_solution":
-
                 # If voltage solution exceeds iteration limit, reduce power and re-try voltage solution.
                 if voltage_iteration >= voltage_iteration_limit:
-
                     # Reduce nodal power vector candidate.
                     node_power_vector_wye_candidate_no_source *= power_candidate_reduction_factor
                     node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor
@@ -1577,7 +1559,6 @@ class PowerFlowSolutionFixedPoint(PowerFlowSolutionBase):
                     if (node_power_vector_wye_candidate_no_source != node_power_vector_wye_no_source).any() or (
                         node_power_vector_delta_candidate_no_source != node_power_vector_delta_no_source
                     ).any():
-
                         # Increase nodal power vector candidate.
                         node_power_vector_wye_candidate_no_source *= power_candidate_reduction_factor**-1
                         node_power_vector_delta_candidate_no_source *= power_candidate_reduction_factor**-1
@@ -1718,7 +1699,6 @@ class PowerFlowSolutionZBus(PowerFlowSolutionFixedPoint):
         voltage_iteration = 0
         voltage_change = np.inf
         while (voltage_iteration < voltage_iteration_limit) & (voltage_change > voltage_tolerance):
-
             # Calculate current injections.
             node_current_injection_delta_in_wye_no_source = (
                 electric_grid_model.node_transformation_matrix_no_source.transpose()
@@ -1785,7 +1765,6 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, scenario_name: str, **kwargs):
-
         # Obtain `electric_grid_model`.
         electric_grid_model = ElectricGridModelOpenDSS(scenario_name)
 
@@ -1793,7 +1772,6 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModelOpenDSS, **kwargs):
-
         # Obtain `der_power_vector`, assuming nominal power conditions.
         der_power_vector = electric_grid_model.der_power_vector_reference
 
@@ -1801,7 +1779,6 @@ class PowerFlowSolutionOpenDSS(PowerFlowSolutionBase):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModelOpenDSS, der_power_vector: np.ndarray, **kwargs):
-
         # Store DER power vector.
         self.der_power_vector = der_power_vector.ravel()
 
@@ -1952,7 +1929,6 @@ class PowerFlowSolution(PowerFlowSolutionFixedPoint):
 
 
 class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
-
     power_flow_solutions: typing.Dict[pd.Timestamp, PowerFlowSolutionBase]
     electric_grid_model: ElectricGridModel
     der_power_vector: pd.DataFrame
@@ -1965,7 +1941,6 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         der_operation_results: ElectricGridDEROperationResults,
         **kwargs,
     ):
-
         der_power_vector = (
             der_operation_results.der_active_power_vector + 1.0j * der_operation_results.der_reactive_power_vector
         )
@@ -1979,7 +1954,6 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         der_power_vector: pd.DataFrame,
         power_flow_solution_method=PowerFlowSolutionFixedPoint,
     ):
-
         # Store attributes.
         self.electric_grid_model = electric_grid_model
         self.der_power_vector = der_power_vector
@@ -1992,7 +1966,6 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         self.power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
 
     def get_results(self) -> ElectricGridOperationResults:
-
         # Instantiate results variables.
         der_power_vector = pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
         node_voltage_vector = pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=complex)
@@ -2242,7 +2215,6 @@ class LinearElectricGridModelGlobal(LinearElectricGridModelBase):
         self,
         scenario_name: str,
     ):
-
         # Obtain electric grid model.
         electric_grid_model = ElectricGridModel(scenario_name)
 
@@ -2630,7 +2602,6 @@ class LinearElectricGridModelLocal(LinearElectricGridModelBase):
         self,
         scenario_name: str,
     ):
-
         # Obtain electric grid model.
         electric_grid_model = ElectricGridModel(scenario_name)
 
@@ -2644,7 +2615,6 @@ class LinearElectricGridModelLocal(LinearElectricGridModelBase):
 
     @multimethod.multimethod
     def __init__(self, electric_grid_model: ElectricGridModel, power_flow_solution: PowerFlowSolutionBase):
-
         # Store power flow solution.
         self.power_flow_solution = power_flow_solution
 
@@ -3020,14 +2990,12 @@ class LinearElectricGridModelLocal(LinearElectricGridModelBase):
 
 
 class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
-
     linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModelBase]
     electric_grid_model: ElectricGridModel
     timesteps: pd.Index
 
     @multimethod.multimethod
     def __init__(self, scenario_name: str):
-
         # Obtain electric grid model & reference power flow solution.
         electric_grid_model = ElectricGridModel(scenario_name)
         power_flow_solution = PowerFlowSolutionFixedPoint(electric_grid_model)
@@ -3041,7 +3009,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         power_flow_solution: PowerFlowSolutionBase,
         linear_electric_grid_model_method: typing.Type[LinearElectricGridModelBase] = LinearElectricGridModelGlobal,
     ):
-
         self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
 
         # Obtain linear electric grid models.
@@ -3059,7 +3026,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         power_flow_solution_set: PowerFlowSolutionSet,
         linear_electric_grid_model_method: typing.Type[LinearElectricGridModelBase] = LinearElectricGridModelLocal,
     ):
-
         self.check_linear_electric_grid_model_method(linear_electric_grid_model_method)
 
         # Obtain linear electric grid models.
@@ -3077,7 +3043,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         electric_grid_model: ElectricGridModel,
         linear_electric_grid_models: typing.Dict[pd.Timestamp, LinearElectricGridModelBase],
     ):
-
         # Store attributes.
         self.electric_grid_model = electric_grid_model
         self.timesteps = self.electric_grid_model.timesteps
@@ -3088,7 +3053,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
     @staticmethod
     def check_linear_electric_grid_model_method(linear_electric_grid_model_method):
-
         if not issubclass(linear_electric_grid_model_method, LinearElectricGridModelBase):
             raise ValueError(f"Invalid linear electric grid model method: {linear_electric_grid_model_method}")
 
@@ -3099,7 +3063,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         scenarios: typing.Union[list, pd.Index] = None,
         **kwargs,
     ):
-
         # Defined optimization problem definitions through respective sub-methods.
         self.define_optimization_variables(optimization_problem, scenarios=scenarios)
         self.define_optimization_parameters(optimization_problem, price_data, scenarios=scenarios, **kwargs)
@@ -3109,7 +3072,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_variables(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -3157,7 +3119,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         branch_power_magnitude_vector_maximum: np.ndarray = None,
         scenarios: typing.Union[list, pd.Index] = None,
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -3473,7 +3434,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_constraints(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -3780,7 +3740,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     def define_optimization_objective(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ):
-
         # If no scenarios given, obtain default value.
         if scenarios is None:
             scenarios = [None]
@@ -3793,7 +3752,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         # - Only defined here, if not yet defined as cost of electric power supply at the DER node
         #   in `mesmo.der_models.DERModel.define_optimization_objective`.
         if not optimization_problem.flags.get("has_der_objective"):
-
             # Active power cost / revenue.
             # - Cost for load / demand, revenue for generation / supply.
             optimization_problem.define_objective(
@@ -3877,7 +3835,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     def evaluate_optimization_objective(
         self, results: ElectricGridOperationResults, price_data: mesmo.data_interface.PriceData
     ) -> float:
-
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_parameters(optimization_problem, price_data)
@@ -3908,7 +3865,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
     ) -> ElectricGridDLMPResults:
-
         # Obtain results index sets, depending on if / if not scenarios given.
         # TODO: Flatten index to align with other results.
         if scenarios in [None, [None]]:
@@ -4435,7 +4391,6 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
     ) -> ElectricGridOperationResults:
-
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]

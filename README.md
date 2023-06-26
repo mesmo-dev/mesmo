@@ -3,7 +3,7 @@
 [![](https://zenodo.org/badge/201130660.svg)](https://zenodo.org/badge/latestdoi/201130660)
 [![](https://img.shields.io/github/release-date/mesmo-dev/mesmo?label=last%20release)](https://github.com/mesmo-dev/mesmo/releases)
 [![](https://img.shields.io/github/last-commit/mesmo-dev/mesmo?label=last%20commit%20%28develop%29)](https://github.com/mesmo-dev/mesmo/commits/develop)
-[![](https://img.shields.io/github/workflow/status/mesmo-dev/mesmo/Python%20tests/develop?label=tests%20%28develop%29)](https://github.com/mesmo-dev/mesmo/actions/workflows/pythontests.yml?query=branch%3Adevelop)
+[![](https://img.shields.io/github/actions/workflow/status/mesmo-dev/mesmo/pythontests.yml?branch=develop)](https://github.com/mesmo-dev/mesmo/actions/workflows/pythontests.yml?query=branch%3Adevelop)
 
 > Work in progress: The repository is under active development and interfaces may change without notice. Please use [GitHub issues](https://github.com/mesmo-dev/mesmo/issues) for raising problems, questions, comments and feedback.
 

@@ -620,7 +620,7 @@ class DERData(mesmo.utils.ObjectBase):
                 else:
 
                     # Resample to scenario timestep interval, using mean to aggregate. Missing values are interpolated.
-                    der_timeseries = der_timeseries.resample(timestep_interval, origin=timestep_start).mean()
+                    der_timeseries = der_timeseries.resample(timestep_interval, origin=timestep_start).mean(numeric_only=True)
                     der_timeseries = der_timeseries.reindex(timesteps)
                     der_timeseries = der_timeseries.interpolate(method="linear")
 
@@ -685,7 +685,7 @@ class DERData(mesmo.utils.ObjectBase):
                     # Resample to required timestep frequency, foward-filling intermediate values.
                     # - Ensures that the correct value is used when reindexing to obtain the full timeseries,
                     #   independent of any shift between timeseries and schedule timesteps.
-                    der_schedule_complete = der_schedule_complete.resample(timestep_frequency).mean()
+                    der_schedule_complete = der_schedule_complete.resample(timestep_frequency).mean(numeric_only=True)
                     der_schedule_complete = der_schedule_complete.reindex(
                         pd.date_range(start="2001-01-01T00:00", end="2001-01-07T23:59", freq=timestep_frequency)
                     )
@@ -694,7 +694,7 @@ class DERData(mesmo.utils.ObjectBase):
                 else:
 
                     # Resample to required timestep frequency, using mean to aggregate. Missing values are interpolated.
-                    der_schedule_complete = der_schedule_complete.resample(timestep_frequency).mean()
+                    der_schedule_complete = der_schedule_complete.resample(timestep_frequency).mean(numeric_only=True)
                     der_schedule_complete = der_schedule_complete.reindex(
                         pd.date_range(start="2001-01-01T00:00", end="2001-01-07T23:59", freq=timestep_frequency)
                     )
@@ -920,7 +920,7 @@ class ElectricGridData(mesmo.utils.ObjectBase):
 
         # If line type matrix phases differ from matrix entries, raise error.
         for line_type_index, line_type in self.electric_grid_line_types.iterrows():
-            if np.math.factorial(line_type.at["n_phases"]) != len(
+            if np.math.factorial(int(line_type.at["n_phases"])) != len(
                 self.electric_grid_line_types_matrices.loc[
                     self.electric_grid_line_types_matrices.loc[:, "line_type"] == line_type_index,
                 ]

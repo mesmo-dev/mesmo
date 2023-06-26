@@ -3,7 +3,7 @@
 If you are keen to contribute to this project, please follow these guidelines:
 
 - Before making any change, please first discuss via issue or email with the owners of this repository.
-- Development is based on Python 3.8.
+- Development is based on Python 3.10.
 - Git branches follow the [GitFlow principle](https://nvie.com/posts/a-successful-git-branching-model/).
 - Release versioning follows the [Semantic Versioning principle](https://semver.org/).
 - Code style follows the [PEP 8 Style Guide](https://www.python.org/dev/peps/pep-0008/) and [Common Coding Conventions](https://github.com/tum-esi/common-coding-conventions), unless stated otherwise [below](#style-guide).

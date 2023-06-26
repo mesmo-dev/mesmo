@@ -5,7 +5,7 @@ FROM condaforge/miniforge3:latest
 WORKDIR /mesmo
 
 # Setup conda environment.
-RUN conda create -n mesmo -c conda-forge python=3.8 contextily cvxpy numpy pandas scipy
+RUN conda create -n mesmo -c conda-forge python=3.10 contextily cvxpy numpy pandas scipy
 # Activate conda environment for RUN commands.
 SHELL ["conda", "run", "--no-capture-output", "-n", "mesmo", "/bin/bash", "-c"]
 # Activate conda environment for interactive shell.

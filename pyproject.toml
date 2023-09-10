@@ -21,6 +21,7 @@ dependencies = [
     "cobmo",  # Not on package index. Needs to be manually installed from https://github.com/mesmo-dev/cobmo
     "dill",
     "dynaconf",
+    "fastapi",  # Only needed for its convenient JSON encoder
     "gurobipy",
     "kaleido",  # For static plot output with plotly.
     "matplotlib",
@@ -32,6 +33,7 @@ dependencies = [
     "OpenDSSDirect.py",
     "pandas",
     "plotly",
+    "pydantic",
     "pyyaml",
     "ray[default]",
     "requests",  # For HiGHS installation.

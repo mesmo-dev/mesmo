@@ -2,6 +2,7 @@
 
 import copy
 import datetime
+from fastapi.encoders import jsonable_encoder
 import functools
 import itertools
 import logging
@@ -559,12 +560,16 @@ def write_figure_plotly(
     elif file_format in ["html"]:
         pio.write_html(figure, f"{results_path}.{file_format}")
     elif file_format in ["json"]:
-        pio.write_json(figure, f"{results_path}.{file_format}")
+        pio.write_json(figure, f"{results_path}.{file_format}", pretty=True)
     else:
         raise ValueError(
             f"Invalid `file_format` for `write_figure_plotly`: {file_format}"
             f" - Valid file formats: 'png', 'jpg', 'jpeg', 'webp', 'svg', 'pdf', 'html', 'json'"
         )
+
+    # Additionally to the requested format, also output at plottable item in JSON format.
+    if file_format != "json":
+        write_figure_plotly(figure, results_path, "json", width, height)
 
 
 def OptimizationProblem() -> "mesmo.solutions.OptimizationProblem":

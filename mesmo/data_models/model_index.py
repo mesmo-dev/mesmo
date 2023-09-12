@@ -2,11 +2,10 @@
 
 import pandas as pd
 
-
 from mesmo.data_models import base_model
 
 
-class ElectricGridModelIndex(base_model.Model):
+class ElectricGridModelIndex(base_model.BaseModel):
     timesteps: pd.Index
     phases: pd.Index
     node_names: pd.Index
@@ -24,7 +23,7 @@ class ElectricGridModelIndex(base_model.Model):
     ders: pd.Index
 
 
-class ThermalGridModelIndex(base_model.Model):
+class ThermalGridModelIndex(base_model.BaseModel):
     timesteps: pd.Index
     node_names: pd.Index
     line_names: pd.Index

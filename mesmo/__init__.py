@@ -1,12 +1,13 @@
 """MESMO - Multi-Energy System Modeling and Optimization."""
 
-import mesmo.api as api
-import mesmo.config as config
-import mesmo.data_interface as data_interface
-import mesmo.der_models as der_models
-import mesmo.electric_grid_models as electric_grid_models
-import mesmo.plots as plots
-import mesmo.problems as problems
-import mesmo.solutions as solutions
-import mesmo.thermal_grid_models as thermal_grid_models
-import mesmo.utils as utils
+from . import api
+from . import config
+from . import data_interface
+from . import data_models
+from . import der_models
+from . import electric_grid_models
+from . import plots
+from . import problems
+from . import solutions
+from . import thermal_grid_models
+from . import utils

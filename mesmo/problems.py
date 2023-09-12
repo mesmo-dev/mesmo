@@ -385,7 +385,7 @@ class OptimalOperationProblem(ProblemBase):
             self.linear_electric_grid_model_set = mesmo.electric_grid_models.LinearElectricGridModelSet(
                 self.electric_grid_model,
                 self.power_flow_solution_reference,
-                linear_electric_grid_model_method=mesmo.electric_grid_models.LinearElectricGridModelGlobal,
+                mesmo.electric_grid_models.LinearElectricGridModelGlobal,
             )
             mesmo.utils.log_time("electric grid model instantiation")
 

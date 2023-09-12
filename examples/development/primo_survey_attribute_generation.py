@@ -165,6 +165,7 @@ def solve_problem(
         * price_data.price_timeseries.loc[:, [("active_power", "source", "source")]].values
         * timestep_interval_hours
     )
+    results.der_model = flexible_der_model
 
     return results
 

@@ -12,6 +12,9 @@ import typing
 
 import mesmo.config
 import mesmo.data_interface
+from mesmo.data_models.results import ElectricGridDEROperationResults
+from mesmo.data_models.results import ElectricGridOperationResults
+from mesmo.data_models.results import ElectricGridDLMPResults
 import mesmo.solutions
 import mesmo.utils
 
@@ -1167,58 +1170,6 @@ class ElectricGridModelOpenDSS(ElectricGridModel):
         opendss_command_string = "set mode=0"
         logger.debug(f"opendss_command_string = \n{opendss_command_string}")
         opendssdirect.run_command(opendss_command_string)
-
-
-class ElectricGridDEROperationResults(mesmo.utils.ResultsBase):
-    der_active_power_vector: pd.DataFrame
-    der_active_power_vector_per_unit: pd.DataFrame
-    der_reactive_power_vector: pd.DataFrame
-    der_reactive_power_vector_per_unit: pd.DataFrame
-
-
-class ElectricGridOperationResults(ElectricGridDEROperationResults):
-    electric_grid_model: ElectricGridModel
-    node_voltage_magnitude_vector: pd.DataFrame
-    node_voltage_magnitude_vector_per_unit: pd.DataFrame
-    node_voltage_angle_vector: pd.DataFrame
-    branch_power_magnitude_vector_1: pd.DataFrame
-    branch_power_magnitude_vector_1_per_unit: pd.DataFrame
-    branch_active_power_vector_1: pd.DataFrame
-    branch_active_power_vector_1_per_unit: pd.DataFrame
-    branch_reactive_power_vector_1: pd.DataFrame
-    branch_reactive_power_vector_1_per_unit: pd.DataFrame
-    branch_power_magnitude_vector_2: pd.DataFrame
-    branch_power_magnitude_vector_2_per_unit: pd.DataFrame
-    branch_active_power_vector_2: pd.DataFrame
-    branch_active_power_vector_2_per_unit: pd.DataFrame
-    branch_reactive_power_vector_2: pd.DataFrame
-    branch_reactive_power_vector_2_per_unit: pd.DataFrame
-    loss_active: pd.DataFrame
-    loss_reactive: pd.DataFrame
-
-
-class ElectricGridDLMPResults(mesmo.utils.ResultsBase):
-    electric_grid_energy_dlmp_node_active_power: pd.DataFrame
-    electric_grid_voltage_dlmp_node_active_power: pd.DataFrame
-    electric_grid_congestion_dlmp_node_active_power: pd.DataFrame
-    electric_grid_loss_dlmp_node_active_power: pd.DataFrame
-    electric_grid_total_dlmp_node_active_power: pd.DataFrame
-    electric_grid_voltage_dlmp_node_reactive_power: pd.DataFrame
-    electric_grid_congestion_dlmp_node_reactive_power: pd.DataFrame
-    electric_grid_loss_dlmp_node_reactive_power: pd.DataFrame
-    electric_grid_energy_dlmp_node_reactive_power: pd.DataFrame
-    electric_grid_total_dlmp_node_reactive_power: pd.DataFrame
-    electric_grid_energy_dlmp_der_active_power: pd.DataFrame
-    electric_grid_voltage_dlmp_der_active_power: pd.DataFrame
-    electric_grid_congestion_dlmp_der_active_power: pd.DataFrame
-    electric_grid_loss_dlmp_der_active_power: pd.DataFrame
-    electric_grid_total_dlmp_der_active_power: pd.DataFrame
-    electric_grid_voltage_dlmp_der_reactive_power: pd.DataFrame
-    electric_grid_congestion_dlmp_der_reactive_power: pd.DataFrame
-    electric_grid_loss_dlmp_der_reactive_power: pd.DataFrame
-    electric_grid_energy_dlmp_der_reactive_power: pd.DataFrame
-    electric_grid_total_dlmp_der_reactive_power: pd.DataFrame
-    electric_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
 class PowerFlowSolutionBase(mesmo.utils.ObjectBase):

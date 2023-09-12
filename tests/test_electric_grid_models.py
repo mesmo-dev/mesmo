@@ -5,6 +5,7 @@ from parameterized import parameterized
 import unittest
 
 import mesmo
+import mesmo.data_models.results
 
 logger = mesmo.config.get_logger(__name__)
 
@@ -30,7 +31,7 @@ class TestElectricGridModels(unittest.TestCase):
                 mesmo.config.config["tests"]["scenario_name"]
             )
             der_model_set = mesmo.der_models.DERModelSet(mesmo.config.config["tests"]["scenario_name"])
-            der_operation_results = mesmo.electric_grid_models.ElectricGridDEROperationResults(
+            der_operation_results = mesmo.data_models.results.ElectricGridDEROperationResults(
                 der_active_power_vector=der_model_set.der_active_power_nominal_timeseries,
                 der_reactive_power_vector=der_model_set.der_reactive_power_nominal_timeseries,
             )

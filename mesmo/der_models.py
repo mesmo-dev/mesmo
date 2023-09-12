@@ -13,6 +13,7 @@ import typing
 import cobmo.building_model
 import mesmo.config
 import mesmo.data_interface
+from mesmo.data_models.results import DERModelSetOperationResults
 import mesmo.electric_grid_models
 import mesmo.solutions
 import mesmo.utils
@@ -141,13 +142,6 @@ class DERModel(mesmo.utils.ObjectBase):
 
         # Obtain marginal cost.
         self.marginal_cost = der.at["marginal_cost"] if pd.notnull(der.at["marginal_cost"]) else 0.0
-
-
-class DERModelOperationResults(mesmo.utils.ResultsBase):
-    der_model: DERModel
-    state_vector: pd.DataFrame
-    control_vector: pd.DataFrame
-    output_vector: pd.DataFrame
 
 
 class FixedDERModel(DERModel):
@@ -1314,16 +1308,6 @@ class DERModelSetBase:
     der_active_power_nominal_timeseries: pd.DataFrame
     der_reactive_power_nominal_timeseries: pd.DataFrame
     der_thermal_power_nominal_timeseries: pd.DataFrame
-
-
-class DERModelSetOperationResults(mesmo.electric_grid_models.ElectricGridDEROperationResults):
-    der_model_set: DERModelSetBase
-    state_vector: pd.DataFrame
-    control_vector: pd.DataFrame
-    output_vector: pd.DataFrame
-    # TODO: Add output constraint and disturbance timeseries.
-    der_thermal_power_vector: pd.DataFrame
-    der_thermal_power_vector_per_unit: pd.DataFrame
 
 
 class DERModelSet(DERModelSetBase):

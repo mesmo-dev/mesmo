@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 
 import mesmo
+import mesmo.data_models.results
 
 
 def main():
@@ -43,7 +44,7 @@ def run_optimal_operation_problem_trust_region(
     der_model_set: mesmo.der_models.DERModelSet,
     electric_grid_model: mesmo.electric_grid_models.ElectricGridModel,
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None,
-    presolve_results: mesmo.der_models.DERModelSetOperationResults = None,
+    presolve_results: mesmo.data_models.results.DERModelSetOperationResults = None,
     results_path: str = None,
 ) -> [float, mesmo.problems.Results, dict]:
     """
@@ -535,7 +536,7 @@ class OptimalOperationProblem(object):
     power_flow_solution_set: mesmo.electric_grid_models.PowerFlowSolutionSet = None
     linear_electric_grid_model_set: mesmo.electric_grid_models.LinearElectricGridModelSet = None
     der_model_set: mesmo.der_models.DERModelSet
-    presolve_results: mesmo.der_models.DERModelSetOperationResults = None
+    presolve_results: mesmo.data_models.results.DERModelSetOperationResults = None
     optimization_problem: mesmo.solutions.OptimizationProblem
     results: mesmo.problems.Results
 

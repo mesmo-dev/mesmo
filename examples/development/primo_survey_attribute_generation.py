@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 import mesmo
+import mesmo.data_models.results
 
 
 def main():
@@ -140,7 +141,7 @@ def main():
 
 def solve_problem(
     flexible_der_model: mesmo.der_models.FlexibleDERModel, price_data: mesmo.data_interface.PriceData
-) -> mesmo.der_models.DERModelOperationResults:
+) -> mesmo.data_models.results.DERModelOperationResults:
     # Enforce storage states, initial state is linked to final state.
     flexible_der_model.storage_states = flexible_der_model.states
 
@@ -189,7 +190,7 @@ def plot_results(results: dict, results_path: str):
 
 
 @multimethod
-def plot_results(results: mesmo.der_models.DERModelOperationResults, results_path: pathlib.Path, label: tuple):
+def plot_results(results: mesmo.data_models.results.DERModelOperationResults, results_path: pathlib.Path, label: tuple):
     # Parse label.
     label = mesmo.utils.get_alphanumeric_string(str(label))
 

@@ -11,6 +11,9 @@ import typing
 
 import mesmo.config
 import mesmo.data_interface
+from mesmo.data_models.results import ThermalGridDEROperationResults
+from mesmo.data_models.results import ThermalGridOperationResults
+from mesmo.data_models.results import ThermalGridDLMPResults
 import mesmo.der_models
 import mesmo.solutions
 import mesmo.utils
@@ -339,34 +342,6 @@ class ThermalGridModel(mesmo.utils.ObjectBase):
         )
 
         return branch_loss_coefficient_vector
-
-
-class ThermalGridDEROperationResults(mesmo.utils.ResultsBase):
-    der_thermal_power_vector: pd.DataFrame
-    der_thermal_power_vector_per_unit: pd.DataFrame
-
-
-class ThermalGridOperationResults(ThermalGridDEROperationResults):
-    thermal_grid_model: ThermalGridModel
-    node_head_vector: pd.DataFrame
-    node_head_vector_per_unit: pd.DataFrame
-    branch_flow_vector: pd.DataFrame
-    branch_flow_vector_per_unit: pd.DataFrame
-    pump_power: pd.DataFrame
-
-
-class ThermalGridDLMPResults(mesmo.utils.ResultsBase):
-    thermal_grid_energy_dlmp_node_thermal_power: pd.DataFrame
-    thermal_grid_head_dlmp_node_thermal_power: pd.DataFrame
-    thermal_grid_congestion_dlmp_node_thermal_power: pd.DataFrame
-    thermal_grid_pump_dlmp_node_thermal_power: pd.DataFrame
-    thermal_grid_total_dlmp_node_thermal_power: pd.DataFrame
-    thermal_grid_energy_dlmp_der_thermal_power: pd.DataFrame
-    thermal_grid_head_dlmp_der_thermal_power: pd.DataFrame
-    thermal_grid_congestion_dlmp_der_thermal_power: pd.DataFrame
-    thermal_grid_pump_dlmp_der_thermal_power: pd.DataFrame
-    thermal_grid_total_dlmp_der_thermal_power: pd.DataFrame
-    thermal_grid_total_dlmp_price_timeseries: pd.DataFrame
 
 
 class ThermalPowerFlowSolutionBase(mesmo.utils.ObjectBase):

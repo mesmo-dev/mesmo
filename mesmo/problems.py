@@ -9,6 +9,7 @@ import typing
 
 import mesmo.config
 import mesmo.data_interface
+import mesmo.data_models
 import mesmo.der_models
 import mesmo.electric_grid_models
 import mesmo.solutions
@@ -19,11 +20,11 @@ logger = mesmo.config.get_logger(__name__)
 
 
 class Results(
-    mesmo.electric_grid_models.ElectricGridOperationResults,
-    mesmo.thermal_grid_models.ThermalGridOperationResults,
-    mesmo.der_models.DERModelSetOperationResults,
-    mesmo.electric_grid_models.ElectricGridDLMPResults,
-    mesmo.thermal_grid_models.ThermalGridDLMPResults,
+    mesmo.data_models.ElectricGridOperationResults,
+    mesmo.data_models.ThermalGridOperationResults,
+    mesmo.data_models.DERModelSetOperationResults,
+    mesmo.data_models.ElectricGridDLMPResults,
+    mesmo.data_models.ThermalGridDLMPResults,
 ):
     """Results object, which serves as data object to hold structured results variables from solved problems."""
 

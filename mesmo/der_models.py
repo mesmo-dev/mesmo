@@ -1,7 +1,6 @@
 """Distributed energy resource (DER) models."""
 
 import inspect
-import itertools
 from multimethod import multimethod
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ import typing
 import cobmo.building_model
 import mesmo.config
 import mesmo.data_interface
-from mesmo.data_models.results import DERModelSetOperationResults
+import mesmo.data_models
 import mesmo.electric_grid_models
 import mesmo.solutions
 import mesmo.utils
@@ -2220,7 +2219,7 @@ class DERModelSet(DERModelSetBase):
 
     def evaluate_optimization_objective(
         self,
-        results: DERModelSetOperationResults,
+        results: mesmo.data_models.DERModelSetOperationResults,
         price_data: mesmo.data_interface.PriceData,
         has_electric_grid_objective: bool = False,
         has_thermal_grid_objective: bool = False,
@@ -2253,7 +2252,7 @@ class DERModelSet(DERModelSetBase):
 
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
-    ) -> DERModelSetOperationResults:
+    ) -> mesmo.data_models.DERModelSetOperationResults:
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -2312,8 +2311,20 @@ class DERModelSet(DERModelSetBase):
             else None
         )
 
-        return DERModelSetOperationResults(
-            der_model_set=self,
+        return mesmo.data_models.DERModelSetOperationResults(
+            der_model_set_index=mesmo.data_models.DERModelSetIndex(
+                timesteps=self.timesteps,
+                ders=self.ders,
+                electric_ders=self.electric_ders,
+                thermal_ders=self.thermal_ders,
+                der_names=self.der_names,
+                fixed_der_names=self.fixed_der_names,
+                flexible_der_names=self.flexible_der_names,
+                states=self.states,
+                controls=self.controls,
+                outputs=self.outputs,
+                storage_states=self.storage_states,
+            ),
             state_vector=state_vector,
             control_vector=control_vector,
             output_vector=output_vector,
@@ -2325,7 +2336,7 @@ class DERModelSet(DERModelSetBase):
             der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit,
         )
 
-    def pre_solve(self, price_data: mesmo.data_interface.PriceData) -> DERModelSetOperationResults:
+    def pre_solve(self, price_data: mesmo.data_interface.PriceData) -> mesmo.data_models.DERModelSetOperationResults:
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
         self.define_optimization_variables(optimization_problem)

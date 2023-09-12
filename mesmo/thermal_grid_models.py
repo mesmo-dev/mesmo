@@ -11,9 +11,7 @@ import typing
 
 import mesmo.config
 import mesmo.data_interface
-from mesmo.data_models.results import ThermalGridDEROperationResults
-from mesmo.data_models.results import ThermalGridOperationResults
-from mesmo.data_models.results import ThermalGridDLMPResults
+import mesmo.data_models
 import mesmo.der_models
 import mesmo.solutions
 import mesmo.utils
@@ -584,7 +582,7 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
 
     @multimethod
     def __init__(
-        self, thermal_grid_model: ThermalGridModel, der_operation_results: ThermalGridDEROperationResults, **kwargs
+        self, thermal_grid_model: ThermalGridModel, der_operation_results: mesmo.data_models.ThermalGridDEROperationResults, **kwargs
     ):
         der_thermal_power_vector = der_operation_results.der_thermal_power_vector
 
@@ -608,7 +606,7 @@ class ThermalPowerFlowSolutionSet(mesmo.utils.ObjectBase):
         )
         self.power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
 
-    def get_results(self) -> ThermalGridOperationResults:
+    def get_results(self) -> mesmo.data_models.ThermalGridOperationResults:
         raise NotImplementedError
 
 
@@ -1234,7 +1232,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def evaluate_optimization_objective(
-        self, results: ThermalGridOperationResults, price_data: mesmo.data_interface.PriceData
+        self, results: mesmo.data_models.ThermalGridOperationResults, price_data: mesmo.data_interface.PriceData
     ) -> float:
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
@@ -1261,7 +1259,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
-    ) -> ThermalGridDLMPResults:
+    ) -> mesmo.data_models.ThermalGridDLMPResults:
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -1411,7 +1409,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
             price_data.price_timeseries.columns.isin(thermal_grid_total_dlmp_price_timeseries.columns)
         ]
 
-        return ThermalGridDLMPResults(
+        return mesmo.data_models.ThermalGridDLMPResults(
             thermal_grid_energy_dlmp_node_thermal_power=thermal_grid_energy_dlmp_node_thermal_power,
             thermal_grid_head_dlmp_node_thermal_power=thermal_grid_head_dlmp_node_thermal_power,
             thermal_grid_congestion_dlmp_node_thermal_power=thermal_grid_congestion_dlmp_node_thermal_power,
@@ -1427,7 +1425,7 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
 
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
-    ) -> ThermalGridOperationResults:
+    ) -> mesmo.data_models.ThermalGridOperationResults:
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -1462,8 +1460,18 @@ class LinearThermalGridModelSet(mesmo.utils.ObjectBase):
         )
         pump_power = optimization_problem.results["pump_power"].loc[self.thermal_grid_model.timesteps, pump_power]
 
-        return ThermalGridOperationResults(
-            thermal_grid_model=self.thermal_grid_model,
+        return mesmo.data_models.ThermalGridOperationResults(
+            thermal_grid_model_index=mesmo.data_models.ThermalGridModelIndex(
+                timesteps=self.thermal_grid_model.timesteps,
+                node_names=self.thermal_grid_model.node_names,
+                line_names=self.thermal_grid_model.line_names,
+                der_names=self.thermal_grid_model.der_names,
+                der_types=self.thermal_grid_model.der_types,
+                nodes=self.thermal_grid_model.nodes,
+                branches=self.thermal_grid_model.branches,
+                branch_loops=self.thermal_grid_model.branch_loops,
+                ders=self.thermal_grid_model.ders,
+            ),
             der_thermal_power_vector=der_thermal_power_vector,
             der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit,
             node_head_vector=node_head_vector,

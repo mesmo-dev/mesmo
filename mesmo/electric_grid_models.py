@@ -12,9 +12,7 @@ import typing
 
 import mesmo.config
 import mesmo.data_interface
-from mesmo.data_models.results import ElectricGridDEROperationResults
-from mesmo.data_models.results import ElectricGridOperationResults
-from mesmo.data_models.results import ElectricGridDLMPResults
+import mesmo.data_models
 import mesmo.solutions
 import mesmo.utils
 
@@ -83,7 +81,6 @@ class ElectricGridModel(mesmo.utils.ObjectBase):
     node_types: pd.Index
     line_names: pd.Index
     transformer_names: pd.Index
-    branch_names: pd.Index
     branch_types: pd.Index
     der_names: pd.Index
     der_types: pd.Index
@@ -1889,7 +1886,7 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
     def __init__(
         self,
         electric_grid_model: ElectricGridModel,
-        der_operation_results: ElectricGridDEROperationResults,
+        der_operation_results: mesmo.data_models.ElectricGridDEROperationResults,
         **kwargs,
     ):
         der_power_vector = (
@@ -1916,7 +1913,7 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         )
         self.power_flow_solutions = dict(zip(self.timesteps, power_flow_solutions))
 
-    def get_results(self) -> ElectricGridOperationResults:
+    def get_results(self) -> mesmo.data_models.ElectricGridOperationResults:
         # Instantiate results variables.
         der_power_vector = pd.DataFrame(columns=self.electric_grid_model.ders, index=self.timesteps, dtype=complex)
         node_voltage_vector = pd.DataFrame(columns=self.electric_grid_model.nodes, index=self.timesteps, dtype=complex)
@@ -1962,8 +1959,23 @@ class PowerFlowSolutionSet(mesmo.utils.ObjectBase):
         )
 
         # Store results.
-        return ElectricGridOperationResults(
-            electric_grid_model=self.electric_grid_model,
+        return mesmo.data_models.ElectricGridOperationResults(
+            electric_grid_model_index=mesmo.data_models.ElectricGridModelIndex(
+                timesteps=self.electric_grid_model.timesteps,
+                phases=self.electric_grid_model.phases,
+                node_names=self.electric_grid_model.node_names,
+                node_types=self.electric_grid_model.node_types,
+                line_names=self.electric_grid_model.line_names,
+                transformer_names=self.electric_grid_model.transformer_names,
+                branch_types=self.electric_grid_model.branch_types,
+                der_names=self.electric_grid_model.der_names,
+                der_types=self.electric_grid_model.der_types,
+                nodes=self.electric_grid_model.nodes,
+                branches=self.electric_grid_model.branches,
+                lines=self.electric_grid_model.lines,
+                transformers=self.electric_grid_model.transformers,
+                ders=self.electric_grid_model.ders,
+            ),
             der_active_power_vector=der_active_power_vector,
             der_active_power_vector_per_unit=der_active_power_vector_per_unit,
             der_reactive_power_vector=der_reactive_power_vector,
@@ -3784,7 +3796,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         )
 
     def evaluate_optimization_objective(
-        self, results: ElectricGridOperationResults, price_data: mesmo.data_interface.PriceData
+        self, results: mesmo.data_models.ElectricGridOperationResults, price_data: mesmo.data_interface.PriceData
     ) -> float:
         # Instantiate optimization problem.
         optimization_problem = mesmo.solutions.OptimizationProblem()
@@ -3815,7 +3827,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
         optimization_problem: mesmo.solutions.OptimizationProblem,
         price_data: mesmo.data_interface.PriceData,
         scenarios: typing.Union[list, pd.Index] = None,
-    ) -> ElectricGridDLMPResults:
+    ) -> mesmo.data_models.ElectricGridDLMPResults:
         # Obtain results index sets, depending on if / if not scenarios given.
         # TODO: Flatten index to align with other results.
         if scenarios in [None, [None]]:
@@ -4315,7 +4327,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
                 price_data.price_timeseries.columns.isin(electric_grid_total_dlmp_price_timeseries.columns)
             ]
 
-        return ElectricGridDLMPResults(
+        return mesmo.data_models.ElectricGridDLMPResults(
             electric_grid_energy_dlmp_node_active_power=electric_grid_energy_dlmp_node_active_power,
             electric_grid_voltage_dlmp_node_active_power=electric_grid_voltage_dlmp_node_active_power,
             electric_grid_congestion_dlmp_node_active_power=electric_grid_congestion_dlmp_node_active_power,
@@ -4341,7 +4353,7 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
     def get_optimization_results(
         self, optimization_problem: mesmo.solutions.OptimizationProblem, scenarios: typing.Union[list, pd.Index] = None
-    ) -> ElectricGridOperationResults:
+    ) -> mesmo.data_models.ElectricGridOperationResults:
         # Obtain results index sets, depending on if / if not scenarios given.
         if scenarios in [None, [None]]:
             scenarios = [None]
@@ -4396,8 +4408,23 @@ class LinearElectricGridModelSet(mesmo.utils.ObjectBase):
 
         # TODO: Obtain voltage angle and active / reactive branch power vectors.
 
-        return ElectricGridOperationResults(
-            electric_grid_model=self.electric_grid_model,
+        return mesmo.data_models.ElectricGridOperationResults(
+            electric_grid_model_index=mesmo.data_models.ElectricGridModelIndex(
+                timesteps=self.electric_grid_model.timesteps,
+                phases=self.electric_grid_model.phases,
+                node_names=self.electric_grid_model.node_names,
+                node_types=self.electric_grid_model.node_types,
+                line_names=self.electric_grid_model.line_names,
+                transformer_names=self.electric_grid_model.transformer_names,
+                branch_types=self.electric_grid_model.branch_types,
+                der_names=self.electric_grid_model.der_names,
+                der_types=self.electric_grid_model.der_types,
+                nodes=self.electric_grid_model.nodes,
+                branches=self.electric_grid_model.branches,
+                lines=self.electric_grid_model.lines,
+                transformers=self.electric_grid_model.transformers,
+                ders=self.electric_grid_model.ders,
+            ),
             der_active_power_vector=der_active_power_vector,
             der_active_power_vector_per_unit=der_active_power_vector_per_unit,
             der_reactive_power_vector=der_reactive_power_vector,

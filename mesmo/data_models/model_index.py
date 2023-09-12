@@ -12,7 +12,6 @@ class ElectricGridModelIndex(base_model.BaseModel):
     node_types: pd.Index
     line_names: pd.Index
     transformer_names: pd.Index
-    branch_names: pd.Index
     branch_types: pd.Index
     der_names: pd.Index
     der_types: pd.Index

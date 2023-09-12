@@ -5,7 +5,6 @@ from parameterized import parameterized
 import unittest
 
 import mesmo
-import mesmo.data_models.results
 
 logger = mesmo.config.get_logger(__name__)
 
@@ -33,7 +32,7 @@ class TestThermalGridModels(unittest.TestCase):
                 mesmo.config.config["tests"]["thermal_grid_scenario_name"]
             )
             der_model_set = mesmo.der_models.DERModelSet(mesmo.config.config["tests"]["thermal_grid_scenario_name"])
-            der_operation_results = mesmo.data_models.results.ThermalGridDEROperationResults(
+            der_operation_results = mesmo.data_models.ThermalGridDEROperationResults(
                 der_thermal_power_vector=der_model_set.der_thermal_power_nominal_timeseries,
             )
             object_handle(thermal_grid_model, der_operation_results)

@@ -87,6 +87,7 @@ class ThermalGridDLMPResults(utils.ResultsBase):
 
 
 class DERModelOperationResults(utils.ResultsBase):
+    # TODO: Drop support for this class
     der_model_index: Optional[model_index.DERModelIndex]
     state_vector: pd.DataFrame
     control_vector: pd.DataFrame

@@ -5,6 +5,7 @@ from parameterized import parameterized
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 import mesmo
 
@@ -35,8 +36,10 @@ class TestExamples(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         sys.modules[example_file.stem] = module
         spec.loader.exec_module(module)
-        # Run main(), which will fail if it doesn't exist.
-        module.main()
+        # Patch launch() to not open files while testing
+        with mock.patch.object(mesmo.utils, 'launch', return_value=None):
+            # Run main(), which will fail if it doesn't exist.
+            module.main()
         mesmo.utils.log_time(f"test_example_{example_name}", log_level="info", logger_object=logger)
 
 

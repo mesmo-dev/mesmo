@@ -2,7 +2,6 @@
 
 import numpy as np
 import pathlib
-import plotly.graph_objects as go
 import scipy.sparse as sp
 
 import mesmo
@@ -25,20 +24,13 @@ def main():
             / "output"
         )
     )
-    # mesmo.data_interface.recreate_database()
+    mesmo.data_interface.recreate_database()
 
     # Obtain problems.
     problem_dict = mesmo.problems.ProblemDict(
         {
-            "Baseline scenario": mesmo.problems.NominalOperationProblem(f"{scenario_basename}_no_charging"),
-            "25% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_25percent"),
-            "75% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_75percent"),
-            "100% EVs (uncontrolled)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
-            "25% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_25percent"),
-            "75% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_75percent"),
-            "100% EVs (smart charging)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
-            "100% EVs (peak shaving)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
-            "100% EVs (price based)": mesmo.problems.OptimalOperationProblem(f"{scenario_basename}_100percent"),
+            "Baseline scenario": mesmo.problems.NominalOperationProblem(f"{scenario_basename}"),
+            "100% EVs (uncontrolled)": mesmo.problems.NominalOperationProblem(f"{scenario_basename}"),
         }
     )
 
@@ -128,31 +120,6 @@ def main():
         for key, value in results_dict.items()
         if key in ["25% EVs (uncontrolled)", "75% EVs (uncontrolled)", "100% EVs (uncontrolled)"]
     }
-    results_sets["_optimal25"] = {
-        key: value
-        for key, value in results_dict.items()
-        if key in ["Baseline scenario", "25% EVs (uncontrolled)", "25% EVs (smart charging)"]
-    }
-    results_sets["_optimal75"] = {
-        key: value
-        for key, value in results_dict.items()
-        if key in ["Baseline scenario", "75% EVs (uncontrolled)", "75% EVs (smart charging)"]
-    }
-    results_sets["_optimal100"] = {
-        key: value
-        for key, value in results_dict.items()
-        if key in ["Baseline scenario", "100% EVs (uncontrolled)", "100% EVs (smart charging)"]
-    }
-    results_sets["_peak_shaving"] = {
-        key: value
-        for key, value in results_dict.items()
-        if key in ["100% EVs (uncontrolled)", "100% EVs (peak shaving)", "100% EVs (smart charging)"]
-    }
-    results_sets["_price_based"] = {
-        key: value
-        for key, value in results_dict.items()
-        if key in ["100% EVs (uncontrolled)", "100% EVs (price based)", "100% EVs (smart charging)"]
-    }
 
     # Make plots.
     for results_label, results_set in results_sets.items():
@@ -175,51 +142,6 @@ def main():
                 value_unit_label="MW",
                 der_type_labels={"fixed_load": "Base load", "flexible_ev_charger": "EV charging"},
             )
-
-    # # Plot individual DER results.
-    # for results_label in ['100% EVs (smart charging)']:
-    #     for der_name, der_model in results_dict[results_label].der_model_set.flexible_der_models.items():
-    #         for output in der_model.outputs:
-    #             figure = go.Figure()
-    #             figure.add_trace(go.Scatter(
-    #                 x=der_model.output_maximum_timeseries.index,
-    #                 y=der_model.output_maximum_timeseries.loc[:, output].values,
-    #                 name='Maximum',
-    #                 line=go.scatter.Line(shape='hv')
-    #             ))
-    #             figure.add_trace(go.Scatter(
-    #                 x=der_model.output_minimum_timeseries.index,
-    #                 y=der_model.output_minimum_timeseries.loc[:, output].values,
-    #                 name='Minimum',
-    #                 line=go.scatter.Line(shape='hv')
-    #             ))
-    #             figure.add_trace(go.Scatter(
-    #                 x=results_dict[results_label]['output_vector'].index,
-    #                 y=results_dict[results_label]['output_vector'].loc[:, (der_name, output)].values,
-    #                 name='Optimal',
-    #                 line=go.scatter.Line(shape='hv', width=4)
-    #             ))
-    #             figure.update_layout(
-    #                 title=f'DER: {der_name} / Output: {output}',
-    #                 xaxis=go.layout.XAxis(tickformat='%H:%M'),
-    #                 legend=go.layout.Legend(x=0.99, xanchor='auto', y=0.99, yanchor='auto')
-    #             )
-    #             # figure.show()
-    #             mesmo.utils.write_figure_plotly(figure, (results_path / f'output_{der_name}_{output}'))
-    #         for disturbance in der_model.disturbances:
-    #             figure = go.Figure()
-    #             figure.add_trace(go.Scatter(
-    #                 x=der_model.disturbance_timeseries.index,
-    #                 y=der_model.disturbance_timeseries.loc[:, disturbance].values,
-    #                 line=go.scatter.Line(shape='hv')
-    #             ))
-    #             figure.update_layout(
-    #                 title=f'DER: {der_name} / Disturbance: {disturbance}',
-    #                 xaxis=go.layout.XAxis(tickformat='%H:%M'),
-    #                 showlegend=False
-    #             )
-    #             # figure.show()
-    #             mesmo.utils.write_figure_plotly(figure, (results_path / f'disturbance_{der_name}_{disturbance}'))
 
     # Print results path.
     mesmo.utils.launch(results_path)

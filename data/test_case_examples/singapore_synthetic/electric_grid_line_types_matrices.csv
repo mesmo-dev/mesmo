@@ -1,0 +1,3 @@
+line_type,row,col,resistance,reactance,capacitance
+singapore_line_type_1,1,1,0.22996229563999998,0.32507731256,0.0
+singapore_line_type_3,1,1,0.39057290404,0.32507731256,0.0

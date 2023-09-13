@@ -124,18 +124,18 @@ def main():
     # Make plots.
     for results_label, results_set in results_sets.items():
         if len(results_set) > 0:
-            mesmo.plots.plot_histogram_cumulative_branch_utilization(
+            mesmo.legacy_plots.plot_histogram_cumulative_branch_utilization(
                 results_set, results_path, filename_suffix=results_label, branch_type="transformer", vertical_line=0.9
             )
-            mesmo.plots.plot_histogram_cumulative_branch_utilization(
+            mesmo.legacy_plots.plot_histogram_cumulative_branch_utilization(
                 results_set, results_path, filename_suffix=results_label, branch_type="line", vertical_line=0.9
             )
-            mesmo.plots.plot_histogram_node_utilization(
+            mesmo.legacy_plots.plot_histogram_node_utilization(
                 results_set,
                 results_path,
                 filename_suffix=results_label,
             )
-            mesmo.plots.plot_aggregate_timeseries_der_power(
+            mesmo.legacy_plots.plot_aggregate_timeseries_der_power(
                 results_set,
                 results_path,
                 filename_suffix=results_label,

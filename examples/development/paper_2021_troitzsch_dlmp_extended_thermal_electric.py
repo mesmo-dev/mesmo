@@ -328,8 +328,8 @@ def main(scenario_number=None):
         plt.close()
 
     # Obtain graphs.
-    electric_grid_graph = mesmo.plots.ElectricGridGraph(scenario_name)
-    thermal_grid_graph = mesmo.plots.ThermalGridGraph(scenario_name)
+    electric_grid_graph = mesmo.legacy_plots.ElectricGridGraph(scenario_name)
+    thermal_grid_graph = mesmo.legacy_plots.ThermalGridGraph(scenario_name)
 
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [
@@ -424,14 +424,14 @@ def main(scenario_number=None):
             plt.close()
 
     # Plot electric grid line utilization.
-    mesmo.plots.plot_grid_line_utilization(
+    mesmo.legacy_plots.plot_grid_line_utilization(
         electric_grid_model,
         electric_grid_graph,
         results[f"branch_power_magnitude_vector_1{results_suffix}"] * (100.0 if in_per_unit else 1.0e-3),
         results_path,
         value_unit="%" if in_per_unit else "kW",
     )
-    mesmo.plots.plot_grid_line_utilization(
+    mesmo.legacy_plots.plot_grid_line_utilization(
         thermal_grid_model,
         thermal_grid_graph,
         results[f"branch_flow_vector{results_suffix}"] * (100.0 if in_per_unit else 1.0e-3),
@@ -440,7 +440,7 @@ def main(scenario_number=None):
     )
 
     # Plot electric grid nodes voltage drop.
-    mesmo.plots.plot_grid_node_utilization(
+    mesmo.legacy_plots.plot_grid_node_utilization(
         electric_grid_model, electric_grid_graph, results["node_voltage_magnitude_vector_per_unit"], results_path
     )
 

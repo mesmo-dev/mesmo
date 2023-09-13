@@ -268,8 +268,8 @@ def main(scenario_number=1):
         plt.close()
 
     # Obtain graphs.
-    electric_grid_graph = mesmo.plots.ElectricGridGraph(scenario_name)
-    thermal_grid_graph = mesmo.plots.ThermalGridGraph(scenario_name)
+    electric_grid_graph = mesmo.legacy_plots.ElectricGridGraph(scenario_name)
+    thermal_grid_graph = mesmo.legacy_plots.ThermalGridGraph(scenario_name)
 
     # Plot thermal grid DLMPs in grid.
     dlmp_types = [

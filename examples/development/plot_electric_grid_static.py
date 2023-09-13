@@ -24,7 +24,7 @@ def main():
 
     # Obtain electric grid data / graph.
     electric_grid_data = mesmo.data_interface.ElectricGridData(scenario_name)
-    electric_grid_graph = mesmo.plots.ElectricGridGraph(scenario_name)
+    electric_grid_graph = mesmo.legacy_plots.ElectricGridGraph(scenario_name)
 
     # Obtain substation nodes.
     # - This identification is based on the assumption that all nodes with no DER connected are substation nodes,

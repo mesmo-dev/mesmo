@@ -6,6 +6,7 @@ from . import data_interface
 from . import data_models
 from . import der_models
 from . import electric_grid_models
+from . import legacy_plots
 from . import plots
 from . import problems
 from . import solutions

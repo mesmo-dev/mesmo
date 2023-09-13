@@ -30,6 +30,38 @@ class Results(
 
     price_data: mesmo.data_interface.PriceData
 
+    def get_run_results(self) -> mesmo.data_models.RunResults:
+        return mesmo.data_models.RunResults(
+            electric_grid_model_index = getattr(self, "electric_grid_model_index", None),
+            thermal_grid_model_index = getattr(self, "thermal_grid_model_index", None),
+            der_model_set_index = getattr(self, "der_model_set_index", None),
+            electric_grid_operation_results = mesmo.data_models.ElectricGridOperationResults(**{
+                attribute_name: getattr(self, attribute_name, None)
+                for attribute_name in typing.get_type_hints(type(self))
+                if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridOperationResults)
+            }),
+            thermal_grid_operation_results = mesmo.data_models.ThermalGridOperationResults(**{
+                attribute_name: getattr(self, attribute_name, None)
+                for attribute_name in typing.get_type_hints(type(self))
+                if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridOperationResults)
+            }),
+            der_operation_results = mesmo.data_models.DERModelSetOperationResults(**{
+                attribute_name: getattr(self, attribute_name, None)
+                for attribute_name in typing.get_type_hints(type(self))
+                if attribute_name in typing.get_type_hints(mesmo.data_models.DERModelSetOperationResults)
+            }),
+            electric_grid_dlmp_results = mesmo.data_models.ElectricGridDLMPResults(**{
+                attribute_name: getattr(self, attribute_name, None)
+                for attribute_name in typing.get_type_hints(type(self))
+                if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridDLMPResults)
+            }),
+            thermal_grid_dlmp_results = mesmo.data_models.ThermalGridDLMPResults(**{
+                attribute_name: getattr(self, attribute_name, None)
+                for attribute_name in typing.get_type_hints(type(self))
+                if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridDLMPResults)
+            })
+        )
+
 
 class ResultsDict(typing.Dict[str, Results]):
     """Results dictionary, which serves as collection object for labelled results objects."""
@@ -271,11 +303,41 @@ class NominalOperationProblem(ProblemBase):
             )
 
         # Store results.
-        self.results = Results(price_data=self.price_data, der_model_set=self.der_model_set)
+        self.results = Results(
+            price_data=self.price_data,
+            der_model_set_index=mesmo.data_models.DERModelSetIndex(
+                timesteps=self.der_model_set.timesteps,
+                ders=self.der_model_set.ders,
+                electric_ders=self.der_model_set.electric_ders,
+                thermal_ders=self.der_model_set.thermal_ders,
+                der_names=self.der_model_set.der_names,
+                fixed_der_names=self.der_model_set.fixed_der_names,
+                flexible_der_names=self.der_model_set.flexible_der_names,
+                states=self.der_model_set.states,
+                controls=self.der_model_set.controls,
+                outputs=self.der_model_set.outputs,
+                storage_states=self.der_model_set.storage_states,
+            ),
+        )
         if self.electric_grid_model is not None:
             self.results.update(
                 Results(
-                    electric_grid_model=self.electric_grid_model,
+                    electric_grid_model_index=mesmo.data_models.ElectricGridModelIndex(
+                        timesteps=self.electric_grid_model.timesteps,
+                        phases=self.electric_grid_model.phases,
+                        node_names=self.electric_grid_model.node_names,
+                        node_types=self.electric_grid_model.node_types,
+                        line_names=self.electric_grid_model.line_names,
+                        transformer_names=self.electric_grid_model.transformer_names,
+                        branch_types=self.electric_grid_model.branch_types,
+                        der_names=self.electric_grid_model.der_names,
+                        der_types=self.electric_grid_model.der_types,
+                        nodes=self.electric_grid_model.nodes,
+                        branches=self.electric_grid_model.branches,
+                        lines=self.electric_grid_model.lines,
+                        transformers=self.electric_grid_model.transformers,
+                        ders=self.electric_grid_model.ders,
+                    ),
                     der_active_power_vector=der_active_power_vector,
                     der_active_power_vector_per_unit=der_active_power_vector_per_unit,
                     der_reactive_power_vector=der_reactive_power_vector,
@@ -302,7 +364,17 @@ class NominalOperationProblem(ProblemBase):
         if self.thermal_grid_model is not None:
             self.results.update(
                 Results(
-                    thermal_grid_model=self.thermal_grid_model,
+                    thermal_grid_model_index=mesmo.data_models.ThermalGridModelIndex(
+                        timesteps=self.thermal_grid_model.timesteps,
+                        node_names=self.thermal_grid_model.node_names,
+                        line_names=self.thermal_grid_model.line_names,
+                        der_names=self.thermal_grid_model.der_names,
+                        der_types=self.thermal_grid_model.der_types,
+                        nodes=self.thermal_grid_model.nodes,
+                        branches=self.thermal_grid_model.branches,
+                        branch_loops=self.thermal_grid_model.branch_loops,
+                        ders=self.thermal_grid_model.ders,
+                    ),
                     der_thermal_power_vector=der_thermal_power_vector,
                     der_thermal_power_vector_per_unit=der_thermal_power_vector_per_unit,
                     node_head_vector=node_head_vector,

@@ -104,5 +104,12 @@ class DERModelSetOperationResults(ElectricGridDEROperationResults):
     der_thermal_power_vector_per_unit: pd.DataFrame
 
 
-class Results(base_model.BaseModel):
-    pass
+class RunResults(utils.ResultsBase):
+    electric_grid_model_index: model_index.ElectricGridModelIndex
+    thermal_grid_model_index: model_index.ThermalGridModelIndex
+    der_model_set_index: model_index.DERModelSetIndex
+    electric_grid_operation_results: ElectricGridOperationResults
+    thermal_grid_operation_results: ThermalGridOperationResults
+    der_operation_results: DERModelSetOperationResults
+    electric_grid_dlmp_results: ElectricGridDLMPResults
+    thermal_grid_dlmp_results: ThermalGridDLMPResults

@@ -16,4 +16,5 @@ from .results import (
     ThermalGridDLMPResults,
     DERModelOperationResults,
     DERModelSetOperationResults,
+    RunResults,
 )

@@ -12,36 +12,32 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [
-          windows-latest,
-          macos-latest,
-          ubuntu-latest
-        ]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     defaults:
       run:
-        shell: bash -l {0}  # Required for conda commands.
+        shell: bash -l {0} # Required for conda commands.
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: conda-incubator/setup-miniconda@v2
-    - name: Install dependencies
-      run: |
-        conda create -n mesmo -c conda-forge python=3.10 contextily cvxpy numpy pandas scipy
-        conda activate mesmo
-        python development_setup.py
-    - name: Get new environment-${{ matrix.os }}.yml
-      run: |
-        rm -f environment-*
-        conda env export -n mesmo --no-builds | grep -v "^prefix: " > environment-${{ matrix.os }}.yml
-    - name: Store environment-${{ matrix.os }}.yml
-      uses: actions/upload-artifact@v2
-      with:
-        name: environment-${{ matrix.os }}.yml
-        path: environment-${{ matrix.os }}.yml
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: conda-incubator/setup-miniconda@v2
+      - name: Install dependencies
+        run: |
+          conda create -n mesmo -c conda-forge python=3.10 contextily
+          conda activate mesmo
+          python development_setup.py
+      - name: Get new environment-${{ matrix.os }}.yml
+        run: |
+          rm -f environment-*
+          conda env export -n mesmo --no-builds | grep -v "^prefix: " > environment-${{ matrix.os }}.yml
+      - name: Store environment-${{ matrix.os }}.yml
+        uses: actions/upload-artifact@v2
+        with:
+          name: environment-${{ matrix.os }}.yml
+          path: environment-${{ matrix.os }}.yml
 
   run-maintenance:
     needs: get-environment
@@ -51,33 +47,33 @@ jobs:
         shell: bash -l {0}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        token: ${{ secrets.MESMO_BOT_PAT }}
-    - name: Remove old environment files
-      run: |
-        rm -f environment-*
-    - name: Get cached environment-windows-latest.yml
-      uses: actions/download-artifact@v2
-      with:
-        name: environment-windows-latest.yml
-    - name: Get cached environment-macos-latest.yml
-      uses: actions/download-artifact@v2
-      with:
-        name: environment-macos-latest.yml
-    - name: Get cached environment-ubuntu-latest.yml
-      uses: actions/download-artifact@v2
-      with:
-        name: environment-ubuntu-latest.yml
-    - name: Run automatic code formatting
-      uses: psf/black@stable
-      with:
-        options: "--line-length 120"
-        # For future reference: Exclude submodules if this runs too long.
-    - name: Commit changes
-      uses: stefanzweifel/git-auto-commit-action@v4
-      with:
-        commit_message: Automated maintenance for ${{ github.sha }}
-        commit_user_name: MESMO Bot
-        commit_user_email: bot@mesmo.dev
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.MESMO_BOT_PAT }}
+      - name: Remove old environment files
+        run: |
+          rm -f environment-*
+      - name: Get cached environment-windows-latest.yml
+        uses: actions/download-artifact@v2
+        with:
+          name: environment-windows-latest.yml
+      - name: Get cached environment-macos-latest.yml
+        uses: actions/download-artifact@v2
+        with:
+          name: environment-macos-latest.yml
+      - name: Get cached environment-ubuntu-latest.yml
+        uses: actions/download-artifact@v2
+        with:
+          name: environment-ubuntu-latest.yml
+      - name: Run automatic code formatting
+        uses: psf/black@stable
+        with:
+          options: "--line-length 120"
+          # For future reference: Exclude submodules if this runs too long.
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Automated maintenance for ${{ github.sha }}
+          commit_user_name: MESMO Bot
+          commit_user_email: bot@mesmo.dev

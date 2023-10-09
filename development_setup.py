@@ -35,20 +35,16 @@ def main():
                     subprocess.check_call(["git", "-C", f"{base_path}", "submodule", "update", "--init", "--recursive"])
                 except FileNotFoundError as exception:
                     raise FileNotFoundError(
-                        f"ERROR: No setup file found for submodule `{submodule}`. "
+                        f"No setup file found for submodule `{submodule}`. "
                         f"Please check if the submodule is loaded correctly."
                     ) from exception
 
-    # Install submodules in develop mode.
+    # Install MESMO and submodules in develop mode.
     if run_all:
-        print("Installing submodules in development mode.")
-        for submodule in submodules:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", f"{base_path / submodule}"])
-
-    # Install MESMO.
-    if run_all:
+        print("Installing poetry package management tool.")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "poetry"])
         print("Installing MESMO in development mode.")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", f"{base_path}[tests]"])
+        subprocess.check_call([sys.executable, "-m", "poetry", "install"], cwd=base_path)
 
     # Install HiGHS solver.
     if run_all or run_highs:

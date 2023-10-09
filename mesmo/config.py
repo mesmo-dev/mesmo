@@ -1,13 +1,14 @@
 """Configuration module."""
 
-import dynaconf
 import logging
+import multiprocessing
+import pathlib
+
+import dynaconf
 import matplotlib
 import matplotlib.pyplot as plt
-import multiprocessing
 import numpy as np
 import pandas as pd
-import pathlib
 import plotly.graph_objects as go
 import plotly.io as pio
 
@@ -91,9 +92,7 @@ def get_parallel_pool() -> multiprocessing.Pool:
     """
 
     # Obtain multiprocessing pool.
-    import ray.util.multiprocessing
-
-    return ray.util.multiprocessing.Pool()
+    return multiprocessing.Pool()
 
 
 # Obtain repository base directory path.

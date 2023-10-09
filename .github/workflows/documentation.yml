@@ -6,34 +6,34 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash -l {0}  # Required for conda commands.
+        shell: bash -l {0} # Required for conda commands.
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        ref: develop  # Checkout `develop` branch to build documentation instead of using current branch / commit.
-        fetch-depth: 0  # Fetch all branches and tags, to build documentation for all branches and tags.
-        submodules: false  # Not needed to build documentation.
-    - name: Set up Python
-      uses: conda-incubator/setup-miniconda@v2
-      with:
-        python-version: 3.8
-    - name: Install dependencies
-      run: |
-        conda install sphinx
-        pip install -r docs/requirements.txt
-    - name: Build documentation HTML with Sphinx
-      run: |
-        sphinx-multiversion docs docs/_build/html
-        cp docs/assets/gh-pages_index.html docs/_build/html/index.html
-    - name: Deploy documentation HTML to Github Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/_build/html/
-        keep_files: false
-        force_orphan: true
-        full_commit_message: Deploy documentation for ${{ github.sha }}
-        user_name: MESMO Bot
-        user_email: bot@mesmo.dev
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: develop # Checkout `develop` branch to build documentation instead of using current branch / commit.
+          fetch-depth: 0 # Fetch all branches and tags, to build documentation for all branches and tags.
+          submodules: false # Not needed to build documentation.
+      - name: Set up Python
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          conda install sphinx
+          pip install -r docs/requirements.txt
+      - name: Build documentation HTML with Sphinx
+        run: |
+          sphinx-multiversion docs docs/_build/html
+          cp docs/assets/gh-pages_index.html docs/_build/html/index.html
+      - name: Deploy documentation HTML to Github Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html/
+          keep_files: false
+          force_orphan: true
+          full_commit_message: Deploy documentation for ${{ github.sha }}
+          user_name: MESMO Bot
+          user_email: bot@mesmo.dev

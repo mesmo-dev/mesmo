@@ -48,7 +48,7 @@ autodoc_mock_imports = [
     "plotly",
     "pyyaml",
     "pyomo",  # Deprecated.
-    "ray",
+    "ray",  # Deprecated.
     "scipy",
     "tqdm",
 ]

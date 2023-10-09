@@ -1,65 +1,56 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "mesmo"
 version = "0.5.0"
 description = "Multi-Energy System Modeling and Optimization"
 keywords = ["optimal-power-flow", "smart-grid", "multi-energy-systems"]
-readme = "README.md"
-license = {file = "LICENSE"}
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering"
+    "Topic :: Scientific/Engineering",
 ]
-requires-python = ">=3.10"
-dependencies = [
-    # Please note: Dependencies must also be added in `docs/conf.py` to `autodoc_mock_imports`.
-    "cvxpy",
-    "cobmo",  # Not on package index. Needs to be manually installed from https://github.com/mesmo-dev/cobmo
-    "dill",
-    "dynaconf",
-    "fastapi",  # Only needed for its convenient JSON encoder
-    "gurobipy",
-    "kaleido",  # For static plot output with plotly.
-    "matplotlib",
-    "multimethod",
-    "networkx",
-    "natsort",
-    "numpy",
-    "opencv-python-headless",
-    "OpenDSSDirect.py",
-    "pandas",
-    "plotly",
-    "pydantic",
-    "pyyaml",
-    "ray[default]",
-    "requests",  # For HiGHS installation.
-    "scipy<1.11",  # For CVXPY compatibility.
-    "tqdm",
-]
+authors = []
+readme = "README.md"
+license = "MIT"
+packages = [{ include = "mesmo" }]
 
-[project.optional-dependencies]
-"tests" = [
-    "coverage[toml]",
-    "parameterized",
-    "pylint",
-    "pytest",
-]
+[tool.poetry.dependencies]
+python = "~3.10"
+cobmo = { path = "cobmo", develop = true }
+cvxpy = "^1.3.2"
+dill = "^0.3.7"
+dynaconf = "^3.2.3"
+fastapi = "^0.103.2"                       # Only needed for its convenient JSON encoder
+gurobipy = "^10.0.3"
+kaleido = "0.2.1"                          # For static plot output with plotly.
+matplotlib = "^3.8.0"
+multimethod = "^1.10"
+networkx = "^3.1"
+natsort = "^8.4.0"
+numpy = "^1.26.0"
+opencv-python-headless = "^4.8.1.78"
+opendssdirect-py = "^0.8.4"
+pandas = "^2.1.1"
+plotly = "^5.17.0"
+pydantic = "^2.4.2"
+pyyaml = "^6.0.1"
+requests = "^2.31.0"                       # For HiGHS installation.
+scipy = "^1.11.3"
+tqdm = "^4.66.1"
+contextily = "^1.4.0"
 
-[tool.setuptools]
-packages = ["mesmo"]
+[tool.poetry.group.test.dependencies]
+coverage = { extras = ["toml"], version = "^7.3.2" }
+parameterized = "^0.9.0"
+pylint = "^3.0.1"
+pytest = "^7.4.2"
 
 [tool.coverage.report]
-include = [
-    "mesmo/*",
-    "examples/*",
-]
-omit = [
-    "examples/development/*",
-]
+include = ["mesmo/*", "examples/*"]
+omit = ["examples/development/*"]
 
 [tool.pylint.FORMAT]
 max-line-length = 120

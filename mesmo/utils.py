@@ -5,21 +5,21 @@ import datetime
 import functools
 import itertools
 import logging
-import numpy as np
 import os
-import pandas as pd
 import pathlib
 import pickle
-import plotly.graph_objects as go
-import plotly.io as pio
-import ray
 import re
 import shutil
 import subprocess
 import sys
 import time
-import tqdm
 import typing
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
+import tqdm
 
 import mesmo.config
 
@@ -179,22 +179,14 @@ def starmap(
     argument_sequence = list(argument_sequence)
 
     if mesmo.config.config["multiprocessing"]["run_parallel"]:
-        # TODO: Remove old parallel pool traces.
-        # # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
-        # if mesmo.config.parallel_pool is None:
-        #     # Setup parallel pool on first execution.
-        #     log_time('parallel pool setup')
-        #     mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
-        #     log_time('parallel pool setup')
-        # results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
-
-        # If `run_parallel`, use `ray_starmap` for parallel execution.
+        # If `run_parallel`, use starmap from multiprocessing pool for parallel execution.
         if mesmo.config.parallel_pool is None:
+            # Setup parallel pool on first execution.
             log_time("parallel pool setup")
-            ray.init(num_cpus=max(int(mesmo.config.config["multiprocessing"]["cpu_share"] * os.cpu_count()), 1))
-            mesmo.config.parallel_pool = True
+            mesmo.config.parallel_pool = mesmo.config.get_parallel_pool()
             log_time("parallel pool setup")
-        results = ray_starmap(function_partial, argument_sequence)
+        results = mesmo.config.parallel_pool.starmap(function_partial, list(argument_sequence))
+
     else:
         # If not `run_parallel`, use for loop for sequential execution.
         results = [
@@ -227,47 +219,6 @@ def chunk_list(list_in: typing.Union[typing.Iterable, typing.Sized], chunk_count
     list_iter = iter(list_in)
 
     return [[j for j in itertools.islice(list_iter, chunk_size)] for i in range(0, len(list_in), chunk_size)]
-
-
-def ray_iterator(objects: list):
-    """Utility iterator for a list of parallelized ``ray`` objects.
-
-    - This iterator enables progress reporting with ``tqdm`` in :func:`ray_get`.
-    """
-
-    while objects:
-        done, objects = ray.wait(objects)
-        yield ray.get(done[0])
-
-
-def ray_get(objects: list):
-    """Utility function for parallelized execution of a list of ``ray`` objects.
-
-    - This function enables the parallelized execution with built-in progress reporting.
-    """
-
-    try:
-        for _ in tqdm.tqdm(
-            ray_iterator(objects),
-            total=len(objects),
-            disable=(mesmo.config.config["logs"]["level"] != "debug"),  # Progress bar only shown in debug mode.
-        ):
-            pass
-    except TypeError:
-        pass
-    return ray.get(objects)
-
-
-def ray_starmap(function_handle: typing.Callable, argument_sequence: list):
-    """Utility function to provide an interface similar to ``itertools.starmap`` for ``ray``.
-
-    - This replicates the ``starmap`` interface of the ``multiprocessing`` API, which ray also supports,
-      but allows for additional modifications, e.g. progress reporting via :func:`ray_get`.
-    """
-
-    return ray_get(
-        [ray.remote(lambda *args: function_handle(*args)).remote(*arguments) for arguments in argument_sequence]
-    )
 
 
 def log_time(label: str, log_level: str = "debug", logger_object: logging.Logger = logger):

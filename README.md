@@ -37,20 +37,19 @@ The documentation is located at [mesmo-dev.github.io/mesmo](https://mesmo-dev.gi
 
 ## Installation
 
-MESMO has not yet been deployed to Python `pip` / `conda` package indexes, but can be installed in a local development environment as follows:
+MESMO has not yet been deployed to Python package indexes, but can be installed in a local development environment as follows:
 
 1. Install `conda`-based Python distribution¹ such as [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
 2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
     - `cd path_to_mesmo_repository`
-    - `conda create -n mesmo -c conda-forge python=3.10 contextily cvxpy numpy pandas scipy`
+    - `conda create -n mesmo -c conda-forge python=3.10 contextily`
     - `conda activate mesmo`
     - `python development_setup.py`
-    - On Intel CPUs²: `conda install -c conda-forge "libblas=*=*mkl"`
 
-MESMO ships with [HiGHS](https://highs.dev/) as default optimization solver³, but also supports [Gurobi](http://www.gurobi.com/) and [any CVXPY-supported solvers](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
+MESMO ships with [HiGHS](https://highs.dev/) as default optimization solver², but also supports [Gurobi](http://www.gurobi.com/) and [any CVXPY-supported solvers](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
 
-For notes ¹/²/³ and alternative installation guide, see [docs/installation.md](docs/installation.md).
+For notes ¹/² and alternative installation guide, see [docs/installation.md](docs/installation.md).
 
 ## Contributing
 

@@ -40,7 +40,6 @@ pyyaml = "^6.0.1"
 requests = "^2.31.0"                       # For HiGHS installation.
 scipy = "^1.11.3"
 tqdm = "^4.66.1"
-contextily = "^1.4.0"
 
 [tool.poetry.group.test.dependencies]
 coverage = { extras = ["toml"], version = "^7.3.2" }

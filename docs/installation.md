@@ -4,21 +4,19 @@
 
 MESMO has not yet been deployed to Python package indexes, but can be installed in a local development environment as follows:
 
-1. Install `conda`-based Python distribution¹ such as [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
+1. Install Python distribution such as [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Miniforge](https://github.com/conda-forge/miniforge).
 2. Clone or download the repository. Ensure that the `cobmo` submodule directory is loaded as well.
 3. In `conda`-enabled shell (e.g. Anaconda Prompt), run:
     - `cd path_to_mesmo_repository`
-    - `conda create -n mesmo -c conda-forge python=3.10 contextily`
+    - `conda create -n mesmo -c conda-forge python=3.10`
     - `conda activate mesmo`
     - `python development_setup.py`
 
-MESMO ships with [HiGHS](https://highs.dev/) as default optimization solver², but also supports [Gurobi](http://www.gurobi.com/) and [any CVXPY-supported solvers](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
+MESMO ships with [HiGHS](https://highs.dev/) as default optimization solver¹, but also supports [Gurobi](http://www.gurobi.com/) and [any CVXPY-supported solvers](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver).
 
 ### Notes
 
-¹ The installation via `conda` is recommended, because it also allows installing the `contextily` package on Windows, which is required for some geographical plots. The direct installation via `pip` in a non-`conda` environment is also possible, but is currently not tested.
-
-² HiGHS is currently MESMO's default optimization solver and the HiGHS binaries are automatically fetched during MESMO setup. Other solvers can be selected via [MESMO configuration](configuration_reference.md#optimization-solver-configuration). For better performance, MESMO implements direct solver interfaces to HiGHS and Gurobi. Other solvers are indirectly supported [via CVXPY](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver). CVXPY comes bundled with several open-source solvers and supports additional solvers via manual installation (see "Install with ... support" sections in [CVPXY installation guide](https://www.cvxpy.org/install/index.html)). Note that interfacing solvers via CVXPY currently has [performance limitations](https://github.com/cvxpy/cvxpy/issues/704) for large-scale scenarios.
+¹ HiGHS is currently MESMO's default optimization solver and the HiGHS binaries are automatically fetched during MESMO setup. Other solvers can be selected via [MESMO configuration](configuration_reference.md#optimization-solver-configuration). For better performance, MESMO implements direct solver interfaces to HiGHS and Gurobi. Other solvers are indirectly supported [via CVXPY](https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver). CVXPY comes bundled with several open-source solvers and supports additional solvers via manual installation (see "Install with ... support" sections in [CVPXY installation guide](https://www.cvxpy.org/install/index.html)). Note that interfacing solvers via CVXPY currently has [performance limitations](https://github.com/cvxpy/cvxpy/issues/704) for large-scale scenarios.
 
 ## Alternative installation
 

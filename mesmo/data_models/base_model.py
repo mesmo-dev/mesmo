@@ -1,7 +1,10 @@
 """Custom pydantic base model."""
 
+from typing import Callable
+
 import numpy as np
 import pandas as pd
+import pandera as pa
 import pydantic as pyd
 from pydantic.json import timedelta_isoformat
 
@@ -19,3 +22,8 @@ class BaseModel(pyd.BaseModel):
             np.bool_: bool,
         },
     )
+
+
+def check_index(schema: pa.Index) -> Callable[[pd.Index], pd.Index]:
+    """Create pydantic validation function for pandas.Index based on given pandera.Index schema."""
+    return lambda v: schema.validate(pd.Series(index=v)).index

@@ -1,8 +1,17 @@
 """Model index set data models."""
 
+from typing import Annotated
+
 import pandas as pd
+import pandera as pa
+import pydantic as pyd
 
 from mesmo.data_models import base_model
+
+
+class SampleModelIndex(base_model.BaseModel):
+    timesteps: Annotated[pd.Index, pyd.AfterValidator(base_model.check_index(pa.Index(pd.Timestamp)))]
+    names: Annotated[pd.Index, pyd.AfterValidator(base_model.check_index(pa.Index(str, unique=True)))]
 
 
 class ElectricGridModelIndex(base_model.BaseModel):

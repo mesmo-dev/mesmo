@@ -1,13 +1,14 @@
 """Distributed energy resource (DER) models."""
 
 import inspect
-from multimethod import multimethod
+import sys
+import typing
+
 import numpy as np
 import pandas as pd
 import scipy.constants
 import scipy.sparse as sp
-import sys
-import typing
+from multimethod import multimethod
 
 import cobmo.building_model
 import mesmo.config
@@ -1377,61 +1378,45 @@ class DERModelSet(DERModelSetBase):
 
     def update_data(self):
         # Obtain flexible DER state space indexes.
-        self.states = (
-            pd.MultiIndex.from_tuples(
-                [
-                    (der_name, state)
-                    for der_name in self.flexible_der_names
-                    for state in self.flexible_der_models[der_name].states
-                ]
-            )
-            if len(self.flexible_der_names) > 0
-            else pd.Index([])
+        self.states = pd.MultiIndex.from_tuples(
+            [
+                (der_name, state)
+                for der_name in self.flexible_der_names
+                for state in self.flexible_der_models[der_name].states
+            ],
+            names=["der_name", "state"],
         )
-        self.controls = (
-            pd.MultiIndex.from_tuples(
-                [
-                    (der_name, control)
-                    for der_name in self.flexible_der_names
-                    for control in self.flexible_der_models[der_name].controls
-                ]
-            )
-            if len(self.flexible_der_names) > 0
-            else pd.Index([])
+        self.controls = pd.MultiIndex.from_tuples(
+            [
+                (der_name, control)
+                for der_name in self.flexible_der_names
+                for control in self.flexible_der_models[der_name].controls
+            ],
+            names=["der_name", "control"],
         )
-        self.disturbances = (
-            pd.MultiIndex.from_tuples(
-                [
-                    (der_name, output)
-                    for der_name in self.flexible_der_names
-                    for output in self.flexible_der_models[der_name].disturbances
-                ]
-            )
-            if len(self.flexible_der_names) > 0
-            else pd.Index([])
+        self.disturbances = pd.MultiIndex.from_tuples(
+            [
+                (der_name, output)
+                for der_name in self.flexible_der_names
+                for output in self.flexible_der_models[der_name].disturbances
+            ],
+            names=["der_name", "disturbance"],
         )
-        self.outputs = (
-            pd.MultiIndex.from_tuples(
-                [
-                    (der_name, output)
-                    for der_name in self.flexible_der_names
-                    for output in self.flexible_der_models[der_name].outputs
-                ]
-            )
-            if len(self.flexible_der_names) > 0
-            else pd.Index([])
+        self.outputs = pd.MultiIndex.from_tuples(
+            [
+                (der_name, output)
+                for der_name in self.flexible_der_names
+                for output in self.flexible_der_models[der_name].outputs
+            ],
+            names=["der_name", "output"],
         )
-        self.storage_states = (
-            pd.MultiIndex.from_tuples(
-                [
-                    (der_name, state)
-                    for der_name in self.flexible_der_names
-                    for state in self.flexible_der_models[der_name].storage_states
-                ],
-                names=["der_name", "state"],
-            )
-            if len(self.flexible_der_names) > 0
-            else pd.Index([])
+        self.storage_states = pd.MultiIndex.from_tuples(
+            [
+                (der_name, state)
+                for der_name in self.flexible_der_names
+                for state in self.flexible_der_models[der_name].storage_states
+            ],
+            names=["der_name", "state"],
         )
 
         # Obtain nominal power vectors.

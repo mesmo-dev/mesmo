@@ -1,11 +1,12 @@
 """Problems module for mathematical optimization and simulation problem type definitions."""
 
 import itertools
-from multimethod import multimethod
+import typing
+
 import numpy as np
 import pandas as pd
 import tqdm
-import typing
+from multimethod import multimethod
 
 import mesmo.config
 import mesmo.data_interface
@@ -32,34 +33,44 @@ class Results(
 
     def get_run_results(self) -> mesmo.data_models.RunResults:
         return mesmo.data_models.RunResults(
-            electric_grid_model_index = getattr(self, "electric_grid_model_index", None),
-            thermal_grid_model_index = getattr(self, "thermal_grid_model_index", None),
-            der_model_set_index = getattr(self, "der_model_set_index", None),
-            electric_grid_operation_results = mesmo.data_models.ElectricGridOperationResults(**{
-                attribute_name: getattr(self, attribute_name, None)
-                for attribute_name in typing.get_type_hints(type(self))
-                if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridOperationResults)
-            }),
-            thermal_grid_operation_results = mesmo.data_models.ThermalGridOperationResults(**{
-                attribute_name: getattr(self, attribute_name, None)
-                for attribute_name in typing.get_type_hints(type(self))
-                if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridOperationResults)
-            }),
-            der_operation_results = mesmo.data_models.DERModelSetOperationResults(**{
-                attribute_name: getattr(self, attribute_name, None)
-                for attribute_name in typing.get_type_hints(type(self))
-                if attribute_name in typing.get_type_hints(mesmo.data_models.DERModelSetOperationResults)
-            }),
-            electric_grid_dlmp_results = mesmo.data_models.ElectricGridDLMPResults(**{
-                attribute_name: getattr(self, attribute_name, None)
-                for attribute_name in typing.get_type_hints(type(self))
-                if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridDLMPResults)
-            }),
-            thermal_grid_dlmp_results = mesmo.data_models.ThermalGridDLMPResults(**{
-                attribute_name: getattr(self, attribute_name, None)
-                for attribute_name in typing.get_type_hints(type(self))
-                if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridDLMPResults)
-            })
+            electric_grid_model_index=getattr(self, "electric_grid_model_index", None),
+            thermal_grid_model_index=getattr(self, "thermal_grid_model_index", None),
+            der_model_set_index=getattr(self, "der_model_set_index", None),
+            electric_grid_operation_results=mesmo.data_models.ElectricGridOperationRunResults(
+                **{
+                    attribute_name: getattr(self, attribute_name, None)
+                    for attribute_name in typing.get_type_hints(type(self))
+                    if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridOperationRunResults)
+                }
+            ),
+            thermal_grid_operation_results=mesmo.data_models.ThermalGridOperationRunResults(
+                **{
+                    attribute_name: getattr(self, attribute_name, None)
+                    for attribute_name in typing.get_type_hints(type(self))
+                    if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridOperationRunResults)
+                }
+            ),
+            der_operation_results=mesmo.data_models.DERModelSetOperationRunResults(
+                **{
+                    attribute_name: getattr(self, attribute_name, None)
+                    for attribute_name in typing.get_type_hints(type(self))
+                    if attribute_name in typing.get_type_hints(mesmo.data_models.DERModelSetOperationRunResults)
+                }
+            ),
+            electric_grid_dlmp_results=mesmo.data_models.ElectricGridDLMPRunResults(
+                **{
+                    attribute_name: getattr(self, attribute_name, None)
+                    for attribute_name in typing.get_type_hints(type(self))
+                    if attribute_name in typing.get_type_hints(mesmo.data_models.ElectricGridDLMPRunResults)
+                }
+            ),
+            thermal_grid_dlmp_results=mesmo.data_models.ThermalGridDLMPRunResults(
+                **{
+                    attribute_name: getattr(self, attribute_name, None)
+                    for attribute_name in typing.get_type_hints(type(self))
+                    if attribute_name in typing.get_type_hints(mesmo.data_models.ThermalGridDLMPRunResults)
+                }
+            ),
         )
 
 
@@ -241,14 +252,14 @@ class NominalOperationProblem(ProblemBase):
                 loss.loc[timestep, :] = power_flow_solution.loss
             der_active_power_vector = der_power_vector.apply(np.real)
             der_reactive_power_vector = der_power_vector.apply(np.imag)
-            node_voltage_magnitude_vector = np.abs(node_voltage_vector)
-            node_voltage_angle_vector = np.angle(node_voltage_vector)
+            node_voltage_magnitude_vector = node_voltage_vector.apply(np.abs)
+            node_voltage_angle_vector = node_voltage_vector.apply(np.angle)
             branch_power_magnitude_vector_1 = np.abs(branch_power_vector_1)
-            branch_active_power_vector_1 = np.real(branch_power_vector_1)
-            branch_reactive_power_vector_1 = np.imag(branch_power_vector_1)
-            branch_power_magnitude_vector_2 = np.abs(branch_power_vector_2)
-            branch_active_power_vector_2 = np.real(branch_power_vector_2)
-            branch_reactive_power_vector_2 = np.imag(branch_power_vector_2)
+            branch_active_power_vector_1 = branch_power_vector_1.apply(np.real)
+            branch_reactive_power_vector_1 = branch_power_vector_1.apply(np.imag)
+            branch_power_magnitude_vector_2 = branch_power_vector_2.apply(np.abs)
+            branch_active_power_vector_2 = branch_power_vector_2.apply(np.real)
+            branch_reactive_power_vector_2 = branch_power_vector_2.apply(np.imag)
             loss_active = loss.apply(np.real)
             loss_reactive = loss.apply(np.imag)
         if self.thermal_grid_model is not None:

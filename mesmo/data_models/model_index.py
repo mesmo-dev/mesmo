@@ -1,69 +1,60 @@
 """Model index set data models."""
 
-from typing import Annotated
-
 import pandas as pd
-import pandera as pa
-import pydantic as pyd
 
 from mesmo.data_models import base_model
 
 
-class SampleModelIndex(base_model.BaseModel):
-    timesteps: Annotated[pd.Index, pyd.AfterValidator(base_model.check_index(pa.Index(pd.Timestamp)))]
-    names: Annotated[pd.Index, pyd.AfterValidator(base_model.check_index(pa.Index(str, unique=True)))]
-
-
 class ElectricGridModelIndex(base_model.BaseModel):
-    timesteps: pd.Index
-    phases: pd.Index
-    node_names: pd.Index
-    node_types: pd.Index
-    line_names: pd.Index
-    transformer_names: pd.Index
-    branch_types: pd.Index
-    der_names: pd.Index
-    der_types: pd.Index
-    nodes: pd.Index
-    branches: pd.Index
-    lines: pd.Index
-    transformers: pd.Index
-    ders: pd.Index
+    timesteps: base_model.get_index_annotation(pd.Timestamp)
+    phases: base_model.get_index_annotation(int)
+    node_names: base_model.get_index_annotation(str)
+    node_types: base_model.get_index_annotation(str)
+    line_names: base_model.get_index_annotation(str)
+    transformer_names: base_model.get_index_annotation(str)
+    branch_types: base_model.get_index_annotation(str)
+    der_names: base_model.get_index_annotation(str)
+    der_types: base_model.get_index_annotation(str)
+    nodes: base_model.get_multiindex_annotation({"node_type": str, "node_name": str, "phase": int})
+    branches: base_model.get_multiindex_annotation({"branch_type": str, "branch_name": str, "phase": int})
+    lines: base_model.get_multiindex_annotation({"branch_type": str, "branch_name": str, "phase": int})
+    transformers: base_model.get_multiindex_annotation({"branch_type": str, "branch_name": str, "phase": int})
+    ders: base_model.get_multiindex_annotation({"der_type": str, "der_name": str})
 
 
 class ThermalGridModelIndex(base_model.BaseModel):
-    timesteps: pd.Index
-    node_names: pd.Index
-    line_names: pd.Index
-    der_names: pd.Index
-    der_types: pd.Index
-    nodes: pd.Index
-    branches: pd.Index
-    branch_loops: pd.Index
-    ders: pd.Index
+    timesteps: base_model.get_index_annotation(pd.Timestamp)
+    node_names: base_model.get_index_annotation(str)
+    line_names: base_model.get_index_annotation(str)
+    der_names: base_model.get_index_annotation(str)
+    der_types: base_model.get_index_annotation(str)
+    nodes: base_model.get_multiindex_annotation({"node_type": str, "node_name": str})
+    branches: base_model.get_multiindex_annotation({"branch_name": str, "loop_type": str})
+    branch_loops: base_model.get_multiindex_annotation({"loop_id": str, "branch_name": str})
+    ders: base_model.get_multiindex_annotation({"der_type": str, "der_name": str})
 
 
 class DERModelIndex(base_model.BaseModel):
     der_type: str
     der_name: str
-    timesteps: pd.Index
-    # Following is only defined for FlexibleDERModels.
-    states: pd.Index = pd.Index([])
-    storage_states: pd.Index = pd.Index([])
-    controls: pd.Index = pd.Index([])
-    disturbances: pd.Index = pd.Index([])
-    outputs: pd.Index = pd.Index([])
+    timesteps: base_model.get_index_annotation(pd.Timestamp)
+    # The following fields are only defined for FlexibleDERModels.
+    states: base_model.get_index_annotation(str, optional=True)
+    storage_states: base_model.get_index_annotation(str, optional=True)
+    controls: base_model.get_index_annotation(str, optional=True)
+    disturbances: base_model.get_index_annotation(str, optional=True)
+    outputs: base_model.get_index_annotation(str, optional=True)
 
 
 class DERModelSetIndex(base_model.BaseModel):
-    timesteps: pd.Index
-    ders: pd.Index
-    electric_ders: pd.Index
-    thermal_ders: pd.Index
-    der_names: pd.Index
-    fixed_der_names: pd.Index
-    flexible_der_names: pd.Index
-    states: pd.Index
-    controls: pd.Index
-    outputs: pd.Index
-    storage_states: pd.Index
+    timesteps: base_model.get_index_annotation(pd.Timestamp)
+    ders: base_model.get_multiindex_annotation({"der_type": str, "der_name": str})
+    electric_ders: base_model.get_multiindex_annotation({"der_type": str, "der_name": str})
+    thermal_ders: base_model.get_multiindex_annotation({"der_type": str, "der_name": str})
+    der_names: base_model.get_index_annotation(str)
+    fixed_der_names: base_model.get_index_annotation(str)
+    flexible_der_names: base_model.get_index_annotation(str)
+    states: base_model.get_multiindex_annotation({"der_name": str, "state": str})
+    controls: base_model.get_multiindex_annotation({"der_name": str, "control": str})
+    outputs: base_model.get_multiindex_annotation({"der_name": str, "output": str})
+    storage_states: base_model.get_multiindex_annotation({"der_name": str, "state": str})

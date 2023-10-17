@@ -1,6 +1,7 @@
 """Plotting entrypoint development script"""
 
 import mesmo
+from mesmo import plots
 
 
 def main():
@@ -10,28 +11,31 @@ def main():
 
     mesmo.utils.cleanup()
     results_path = mesmo.utils.get_results_path("run_operation_problem", scenario_name)
-    results = mesmo.api.run_nominal_operation_problem(
+    results_raw = mesmo.api.run_nominal_operation_problem(
         scenario_name, results_path=results_path, store_results=False, recreate_database=False
     )
-    run_results = results.get_run_results()
+    results = results_raw.get_run_results()
 
     # Roundtrip save/load to/from JSON, just for demonstration
-    with open(results_path / "run_results.json", "w", encoding="utf-8") as file:
+    with open(results_path / "results.json", "w", encoding="utf-8") as file:
         print("Dumping results to file")
-        file.write(run_results.model_dump_json())
-    with open(results_path / "run_results.json", "r", encoding="utf-8") as file:
+        file.write(results.model_dump_json())
+    with open(results_path / "results.json", "r", encoding="utf-8") as file:
         print("Loading results from file")
-        run_results = mesmo.data_models.RunResults.model_validate_json(file.read())
+        results = mesmo.data_models.RunResults.model_validate_json(file.read())
 
-    # TODO: Return JSON object, function should take run_id as input
-    mesmo.plots.der_active_power_time_series(run_results, results_path)
-    mesmo.plots.der_reactive_power_time_series(run_results, results_path)
-    mesmo.plots.der_apparent_power_time_series(run_results, results_path)
-    mesmo.plots.der_aggregated_active_power_time_series(run_results, results_path)
-    mesmo.plots.der_aggregated_reactive_power_time_series(run_results, results_path)
-    mesmo.plots.der_aggregated_apparent_power_time_series(run_results, results_path)
-    mesmo.plots.node_voltage_per_unit_time_series(run_results, results_path)
-    mesmo.plots.node_aggregated_voltage_per_unit_time_series(run_results, results_path)
+    # Sample plotting to file, just for demonstration
+    plots.plot_to_file(plots.der_active_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.der_reactive_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.der_apparent_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.der_aggregated_active_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.der_aggregated_reactive_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.der_aggregated_apparent_power_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.node_voltage_per_unit_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.node_aggregated_voltage_per_unit_time_series, results=results, results_path=results_path)
+
+    # Sample JSON return
+    print(plots.plot_to_json(plots.der_active_power_time_series, results=results))
 
     # Print results path.
     mesmo.utils.launch(results_path)

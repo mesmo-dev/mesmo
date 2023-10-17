@@ -1,5 +1,5 @@
 """Results data models."""
-from typing import Annotated, Optional
+from typing import Optional
 
 import pandas as pd
 

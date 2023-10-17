@@ -2,6 +2,7 @@
 
 import json
 import pathlib
+
 import plotly.graph_objects as go
 import plotly.io as pio
 
@@ -9,7 +10,21 @@ import mesmo.config
 import mesmo.utils
 
 
-def write_figure_plotly(
+def get_plotly_figure_json(figure: go.Figure) -> str:
+    """Get JSON string representation of plotly figure.
+
+    Args:
+        figure (go.Figure): Figure for which the JSON representation is generated
+
+    Returns:
+        str: JSON representation of given figure
+    """
+    json_dict = json.loads(pio.to_json(figure))
+    json_dict["layout"].pop("template")  # Exclude template information to minify JSON
+    return json.dumps(json_dict)
+
+
+def write_plotly_figure_file(
     figure: go.Figure,
     results_path: pathlib.Path,
     file_format=mesmo.config.config["plots"]["file_format"],
@@ -47,4 +62,4 @@ def write_figure_plotly(
 
     # Additionally to the requested format, also output at plottable item in JSON format.
     if file_format != "json":
-        write_figure_plotly(figure, results_path, "json", width, height)
+        write_plotly_figure_file(figure, results_path, "json", width, height)

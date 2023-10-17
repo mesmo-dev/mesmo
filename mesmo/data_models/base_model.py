@@ -1,12 +1,16 @@
 """Custom pydantic base model."""
 
-from typing import Annotated, Optional
+import bz2
+import pathlib
+from typing import Annotated, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
 import pandera as pa
 import pydantic as pyd
 from pydantic.json import timedelta_isoformat
+
+Model = TypeVar("Model", bound="BaseModel")
 
 
 class BaseModel(pyd.BaseModel):
@@ -22,6 +26,36 @@ class BaseModel(pyd.BaseModel):
             np.bool_: bool,
         },
     )
+
+    def to_json_file(self, file_path: pathlib.Path, compress=False):
+        """Write data model to given file path as JSON file.
+
+        Args:
+            file_path (pathlib.Path): File output path
+        """
+        if compress:
+            with bz2.open(file_path, "wt", encoding="utf-8") as file:
+                file.write(self.model_dump_json())
+        else:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(self.model_dump_json())
+
+    @classmethod
+    def from_json_file(cls: type[Model], file_path: pathlib.Path, decompress=False) -> Model:
+        """Load data model from given JSON file path.
+
+        Args:
+            file_path (pathlib.Path): File input path
+
+        Returns:
+            Instantiated data model based on given JSON file
+        """
+        if decompress:
+            with bz2.open(file_path, "rt", encoding="utf-8") as file:
+                return cls.model_validate_json(file.read())
+        else:
+            with open(file_path, "r", encoding="utf-8") as file:
+                return cls.model_validate_json(file.read())
 
 
 def get_index_annotation(dtype: type[pd.Timestamp | int | str], optional: bool = False) -> type[pd.Index]:

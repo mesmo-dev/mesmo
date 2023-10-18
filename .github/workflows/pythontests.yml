@@ -28,7 +28,7 @@ jobs:
       - name: Run tests with coverage report
         run: |
           conda activate mesmo
-          coverage run -m unittest discover tests
+          coverage run -m pytest tests
           coverage xml
       - name: Report coverage to Codecov
         if: always()

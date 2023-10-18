@@ -17,3 +17,4 @@ class ValueLabels(str, enum.Enum):
     REACTIVE_POWER = "Reactive power"
     APPARENT_POWER = "Apparent power"
     VOLTAGE = "Voltage"
+    ASSETS = "Assets"

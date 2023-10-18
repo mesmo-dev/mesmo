@@ -259,6 +259,7 @@ class ThermalGridDLMPRunResults(base_model.BaseModel):
 
 
 class RunResults(base_model.BaseModel):
+    scenario_name: str
     electric_grid_model_index: Optional[model_index.ElectricGridModelIndex]
     thermal_grid_model_index: Optional[model_index.ThermalGridModelIndex]
     der_model_set_index: model_index.DERModelSetIndex

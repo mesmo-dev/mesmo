@@ -14,13 +14,7 @@ def main():
     results_raw = mesmo.api.run_nominal_operation_problem(
         scenario_name, results_path=results_path, store_results=False, recreate_database=False
     )
-    results = results_raw.get_run_results()
-
-    # # Roundtrip save/load to/from JSON, just for demonstration
-    # print("Writing results to file")
-    # results.to_json_file(results_path / "results.json")
-    # print("Loading results from file")
-    # results = mesmo.data_models.RunResults.from_json_file(results_path / "results.json")
+    results = results_raw.get_run_results(scenario_name=scenario_name)
 
     # Write results to compressed JSON
     print("Writing results to file")
@@ -32,7 +26,7 @@ def main():
         mesmo.config.base_path / "results" / "results.json.bz2", decompress=True
     )
 
-    # Sample plotting to file, just for demonstration
+    # Sample plotting to file
     plots.plot_to_file(plots.der_active_power_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.der_reactive_power_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.der_apparent_power_time_series, results=results, results_path=results_path)
@@ -41,6 +35,7 @@ def main():
     plots.plot_to_file(plots.der_aggregated_apparent_power_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.node_voltage_per_unit_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.node_aggregated_voltage_per_unit_time_series, results=results, results_path=results_path)
+    plots.plot_to_file(plots.electric_grid_asset_layout, results=results, results_path=results_path)
 
     # Sample JSON return
     print(plots.plot_to_json(plots.der_active_power_time_series, results=results))

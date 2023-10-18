@@ -31,8 +31,9 @@ class Results(
 
     price_data: mesmo.data_interface.PriceData
 
-    def get_run_results(self) -> mesmo.data_models.RunResults:
+    def get_run_results(self, scenario_name: str) -> mesmo.data_models.RunResults:
         return mesmo.data_models.RunResults(
+            scenario_name=scenario_name,
             electric_grid_model_index=getattr(self, "electric_grid_model_index", None),
             thermal_grid_model_index=getattr(self, "thermal_grid_model_index", None),
             der_model_set_index=getattr(self, "der_model_set_index", None),

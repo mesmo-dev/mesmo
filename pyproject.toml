@@ -41,6 +41,7 @@ requests = "^2.31.0"                       # For HiGHS installation.
 scipy = "^1.11.3"
 tqdm = "^4.66.1"
 pandera = "^0.17.2"
+netgraph = "^4.12.11"
 
 [tool.poetry.group.test.dependencies]
 coverage = { extras = ["toml"], version = "^7.3.2" }

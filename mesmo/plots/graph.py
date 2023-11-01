@@ -248,7 +248,7 @@ def electric_grid_node_voltage_nominal(figure: go.Figure, results: data_models.R
     _plot_electric_transformer_layout(figure, results, graph)
     _plot_electric_nodes_nominal_voltage(figure, results, graph)
 
-    title = "Electric grid asset layout"
+    title = "Electric grid nominal voltage"
     legend_title = constants.ValueLabels.ASSETS
     figure.update_layout(
         title=title,
@@ -265,7 +265,7 @@ def electric_grid_node_voltage_magnitude_min(figure: go.Figure, results: data_mo
     _plot_electric_transformer_layout(figure, results, graph)
     _plot_electric_nodes_min_voltage(figure, results, graph)
 
-    title = "Electric grid asset layout"
+    title = "Electric grid voltage magnitude (aggregated minimum)"
     legend_title = constants.ValueLabels.ASSETS
     figure.update_layout(
         title=title,

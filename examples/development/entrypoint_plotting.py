@@ -7,7 +7,6 @@ from mesmo import plots
 def main():
     # Settings.
     scenario_name = "singapore_geylang"
-    # TODO: Split singapore_all scenario into separate folder
 
     results_path = mesmo.utils.get_results_path("run_operation_problem", scenario_name)
 

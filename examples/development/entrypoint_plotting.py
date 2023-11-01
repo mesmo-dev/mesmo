@@ -35,7 +35,9 @@ def main():
     plots.plot_to_file(plots.der_aggregated_apparent_power_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.node_voltage_per_unit_time_series, results=results, results_path=results_path)
     plots.plot_to_file(plots.node_aggregated_voltage_per_unit_time_series, results=results, results_path=results_path)
-    plots.plot_to_file(plots.electric_grid_asset_layout, results=results, results_path=results_path)
+    plots.plot_to_file(plots.electric_grid_assets, results=results, results_path=results_path)
+    plots.plot_to_file(plots.electric_grid_node_voltage_nominal, results=results, results_path=results_path)
+    plots.plot_to_file(plots.electric_grid_node_voltage_magnitude_min, results=results, results_path=results_path)
 
     # Sample JSON return
     print(plots.plot_to_json(plots.der_active_power_time_series, results=results))

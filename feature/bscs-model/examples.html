@@ -1,0 +1,869 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Architecture" href="architecture.html" /><link rel="prev" title="Installation" href="installation.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2023.09.10 -->
+        <title>Examples - MESMO</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=362ab14a" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=135e06be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=ecafd8be" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">MESMO</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><div class="sidebar-scroll"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/mesmo_icon.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">MESMO</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_reference.html">Data reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration_reference.html">Configuration reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="change_log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo/blob/develop/LICENSE">License</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo">GitHub repository</a></li>
+</ul>
+
+</div>
+    <div class="sidebar-tree">
+        <ul>
+            <li class="toctree-l1 has-children" data-children-count="1">
+                <a style="font-size: var(--sidebar-caption-font-size); font-weight: 700; text-transform: uppercase;color: var(--color-sidebar-caption-text); pointer-events: none" class="reference">Versions</a>
+                <input class="toctree-checkbox" id="toctree-checkbox-tags" name="toctree-checkbox-tags" type="checkbox"><label for="toctree-checkbox-tags"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+                <ul style="font-size: var(--font-size--small--2);">
+                    <li class="toctree-l1 current current-page"><a class="current reference internal" href="examples.html">feature/bscs-model</a></li>
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../0.5.0/examples.html">0.5.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.3.0/index.html">v0.3.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.0/index.html">v0.4.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.1/index.html">v0.4.1</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../develop/examples.html">develop</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../biogas_model/index.html">feature/biogas_model</a></li>
+                        
+                        
+                            
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dlmp_analysis/index.html">feature/dlmp_analysis</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../docs/examples.html">feature/docs</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dro/examples.html">feature/dro</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../ens_development_support/examples.html">feature/ens_development_support</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../gas_grid_model/examples.html">feature/gas_grid_model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../general_improvements/examples.html">feature/general_improvements</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../market_clearing_engine/index.html">feature/market_clearing_engine</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../mesmo_planning/examples.html">feature/mesmo_planning</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../optimization/examples.html">feature/optimization</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plotable_items/examples.html">feature/plotable_items</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plots/examples.html">feature/plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../pnnl_tumcreate_colab/index.html">feature/pnnl_tumcreate_colab</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../primo_survey/index.html">feature/primo_survey</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../sitem/examples.html">feature/sitem</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../strategic_offering/examples.html">feature/strategic_offering</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../thermal_grid_extensions/examples.html">feature/thermal_grid_extensions</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../trust_region/examples.html">feature/trust_region</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../updated_plots/index.html">feature/updated_plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../validity_checks/index.html">feature/validity_checks</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../weather_dependent/index.html">feature/weather_dependent</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../master/examples.html">master</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../multi_objective_mesmo/examples.html">multi_objective_mesmo</a></li>
+                        
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">#</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">#</a></h2>
+<p>The following introduces basic examples for using MESMO in the form of tutorials with step-by-step guidance. We address the following simple use cases:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#tutorial-1">Tutorial 1</a>: Setting up and solving a multi-period electric grid optimal power flow problem. (This tutorial assumes that a test case scenario has already been defined.)</p></li>
+<li><p><a class="reference internal" href="#tutorial-2">Tutorial 2</a>: Defining a test case scenario for an electric distribution grid with several lines, transformers and DERs.</p></li>
+<li><p><a class="reference internal" href="#tutorial-3">Tutorial 3</a>: Utilizing the optimization problem interface to define a simple optimization problem.</p></li>
+</ul>
+<p>More examples are in the <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory of the repository and are listed <a class="reference internal" href="#more-examples">at the bottom of this section</a>.</p>
+</section>
+<section id="tutorial-1">
+<h2>Tutorial 1<a class="headerlink" href="#tutorial-1" title="Permalink to this heading">#</a></h2>
+<section id="outline">
+<h3>Outline<a class="headerlink" href="#outline" title="Permalink to this heading">#</a></h3>
+<p>This example demonstrates the usage of MESMO for setting up and solving a multi-period optimal power flow (OPF) problem for an electric grid with several DERs. We will utilize the test case <code class="docutils literal notranslate"><span class="pre">sinagpore_6node</span></code>, which is shipped with MESMO for this tutorial. Skip to <a class="reference internal" href="#tutorial-2">tutorial 2</a> for learning how to define your own test case scenario.</p>
+<p>The multi-period OPF problem is an optimization problem for the maximization of overall social welfare, i.e. minimization of overall costs, for the modeled energy system. The decision variables are the dispatch decisions of DERs, subject to the operational constraints of the DERs and the electric grid.</p>
+<p>The tutorial will work through the following steps:</p>
+<ol class="arabic simple">
+<li><p>Imports and settings: Getting started and selecting a test case scenario.</p></li>
+<li><p>Load data &amp; models: Selecting the MESMO objects that are needed for this use case.</p></li>
+<li><p>Defining and solving the optimization problem: Utilizing API methods for composing the OPF problem.</p></li>
+<li><p>Retrieving and evaluating results: How to access the results and what to do with them.</p></li>
+</ol>
+</section>
+<section id="imports-and-settings">
+<h3>Imports and settings<a class="headerlink" href="#imports-and-settings" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">import</span> <span class="nn">mesmo</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We will use <code class="docutils literal notranslate"><span class="pre">plotly</span></code> for plotting and <code class="docutils literal notranslate"><span class="pre">os</span></code> for path operations later on.</p></li>
+<li><p>Most importantly, we need <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">mesmo</span></code> to load MESMO. This always loads all submodules and no explicit submodule imports are needed, except if you want to be specific about the MESMO components that you are using.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scenario_name</span> <span class="o">=</span> <span class="s1">&#39;singapore_6node&#39;</span>
+<span class="n">results_path</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_results_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">,</span> <span class="n">scenario_name</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We use <code class="docutils literal notranslate"><span class="pre">scenario_name</span></code> as an identifier throughout MESMO for selecting a test case scenario. Therefore each test case scenario has a unique <code class="docutils literal notranslate"><span class="pre">scenario_name</span></code>. See <a class="reference internal" href="#tutorial-2">tutorial 2</a> for more information on defining a test case scenario.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">get_results_path()</span></code> utility function provides a unique timestamped results path, i.e., it creates new folder in the <code class="docutils literal notranslate"><span class="pre">results</span></code> directory of the repository and returns the path. This is intended for convenience, but is entirely optional. Of course, you can also store your results to any other folder.</p></li>
+</ul>
+</section>
+<section id="loading-data-and-models">
+<h3>Loading data and models<a class="headerlink" href="#loading-data-and-models" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">price_data</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">data_interface</span><span class="o">.</span><span class="n">PriceData</span><span class="p">(</span><span class="n">scenario_name</span><span class="p">)</span>
+<span class="n">linear_electric_grid_model_set</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">electric_grid_models</span><span class="o">.</span><span class="n">LinearElectricGridModelSet</span><span class="p">(</span><span class="n">scenario_name</span><span class="p">)</span>
+<span class="n">der_model_set</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">der_models</span><span class="o">.</span><span class="n">DERModelSet</span><span class="p">(</span><span class="n">scenario_name</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We load data &amp; model objects, which are containers for the mathematical models and parameters of the problem. The <code class="docutils literal notranslate"><span class="pre">scenario_name</span></code> is passed to the initialization of each object to identify the test case that should be loaded. For the multi-period OPF problem, we need the following objects:</p>
+<ul>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.data_interface.PriceData</span></code>: Contains the energy price time series and price sensitivity parameter. In <code class="docutils literal notranslate"><span class="pre">singapore_6node</span></code>, this is the Singapore wholesale market price for a representative time period.</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.electric_grid_models.LinearElectricGridModelSet</span></code>: Contains the linear approximate electric grid model. Optimization problems in MESMO are convex optimization problems by default, such that we use the linear approximate electric grid model rather than the non-linear default electric grid model <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.electric_grid_models.ElectricGridModelDefault</span></code> for this example. The linear approximate electric grid model is essentially a collection of sensitivity matrices that describe the electric grid state variables with respect to the DER power dispatch values. These models are defined as set containing one model per time step, which accommodates different linearization points for each time steps. However, this is not utilized in this tutorial.</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.der_models.DERModelSet</span></code>: The DER model set contains all DER models for the test case scenario. These are either 1) times series models for fixed DERs or 2) state space models for flexible DERs.</p></li>
+<li><p>Please refer to the <a class="reference internal" href="architecture.html"><span class="std std-doc">architecture documentation</span></a> for more information on the MESMO module structure.</p></li>
+</ul>
+</li>
+<li><p>Data &amp; model classes are structured into thematic submodules and objects can generally be instantiated for the current test case by simply passing <code class="docutils literal notranslate"><span class="pre">scenario_name</span></code>.</p></li>
+</ul>
+</section>
+<section id="defining-and-solving-the-optimization-problem">
+<h3>Defining and solving the optimization problem<a class="headerlink" href="#defining-and-solving-the-optimization-problem" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">solutions</span><span class="o">.</span><span class="n">OptimizationProblem</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We first initialize the <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.solutions.OptimizationProblem</span></code> object, which serves as container for variables / parameters / constraints / objective of the optimization problem.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">linear_electric_grid_model_set</span><span class="o">.</span><span class="n">define_optimization_problem</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">,</span> <span class="n">price_data</span><span class="p">)</span>
+<span class="n">der_model_set</span><span class="o">.</span><span class="n">define_optimization_problem</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">,</span> <span class="n">price_data</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Both linear electric grid and DER model objects provide the <code class="docutils literal notranslate"><span class="pre">define_optimization_problem()</span></code> method for defining the variables, parameters, constraints and objective for their underlying dispatch optimization problem. These definitions are essentially “attached” to <code class="docutils literal notranslate"><span class="pre">optimization_problem</span></code>. The <code class="docutils literal notranslate"><span class="pre">price_data</span></code> object is passed as input to <code class="docutils literal notranslate"><span class="pre">define_optimization_problem()</span></code> because the objective definition depends on the energy price.</p></li>
+<li><p>Beyond the default problem variables, parameters, constraints and objective terms, custom definitions can also be manually added to <code class="docutils literal notranslate"><span class="pre">optimization_problem</span></code>. See <a class="reference internal" href="#tutorial-3">tutorial 3</a> for more on this.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We call the <code class="docutils literal notranslate"><span class="pre">solve()</span></code> method to invoke the optimization solver. Internally this method first generates the LP/QP standard form and then passes the problem to the solver interface, i.e., direct via <code class="docutils literal notranslate"><span class="pre">gurobipy</span></code> or indirect via <code class="docutils literal notranslate"><span class="pre">cvxpy</span></code>. Please refer to the class documentation of <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.solutions.OptimizationProblem</span></code> for more on this.</p></li>
+<li><p>The problem solution is stored within <code class="docutils literal notranslate"><span class="pre">optimization_problem</span></code> in terms of variable and dual vectors.</p></li>
+</ul>
+</section>
+<section id="retrieving-and-evaluating-results">
+<h3>Retrieving and evaluating results<a class="headerlink" href="#retrieving-and-evaluating-results" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">problems</span><span class="o">.</span><span class="n">Results</span><span class="p">()</span>
+<span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">linear_electric_grid_model_set</span><span class="o">.</span><span class="n">get_optimization_results</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">))</span>
+<span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">der_model_set</span><span class="o">.</span><span class="n">get_optimization_results</span><span class="p">(</span><span class="n">optimization_problem</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We first instantiate the results object <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.problems.Results</span></code> that is a container for <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> and <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code> objects for individual variable values. For vector variables, the solution values are typically obtained as <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> with the time steps as rows and variable dimensions as columns, e.g. the nodes of the electric grid for the nodal voltage vector. For scalar variables, the solution values are obtained as <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code> with time steps as rows.</p></li>
+<li><p>The solution values are extracted from <code class="docutils literal notranslate"><span class="pre">optimization_problem</span></code> through the <code class="docutils literal notranslate"><span class="pre">get_optimization_results()</span></code> methods of the linear electric grid and DER model objects. Retrieving through the model objects is needed because the variable dimensions are constructed from the index sets that are contained the model objects. The individual results are attached to the <code class="docutils literal notranslate"><span class="pre">results</span></code> object via its <code class="docutils literal notranslate"><span class="pre">update()</span></code> method.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">results_path</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">save()</span></code> method of the <code class="docutils literal notranslate"><span class="pre">results</span></code> object stores all <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> and <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code> objects as CSV files. Note that <code class="docutils literal notranslate"><span class="pre">results</span></code> also contains the linear electric grid and DER model objects, which are stored as binary PKL files.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+<span class="n">figure</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">results</span><span class="o">.</span><span class="n">branch_power_magnitude_vector_1</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">results</span><span class="o">.</span><span class="n">branch_power_magnitude_vector_1</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[(</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+<span class="p">)</span>
+<span class="n">figure</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Branch Power Magnitude at Line 1 (Phase 1)&#39;</span>
+<span class="p">)</span>
+<span class="n">mesmo</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">write_figure_plotly</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_path</span><span class="p">,</span> <span class="s1">&#39;branch_power_line_1_phase_1&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We use <code class="docutils literal notranslate"><span class="pre">plotly.graph_objects</span></code> for plotting and the <code class="docutils literal notranslate"><span class="pre">write_figure_plotly()</span></code> utility function to store the plotly figure to a file. The file output of <code class="docutils literal notranslate"><span class="pre">write_figure_plotly()</span></code> can be controlled via configuration parameters as described <a class="reference internal" href="configuration_reference.html#plot-configuration"><span class="std std-ref">here</span></a>.</p></li>
+<li><p>To construct a relative output path for the figure, we use <code class="docutils literal notranslate"><span class="pre">os.path.join()</span></code>. This is the recommended approach for reproducibility rather than hard-coding paths.</p></li>
+</ul>
+</section>
+</section>
+<section id="tutorial-2">
+<h2>Tutorial 2<a class="headerlink" href="#tutorial-2" title="Permalink to this heading">#</a></h2>
+<section id="id1">
+<h3>Outline<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
+<p>This example demonstrates the workflow for defining a simple test case scenario and interacting with this scenario though MESMO’s problem interfaces. We consider a test case with an electric grid consisting of two nodes and one line, with two DERs connected at the second node. We will utilize pre-defined line type and DER models from the <code class="docutils literal notranslate"><span class="pre">data/library</span></code> directory of the repository. The following properties are assumed:</p>
+<ul class="simple">
+<li><p>Node 0: 22 kV; 3-phase</p></li>
+<li><p>Node 1: 22 kV; 3-phase</p></li>
+<li><p>Line 1: Node 0 -&gt; Node 1; 3-phase; line type: <code class="docutils literal notranslate"><span class="pre">singapore_cable_22_copper_300</span></code>; length: 0.5 km</p></li>
+<li><p>DER 1: Fixed load; model name: <code class="docutils literal notranslate"><span class="pre">mixed_commercial_residential</span></code></p></li>
+<li><p>DER 2: Flexible load; model name: <code class="docutils literal notranslate"><span class="pre">mixed_commercial_residential</span></code></p></li>
+<li><p>Start time step: <code class="docutils literal notranslate"><span class="pre">2017-01-02T00:00:00</span></code>; end time step: <code class="docutils literal notranslate"><span class="pre">2017-01-03T00:00:00</span></code>; time step interval: <code class="docutils literal notranslate"><span class="pre">00:30:00</span></code></p></li>
+</ul>
+<p>Based on this test case, we will demonstrate the following tasks:</p>
+<ol class="arabic simple">
+<li><p>Solving a nominal operation problem, i.e., a simulation problem.</p></li>
+<li><p>Solving optimal operation problem with a custom peak shaving constraint at 95 % of the peak load from the nominal operation problem.</p></li>
+<li><p>Making plot for the total DER power demand time series to compare nominal vs. optimal dispatch.</p></li>
+</ol>
+</section>
+<section id="test-case-definition">
+<h3>Test case definition<a class="headerlink" href="#test-case-definition" title="Permalink to this heading">#</a></h3>
+<p>The test case definition workflow can be outlined as follows:</p>
+<ol class="arabic simple">
+<li><p>Create a new folder in <code class="docutils literal notranslate"><span class="pre">data</span></code> directory for the test case, e.g., named <code class="docutils literal notranslate"><span class="pre">tutorial_example</span></code>.</p></li>
+<li><p>Create the set of CSV files that are needed for the test case scenario definition:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/</span></code>: Test case base directory.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/electric_grid_ders.csv</span></code>: DER definitions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/electric_grid_lines.csv</span></code>: Electric line definition.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/electric_grid_nodes.csv</span></code>: Electric grid node definitions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/electric_grids.csv</span></code>: Electric grid base definition.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tutorial_example/scenarios.csv</span></code>: Test case scenario base definition.</p></li>
+</ul>
+</li>
+<li><p>Fill CSV files based on definition templates and data reference documentation.</p>
+<ul class="simple">
+<li><p>CSV file templates can be copied from the <code class="docutils literal notranslate"><span class="pre">data/templates/</span></code> directory.</p></li>
+<li><p>CSV files also can be based off existing test cases, e.g., <code class="docutils literal notranslate"><span class="pre">data/test_case_examples/singapore_6node/</span></code>.</p></li>
+<li><p>The CSV file contents and units for numerical values are documented in the <a class="reference internal" href="data_reference.html"><span class="std std-doc">data reference</span></a>.</p></li>
+</ul>
+</li>
+</ol>
+<p>The detailed contents of individual CSV files for this tutorial are omitted here, but the sample definition is included in <code class="docutils literal notranslate"><span class="pre">data/test_case_examples/tutorial_example</span></code> in the MESMO repository.</p>
+</section>
+<section id="id2">
+<h3>Imports and settings<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">import</span> <span class="nn">mesmo</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We will utilize <code class="docutils literal notranslate"><span class="pre">numpy</span></code> for the numerical operations when constructing the peak load constraint.</p></li>
+<li><p>We will use <code class="docutils literal notranslate"><span class="pre">plotly</span></code> for plotting and <code class="docutils literal notranslate"><span class="pre">os</span></code> for path operations later on.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">mesmo</span></code> call is needed to load MESMO and all its submodules.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scenario_name</span> <span class="o">=</span> <span class="s1">&#39;tutorial_example&#39;</span>
+<span class="n">results_path</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_results_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">,</span> <span class="n">scenario_name</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We define <code class="docutils literal notranslate"><span class="pre">scenario_name</span></code> as <code class="docutils literal notranslate"><span class="pre">'tutorial_example'</span></code> to select our newly defined test case scenario.</p></li>
+</ul>
+</section>
+<section id="recreate-the-database">
+<h3>Recreate the database<a class="headerlink" href="#recreate-the-database" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesmo</span><span class="o">.</span><span class="n">data_interface</span><span class="o">.</span><span class="n">recreate_database</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The call to <code class="docutils literal notranslate"><span class="pre">recreate_database()</span></code> is needed whenever defining or changing test cases. The CSV files serve as the input format, but an SQLITE database is used internally for data processing. Therefore, changes in the CSV files need to be read into the SQLITE database through the <code class="docutils literal notranslate"><span class="pre">recreate_database()</span></code> function.</p></li>
+<li><p>This call is recommended to be included in all run scripts, such that the latest data definitions are always loaded. However, this was omitted above in <a class="reference internal" href="#tutorial-1">tutorial 1</a> for the sake of brevity.</p></li>
+</ul>
+</section>
+<section id="get-problem-objects">
+<h3>Get problem objects<a class="headerlink" href="#get-problem-objects" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">problem_nominal</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">problems</span><span class="o">.</span><span class="n">NominalOperationProblem</span><span class="p">(</span><span class="n">scenario_name</span><span class="p">)</span>
+<span class="n">problem_optimal</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">problems</span><span class="o">.</span><span class="n">OptimalOperationProblem</span><span class="p">(</span><span class="n">scenario_name</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We will work with the <code class="docutils literal notranslate"><span class="pre">mesmo.problems</span></code> submodule in this example, as compared to using the more low-level models and data submodules in <a class="reference internal" href="#tutorial-1">tutorial 1</a>. The problem classes implement the appropriate setup and solve routines for each problem type. Relevant models and data are automatically obtained depending on the test case definition, e.g., the thermal grid model is only loaded if a thermal grid is defined in the test case scenario.</p></li>
+<li><p>The nominal operation problem represents a simulation under „nominal conditions“, i.e., all DERs are dispatched according to their nominal power time series. In this example, we utilize this problem type to represent the status quo, i.e., conventional operation of the energy systems.</p></li>
+<li><p>The optimal operation problem represents an optimization for optimal dispatch decisions, subject to the constraints of the DERs, electric grid and thermal grid. For this example, we amend the optimal operation problem definition with a custom constraint to ensure peak load reduction compared to the nominal operation problem.</p></li>
+</ul>
+</section>
+<section id="solve-nominal-operation-problem-and-get-results">
+<h3>Solve nominal operation problem and get results<a class="headerlink" href="#solve-nominal-operation-problem-and-get-results" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">problem_nominal</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+<span class="n">results_nominal</span> <span class="o">=</span> <span class="n">problem_nominal</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Each problem object exposes <code class="docutils literal notranslate"><span class="pre">solve()</span></code> and <code class="docutils literal notranslate"><span class="pre">get_results()</span></code> methods, which are used here to obtain the solution of the nominal operation problem.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">solve()</span></code> method of the nominal operation problem invokes the power flow solution classes of electric and thermal grid for non-linear simulation.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">get_results()</span></code> methods obtains results from the individual models and returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.problems.Results</span></code> object.</p></li>
+</ul>
+</section>
+<section id="customize-and-solve-optimal-operation-problem">
+<h3>Customize and solve optimal operation problem<a class="headerlink" href="#customize-and-solve-optimal-operation-problem" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">timestep</span> <span class="ow">in</span> <span class="n">problem_optimal</span><span class="o">.</span><span class="n">timesteps</span><span class="p">:</span>
+    <span class="n">problem_optimal</span><span class="o">.</span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_constraint</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="s1">&#39;variable&#39;</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">problem_optimal</span><span class="o">.</span><span class="n">electric_grid_model</span><span class="o">.</span><span class="n">der_power_vector_reference</span><span class="p">)]),</span>
+            <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;der_active_power_vector&#39;</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="n">timestep</span><span class="p">)</span>
+        <span class="p">),</span>
+        <span class="s1">&#39;&gt;=&#39;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s1">&#39;constant&#39;</span><span class="p">,</span>
+            <span class="mf">0.95</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">results_nominal</span><span class="o">.</span><span class="n">der_active_power_vector</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We define a custom constraint to limit the peak DER demand to 95 % of the peak load from the nominal operation problem. To this end, we compute the total peak demand via result from the nominal operation problem as <code class="docutils literal notranslate"><span class="pre">np.min(np.sum(results_nominal.der_active_power_vector,</span> <span class="pre">axis=1))</span></code>. Note that that <code class="docutils literal notranslate"><span class="pre">der_active_power_vector</span></code> takes a negative value for load as per convention in MESMO. Therefore, <code class="docutils literal notranslate"><span class="pre">np.min()</span></code> is needed to compute the peak.</p></li>
+<li><p>The total system demand is computed by multiplying the row vector <code class="docutils literal notranslate"><span class="pre">np.array([np.real(problem_optimal.electric_grid_model.der_power_vector_reference)])</span></code> with the optimization variable vector <code class="docutils literal notranslate"><span class="pre">dict(name='der_active_power_vector',</span> <span class="pre">timestep=timestep)</span></code>. Note that <code class="docutils literal notranslate"><span class="pre">der_active_power_vector</span></code> in the optimization problem is defined as normalized vector, i.e., each entry is normalized by the nominal / reference active power value of the corresponding DER. In fact, most optimization variables are normalized in this fashion to enable better numerical performance of the optimization solver. Therefore, to obtain the actual active power value, we multiply with the active power reference vector <code class="docutils literal notranslate"><span class="pre">np.real(problem_optimal.electric_grid_model.der_power_vector_reference)</span></code>. Lastly, <code class="docutils literal notranslate"><span class="pre">np.array([...])</span></code> constructs a row vector, such that the resulting multiplication yields a scalar value.</p></li>
+<li><p>Here, we directly interface the <code class="docutils literal notranslate"><span class="pre">optimization_problem</span></code> object that is a parameter of the <code class="docutils literal notranslate"><span class="pre">problem_optimal</span></code> object. For more details on the <code class="docutils literal notranslate"><span class="pre">optimization_problem.define_constraint()</span></code> method, please see <a class="reference internal" href="#tutorial-3">tutorial 3</a>.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">problem_optimal</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+<span class="n">results_optimal</span> <span class="o">=</span> <span class="n">problem_optimal</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">solve()</span></code> method of the optimal operation problem invokes the <code class="docutils literal notranslate"><span class="pre">solve()</span></code> method of the optimal operation problem and passes the problem to the optimization solver.</p></li>
+<li><p>Once the solution has terminated successfully, the <code class="docutils literal notranslate"><span class="pre">get_results()</span></code> methods obtains results from the individual models and returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.problems.Results</span></code> object.</p></li>
+</ul>
+</section>
+<section id="plotting-and-wrapping-things-up">
+<h3>Plotting and wrapping things up<a class="headerlink" href="#plotting-and-wrapping-things-up" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+<span class="n">figure</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">results_nominal</span><span class="o">.</span><span class="n">der_active_power_vector</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">results_nominal</span><span class="o">.</span><span class="n">der_active_power_vector</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)),</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Nominal&#39;</span><span class="p">,</span>
+    <span class="n">line</span><span class="o">=</span><span class="n">go</span><span class="o">.</span><span class="n">scatter</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="s1">&#39;hv&#39;</span><span class="p">)</span>
+<span class="p">))</span>
+<span class="n">figure</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span><span class="o">=</span><span class="n">results_optimal</span><span class="o">.</span><span class="n">der_active_power_vector</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">results_optimal</span><span class="o">.</span><span class="n">der_active_power_vector</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)),</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Optimal&#39;</span><span class="p">,</span>
+    <span class="n">line</span><span class="o">=</span><span class="n">go</span><span class="o">.</span><span class="n">scatter</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="s1">&#39;hv&#39;</span><span class="p">)</span>
+<span class="p">))</span>
+<span class="n">mesmo</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">write_figure_plotly</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_path</span><span class="p">,</span> <span class="s1">&#39;comparison&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We create a plot to compare the DER dispatch schedule between nominal and optimal operation problem.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesmo</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">results_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results are stored in: </span><span class="si">{</span><span class="n">results_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">launch()</span></code> function opens a file explorer / finder window for the given path.</p></li>
+</ul>
+</section>
+</section>
+<section id="tutorial-3">
+<h2>Tutorial 3<a class="headerlink" href="#tutorial-3" title="Permalink to this heading">#</a></h2>
+<section id="id3">
+<h3>Outline<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
+<p>This example demonstrates the usage of the MESMO optimization problem interface for defining and solving a simple optimization problem. While we only consider a simple stand-alone optimization problem, the interface can also be used to extend default optimization problem definitions with custom variables, constraints and objective terms as demonstrated above in <a class="reference internal" href="#customize-and-solve-optimal-operation-problem">tutorial 2</a>. Note that this tutorial does not require any test case scenario definition, as we directly specify the numerical parameters of the problem in the script.</p>
+<p>For this tutorial, we consider the following optimization problem:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align}
+    \min_{\boldsymbol{a},\boldsymbol{b}} \quad
+    &amp; \sum_{i=1}^{n=1000} b_i \\
+    \text{s.t.} \quad
+    &amp; \boldsymbol{b} = \boldsymbol{a} \cdot \boldsymbol{P} \\
+    &amp; -10 \leq \boldsymbol{a} \leq +10
+\end{align}\end{split}\]</div>
+</div>
+<p>The matrix <span class="math notranslate nohighlight">\(\boldsymbol{P} \in \mathbb{R}^{n \times n}\)</span> is an abitrary parameter matrix. The vectors  <span class="math notranslate nohighlight">\(\boldsymbol{a}, \boldsymbol{b} \in \mathbb{R}^{n \times 1}\)</span> are decision variable vectors. The symbol <span class="math notranslate nohighlight">\(n\)</span> defines the problem dimension.</p>
+</section>
+<section id="imports-and-setting-up">
+<h3>Imports and setting up<a class="headerlink" href="#imports-and-setting-up" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">mesmo</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We will utilize <code class="docutils literal notranslate"><span class="pre">numpy</span></code> for the random parameter matrix definition.</p></li>
+<li><p>As usual, <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">mesmo</span></code> is needed to load MESMO and all its submodules.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dimension</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">parameter_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">dimension</span><span class="p">,</span> <span class="n">dimension</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We begin by defining the problem dimension and generating the <code class="docutils literal notranslate"><span class="pre">parameter_matrix</span></code> of appropriate size. We utilize <code class="docutils literal notranslate"><span class="pre">np.random.rand()</span></code> to obtain a matrix filled with random values.</p></li>
+<li><p>Note that for the optimization problem interface, accepted numerical values for parameter, constraint or objective definitions are 1) float values, 2) numpy arrays or 3) scipy sparse matrices.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span> <span class="o">=</span> <span class="n">mesmo</span><span class="o">.</span><span class="n">solutions</span><span class="o">.</span><span class="n">OptimizationProblem</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>We instantiate the optimization problem object serves as a container for the parameters, variables, constraints and objective terms.</p></li>
+<li><p>As documented at <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.solutions.OptimizationProblem</span></code>, the optimization problem objects exposes methods for problem setup &amp; solution, which are utilized in the following.</p></li>
+</ul>
+</section>
+<section id="defining-parameters">
+<h3>Defining parameters<a class="headerlink" href="#defining-parameters" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_parameter</span><span class="p">(</span><span class="s1">&#39;parameter_matrix&#39;</span><span class="p">,</span> <span class="n">parameter_matrix</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Defining parameters is optional because numerical values can also be directly passed in the constraints and objective definitions. However, using parameters allows updating the numerical values of the problem without re-defining the complete problem.</p></li>
+</ul>
+</section>
+<section id="defining-variables">
+<h3>Defining variables<a class="headerlink" href="#defining-variables" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_variable</span><span class="p">(</span><span class="s1">&#39;a_vector&#39;</span><span class="p">,</span> <span class="n">a_index</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">dimension</span><span class="p">))</span>
+<span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_variable</span><span class="p">(</span><span class="s1">&#39;b_vector&#39;</span><span class="p">,</span> <span class="n">b_index</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">dimension</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Variables are defined by passing a name string and index key sets. The variable dimension is determined by the dimension of the index key sets. Accepted key set values are 1) lists, 2) tuples, 3) numpy arrays, 4) pandas index objects and 5) range objects.</p></li>
+<li><p>If multiple index key sets are passed, the variable dimension is determined as the cartesian product of the key sets. However, note that variables always take the shape of column vectors in constraint and objective definitions. That means, multiple key sets are not interpreted as array dimensions.</p></li>
+</ul>
+</section>
+<section id="defining-constraints">
+<h3>Defining constraints<a class="headerlink" href="#defining-constraints" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_constraint</span><span class="p">(</span>
+    <span class="p">(</span><span class="s1">&#39;variable&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;b_vector&#39;</span><span class="p">)),</span>
+    <span class="s1">&#39;==&#39;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s1">&#39;variable&#39;</span><span class="p">,</span> <span class="s1">&#39;parameter_matrix&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;a_vector&#39;</span><span class="p">)),</span>
+<span class="p">)</span>
+<span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_constraint</span><span class="p">(</span>
+    <span class="p">(</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mf">10.0</span><span class="p">),</span>
+    <span class="s1">&#39;&lt;=&#39;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s1">&#39;variable&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;a_vector&#39;</span><span class="p">)),</span>
+<span class="p">)</span>
+<span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_constraint</span><span class="p">(</span>
+    <span class="p">(</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="o">+</span><span class="mf">10.0</span><span class="p">),</span>
+    <span class="s1">&#39;&gt;=&#39;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s1">&#39;variable&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;a_vector&#39;</span><span class="p">)),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Constraints are defined as list of tuples and strings, where tuples are either 1) variable terms or 2) constant terms and strings represent operators (<code class="docutils literal notranslate"><span class="pre">==</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;=</span></code> or <code class="docutils literal notranslate"><span class="pre">&gt;=</span></code>). If multiple variable and constant terms are on either side of the operator, these are interpreted as summation of the variables / constants.</p></li>
+<li><p>Constant terms are tuples in the form <code class="docutils literal notranslate"><span class="pre">('constant',</span> <span class="pre">numerical</span> <span class="pre">value)</span></code>, where the numerical value can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical value is expected to represent a column vector with appropriate size matching the constraint dimension. If a float value is given as numerical value, the value is multiplied with a column vector of ones of appropriate size.</p></li>
+<li><p>Variable terms are tuples in the form <code class="docutils literal notranslate"><span class="pre">('variable',</span> <span class="pre">numerical</span> <span class="pre">factor,</span> <span class="pre">dict(name=variable</span> <span class="pre">name,</span> <span class="pre">keys...))</span></code>, where the numerical factor can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected to represent a matrix of appropriate size for the multiplication. If a float value is given as numerical factor, the value is multiplied with a identity matrix of appropriate size. Keys can be optionally given to select / slice a portion of the variable vector. Note that variables always take the shape of column vectors.</p></li>
+</ul>
+</section>
+<section id="defining-objective-terms">
+<h3>Defining objective terms<a class="headerlink" href="#defining-objective-terms" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">define_objective</span><span class="p">((</span><span class="s1">&#39;variable&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;b_vector&#39;</span><span class="p">)))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Objective terms are defined as list of tuples, where tuples are either 1) variable terms or 2) constant terms. Each term is expected to evaluate to a scalar value. If multiple variable and constant terms are defined, these are interpreted as summation of the variables / constants.</p></li>
+<li><p>Constant terms are tuples in the form <code class="docutils literal notranslate"><span class="pre">('constant',</span> <span class="pre">numerical</span> <span class="pre">value)</span></code>, where the numerical value can be 1) float value or 2) a parameter name string.</p></li>
+<li><p>Variable terms are tuples in the form <code class="docutils literal notranslate"><span class="pre">('variable',</span> <span class="pre">numerical</span> <span class="pre">factor,</span> <span class="pre">dict(name=variable</span> <span class="pre">name,</span> <span class="pre">keys...))</span></code>, where the numerical factor can be 1) float value, 2) numpy array, 3) scipy sparse matrix or 4) a parameter name string. The numerical factor is multiplied with the variable vector and is expected to represent a matrix of appropriate size for the multiplication, such that the multiplication evaluates to a scalar. If a float value is given as numerical factor, the value is multiplied with a row vector of ones of appropriate size. Keys can be optionally given to select / slice a portion of the variable vector. Note that variables always take the shape of column vectors.</p></li>
+</ul>
+</section>
+<section id="solving-and-retrieving-results">
+<h3>Solving and retrieving results<a class="headerlink" href="#solving-and-retrieving-results" title="Permalink to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimization_problem</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Calling the <code class="docutils literal notranslate"><span class="pre">solve()</span></code> method compiles the standard form of the linear program and passes it the optimization solver, e.g. Gurobi.</p></li>
+<li><p>The solve method currently implements interfaces to 1) Gurobi and 2) CVXPY, where the latter is a high-level convex optimization interface, which in turn allows interfacing further third-party solvers. The intention is to implement more direct solver interfaces on as-need basis (please raise an <a class="reference external" href="https://github.com/mesmo-dev/mesmo/issues">issue</a>), as these interfaces are assumed to allow higher performance than CVXPY for large-scale problems. However, CVXPY is kept as a fallback to allow a high degree of compatibility with various solvers.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">optimization_problem</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="n">a_vector</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;a_vector&#39;</span><span class="p">]</span>
+<span class="n">b_vector</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;b_vector&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Results are returned as dictionary with keys corresponding to the variable names that have been defined. The variable values are returned as <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> with time steps as rows and other variable key dimensions as multi-level column index. For variables with only time steps as key dimension, the values are returned as <code class="docutils literal notranslate"><span class="pre">pd.Series</span></code> with time steps as rows.</p></li>
+<li><p>Note that the <code class="docutils literal notranslate"><span class="pre">results</span></code> dictionary of the optimization problem object is different from the <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.problems.Results</span></code> object that is returned from the <code class="docutils literal notranslate"><span class="pre">get_optimization_results()</span></code> methods of the model objects. Particularly, some variable dimensions are not appropriately reconstructed in the <code class="docutils literal notranslate"><span class="pre">results</span></code> dictionary of the optimization problem object. Therefore, the <code class="xref py py-class docutils literal notranslate"><span class="pre">mesmo.problems.Results</span></code> object is preferred when working with the default models.</p></li>
+</ul>
+</section>
+</section>
+<section id="more-examples">
+<h2>More examples<a class="headerlink" href="#more-examples" title="Permalink to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory of the repository contains the following run scripts.</p>
+<section id="api-examples">
+<h3>API examples<a class="headerlink" href="#api-examples" title="Permalink to this heading">#</a></h3>
+<p>These examples demonstrate the usage of the high-level API to execute predefined problem types.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">run_api_nominal_operation_problem.py</span></code>: Example script for setting up and solving an nominal operation problem. The nominal operation problem (alias: power flow problem, electric grid simulation problem) formulates the steady-state power flow problem for all timesteps of the given scenario subject to the nominal operation schedule of all DERs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_api_optimal_operation_problem.py</span></code>: Example script for setting up and solving an optimal operation problem. The optimal operation problem (alias: optimal dispatch problem, optimal power flow problem) formulates the optimization problem for minimizing the objective functions of DERs and grid operators subject to the model constraints of all DERs and grids.</p></li>
+</ul>
+</section>
+<section id="advanced-examples">
+<h3>Advanced examples<a class="headerlink" href="#advanced-examples" title="Permalink to this heading">#</a></h3>
+<p>For advanced usage of MESMO, the following examples demonstrate in a step-by-step manner how energy system models and optimization problems can be defined and solved with MESMO. These example scripts serve as a reference for setting up custom work flows.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">run_electric_grid_optimal_operation.py</span></code>: Example script for setting up and solving an electric grid optimal operation problem.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_thermal_grid_optimal_operation.py</span></code>: Example script for setting up and solving a thermal grid optimal operation problem.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_multi_grid_optimal_operation.py</span></code>: Example script for setting up and solving a multi-grid optimal operation problem.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_flexible_der_optimal_operation.py</span></code>: Example script for setting up and solving a flexible DER optimal operation problem.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_electric_grid_power_flow_single_step.py</span></code>: Example script for setting up and solving an single step electric grid power flow problem.</p></li>
+</ul>
+</section>
+<section id="validation-scripts">
+<h3>Validation scripts<a class="headerlink" href="#validation-scripts" title="Permalink to this heading">#</a></h3>
+<p>Since the model implementations in MESMO are not infallible, these validation scripts are provided for model testing.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">validation_electric_grid_power_flow.py</span></code>: Example script for testing / validating the electric grid power flow solution.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">validation_linear_electric_grid_model.py</span></code>: Example script for testing / validating the linear electric grid model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">validation_electric_grid_dlmp_solution.py</span></code>: Validation script for solving a decentralized DER operation problem based on DLMPs from the centralized problem.</p></li>
+</ul>
+</section>
+<section id="other-scripts">
+<h3>Other scripts<a class="headerlink" href="#other-scripts" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>The directory <code class="docutils literal notranslate"><span class="pre">examples/development</span></code> contains example scripts which are under development and scripts related to the development of new features for MESMO.</p></li>
+<li><p>The directory <code class="docutils literal notranslate"><span class="pre">examples/publications</span></code> contains scripts related to publications which based on MESMO.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="architecture.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Architecture</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="installation.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Installation</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2018-2022, TUMCREATE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Examples</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#tutorial-1">Tutorial 1</a><ul>
+<li><a class="reference internal" href="#outline">Outline</a></li>
+<li><a class="reference internal" href="#imports-and-settings">Imports and settings</a></li>
+<li><a class="reference internal" href="#loading-data-and-models">Loading data and models</a></li>
+<li><a class="reference internal" href="#defining-and-solving-the-optimization-problem">Defining and solving the optimization problem</a></li>
+<li><a class="reference internal" href="#retrieving-and-evaluating-results">Retrieving and evaluating results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tutorial-2">Tutorial 2</a><ul>
+<li><a class="reference internal" href="#id1">Outline</a></li>
+<li><a class="reference internal" href="#test-case-definition">Test case definition</a></li>
+<li><a class="reference internal" href="#id2">Imports and settings</a></li>
+<li><a class="reference internal" href="#recreate-the-database">Recreate the database</a></li>
+<li><a class="reference internal" href="#get-problem-objects">Get problem objects</a></li>
+<li><a class="reference internal" href="#solve-nominal-operation-problem-and-get-results">Solve nominal operation problem and get results</a></li>
+<li><a class="reference internal" href="#customize-and-solve-optimal-operation-problem">Customize and solve optimal operation problem</a></li>
+<li><a class="reference internal" href="#plotting-and-wrapping-things-up">Plotting and wrapping things up</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tutorial-3">Tutorial 3</a><ul>
+<li><a class="reference internal" href="#id3">Outline</a></li>
+<li><a class="reference internal" href="#imports-and-setting-up">Imports and setting up</a></li>
+<li><a class="reference internal" href="#defining-parameters">Defining parameters</a></li>
+<li><a class="reference internal" href="#defining-variables">Defining variables</a></li>
+<li><a class="reference internal" href="#defining-constraints">Defining constraints</a></li>
+<li><a class="reference internal" href="#defining-objective-terms">Defining objective terms</a></li>
+<li><a class="reference internal" href="#solving-and-retrieving-results">Solving and retrieving results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#more-examples">More examples</a><ul>
+<li><a class="reference internal" href="#api-examples">API examples</a></li>
+<li><a class="reference internal" href="#advanced-examples">Advanced examples</a></li>
+<li><a class="reference internal" href="#validation-scripts">Validation scripts</a></li>
+<li><a class="reference internal" href="#other-scripts">Other scripts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=32e29ea5"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

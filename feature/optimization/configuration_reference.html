@@ -1,0 +1,583 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Contributing" href="contributing.html" /><link rel="prev" title="API reference" href="api_reference.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2023.09.10 -->
+        <title>Configuration reference - MESMO</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=362ab14a" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=135e06be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=ecafd8be" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">MESMO</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><div class="sidebar-scroll"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/mesmo_icon.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">MESMO</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="data_reference.html">Data reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API reference</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Configuration reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="change_log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo/blob/develop/LICENSE">License</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo">GitHub repository</a></li>
+</ul>
+
+</div>
+    <div class="sidebar-tree">
+        <ul>
+            <li class="toctree-l1 has-children" data-children-count="1">
+                <a style="font-size: var(--sidebar-caption-font-size); font-weight: 700; text-transform: uppercase;color: var(--color-sidebar-caption-text); pointer-events: none" class="reference">Versions</a>
+                <input class="toctree-checkbox" id="toctree-checkbox-tags" name="toctree-checkbox-tags" type="checkbox"><label for="toctree-checkbox-tags"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+                <ul style="font-size: var(--font-size--small--2);">
+                    <li class="toctree-l1 current current-page"><a class="current reference internal" href="configuration_reference.html">feature/optimization</a></li>
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../0.5.0/configuration_reference.html">0.5.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.3.0/index.html">v0.3.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.0/index.html">v0.4.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.1/index.html">v0.4.1</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../develop/configuration_reference.html">develop</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../biogas_model/index.html">feature/biogas_model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../bscs-model/configuration_reference.html">feature/bscs-model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dlmp_analysis/index.html">feature/dlmp_analysis</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../docs/configuration_reference.html">feature/docs</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dro/configuration_reference.html">feature/dro</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../ens_development_support/configuration_reference.html">feature/ens_development_support</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../gas_grid_model/configuration_reference.html">feature/gas_grid_model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../general_improvements/configuration_reference.html">feature/general_improvements</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../market_clearing_engine/index.html">feature/market_clearing_engine</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../mesmo_planning/configuration_reference.html">feature/mesmo_planning</a></li>
+                        
+                        
+                            
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plotable_items/configuration_reference.html">feature/plotable_items</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plots/configuration_reference.html">feature/plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../pnnl_tumcreate_colab/index.html">feature/pnnl_tumcreate_colab</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../primo_survey/index.html">feature/primo_survey</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../sitem/configuration_reference.html">feature/sitem</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../strategic_offering/configuration_reference.html">feature/strategic_offering</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../thermal_grid_extensions/configuration_reference.html">feature/thermal_grid_extensions</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../trust_region/configuration_reference.html">feature/trust_region</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../updated_plots/index.html">feature/updated_plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../validity_checks/index.html">feature/validity_checks</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../weather_dependent/index.html">feature/weather_dependent</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../master/configuration_reference.html">master</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../multi_objective_mesmo/configuration_reference.html">multi_objective_mesmo</a></li>
+                        
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="configuration-reference">
+<h1>Configuration reference<a class="headerlink" href="#configuration-reference" title="Permalink to this heading">#</a></h1>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>This reference is work in progress.</p>
+</div>
+<p>The MESMO configuration is defined via <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>. As an initial user, you likely do not need to modify the configuration.</p>
+<section id="configuration-workflow">
+<h2>Configuration workflow<a class="headerlink" href="#configuration-workflow" title="Permalink to this heading">#</a></h2>
+<p>An empty <code class="docutils literal notranslate"><span class="pre">config.yml</span></code> is created during the first runtime of MESMO. To define the local configuration, simply insert and modify configuration parameters from the references below.</p>
+<img alt="" class="invert" src="_images/configuration_file_structure.png" />
+<p><strong>Figure: Configuration file location.</strong></p>
+<p>MESMO distinguishes 1) local configuration in <code class="docutils literal notranslate"><span class="pre">config.yml</span></code> and 2) default configuration in <code class="docutils literal notranslate"><span class="pre">config_default.yml</span></code>. The local configuration takes precedence over the default configuration. That means, during initialization, <code class="docutils literal notranslate"><span class="pre">get_config()</span></code> first reads the default configuration from <code class="docutils literal notranslate"><span class="pre">config_default.yml</span></code> and then redefines any parameters that have been modified in <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>.</p>
+<img alt="" class="invert" src="_images/configuration_workflow.png" />
+<p><strong>Figure: Configuration initialization workflow.</strong></p>
+<p>The following sections serve as a reference for configuration parameters. Please note that key / value pairs are defined in a nested structure for each configuration type. This nested structure needs to be replicated for key / value pairs in <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Please only modify <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>, but do not make changes to <code class="docutils literal notranslate"><span class="pre">config_default.yml</span></code>.</p>
+</div>
+</section>
+<section id="path-configuration">
+<h2>Path configuration<a class="headerlink" href="#path-configuration" title="Permalink to this heading">#</a></h2>
+<section id="default-values">
+<h3>Default values<a class="headerlink" href="#default-values" title="Permalink to this heading">#</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">data</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./data</span>
+<span class="w">  </span><span class="nt">database</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./data/database.sqlite</span>
+<span class="w">  </span><span class="nt">results</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./results</span>
+<span class="w">  </span><span class="nt">additional_data</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">  </span><span class="nt">ignore_data_folders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">  </span><span class="nt">cobmo_additional_data</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</section>
+<section id="configuration-keys">
+<h3>Configuration keys<a class="headerlink" href="#configuration-keys" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data</span></code>: Defines the main data directory, i.e. the location of the CSV input files which are imported by <a class="reference internal" href="api_reference.html#mesmo.data_interface.recreate_database" title="mesmo.data_interface.recreate_database"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.data_interface.recreate_database()</span></code></a>. Can be given as absolute path or relative path to <code class="docutils literal notranslate"><span class="pre">./</span></code>¹. Defaults to the data directory that is included with the MESMO repository. If you want to include additional data from other directories, please see <code class="docutils literal notranslate"><span class="pre">additional_data</span></code> below.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">database</span></code>: Defines the file path for the internal SQLITE database. Can be given as absolute path or relative path to <code class="docutils literal notranslate"><span class="pre">./</span></code>¹. This file will be created by <a class="reference internal" href="api_reference.html#mesmo.data_interface.recreate_database" title="mesmo.data_interface.recreate_database"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.data_interface.recreate_database()</span></code></a>, if it does not exist.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">results</span></code>: Defines the main results directory, i.e. the directory where results outputs are stored. This parameter is used as base path in <a class="reference internal" href="api_reference.html#mesmo.utils.get_results_path" title="mesmo.utils.get_results_path"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.utils.get_results_path()</span></code></a>. Defaults to the results directory in the MESMO repository.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">additional_data</span></code>: Defines list of supplementary data directories, which are imported in addition to the main data directory by <a class="reference internal" href="api_reference.html#mesmo.data_interface.recreate_database" title="mesmo.data_interface.recreate_database"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.data_interface.recreate_database()</span></code></a>. Should be defined as list of absolute or relative paths to <code class="docutils literal notranslate"><span class="pre">./</span></code>¹.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ignore_data_folders</span></code>: Defines a list of directory names that are excluded during import by <a class="reference internal" href="api_reference.html#mesmo.data_interface.recreate_database" title="mesmo.data_interface.recreate_database"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.data_interface.recreate_database()</span></code></a>. Should be defined as list of folder names to exclude, but does accept full paths.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cobmo_additional_data</span></code>: Defines list of supplementary data directories for the <code class="docutils literal notranslate"><span class="pre">cobmo</span></code> submodule, similar to <code class="docutils literal notranslate"><span class="pre">additional_data</span></code> above.</p></li>
+</ul>
+<p>¹ In the path parameters, <code class="docutils literal notranslate"><span class="pre">./</span></code> denotes the MESMO repository base directory as reference for relative path definitions.</p>
+</section>
+<section id="using-additional-data-directories">
+<h3>Using additional data directories<a class="headerlink" href="#using-additional-data-directories" title="Permalink to this heading">#</a></h3>
+<p>As an example, additional data from folders <code class="docutils literal notranslate"><span class="pre">supplementary_data</span></code> and <code class="docutils literal notranslate"><span class="pre">project_data</span></code> adjacent to the MESMO repository base directory can be defined with the following configuration snippet:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">additional_data</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span>
+<span class="w">    </span><span class="nv">./../supplementary_data</span><span class="p p-Indicator">,</span>
+<span class="w">    </span><span class="nv">./../project_data</span>
+<span class="w">  </span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="optimization-solver-configuration">
+<h2>Optimization solver configuration<a class="headerlink" href="#optimization-solver-configuration" title="Permalink to this heading">#</a></h2>
+<section id="id1">
+<h3>Default values<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">optimization</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">solver_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gurobi</span>
+<span class="w">  </span><span class="nt">solver_interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">direct</span>
+<span class="w">  </span><span class="nt">show_solver_output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">time_limit</span><span class="p">:</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Configuration keys<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">solver_name</span></code>: Defines the optimization solver. Choices are ‘gurobi’ or any valid solver name <a class="reference external" href="https://www.cvxpy.org/tutorial/advanced/index.html#choosing-a-solver">for CVXPY</a>. Solver name should be defined in lower caps.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">solver_interface</span></code>: Defines the interface for sending the optimization problem to the solver. Choices are ‘direct’ or ‘cvxpy’. If ‘direct’, MESMO will use a direct solver interface, which is currently only implemented for Gurobi. If no direct solver interface is available for the selected solver, MESMO will automatically fall back to CVXPY. If ‘cvxpy’, MESMO will always use CVXPY without checking for a direct solver interface. If not defined, will use ‘direct’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">time_limit</span></code>: Solver time limit in seconds. If not defined, the value is set to infinite. Currently only implemented for Gurobi and CPLEX.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">show_solver_output</span></code>: Choices are ‘true’ or ‘false’. If ‘true’, activate verbose solver output. If ‘false’, silence any solver outputs.</p></li>
+</ul>
+</section>
+<section id="setting-cplex-as-optimization-solver">
+<h3>Setting CPLEX as optimization solver<a class="headerlink" href="#setting-cplex-as-optimization-solver" title="Permalink to this heading">#</a></h3>
+<p>As an example, <a class="reference external" href="https://www.ibm.com/analytics/cplex-optimizer">CPLEX</a> can be defined as the optimization solver with the following configuration snippet:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">optimization</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">solver_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cplex</span>
+<span class="w">  </span><span class="nt">solver_interface</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cvxpy</span>
+</pre></div>
+</div>
+<p>Note that CPLEX is interfaced through CVXPY, because there is currently no direct interface implemented in MESMO. This requires CPLEX to be installed <a class="reference external" href="https://www.cvxpy.org/install/index.html#install-with-cplex-support">as per CVXPY instructions</a>.</p>
+</section>
+</section>
+<section id="multiprocessing-configuration">
+<h2>Multiprocessing configuration<a class="headerlink" href="#multiprocessing-configuration" title="Permalink to this heading">#</a></h2>
+<p>MESMO enables multiprocessing, i.e. parallel processing, of subtasks that are enabled for parallelization via <a class="reference internal" href="api_reference.html#mesmo.utils.starmap" title="mesmo.utils.starmap"><code class="xref py py-func docutils literal notranslate"><span class="pre">mesmo.utils.starmap()</span></code></a>. This can be useful when running very large scenarios, but requires additional computational overhead for starting up and maintaining a pool of parallel workers. Therefore, this feature is disabled by default and not recommended when running small test cases.</p>
+<section id="id3">
+<h3>Default values<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">multiprocessing</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">run_parallel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">cpu_share</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>Configuration keys<a class="headerlink" href="#id4" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">run_parallel</span></code>: Enables / disables multiprocessing. Disabled by default and not recommended when running small scenarios.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cpu_share</span></code>: Defines the share of CPU cores to be used for parallel processing. Can be used to limit the system loading, e.g. on shared workstations.</p></li>
+</ul>
+</section>
+</section>
+<section id="logging-and-tests-configuration">
+<h2>Logging and tests configuration<a class="headerlink" href="#logging-and-tests-configuration" title="Permalink to this heading">#</a></h2>
+<section id="id5">
+<h3>Default values<a class="headerlink" href="#id5" title="Permalink to this heading">#</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">logs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">info</span>
+<span class="w">  </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;%(asctime)s</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">%(levelname)s</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">%(message)s&#39;</span>
+<span class="nt">tests</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">scenario_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">singapore_6node</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3>Configuration keys<a class="headerlink" href="#id6" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">level</span></code>: Defines the logging level for the <a class="reference external" href="https://docs.python.org/3/howto/logging.html">Python logging facility</a>. Choices: <code class="docutils literal notranslate"><span class="pre">debug</span></code>, <code class="docutils literal notranslate"><span class="pre">info</span></code>, <code class="docutils literal notranslate"><span class="pre">warn</span></code>. All log messages at or above the selected log level are printed, in the following order <code class="docutils literal notranslate"><span class="pre">debug</span></code> &lt; <code class="docutils literal notranslate"><span class="pre">info</span></code> &lt; <code class="docutils literal notranslate"><span class="pre">warn</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">format</span></code>: Defines the format of the log message output. See <a class="reference external" href="https://docs.python.org/3/library/logging.html#formatter-objects">here</a> and <a class="reference external" href="https://docs.python.org/3/library/logging.html#logrecord-attributes">here</a> for additional information on how to define the format string.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scenario_name</span></code>: Defines the scenario which is used when running automated testing scripts in the <code class="docutils literal notranslate"><span class="pre">tests</span></code> directory and some of the example scripts in the <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory.</p></li>
+</ul>
+</section>
+</section>
+<section id="plot-configuration">
+<h2>Plot configuration<a class="headerlink" href="#plot-configuration" title="Permalink to this heading">#</a></h2>
+<section id="id7">
+<h3>Default values<a class="headerlink" href="#id7" title="Permalink to this heading">#</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">plots</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">matplotlib_style</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">seaborn-colorblind</span>
+<span class="w">  </span><span class="nt">matplotlib_colormap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">viridis_r</span>
+<span class="w">  </span><span class="nt">matplotlib_font_family</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;Arial&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;Helvetica&#39;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">matplotlib_figure_size</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">7.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4.0</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">plotly_font_family</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Arial</span>
+<span class="w">  </span><span class="nt">plotly_font_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15</span>
+<span class="w">  </span><span class="nt">plotly_figure_width</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="w">  </span><span class="nt">plotly_figure_height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+<span class="w">  </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">png</span>
+<span class="w">  </span><span class="nt">add_basemap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">show_basemap_attribution</span><span class="p">:</span>
+</pre></div>
+</div>
+</section>
+<section id="id8">
+<h3>Configuration keys<a class="headerlink" href="#id8" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib_style</span></code>: Defines the style template for matplotlib plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib_colormap</span></code>: Defines the colormap for matplotlib plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib_font_family</span></code>: Defines the fonts for matplotlib plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib_figure_size</span></code>: Defines the figure size for matplotlib plots in inch.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly_font_family</span></code>: Defines the font for plotly plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly_font_size</span></code>: Defines the font size for plotly plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly_figure_width</span></code>: Defines the figure width for plotly plots in pixels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly_figure_height</span></code>: Defines the figure height for plotly plots in pixels.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file_format</span></code>: Defines the file format for matplotlib / plotly plots.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_basemap</span></code>: If True, add basemap layer to static grid plots for orientation. Requires installation of <code class="docutils literal notranslate"><span class="pre">contextily</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">show_basemap_attribution</span></code>: If True, show copyright notice for basemap.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="contributing.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Contributing</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="api_reference.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">API reference</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2018-2022, TUMCREATE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Configuration reference</a><ul>
+<li><a class="reference internal" href="#configuration-workflow">Configuration workflow</a></li>
+<li><a class="reference internal" href="#path-configuration">Path configuration</a><ul>
+<li><a class="reference internal" href="#default-values">Default values</a></li>
+<li><a class="reference internal" href="#configuration-keys">Configuration keys</a></li>
+<li><a class="reference internal" href="#using-additional-data-directories">Using additional data directories</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#optimization-solver-configuration">Optimization solver configuration</a><ul>
+<li><a class="reference internal" href="#id1">Default values</a></li>
+<li><a class="reference internal" href="#id2">Configuration keys</a></li>
+<li><a class="reference internal" href="#setting-cplex-as-optimization-solver">Setting CPLEX as optimization solver</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multiprocessing-configuration">Multiprocessing configuration</a><ul>
+<li><a class="reference internal" href="#id3">Default values</a></li>
+<li><a class="reference internal" href="#id4">Configuration keys</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#logging-and-tests-configuration">Logging and tests configuration</a><ul>
+<li><a class="reference internal" href="#id5">Default values</a></li>
+<li><a class="reference internal" href="#id6">Configuration keys</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#plot-configuration">Plot configuration</a><ul>
+<li><a class="reference internal" href="#id7">Default values</a></li>
+<li><a class="reference internal" href="#id8">Configuration keys</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=32e29ea5"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    </body>
+</html>

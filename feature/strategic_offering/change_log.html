@@ -1,0 +1,513 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Publications" href="publications.html" /><link rel="prev" title="Contributing" href="contributing.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2023.09.10 -->
+        <title>Change log - MESMO</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=362ab14a" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=135e06be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=ecafd8be" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">MESMO</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><div class="sidebar-scroll"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/mesmo_icon.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">MESMO</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_reference.html">Data reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration_reference.html">Configuration reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo/blob/develop/LICENSE">License</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/mesmo-dev/mesmo">GitHub repository</a></li>
+</ul>
+
+</div>
+    <div class="sidebar-tree">
+        <ul>
+            <li class="toctree-l1 has-children" data-children-count="1">
+                <a style="font-size: var(--sidebar-caption-font-size); font-weight: 700; text-transform: uppercase;color: var(--color-sidebar-caption-text); pointer-events: none" class="reference">Versions</a>
+                <input class="toctree-checkbox" id="toctree-checkbox-tags" name="toctree-checkbox-tags" type="checkbox"><label for="toctree-checkbox-tags"><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+                <ul style="font-size: var(--font-size--small--2);">
+                    <li class="toctree-l1 current current-page"><a class="current reference internal" href="change_log.html">feature/strategic_offering</a></li>
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../0.5.0/change_log.html">0.5.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.3.0/index.html">v0.3.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.0/change_log.html">v0.4.0</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../v0.4.1/change_log.html">v0.4.1</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../develop/change_log.html">develop</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../biogas_model/index.html">feature/biogas_model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../bscs-model/change_log.html">feature/bscs-model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dlmp_analysis/change_log.html">feature/dlmp_analysis</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../docs/change_log.html">feature/docs</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../dro/change_log.html">feature/dro</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../ens_development_support/change_log.html">feature/ens_development_support</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../gas_grid_model/change_log.html">feature/gas_grid_model</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../general_improvements/change_log.html">feature/general_improvements</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../market_clearing_engine/index.html">feature/market_clearing_engine</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../mesmo_planning/change_log.html">feature/mesmo_planning</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../optimization/change_log.html">feature/optimization</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plotable_items/change_log.html">feature/plotable_items</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../plots/change_log.html">feature/plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../pnnl_tumcreate_colab/change_log.html">feature/pnnl_tumcreate_colab</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../primo_survey/change_log.html">feature/primo_survey</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../sitem/change_log.html">feature/sitem</a></li>
+                        
+                        
+                            
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../thermal_grid_extensions/change_log.html">feature/thermal_grid_extensions</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../trust_region/change_log.html">feature/trust_region</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../updated_plots/change_log.html">feature/updated_plots</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../validity_checks/change_log.html">feature/validity_checks</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../weather_dependent/change_log.html">feature/weather_dependent</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../master/change_log.html">master</a></li>
+                        
+                        
+                            <li class="toctree-l1"><a class="reference internal" href="../../multi_objective_mesmo/change_log.html">multi_objective_mesmo</a></li>
+                        
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="change-log">
+<h1>Change log<a class="headerlink" href="#change-log" title="Permalink to this heading">#</a></h1>
+<p>Note that version numbering follows the <a class="reference external" href="https://semver.org/">Semantic Versioning principle</a>.</p>
+<section id="id1">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/0.5.0">0.5.0</a><a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h2>
+<p>With this release, the Flexible Distribution Grid Demonstrator (FLEDGE) was renamed to Multi-Energy System Modeling and Optimization (MESMO).</p>
+<section id="new-features">
+<h3>New features<a class="headerlink" href="#new-features" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Added new optimization problem object (<code class="docutils literal notranslate"><span class="pre">utils.OptimizationProblem</span></code>) as main interface for defining optimization problems with functionality to 1) export the standard form for LP / QP, 2) directly interface Gurobi for better performance with large problems.</p></li>
+<li><p>Overhead line types can now be defined in terms of conductor data and geometric arrangement (Arif Ahmed).</p></li>
+<li><p>Added local-approximation variant for linear electric grid model.</p></li>
+<li><p>Added linear model set for electric grid model, which enables defining separate linear models for each time step.</p></li>
+<li><p>Added power flow solution set, to obtain power flow solutions more conveniently for multiple time steps.</p></li>
+<li><p>Added pre-solve method for DER model set, to obtain baseline nominal power time series for flexible DERs.</p></li>
+</ul>
+</section>
+<section id="changes">
+<h3>Changes<a class="headerlink" href="#changes" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Improved / simplified <code class="docutils literal notranslate"><span class="pre">define_optimization...()</span></code> methods for most use cases.</p></li>
+<li><p>Revised <code class="docutils literal notranslate"><span class="pre">define_optimization...()</span></code> methods for new optimization problem object.</p></li>
+<li><p>Switched from <code class="docutils literal notranslate"><span class="pre">multiprocess</span></code> to <code class="docutils literal notranslate"><span class="pre">ray</span></code> for parallel processing for performance reasons.</p></li>
+<li><p>Revised documentation structure, overhauled the architecture documentation and added the configuration reference.</p></li>
+</ul>
+</section>
+</section>
+<section id="v0-4-1">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.1">v0.4.1</a><a class="headerlink" href="#v0-4-1" title="Permalink to this heading">#</a></h2>
+<section id="fixes">
+<h3>Fixes<a class="headerlink" href="#fixes" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Updated <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code>.</p></li>
+<li><p>Updated version indicators.</p></li>
+</ul>
+</section>
+</section>
+<section id="v0-4-0">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/v0.4.0">v0.4.0</a><a class="headerlink" href="#v0-4-0" title="Permalink to this heading">#</a></h2>
+<section id="id2">
+<h3>New features<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Added problems module with definitions for nominal operation problem (simulation) and optimal operation problem (optimization).</p></li>
+<li><p>Added high-level API for executing optimal &amp; nominal operation problems.</p></li>
+<li><p>Added various DER models.</p></li>
+<li><p>Enabled most DERs for thermal grids (Verena Kleinschmidt).</p></li>
+<li><p>Added ability to define electric grid model as single-phase-approximate.</p></li>
+<li><p>Added Z-Bus power flow solution method (Arif Ahmed).</p></li>
+<li><p>Added plots module (work-in-progress).</p></li>
+<li><p>Added ability to set local configuration with <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>.</p></li>
+<li><p>Added ability to set base units for apparent power, voltage and thermal power for in scenario definition.</p></li>
+</ul>
+</section>
+<section id="id3">
+<h3>Changes<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Moved implementation of optimization problems from Pyomo to CVXPY for performance improvements.</p></li>
+<li><p>Reformulated optimization constraints to use normalized values for improved numerical performance.</p></li>
+<li><p>Improved MESMO definition data format documentation.</p></li>
+<li><p>Refactored DER model data definition format.</p></li>
+<li><p>Refactored price data object.</p></li>
+<li><p>Various fixes in linear electric grid model model and DLMP calculations.</p></li>
+<li><p>Introduced various error messages for common issues.</p></li>
+</ul>
+</section>
+</section>
+<section id="v0-3-0">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/v0.3.0">v0.3.0</a><a class="headerlink" href="#v0-3-0" title="Permalink to this heading">#</a></h2>
+<section id="id4">
+<h3>New features<a class="headerlink" href="#id4" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Moved to Python as main implementation language.</p></li>
+<li><p>Extended linear electric models with methods for defining optimization variables / constraints.</p></li>
+<li><p>Added thermal grid model.</p></li>
+<li><p>Added linear thermal grid model with methods for defining optimization variables / constraints.</p></li>
+<li><p>Added DER models and integrated CoBMo for flexible building models.</p></li>
+<li><p>Added methods for defining operation limits and obtaining DLMPs for electric and thermal grids.</p></li>
+<li><p>Provided various example scripts for running optimal operation problems for DERs / electric grids / thermal grids / multi-energy grids.</p></li>
+</ul>
+</section>
+</section>
+<section id="v0-2-0">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/v0.2.0">v0.2.0</a><a class="headerlink" href="#v0-2-0" title="Permalink to this heading">#</a></h2>
+<section id="auxiliary-release">
+<h3>Auxiliary Release<a class="headerlink" href="#auxiliary-release" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Snapshot before moving to Python as main implementation language.</p></li>
+</ul>
+</section>
+</section>
+<section id="v0-1-0">
+<h2><a class="reference external" href="https://github.com/mesmo-dev/mesmo/releases/tag/v0.1.0">v0.1.0</a><a class="headerlink" href="#v0-1-0" title="Permalink to this heading">#</a></h2>
+<section id="initial-release">
+<h3>Initial release<a class="headerlink" href="#initial-release" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Initial set of modules with Julia as main implementation language.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="publications.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Publications</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="contributing.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Contributing</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2018-2022, TUMCREATE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Change log</a><ul>
+<li><a class="reference internal" href="#id1">0.5.0</a><ul>
+<li><a class="reference internal" href="#new-features">New features</a></li>
+<li><a class="reference internal" href="#changes">Changes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-4-1">v0.4.1</a><ul>
+<li><a class="reference internal" href="#fixes">Fixes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-4-0">v0.4.0</a><ul>
+<li><a class="reference internal" href="#id2">New features</a></li>
+<li><a class="reference internal" href="#id3">Changes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-3-0">v0.3.0</a><ul>
+<li><a class="reference internal" href="#id4">New features</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-2-0">v0.2.0</a><ul>
+<li><a class="reference internal" href="#auxiliary-release">Auxiliary Release</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-1-0">v0.1.0</a><ul>
+<li><a class="reference internal" href="#initial-release">Initial release</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=32e29ea5"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    </body>
+</html>

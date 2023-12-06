@@ -1,0 +1,37 @@
+.literal,
+.toc-title {
+    font-weight: bolder;
+}
+.sidebar-logo {
+    max-width: 50%;
+}
+/*Invert images in dark mode.*/
+body[data-theme="dark"] .invert,
+body[data-theme="dark"] .sidebar-logo {
+    filter: invert(1) hue-rotate(180deg);
+}
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) .invert,
+    body:not([data-theme="light"]) .sidebar-logo {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+body[data-theme="dark"] .invert-gray {
+    filter: invert(1) grayscale(1);
+}
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) .invert-gray {
+        filter: invert(1) grayscale(1);
+    }
+}
+/*Left-align figures and fix caption link behavior.*/
+article .align-center,
+article .align-default {
+    text-align: left;
+}
+figure > figcaption > p > .headerlink {
+    visibility: hidden;
+}
+figure:hover > figcaption > p > .headerlink {
+    visibility: visible;
+}

@@ -11,7 +11,7 @@ paths:
   cobmo_additional_data: []
   highs_solver: ./highs/bin/highs
 optimization:
-  solver_name: highs  # Choices: 'highs', 'gurobi' or any valid solver name for CVXPY in lower caps.
+  solver_name: gurobi  # Choices: 'highs', 'gurobi' or any valid solver name for CVXPY in lower caps.
   solver_interface: direct # Choices: 'direct' or 'cvxpy'. If not defined, will use 'direct'.
   show_solver_output: true # Choices: 'true' or 'false'. If 'true', activate verbose solver output.
   time_limit:  # Solver time limit in seconds. If not defined, will use infinite. Only for Gurobi and CPLEX.

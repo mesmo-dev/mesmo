@@ -1,0 +1,585 @@
+import mesmo
+
+optimization_problem = mesmo.solutions.Augmecon(grid_points=10)
+optimization_problem.define_variable("LIGN")
+optimization_problem.define_variable("LIGN1")
+optimization_problem.define_variable("LIGN2")
+optimization_problem.define_variable("OIL")
+optimization_problem.define_variable("OIL2")
+optimization_problem.define_variable("OIL3")
+optimization_problem.define_variable("NG")
+optimization_problem.define_variable("NG1")
+optimization_problem.define_variable("NG2")
+optimization_problem.define_variable("NG3")
+optimization_problem.define_variable("RES")
+optimization_problem.define_variable("RES1")
+optimization_problem.define_variable("RES3")
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN1"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN2"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL2"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL3"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG1"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG2"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG3"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES1"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES3"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="LIGN1"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="LIGN2"
+        )
+    ),
+    "==",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="OIL2"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="OIL3"
+        )
+    ),
+    "==",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="NG1"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="NG2"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="NG3"
+        )
+    ),
+    "==",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="RES1"
+        )
+    ),
+    (
+        "variable",
+        -1.0,
+        dict(
+            name="RES3"
+        )
+    ),
+    "==",
+    (
+        "constant",
+        0.0,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN"
+        )
+    ),
+    "<=",
+    (
+        "constant",
+        31000,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL"
+        )
+    ),
+    "<=",
+    (
+        "constant",
+        15000,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG"
+        )
+    ),
+    "<=",
+    (
+        "constant",
+        22000,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES"
+        )
+    ),
+    "<=",
+    (
+        "constant",
+        10000,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN1"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG1"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES1"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        38400,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="LIGN2"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL2"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG2"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        19200,
+        dict()
+    )
+)
+
+optimization_problem.define_constraint(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL3"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG3"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="RES3"
+        )
+    ),
+    ">=",
+    (
+        "constant",
+        6400,
+        dict()
+    )
+)
+
+optimization_problem.define_objective(
+    (
+        "variable",
+        30.0,
+        dict(
+            name="LIGN"
+        )
+    ),
+    (
+        "variable",
+        75,
+        dict(
+            name="OIL"
+        ),
+    ),
+    (
+        "variable",
+        60,
+        dict(
+            name="NG"
+        ),
+    ),
+    (
+        "variable",
+        90,
+        dict(
+            name="RES"
+        ),
+    ),
+    objective_index=1
+)
+
+optimization_problem.define_objective(
+    (
+        "variable",
+        1.44,
+        dict(
+            name="LIGN"
+        )
+    ),
+    (
+        "variable",
+        0.72,
+        dict(
+            name="OIL"
+        ),
+    ),
+    (
+        "variable",
+        0.45,
+        dict(
+            name="NG"
+        ),
+    ),
+    objective_index=2
+)
+
+optimization_problem.define_objective(
+    (
+        "variable",
+        1.0,
+        dict(
+            name="OIL"
+        )
+    ),
+    (
+        "variable",
+        1.0,
+        dict(
+            name="NG"
+        ),
+    ),
+    objective_index=3
+)
+
+# model_properties = optimization_problem.get_gurobi_problem()
+optimization_problem.construct_payoff_table()
+optimization_problem.find_objective_range()
+optimization_problem.pareto()

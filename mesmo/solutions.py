@@ -1,14 +1,22 @@
 """Solution problems / methods / algorithms module"""
 
 import collections
-import cvxpy as cp
+from typing import Tuple, Union, Any
+
+import os
 import gurobipy as gp
 import itertools
 import numpy as np
 import pandas as pd
+import ray
 import scipy.sparse as sp
 import subprocess
 import typing
+from itertools import product
+
+from gurobipy import Model
+from numpy import ndarray, dtype
+from pyomo.environ import *
 
 import mesmo.config
 import mesmo.utils
@@ -128,6 +136,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
     results: dict
     duals: dict
     objective: float
+    number_of_objectives: int
 
     def __init__(self):
 
@@ -143,6 +152,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.parameters = dict()
         self.flags = dict()
 
+        self.number_of_objectives = 1
         # Instantiate A matrix / b vector / c vector / Q matrix / d constant dictionaries.
         # - Final matrix / vector are only created in ``get_a_matrix()``, ``get_b_vector()``, ``get_c_vector()``,
         #   ``get_q_matrix()`` and ``get_d_constant()``.
@@ -155,10 +165,10 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.d_dict = collections.defaultdict(list)
 
     def define_variable(
-        self,
-        name: str,
-        variable_type: str = "continuous",
-        **keys,
+            self,
+            name: str,
+            variable_type: str = "continuous",
+            **keys,
     ):
         """Define decision variable with given name and key set.
 
@@ -220,13 +230,13 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.parameters[name] = value
 
     def define_constraint(
-        self,
-        *elements: typing.Union[
-            str,
-            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
-            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
-        ],
-        **kwargs,
+            self,
+            *elements: typing.Union[
+                str,
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
+            ],
+            **kwargs,
     ):
         """Define linear constraint for given list of constraint elements.
 
@@ -330,12 +340,12 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.define_constraint_low_level(variables, operator, constants, **kwargs)
 
     def define_constraint_low_level(
-        self,
-        variables: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
-        operator: str,
-        constants: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
-        keys: dict = None,
-        broadcast: typing.Union[str, list, tuple] = None,
+            self,
+            variables: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+            operator: str,
+            constants: typing.List[typing.Tuple[float, typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+            keys: dict = None,
+            broadcast: typing.Union[str, list, tuple] = None,
     ):
 
         # Raise error if no variables in constraint.
@@ -550,14 +560,14 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             ValueError(f"Invalid constraint operator: {operator}")
 
     def define_objective(
-        self,
-        *elements: typing.Union[
-            str,
-            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
-            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
-            typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict],
-        ],
-        **kwargs,
+            self,
+            *elements: typing.Union[
+                str,
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix]],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict],
+                typing.Tuple[str, typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict],
+            ],
+            **kwargs,
     ):
         """Define objective terms for the given list of objective elements.
 
@@ -618,180 +628,357 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         self.define_objective_low_level(variables, variables_quadratic, constants, **kwargs)
 
     def define_objective_low_level(
-        self,
-        variables: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
-        variables_quadratic: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]],
-        constants: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
-        broadcast: typing.Union[str, list, tuple] = None,
+            self,
+            variables: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+            variables_quadratic: typing.List[
+                typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict, dict]],
+            constants: typing.List[typing.Tuple[typing.Union[str, float, np.ndarray, sp.spmatrix], dict]],
+            broadcast: typing.Union[str, list, tuple] = None,
+            objective_index: int = None
     ):
 
-        # Run type checks for broadcast argument.
-        if broadcast is not None:
-            if type(broadcast) is str:
-                broadcast = [broadcast]
-            elif type(broadcast) not in [list, tuple]:
-                raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
-
-        # Process variables.
-        for variable_value, variable_keys in variables:
-
-            # If any variable key values are empty, ignore variable & do not add any c vector entry.
-            for key_value in variable_keys.values():
-                if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
-                    if len(key_value) == 0:
-                        continue  # Skip variable & go to next iteration.
-
-            # Obtain variable index & raise error if variable or key does not exist.
-            variable_index = tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
-
-            # Obtain broadcast dimension length for variable.
+        if objective_index is None:
+            # Run type checks for broadcast argument.
             if broadcast is not None:
-                broadcast_len = 1
-                for broadcast_key in broadcast:
-                    if broadcast_key not in variable_keys.keys():
-                        raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
-                    else:
-                        broadcast_len *= len(variable_keys[broadcast_key])
-            else:
-                broadcast_len = 1
+                if type(broadcast) is str:
+                    broadcast = [broadcast]
+                elif type(broadcast) not in [list, tuple]:
+                    raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
 
-            # String values are interpreted as parameter name.
-            if type(variable_value) is str:
-                parameter_name = variable_value
-                variable_value = self.parameters[parameter_name]
-            else:
-                parameter_name = None
-            # Scalar values are multiplied with row vector of ones of appropriate size.
-            if len(np.shape(variable_value)) == 0:
-                variable_value = variable_value * np.ones((1, len(variable_index)))
-            # If broadcasting, values are repeated along broadcast dimension.
-            else:
-                if broadcast_len > 1:
-                    if len(np.shape(variable_value)) > 1:
-                        variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
-                    else:
-                        variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
+            # Process variables.
+            for variable_value, variable_keys in variables:
 
-            # Raise error if vector is not a row vector (1, n) or flat array (n, ).
-            if len(np.shape(variable_value)) > 1:
-                if np.shape(variable_value)[0] > 1:
+                # If any variable key values are empty, ignore variable & do not add any c vector entry.
+                for key_value in variable_keys.values():
+                    if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
+                        if len(key_value) == 0:
+                            continue  # Skip variable & go to next iteration.
+
+                # Obtain variable index & raise error if variable or key does not exist.
+                variable_index = tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
+
+                # Obtain broadcast dimension length for variable.
+                if broadcast is not None:
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key not in variable_keys.keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                        else:
+                            broadcast_len *= len(variable_keys[broadcast_key])
+                else:
+
+                    broadcast_len = 1
+
+                # String values are interpreted as parameter name.
+                if type(variable_value) is str:
+                    parameter_name = variable_value
+                    variable_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+                # Scalar values are multiplied with row vector of ones of appropriate size.
+                if len(np.shape(variable_value)) == 0:
+                    variable_value = variable_value * np.ones((1, len(variable_index)))
+                # If broadcasting, values are repeated along broadcast dimension.
+                else:
+                    if broadcast_len > 1:
+                        if len(np.shape(variable_value)) > 1:
+                            variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
+                        else:
+                            variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
+
+                # Raise error if vector is not a row vector (1, n) or flat array (n, ).
+                if len(np.shape(variable_value)) > 1:
+                    if np.shape(variable_value)[0] > 1:
+                        raise ValueError(
+                            f"Objective factor must be row vector (1, n) or flat array (n, ),"
+                            f" not column vector (n, 1) nor matrix (m, n)."
+                        )
+
+                # Raise error if variable dimensions are inconsistent.
+                if (
+                        np.shape(variable_value)[1] != len(variable_index)
+                        if len(np.shape(variable_value)) > 1
+                        else np.shape(variable_value)[0] != len(variable_index)
+                ):
+                    raise ValueError(f"Objective factor dimension mismatch at variable: \n{variable_keys}")
+
+                # Add c vector entry.
+                # - If parameter, pass tuple of parameter name and broadcasting dimension length.
+                if parameter_name is None:
+                    self.c_dict[variable_index].append(variable_value)
+                else:
+                    self.c_dict[variable_index].append((parameter_name, broadcast_len))
+
+            # Process quadratic variables.
+            for variable_value, variable_keys_1, variable_keys_2 in variables_quadratic:
+
+                # If any variable key values are empty, ignore variable & do not add any c vector entry.
+                for key_value in list(variable_keys_1.values()) + list(variable_keys_2.values()):
+                    if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
+                        if len(key_value) == 0:
+                            continue  # Skip variable & go to next iteration.
+
+                # Obtain variable index & raise error if variable or key does not exist.
+                variable_1_index = tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
+                variable_2_index = tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
+
+                # Obtain broadcast dimension length for variable.
+                if broadcast is not None:
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key not in variable_keys_1.keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                        else:
+                            broadcast_len *= len(variable_keys_1[broadcast_key])
+                else:
+                    broadcast_len = 1
+
+                # String values are interpreted as parameter name.
+                if type(variable_value) is str:
+                    parameter_name = variable_value
+                    variable_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+                # Flat arrays are interpreted as diagonal matrix.
+                if len(np.shape(variable_value)) == 1:
+                    # TODO: Raise error for flat arrays instead?
+                    variable_value = sp.diags(variable_value)
+                # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
+                if len(np.shape(variable_value)) == 0:
+                    variable_value = variable_value * sp.eye(len(variable_1_index))
+                # If broadcasting, values are repeated along broadcast dimension.
+                else:
+                    if type(variable_value) is np.matrix:
+                        variable_value = np.array(variable_value)
+                    variable_value = sp.block_diag([variable_value] * broadcast_len)
+
+                # Raise error if variable dimensions are inconsistent.
+                if np.shape(variable_value)[0] != len(variable_1_index):
                     raise ValueError(
-                        f"Objective factor must be row vector (1, n) or flat array (n, ),"
-                        f" not column vector (n, 1) nor matrix (m, n)."
+                        f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
+                        f"\nThe shape of quadratic objective factor matrix must be "
+                        f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
+                    )
+                if np.shape(variable_value)[1] != len(variable_2_index):
+                    raise ValueError(
+                        f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
+                        f"\nThe shape of quadratic objective factor matrix must be "
+                        f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
                     )
 
-            # Raise error if variable dimensions are inconsistent.
-            if (
-                np.shape(variable_value)[1] != len(variable_index)
-                if len(np.shape(variable_value)) > 1
-                else np.shape(variable_value)[0] != len(variable_index)
-            ):
-                raise ValueError(f"Objective factor dimension mismatch at variable: \n{variable_keys}")
+                # Add Q matrix entry.
+                # - If parameter, pass tuple of parameter name and broadcasting dimension length.
+                if parameter_name is None:
+                    self.q_dict[variable_1_index, variable_2_index].append(variable_value)
+                else:
+                    self.q_dict[variable_1_index, variable_2_index].append((parameter_name, broadcast_len))
 
-            # Add c vector entry.
-            # - If parameter, pass tuple of parameter name and broadcasting dimension length.
-            if parameter_name is None:
-                self.c_dict[variable_index].append(variable_value)
-            else:
-                self.c_dict[variable_index].append((parameter_name, broadcast_len))
+            # Process constants.
+            for constant_value, constant_keys in constants:
 
-        # Process quadratic variables.
-        for variable_value, variable_keys_1, variable_keys_2 in variables_quadratic:
+                # If constant value is string, it is interpreted as parameter.
+                if type(constant_value) is str:
+                    parameter_name = constant_value
+                    constant_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
 
-            # If any variable key values are empty, ignore variable & do not add any c vector entry.
-            for key_value in list(variable_keys_1.values()) + list(variable_keys_2.values()):
-                if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
-                    if len(key_value) == 0:
-                        continue  # Skip variable & go to next iteration.
+                # Obtain broadcast dimension length for constant.
+                if (broadcast is not None) and (constant_keys is not None):
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key in constant_keys.keys():
+                            broadcast_len *= len(constant_keys[broadcast_key])
+                else:
+                    broadcast_len = 1
 
-            # Obtain variable index & raise error if variable or key does not exist.
-            variable_1_index = tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
-            variable_2_index = tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
+                # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
+                if type(constant_value) is not float:
+                    if np.shape(constant_value) not in [(1,), (1, 1)]:
+                        raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
 
-            # Obtain broadcast dimension length for variable.
+                # If broadcasting, value is repeated along broadcast dimension.
+                if broadcast_len > 1:
+                    constant_value = constant_value * broadcast_len
+
+                # Append d constant entry.
+                if parameter_name is None:
+                    self.d_dict[0].append(constant_value)
+                else:
+                    self.d_dict[0].append((parameter_name, broadcast_len))
+
+        else:
+            if objective_index > self.number_of_objectives:
+                self.number_of_objectives += 1
+
             if broadcast is not None:
-                broadcast_len = 1
-                for broadcast_key in broadcast:
-                    if broadcast_key not in variable_keys_1.keys():
-                        raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
-                    else:
-                        broadcast_len *= len(variable_keys_1[broadcast_key])
-            else:
-                broadcast_len = 1
+                if type(broadcast) is str:
+                    broadcast = [broadcast]
+                elif type(broadcast) not in [list, tuple]:
+                    raise ValueError(f"Invalid type of broadcast argument: {type(broadcast)}")
 
-            # String values are interpreted as parameter name.
-            if type(variable_value) is str:
-                parameter_name = variable_value
-                variable_value = self.parameters[parameter_name]
-            else:
-                parameter_name = None
-            # Flat arrays are interpreted as diagonal matrix.
-            if len(np.shape(variable_value)) == 1:
-                # TODO: Raise error for flat arrays instead?
-                variable_value = sp.diags(variable_value)
-            # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
-            if len(np.shape(variable_value)) == 0:
-                variable_value = variable_value * sp.eye(len(variable_1_index))
-            # If broadcasting, values are repeated along broadcast dimension.
-            else:
-                if type(variable_value) is np.matrix:
-                    variable_value = np.array(variable_value)
-                variable_value = sp.block_diag([variable_value] * broadcast_len)
+            # Process variables.
+            for variable_value, variable_keys in variables:
 
-            # Raise error if variable dimensions are inconsistent.
-            if np.shape(variable_value)[0] != len(variable_1_index):
-                raise ValueError(
-                    f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
-                    f"\nThe shape of quadratic objective factor matrix must be "
-                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
-                )
-            if np.shape(variable_value)[1] != len(variable_2_index):
-                raise ValueError(
-                    f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
-                    f"\nThe shape of quadratic objective factor matrix must be "
-                    f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
-                )
+                # If any variable key values are empty, ignore variable & do not add any c vector entry.
+                for key_value in variable_keys.values():
+                    if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
+                        if len(key_value) == 0:
+                            continue  # Skip variable & go to next iteration.
 
-            # Add Q matrix entry.
-            # - If parameter, pass tuple of parameter name and broadcasting dimension length.
-            if parameter_name is None:
-                self.q_dict[variable_1_index, variable_2_index].append(variable_value)
-            else:
-                self.q_dict[variable_1_index, variable_2_index].append((parameter_name, broadcast_len))
+                # Obtain variable index & raise error if variable or key does not exist.
+                variable_index = tuple(self.get_variable_index(**variable_keys, raise_empty_index_error=True))
 
-        # Process constants.
-        for constant_value, constant_keys in constants:
+                # Obtain broadcast dimension length for variable.
+                if broadcast is not None:
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key not in variable_keys.keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                        else:
+                            broadcast_len *= len(variable_keys[broadcast_key])
+                else:
+                    broadcast_len = 1
 
-            # If constant value is string, it is interpreted as parameter.
-            if type(constant_value) is str:
-                parameter_name = constant_value
-                constant_value = self.parameters[parameter_name]
-            else:
-                parameter_name = None
+                # String values are interpreted as parameter name.
+                if type(variable_value) is str:
+                    parameter_name = variable_value
+                    variable_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+                # Scalar values are multiplied with row vector of ones of appropriate size.
+                if len(np.shape(variable_value)) == 0:
+                    variable_value = variable_value * np.ones((1, len(variable_index)))
+                # If broadcasting, values are repeated along broadcast dimension.
+                else:
+                    if broadcast_len > 1:
+                        if len(np.shape(variable_value)) > 1:
+                            variable_value = np.concatenate([variable_value] * broadcast_len, axis=1)
+                        else:
+                            variable_value = np.concatenate([[variable_value]] * broadcast_len, axis=1)
 
-            # Obtain broadcast dimension length for constant.
-            if (broadcast is not None) and (constant_keys is not None):
-                broadcast_len = 1
-                for broadcast_key in broadcast:
-                    if broadcast_key in constant_keys.keys():
-                        broadcast_len *= len(constant_keys[broadcast_key])
-            else:
-                broadcast_len = 1
+                # Raise error if vector is not a row vector (1, n) or flat array (n, ).
+                if len(np.shape(variable_value)) > 1:
+                    if np.shape(variable_value)[0] > 1:
+                        raise ValueError(
+                            f"Objective factor must be row vector (1, n) or flat array (n, ),"
+                            f" not column vector (n, 1) nor matrix (m, n)."
+                        )
 
-            # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
-            if type(constant_value) is not float:
-                if np.shape(constant_value) not in [(1,), (1, 1)]:
-                    raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
+                # Raise error if variable dimensions are inconsistent.
+                if (
+                        np.shape(variable_value)[1] != len(variable_index)
+                        if len(np.shape(variable_value)) > 1
+                        else np.shape(variable_value)[0] != len(variable_index)
+                ):
+                    raise ValueError(f"Objective factor dimension mismatch at variable: \n{variable_keys}")
 
-            # If broadcasting, value is repeated along broadcast dimension.
-            if broadcast_len > 1:
-                constant_value = constant_value * broadcast_len
+                # Add c vector entry.
+                # - If parameter, pass tuple of parameter name and broadcasting dimension length.
+                if parameter_name is None:
+                    self.c_dict[objective_index, variable_index].append(variable_value)
+                else:
+                    self.c_dict[objective_index, variable_index].append((parameter_name, broadcast_len))
 
-            # Append d constant entry.
-            if parameter_name is None:
-                self.d_dict[0].append(constant_value)
-            else:
-                self.d_dict[0].append((parameter_name, broadcast_len))
+            # Process quadratic variables.
+            for variable_value, variable_keys_1, variable_keys_2 in variables_quadratic:
+
+                # If any variable key values are empty, ignore variable & do not add any c vector entry.
+                for key_value in list(variable_keys_1.values()) + list(variable_keys_2.values()):
+                    if isinstance(key_value, (list, tuple, pd.MultiIndex, pd.Index, np.ndarray)):
+                        if len(key_value) == 0:
+                            continue  # Skip variable & go to next iteration.
+
+                # Obtain variable index & raise error if variable or key does not exist.
+                variable_1_index = tuple(self.get_variable_index(**variable_keys_1, raise_empty_index_error=True))
+                variable_2_index = tuple(self.get_variable_index(**variable_keys_2, raise_empty_index_error=True))
+
+                # Obtain broadcast dimension length for variable.
+                if broadcast is not None:
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key not in variable_keys_1.keys():
+                            raise ValueError(f"Invalid broadcast dimension: {broadcast_key}")
+                        else:
+                            broadcast_len *= len(variable_keys_1[broadcast_key])
+                else:
+                    broadcast_len = 1
+
+                # String values are interpreted as parameter name.
+                if type(variable_value) is str:
+                    parameter_name = variable_value
+                    variable_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+                # Flat arrays are interpreted as diagonal matrix.
+                if len(np.shape(variable_value)) == 1:
+                    # TODO: Raise error for flat arrays instead?
+                    variable_value = sp.diags(variable_value)
+                # Scalar values are multiplied with diagonal matrix of ones of appropriate size.
+                if len(np.shape(variable_value)) == 0:
+                    variable_value = variable_value * sp.eye(len(variable_1_index))
+                # If broadcasting, values are repeated along broadcast dimension.
+                else:
+                    if type(variable_value) is np.matrix:
+                        variable_value = np.array(variable_value)
+                    variable_value = sp.block_diag([variable_value] * broadcast_len)
+
+                # Raise error if variable dimensions are inconsistent.
+                if np.shape(variable_value)[0] != len(variable_1_index):
+                    raise ValueError(
+                        f"Quadratic objective factor dimension mismatch at variable 1: \n{variable_keys_1}"
+                        f"\nThe shape of quadratic objective factor matrix must be "
+                        f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
+                    )
+                if np.shape(variable_value)[1] != len(variable_2_index):
+                    raise ValueError(
+                        f"Quadratic objective factor dimension mismatch at variable 2: \n{variable_keys_2}"
+                        f"\nThe shape of quadratic objective factor matrix must be "
+                        f"{(len(variable_1_index), len(variable_2_index))}, based on the variable dimensions."
+                    )
+
+                # Add Q matrix entry.
+                # - If parameter, pass tuple of parameter name and broadcasting dimension length.
+                if parameter_name is None:
+                    self.q_dict[objective_index, variable_1_index, variable_2_index].append(variable_value)
+                else:
+                    self.q_dict[objective_index, variable_1_index, variable_2_index].append(
+                        (parameter_name, broadcast_len)
+                    )
+
+            # Process constants.
+            for constant_value, constant_keys in constants:
+
+                # If constant value is string, it is interpreted as parameter.
+                if type(constant_value) is str:
+                    parameter_name = constant_value
+                    constant_value = self.parameters[parameter_name]
+                else:
+                    parameter_name = None
+
+                # Obtain broadcast dimension length for constant.
+                if (broadcast is not None) and (constant_keys is not None):
+                    broadcast_len = 1
+                    for broadcast_key in broadcast:
+                        if broadcast_key in constant_keys.keys():
+                            broadcast_len *= len(constant_keys[broadcast_key])
+                else:
+                    broadcast_len = 1
+
+                # Raise error if constant is not a scalar (1, ) or (1, 1) or float.
+                if type(constant_value) is not float:
+                    if np.shape(constant_value) not in [(1,), (1, 1)]:
+                        raise ValueError(f"Objective constant must be scalar or (1, ) or (1, 1).")
+
+                # If broadcasting, value is repeated along broadcast dimension.
+                if broadcast_len > 1:
+                    constant_value = constant_value * broadcast_len
+
+                # Append d constant entry.
+                if parameter_name is None:
+                    self.d_dict[objective_index, 0].append(constant_value)
+                else:
+                    self.d_dict[objective_index, 0].append((parameter_name, broadcast_len))
 
     def get_variable_index(self, name: str, raise_empty_index_error: bool = False, **keys):
         """Utility method for obtaining a variable integer index vector for given variable name / keys."""
@@ -883,38 +1070,56 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         return b_vector
 
-    def get_c_vector(self) -> np.ndarray:
+    def get_c_vector(self, objective_number: int = None) -> np.ndarray:
         r"""Obtain :math:`\boldsymbol{c}` vector for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
         mesmo.utils.log_time("get optimization problem c vector", logger_object=logger)
-
         # Instantiate array.
         c_vector = np.zeros((1, len(self.variables)))
+        if objective_number is None:
 
-        # Fill vector entries.
-        for variable_index in self.c_dict:
-            for values in self.c_dict[variable_index]:
-                # If value is tuple, treat as parameter.
-                if type(values) is tuple:
-                    parameter_name, broadcast_len = values
-                    values = self.parameters[parameter_name]
-                    if len(np.shape(values)) == 0:
-                        values = values * np.ones(len(variable_index))
-                    elif broadcast_len > 1:
-                        if len(np.shape(values)) > 1:
-                            values = np.concatenate([values] * broadcast_len, axis=1)
-                        else:
-                            values = np.concatenate([[values]] * broadcast_len, axis=1)
-                # Insert entry in c vector.
-                c_vector[0, variable_index] += values.ravel()
+            # Fill vector entries.
+            for variable_index in self.c_dict:
+                for values in self.c_dict[variable_index]:
+                    # If value is tuple, treat as parameter.
+                    if type(values) is tuple:
+                        parameter_name, broadcast_len = values
+                        values = self.parameters[parameter_name]
+                        if len(np.shape(values)) == 0:
+                            values = values * np.ones(len(variable_index))
+                        elif broadcast_len > 1:
+                            if len(np.shape(values)) > 1:
+                                values = np.concatenate([values] * broadcast_len, axis=1)
+                            else:
+                                values = np.concatenate([[values]] * broadcast_len, axis=1)
+                    # Insert entry in c vector.
+                    c_vector[0, variable_index] += values.ravel()
+
+        else:
+            # Fill vector entries.
+            for objective_index, variable_index in self.c_dict:
+                if objective_index == objective_number:
+                    for values in self.c_dict[objective_index, variable_index]:
+                        # If value is tuple, treat as parameter.
+                        if type(values) is tuple:
+                            parameter_name, broadcast_len = values
+                            values = self.parameters[parameter_name]
+                            if len(np.shape(values)) == 0:
+                                values = values * np.ones(len(variable_index))
+                            elif broadcast_len > 1:
+                                if len(np.shape(values)) > 1:
+                                    values = np.concatenate([values] * broadcast_len, axis=1)
+                                else:
+                                    values = np.concatenate([[values]] * broadcast_len, axis=1)
+                        # Insert entry in c vector.
+                        c_vector[0, variable_index] += values.ravel()
 
         # Log time.
         mesmo.utils.log_time("get optimization problem c vector", logger_object=logger)
-
         return c_vector
 
-    def get_q_matrix(self) -> sp.spmatrix:
+    def get_q_matrix(self, objective_number: int = None) -> sp.spmatrix:
         r"""Obtain :math:`\boldsymbol{Q}` matrix for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
@@ -925,51 +1130,95 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         rows_list = list()
         columns_list = list()
 
-        # Collect matrix entries.
-        for variable_1_index, variable_2_index in self.q_dict:
-            for values in self.q_dict[variable_1_index, variable_2_index]:
-                # If value is tuple, treat as parameter.
-                if type(values) is tuple:
-                    parameter_name, broadcast_len = values
-                    values = self.parameters[parameter_name]
-                    if len(np.shape(values)) == 1:
-                        values = sp.diags(values)
-                    if len(np.shape(values)) == 0:
-                        values = values * sp.eye(len(variable_1_index))
-                    elif broadcast_len > 1:
-                        if type(values) is np.matrix:
-                            values = np.array(values)
-                        values = sp.block_diag([values] * broadcast_len)
-                # Obtain row index, column index and values for entry in Q matrix.
-                rows, columns, values = sp.find(values)
-                rows = np.array(variable_1_index)[rows]
-                columns = np.array(variable_2_index)[columns]
-                # Insert entries in collections.
-                values_list.append(values)
-                rows_list.append(rows)
-                columns_list.append(columns)
-                # Insert entries for opposite-diagonal side in collections.
-                # - Terms need to be added on both off-diagonal sides of Q for symmetry.
-                values_list.append(values)
-                rows_list.append(columns)
-                columns_list.append(rows)
+        # Initialize Q matrix before conditional blocks
+        q_matrix = sp.csr_matrix((len(self.variables), len(self.variables)))
 
-        # Instantiate Q matrix.
-        q_matrix = (
-            sp.coo_matrix(
-                (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
-                shape=(len(self.variables), len(self.variables)),
-            ).tocsr()
-            if len(self.q_dict) > 0
-            else sp.csr_matrix((len(self.variables), len(self.variables)))
-        )
+        if objective_number is None:
+            # Collect matrix entries.
+            for variable_1_index, variable_2_index in self.q_dict:
+                for values in self.q_dict[variable_1_index, variable_2_index]:
+                    # If value is tuple, treat as parameter.
+                    if type(values) is tuple:
+                        parameter_name, broadcast_len = values
+                        values = self.parameters[parameter_name]
+                        if len(np.shape(values)) == 1:
+                            values = sp.diags(values)
+                        if len(np.shape(values)) == 0:
+                            values = values * sp.eye(len(variable_1_index))
+                        elif broadcast_len > 1:
+                            if type(values) is np.matrix:
+                                values = np.array(values)
+                            values = sp.block_diag([values] * broadcast_len)
+                    # Obtain row index, column index and values for entry in Q matrix.
+                    rows, columns, values = sp.find(values)
+                    rows = np.array(variable_1_index)[rows]
+                    columns = np.array(variable_2_index)[columns]
+                    # Insert entries in collections.
+                    values_list.append(values)
+                    rows_list.append(rows)
+                    columns_list.append(columns)
+                    # Insert entries for opposite-diagonal side in collections.
+                    # - Terms need to be added on both off-diagonal sides of Q for symmetry.
+                    values_list.append(values)
+                    rows_list.append(columns)
+                    columns_list.append(rows)
+
+            # Instantiate Q matrix.
+            q_matrix = (
+                sp.coo_matrix(
+                    (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
+                    shape=(len(self.variables), len(self.variables)),
+                ).tocsr()
+                if len(self.q_dict) > 0
+                else sp.csr_matrix((len(self.variables), len(self.variables)))
+            )
+
+        else:
+            # Collect matrix entries.
+            for objective_index, variable_1_index, variable_2_index in self.q_dict:
+                if objective_index == objective_number:
+                    for values in self.q_dict[objective_index, variable_1_index, variable_2_index]:
+                        # If value is tuple, treat as parameter.
+                        if type(values) is tuple:
+                            parameter_name, broadcast_len = values
+                            values = self.parameters[parameter_name]
+                            if len(np.shape(values)) == 1:
+                                values = sp.diags(values)
+                            if len(np.shape(values)) == 0:
+                                values = values * sp.eye(len(variable_1_index))
+                            elif broadcast_len > 1:
+                                if type(values) is np.matrix:
+                                    values = np.array(values)
+                                values = sp.block_diag([values] * broadcast_len)
+                        # Obtain row index, column index and values for entry in Q matrix.
+                        rows, columns, values = sp.find(values)
+                        rows = np.array(variable_1_index)[rows]
+                        columns = np.array(variable_2_index)[columns]
+                        # Insert entries in collections.
+                        values_list.append(values)
+                        rows_list.append(rows)
+                        columns_list.append(columns)
+                        # Insert entries for opposite-diagonal side in collections.
+                        # - Terms need to be added on both off-diagonal sides of Q for symmetry.
+                        values_list.append(values)
+                        rows_list.append(columns)
+                        columns_list.append(rows)
+
+            # Instantiate Q matrix.
+            q_matrix = (
+                sp.coo_matrix(
+                    (np.concatenate(values_list), (np.concatenate(rows_list), np.concatenate(columns_list))),
+                    shape=(len(self.variables), len(self.variables)),
+                ).tocsr()
+                if len(self.q_dict) > 0
+                else sp.csr_matrix((len(self.variables), len(self.variables)))
+            )
 
         # Log time.
         mesmo.utils.log_time("get optimization problem Q matrix", logger_object=logger)
-
         return q_matrix
 
-    def get_d_constant(self) -> float:
+    def get_d_constant(self, objective_number: int = None) -> float:
         r"""Obtain :math:`d` value for the standard-form problem (see :class:`OptimizationProblem`)."""
 
         # Log time.
@@ -977,18 +1226,29 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Instantiate array.
         d_constant = 0.0
+        if objective_number is None:
+            # Fill vector entries.
+            for values in self.d_dict[0]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    parameter_name, broadcast_len = values
+                    values = self.parameters[parameter_name]
+                    if broadcast_len > 1:
+                        values = values * broadcast_len
+                # Insert entry to d constant.
+                d_constant += float(values)
 
-        # Fill vector entries.
-        for values in self.d_dict[0]:
-            # If value is tuple, treat as parameter.
-            if type(values) is tuple:
-                parameter_name, broadcast_len = values
-                values = self.parameters[parameter_name]
-                if broadcast_len > 1:
-                    values = values * broadcast_len
-            # Insert entry to d constant.
-            d_constant += float(values)
-
+        else:
+            # Fill vector entries.
+            for values in self.d_dict[objective_number, 0]:
+                # If value is tuple, treat as parameter.
+                if type(values) is tuple:
+                    parameter_name, broadcast_len = values
+                    values = self.parameters[parameter_name]
+                    if broadcast_len > 1:
+                        values = values * broadcast_len
+                # Insert entry to d constant.
+                d_constant += float(values)
         # Log time.
         mesmo.utils.log_time("get optimization problem d constant", logger_object=logger)
 
@@ -1045,7 +1305,8 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
 
         # Use CVXPY solver interface, if selected.
         if mesmo.config.config["optimization"]["solver_interface"] == "cvxpy":
-            self.solve_cvxpy(*self.get_cvxpy_problem())
+            # self.solve_cvxpy(*self.get_cvxpy_problem())
+            pass
         # Use direct solver interfaces, if selected.
         elif mesmo.config.config["optimization"]["solver_interface"] == "direct":
             if mesmo.config.config["optimization"]["solver_name"] == "gurobi":
@@ -1072,9 +1333,12 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         # Log time.
         mesmo.utils.log_time(f"solve optimization problem problem", logger_object=logger)
 
-    def get_gurobi_problem(self) -> (gp.Model, gp.MVar, gp.MConstr, gp.MQuadExpr):
-        """Obtain standard-form problem via Gurobi direct interface."""
-
+    @staticmethod
+    def initialize_gurobi_problem(
+            variables: pd.DataFrame,
+            a_matrix,
+            b_vector,
+    ):
         # Instantiate Gurobi environment.
         gurobipy_env = gp.Env(empty=True)
         # Set solver output flag. This allows suppressing license information, which is printed upon model creation.
@@ -1094,34 +1358,133 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).
         # - Lower bound defaults to 0 and needs to be explicitly overwritten.
         x_vector = gurobipy_problem.addMVar(
-            shape=(len(self.variables),), lb=-np.inf, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="x_vector"
+            shape=(len(variables),), lb=-np.inf, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="x_vector"
         )
-        if (self.variables.loc[:, "variable_type"] == "integer").any():
-            x_vector[self.variables.loc[:, "variable_type"] == "integer"].setAttr("vtype", gp.GRB.INTEGER)
-        if (self.variables.loc[:, "variable_type"] == "binary").any():
-            x_vector[self.variables.loc[:, "variable_type"] == "binary"].setAttr("vtype", gp.GRB.BINARY)
+        if (variables.loc[:, "variable_type"] == "integer").any():
+            x_vector[variables.loc[:, "variable_type"] == "integer"].setAttr("vtype", gp.GRB.INTEGER)
+        if (variables.loc[:, "variable_type"] == "binary").any():
+            x_vector[variables.loc[:, "variable_type"] == "binary"].setAttr("vtype", gp.GRB.BINARY)
 
         # Define constraints.
         # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
-        constraints = self.get_a_matrix() @ x_vector <= self.get_b_vector().ravel()
+        constraints = a_matrix @ x_vector <= b_vector
         constraints = gurobipy_problem.addConstr(constraints, name="constraints")
+        return x_vector, gurobipy_problem, constraints
 
-        # Define objective.
-        # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
-        objective = (
-            self.get_c_vector().ravel() @ x_vector
-            + x_vector @ (0.5 * self.get_q_matrix()) @ x_vector
-            + self.get_d_constant()
-        )
-        gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
+    def get_gurobi_problem(self) -> (gp.Model,
+                                     gp.MVar,
+                                     gp.MConstr,
+                                     typing.Union[typing.List[gp.MQuadExpr], gp.MQuadExpr]):
+        """Obtain standard-form problem via Gurobi direct interface."""
+        if self.number_of_objectives == 1:
+            x_vector, gurobipy_problem, constraints = self.initialize_gurobi_problem(
+                variables=self.variables,
+                a_matrix=self.get_a_matrix(),
+                b_vector=self.get_b_vector().ravel()
+            )
 
-        return (gurobipy_problem, x_vector, constraints, objective)
+            objective = (
+                    self.get_c_vector().ravel() @ x_vector
+                    + x_vector @ (0.5 * self.get_q_matrix()) @ x_vector
+                    + self.get_d_constant()
+            )
+            gurobipy_problem.setObjective(objective, gp.GRB.MINIMIZE)
+
+            return (gurobipy_problem, x_vector, constraints, objective)
+
+        else:
+            model_properties = pd.DataFrame(
+                index=['a_matrix', 'b_vector', 'c_vector', 'd_constant', 'q_matrix', 'variables'],
+                columns=[f'objective_function{number}' for number in range(1, self.number_of_objectives + 1)]
+            )
+            for objective_number in range(1, self.number_of_objectives + 1):
+                model_properties.at[
+                    'a_matrix', f'objective_function{objective_number}'
+                ] = self.get_a_matrix()
+                model_properties.at[
+                    'b_vector', f'objective_function{objective_number}'
+                ] = self.get_b_vector().ravel()
+                model_properties.at[
+                    'variables', f'objective_function{objective_number}'
+                ] = self.variables
+                model_properties.at[
+                    'c_vector', f'objective_function{objective_number}'
+                ] = self.get_c_vector(objective_number).ravel()
+                model_properties.at[
+                    'q_matrix', f'objective_function{objective_number}'
+                ] = (0.5 * self.get_q_matrix(objective_number))
+                model_properties.at[
+                    'd_constant', f'objective_function{objective_number}'
+                ] = self.get_d_constant(objective_number)
+
+            return model_properties
 
     def solve_gurobi(
-        self, gurobipy_problem: gp.Model, x_vector: gp.MVar, constraints: gp.MConstr, objective: gp.MQuadExpr
+            self, gurobipy_problem: gp.Model,
+            x_vector: gp.MVar,
+            constraints: gp.MConstr,
+            objective: typing.Union[typing.List[gp.MQuadExpr], gp.MQuadExpr]
     ) -> gp.Model:
         """Solve optimization problem via Gurobi direct interface."""
 
+        if not isinstance(objective, list):
+            # Solve optimization problem.
+            gurobipy_problem.optimize()
+
+            # Raise error if no optimal solution.
+            status_labels = {
+                gp.GRB.INFEASIBLE: "Infeasible",
+                gp.GRB.INF_OR_UNBD: "Infeasible or Unbounded",
+                gp.GRB.UNBOUNDED: "Unbounded",
+                gp.GRB.SUBOPTIMAL: "Suboptimal",
+            }
+            status = gurobipy_problem.getAttr("Status")
+            if status not in [gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL]:
+                status = status_labels[
+                    status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
+                raise RuntimeError(f"Gurobi exited with non-optimal solution status: {status}")
+            elif status == gp.GRB.SUBOPTIMAL:
+                status = status_labels[
+                    status] if status in status_labels.keys() else f"{status} (See Gurobi documentation)"
+                logger.warning(f"Gurobi exited with non-optimal solution status: {status}")
+
+            # Store results.
+            self.x_vector = np.transpose([x_vector.getAttr("x")])
+            if (
+                    (gurobipy_problem.getAttr("NumQCNZs") == 0)
+                    and not ((self.variables.loc[:, "variable_type"] == "integer").any())
+                    and not ((self.variables.loc[:, "variable_type"] == "binary").any())
+            ):
+                self.mu_vector = np.transpose([constraints.getAttr("Pi")])
+            else:
+                # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
+                logger.warning(
+                    f"Duals of the optimization problem's constraints are not retrieved,"
+                    f" because either variables have been defined as non-continuous"
+                    f" or quadratic / SOC constraints have been added to the problem."
+                    f"\nPlease retrieve the duals manually."
+                )
+                self.mu_vector = np.nan * np.zeros(constraints.shape)
+            self.objective = float(objective.getValue())
+
+            return gurobipy_problem
+
+        else:
+            raise RuntimeError(f"Multi-objective optimization is not supported yet")
+
+    @staticmethod
+    def solve_gurobi_independently(
+            gurobipy_problem: gp.Model,
+            objective: gp.MQuadExpr,
+            x_vector: gp.MVar = None,
+            new_constraint: gp.MConstr = None
+    ) -> float:
+        """Solve optimization problem via Gurobi direct interface."""
+
+        # if new_constraint is not None:
+        #     gurobipy_problem.addConstr()
+
+        gurobipy_problem.setObjective(objective, gp.GRB.MAXIMIZE)
         # Solve optimization problem.
         gurobipy_problem.optimize()
 
@@ -1141,25 +1504,10 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
             logger.warning(f"Gurobi exited with non-optimal solution status: {status}")
 
         # Store results.
-        self.x_vector = np.transpose([x_vector.getAttr("x")])
-        if (
-            (gurobipy_problem.getAttr("NumQCNZs") == 0)
-            and not ((self.variables.loc[:, "variable_type"] == "integer").any())
-            and not ((self.variables.loc[:, "variable_type"] == "binary").any())
-        ):
-            self.mu_vector = np.transpose([constraints.getAttr("Pi")])
-        else:
-            # Duals are not retrieved if quadratic or SOC constraints have been added to the model.
-            logger.warning(
-                f"Duals of the optimization problem's constraints are not retrieved,"
-                f" because either variables have been defined as non-continuous"
-                f" or quadratic / SOC constraints have been added to the problem."
-                f"\nPlease retrieve the duals manually."
-            )
-            self.mu_vector = np.nan * np.zeros(constraints.shape)
-        self.objective = float(objective.getValue())
+        # x_vector = np.transpose([x_vector.getAttr("x")])
+        objective_value = float(gurobipy_problem.ObjVal)
 
-        return gurobipy_problem
+        return objective_value
 
     def solve_highs(self):
         """Solve optimization problem via HiGHS solver interface."""
@@ -1200,13 +1548,13 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         )
         output = []
         with subprocess.Popen(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=1,
-            encoding="utf-8",
-            errors="replace",
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                encoding="utf-8",
+                errors="replace",
         ) as process:
             for line in process.stdout:
                 if mesmo.config.config["optimization"]["show_solver_output"]:
@@ -1260,75 +1608,7 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         mu_vector = mu_vector.sort_index()
         self.mu_vector = np.transpose([mu_vector.values])
 
-    def get_cvxpy_problem(
-        self,
-    ) -> (cp.Variable, typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]], cp.Expression):
-        """Obtain standard-form problem via CVXPY interface."""
-
-        # Define variables.
-        x_vector = cp.Variable(
-            shape=(len(self.variables), 1),
-            name="x_vector",
-            integer=(
-                (index, 0)
-                for index, is_integer in enumerate(self.variables.loc[:, "variable_type"] == "integer")
-                if is_integer
-            )
-            if (self.variables.loc[:, "variable_type"] == "integer").any()
-            else False,
-            boolean=(
-                (index, 0)
-                for index, is_binary in enumerate(self.variables.loc[:, "variable_type"] == "binary")
-                if is_binary
-            )
-            if (self.variables.loc[:, "variable_type"] == "binary").any()
-            else False,
-        )
-
-        # Define constraints.
-        constraints = [self.get_a_matrix() @ x_vector <= self.get_b_vector()]
-
-        # Define objective.
-        objective = (
-            self.get_c_vector() @ x_vector + cp.quad_form(x_vector, 0.5 * self.get_q_matrix()) + self.get_d_constant()
-        )
-
-        return (x_vector, constraints, objective)
-
-    def solve_cvxpy(
-        self,
-        x_vector: cp.Variable,
-        constraints: typing.List[typing.Union[cp.NonPos, cp.Zero, cp.SOC, cp.PSD]],
-        objective: cp.Expression,
-    ) -> cp.Problem:
-        """Solve optimization problem via CVXPY interface."""
-
-        # Instantiate CVXPY problem.
-        cvxpy_problem = cp.Problem(cp.Minimize(objective), constraints)
-
-        # Solve optimization problem.
-        cvxpy_problem.solve(
-            solver=(
-                mesmo.config.config["optimization"]["solver_name"].upper()
-                if mesmo.config.config["optimization"]["solver_name"] is not None
-                else None
-            ),
-            verbose=mesmo.config.config["optimization"]["show_solver_output"],
-            **mesmo.config.solver_parameters,
-        )
-
-        # Assert that solver exited with an optimal solution. If not, raise an error.
-        if not (cvxpy_problem.status == cp.OPTIMAL):
-            raise RuntimeError(f"CVXPY exited with non-optimal solution status: {cvxpy_problem.status}")
-
-        # Store results.
-        self.x_vector = x_vector.value
-        self.mu_vector = constraints[0].dual_value
-        self.objective = float(cvxpy_problem.objective.value)
-
-        return cvxpy_problem
-
-    def get_results(self, x_vector: typing.Union[cp.Variable, np.ndarray] = None) -> dict:
+    def get_results(self, x_vector: typing.Union[np.ndarray] = None) -> dict:
         """Obtain results for decisions variables.
 
         - Results are returned as dictionary with keys corresponding to the variable names that have been defined.
@@ -1340,8 +1620,8 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         # Obtain x vector.
         if x_vector is None:
             x_vector = self.x_vector
-        elif type(x_vector) is cp.Variable:
-            x_vector = x_vector.value
+        # elif type(x_vector) is cp.Variable:
+        #     x_vector = x_vector.value
 
         # Instantiate results object.
         results = dict.fromkeys(self.variables.loc[:, "name"].unique())
@@ -1473,3 +1753,372 @@ class OptimizationProblem(mesmo.utils.ObjectBase):
         )
 
         return objective
+
+
+class Augmecon(OptimizationProblem):
+    grid_points: int
+    total_number_of_models: int
+    payoff_table: pd.DataFrame
+    right_hand_side: pd.DataFrame
+    objective_range: pd.Series
+    right_hand_side: pd.DataFrame
+    right_hand_side_combinations: pd.DataFrame
+    objective_list: list
+
+    def __init__(
+            self,
+            grid_points: int = 10
+    ):
+        super().__init__()
+
+        self.grid_points = grid_points
+
+    def solve_payoff_problem(self, model, objective_index):
+        objective = -1.0 * self.objective_list[objective_index]
+        return self.solve_gurobi_independently(
+            gurobipy_problem=model,
+            objective=objective
+        )
+
+    def construct_payoff_table(self):
+
+        x_vector, gurobipy_problem, constraints = self.initialize_gurobi_problem(
+            variables=self.variables,
+            a_matrix=self.get_a_matrix(),
+            b_vector=self.get_b_vector().ravel()
+        )
+        self.objective_list = list()
+        for objective_number in range(1, self.number_of_objectives + 1):
+            self.objective_list.append(
+                self.get_c_vector(objective_number).ravel() @ x_vector
+                + x_vector @ (0.5 * self.get_q_matrix(objective_number)) @ x_vector
+                + self.get_d_constant(objective_number)
+            )
+
+        self.payoff_table = pd.DataFrame(
+            index=[f'OF{i + 1}' for i in range(self.number_of_objectives)],
+            columns=[f'OF{i + 1}' for i in range(self.number_of_objectives)]
+        )
+
+        for index_number, index in enumerate(self.payoff_table.index):
+            # Independently optimize each objective function (diagonal elements)
+            self.payoff_table.at[index, index] = self.solve_payoff_problem(gurobipy_problem, index_number)
+
+            temporary_constraints = [
+                gurobipy_problem.addConstr(
+                    -1.0 * self.objective_list[index_number] == self.payoff_table.at[index, index],
+                    name=f"objective_{index}_constraint"
+                )
+            ]
+
+            for column_number, column in enumerate(self.payoff_table.columns):
+                if index != column:
+                    self.payoff_table.at[index, column] = self.solve_payoff_problem(gurobipy_problem, column_number)
+                    temporary_constraints.append(
+                        gurobipy_problem.addConstr(
+                            -1.0 * self.objective_list[column_number] == self.payoff_table.at[index, column],
+                            name=f"objective_{index, column}_constraint"
+                        )
+                    )
+
+            gurobipy_problem.update()
+            for constraint in temporary_constraints:
+                gurobipy_problem.remove(constraint)
+
+    def find_objective_range(self):
+        self.right_hand_side = pd.DataFrame(
+            dtype=float,
+            index=[f'OF{i + 1}' for i in range(1, self.number_of_objectives)],
+            columns=[f'GP{i + 1}' for i in range(self.grid_points)]
+        )
+        self.right_hand_side.iloc[:, 0] = self.payoff_table.iloc[:, 1:].min(axis=0).astype(float)
+        self.right_hand_side.iloc[:, -1] = self.payoff_table.iloc[:, 1:].max(axis=0).astype(float)
+        self.right_hand_side = self.right_hand_side.interpolate(method='linear', axis=1)
+
+        self.objective_range = self.right_hand_side.iloc[:, -1] - self.right_hand_side.iloc[:, 0]
+
+        self.right_hand_side_combinations = (
+            pd.DataFrame(
+                list(product(*[self.right_hand_side.loc[index, :] for index in self.right_hand_side.index])),
+                columns=self.right_hand_side.index,
+                index=pd.MultiIndex.from_tuples(list(
+                    product(*len(self.right_hand_side.index) * [self.right_hand_side.columns.to_list()])
+                ))
+            )
+        )
+        self.right_hand_side_combinations.index.names = [f'{OF}_GP' for OF in self.right_hand_side_combinations.columns]
+        if self.right_hand_side_combinations.index.nlevels > 1:
+            self.right_hand_side_combinations = self.right_hand_side_combinations.swaplevel()
+            new_index = pd.MultiIndex.from_tuples(
+                list(product(*len(self.right_hand_side.index) * [self.right_hand_side.columns.to_list()])),
+                names=[f'{OF}_GP' for OF in self.right_hand_side_combinations.columns][::-1]
+            )
+            self.right_hand_side_combinations = self.right_hand_side_combinations.reindex(new_index)
+
+    def find_pareto_solutions(self, comb):
+        x_vector, gurobipy_problem, constraints = self.initialize_gurobi_problem(
+            variables=self.variables,
+            a_matrix=self.get_a_matrix(),
+            b_vector=self.get_b_vector().ravel()
+        )
+
+        objective_list = [
+            (
+                    self.get_c_vector(objective_index).ravel() @ x_vector
+                    + x_vector @ (0.5 * self.get_q_matrix(objective_index)) @ x_vector
+                    + self.get_d_constant(objective_index)
+            ) for objective_index in range(1, self.number_of_objectives + 1)
+        ]
+
+        s_vector = gurobipy_problem.addMVar(
+            shape=(len(objective_list) - 1,), lb=0, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="S"
+        )
+        g_vector = np.array(
+            [0.001 * 10 ** (-objective_index) / self.objective_range.at[objective] for objective_index, objective in
+             enumerate(self.objective_range.index)]
+        ).ravel()
+
+        additional_constraints = {
+            of:
+                (- 1.0 * (objective_list[objective_index + 1])
+                 - s_vector[objective_index] == 1.0 * self.right_hand_side_combinations.at[comb, of])
+            for objective_index, of in enumerate(self.right_hand_side_combinations.columns)
+        }
+        gurobipy_problem.update()
+        for of, constraint in additional_constraints.items():
+            gurobipy_problem.addConstr(constraint, name=f'constraint_{of}')
+        modified_objective = (-1 * objective_list[0] + g_vector @ s_vector)
+        gurobipy_problem.setObjective(modified_objective, gp.GRB.MAXIMIZE)
+        gurobipy_problem.update()
+        gurobipy_problem.optimize()
+        status = gurobipy_problem.getAttr("Status")
+        if status not in [gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL]:
+            self.objective_value.update({comb: "NonOpt"})
+            self.s_results.update({comb: "NA"})
+            self.x_results.update({comb: "NA"})
+        else:
+            self.s_results.update({comb: s_vector.getAttr("x")})
+            self.x_results.update({comb: x_vector.getAttr("x")})
+            self.objective_value.update({comb: [objective.getValue() for objective in objective_list]})
+
+    def pareto(self):
+        self.s_results = dict()
+        self.x_results = dict()
+        self.objective_value = dict()
+        c_vector = [(
+            self.get_c_vector(objective_index).ravel()
+        )
+            for objective_index in range(1, self.number_of_objectives + 1)]
+        q_matrix = [(
+            self.get_q_matrix(objective_index)
+        )
+            for objective_index in range(1, self.number_of_objectives + 1)]
+        d_constant = [(self.get_d_constant(objective_index)
+                       ) for objective_index in range(1, self.number_of_objectives + 1)]
+
+
+        shared_state_actor = mesmo.utils.SharedStateActor()
+
+
+        chunks = mesmo.utils.starmap(
+            self.find_pareto_solutions_parallel,
+            zip(mesmo.utils.chunk_list(self.right_hand_side_combinations.index.to_list(), chunk_count=self.grid_points)),
+            dict(
+                variables=self.variables,
+                a_matrix=self.get_a_matrix(),
+                b_vector=self.get_b_vector().ravel(),
+                c_vector=c_vector,
+                q_matrix=q_matrix,
+                d_constant=d_constant,
+                number_of_objectives=self.number_of_objectives,
+                objective_range=self.objective_range,
+                right_hand_side_combinations=self.right_hand_side_combinations,
+                shared_state_actor=shared_state_actor
+                # shere_dict_id=shared_dict
+            )
+        )
+        solutions = dict()
+        for chunk in chunks:
+            solutions.update(chunk)
+
+        solutions = pd.Series(solutions)
+
+        solutions_df = pd.DataFrame(index=solutions.index, columns=[f'OF{i + 1}' for i in range(0, self.number_of_objectives)])
+        for index, values in solutions.items():
+            solutions_df.loc[index] = values
+
+        import matplotlib.pyplot as plt
+        # from mpl_toolkits.mplot3d import Axes3D
+        # Create a 3D plot
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the data
+        for level_0, level_1 in solutions_df.index:
+            ax.scatter(solutions_df.loc[(level_0, level_1), 'OF1'],
+                       solutions_df.loc[(level_0, level_1), 'OF2'],
+                       solutions_df.loc[(level_0, level_1), 'OF3'], label=f'{level_0}-{level_1}')
+
+        # Set labels and title
+        ax.set_xlabel('OF1')
+        ax.set_ylabel('OF2')
+        ax.set_zlabel('OF3')
+        ax.set_title('3D Scatter Plot')
+
+        # Show the legend
+        ax.legend()
+
+        # Show the plot
+        plt.show()
+
+        print("Done")
+        # for comb in self.right_hand_side_combinations.index:
+        #     self.find_pareto_solutions_parallel(
+        #         comb,
+        #         variables=self.variables,
+        #         a_matrix=self.get_a_matrix(),
+        #         b_vector=self.get_b_vector().ravel(),
+        #         c_vector=c_vector,
+        #         q_matrix=q_matrix,
+        #         d_constant=d_constant,
+        #         number_of_objectives=self.number_of_objectives,
+        #         objective_range=self.objective_range,
+        #         right_hand_side_combinations=self.right_hand_side_combinations,
+        #     )
+
+    @staticmethod
+    def find_pareto_solutions_parallel(
+            comb_list,
+            variables: pd.DataFrame,
+            a_matrix,
+            b_vector,
+            c_vector,
+            q_matrix,
+            d_constant,
+            number_of_objectives,
+            objective_range,
+            right_hand_side_combinations,
+            shared_state_actor
+    ):
+        results_objective = dict()
+        # shared_dict = ray.get(shared_state_actor.get_shared_dict())
+
+        # Instantiate Gurobi environment.
+        gurobipy_env = gp.Env(empty=True)
+        # Set solver output flag. This allows suppressing license information, which is printed upon model creation.
+        gurobipy_env.setParam("OutputFlag", int(mesmo.config.config["optimization"]["show_solver_output"]))
+        gurobipy_env.start()
+
+        # Instantiate Gurobi model.
+        # - A Gurobi model holds a single optimization problem. It consists of a set of variables, a set of constraints,
+        #   and the associated attributes.
+        gurobipy_problem = gp.Model(env=gurobipy_env)
+        # Set solver parameters.
+        gurobipy_problem.setParam("OutputFlag", int(mesmo.config.config["optimization"]["show_solver_output"]))
+        for key, value in mesmo.config.solver_parameters.items():
+            gurobipy_problem.setParam(key, value)
+
+        # Define variables.
+        # - Need to express vectors as 1-D arrays to enable matrix multiplication in constraints (gurobipy limitation).
+        # - Lower bound defaults to 0 and needs to be explicitly overwritten.
+        x_vector = gurobipy_problem.addMVar(
+            shape=(len(variables),), lb=-np.inf, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="x_vector"
+        )
+        if (variables.loc[:, "variable_type"] == "integer").any():
+            x_vector[variables.loc[:, "variable_type"] == "integer"].setAttr("vtype", gp.GRB.INTEGER)
+        if (variables.loc[:, "variable_type"] == "binary").any():
+            x_vector[variables.loc[:, "variable_type"] == "binary"].setAttr("vtype", gp.GRB.BINARY)
+
+        # Define constraints.
+        # - 1-D arrays are interpreted as column vectors (n, 1) (based on gurobipy convention).
+        constraints = a_matrix @ x_vector <= b_vector
+        constraints = gurobipy_problem.addConstr(constraints, name="constraints")
+
+        objective_list = [
+            (
+                    c_vector[objective_index] @ x_vector
+                    + x_vector @ (0.5 * q_matrix[objective_index]) @ x_vector
+                    + d_constant[objective_index]
+            ) for objective_index in range(number_of_objectives)
+        ]
+
+        s_vector = gurobipy_problem.addMVar(
+            shape=(len(objective_list) - 1,), lb=0, ub=np.inf, vtype=gp.GRB.CONTINUOUS, name="S"
+        )
+        g_vector = np.array(
+            [0.001 * 10 ** (-objective_index) / objective_range.at[objective] for objective_index, objective in
+             enumerate(objective_range.index)]
+        ).ravel()
+
+        objective_grid_points = [
+            right_hand_side_combinations.index.get_level_values(level_name).drop_duplicates()
+            for level_name in right_hand_side_combinations.index.names
+        ]
+
+        jump = 0
+        temporary_constraint_list = list()
+        for number, comb in enumerate(comb_list):
+            def do_jump(jump, number):
+                return min(jump, abs(len(comb_list) - 1 - number))
+
+            def bypass_range(i):
+                if i == 0:
+                    return [objective_grid_points[-i][number]]
+                    # return comb_list[number][-1]
+                else:
+                    return [objective_grid_points[-1 - i][s] for s in range(step.iat[i] + 1)]
+
+            def early_exit_range(i):
+                if i == 0:
+                    return range(comb[i], comb[i] + 1)
+                else:
+                    return range(comb[i], len(comb_list) - 1)
+
+            # if ray.get(shared_state_actor.get.remote(comb)) != 0 and jump == 0:
+            #     jump = do_jump(ray.get(shared_state_actor.get.remote(comb)), number - 1)
+            if shared_state_actor.get(comb) != 0 and jump == 0:
+                jump = do_jump(shared_state_actor.get(comb), number - 1)
+
+            if jump > 0:
+                jump += -1
+                continue
+
+            additional_constraints = {
+                of:
+                    (- 1.0 * (objective_list[objective_index + 1])
+                     - s_vector[objective_index] == 1.0 * right_hand_side_combinations.at[comb, of])
+                for objective_index, of in enumerate(right_hand_side_combinations.columns)
+            }
+            gurobipy_problem.update()
+            for of, constraint in additional_constraints.items():
+                temporary_constraint_list.append(gurobipy_problem.addConstr(constraint, name=f'constraint_{of}'))
+            modified_objective = (-1 * objective_list[0] + g_vector @ s_vector)
+            gurobipy_problem.setObjective(modified_objective, gp.GRB.MAXIMIZE)
+            gurobipy_problem.update()
+            gurobipy_problem.optimize()
+            status = gurobipy_problem.getAttr("Status")
+            if status not in [gp.GRB.OPTIMAL, gp.GRB.SUBOPTIMAL]:
+                jump = min(len(comb_list), abs(len(comb_list) - number - 1))
+                continue
+                # results_objective.update({f"objective{comb}": "NonOpt"})
+                # self.s_results.update({comb: "NA"})
+                # self.x_results.update({comb: "NA"})
+            else:
+                # self.s_results.update({comb: s_vector.getAttr("x")})
+                # self.x_results.update({comb: x_vector.getAttr("x")})
+                step = (np.round(s_vector.getAttr("x")) / (objective_range / (len(comb_list) - 1))).astype(int)
+                jump = do_jump(step.iat[0], number)
+                # shared_state_actor.set(bypass_range, step.iat[0] + 1, right_hand_side_combinations.columns)
+                shared_state_actor.set(bypass_range, step.iat[0] + 1, right_hand_side_combinations.columns)
+
+                results_objective.update(
+                 {comb: [objective.getValue() for objective in objective_list]}
+                )
+
+            for constraint in temporary_constraint_list:
+                gurobipy_problem.remove(constraint)
+            gurobipy_problem.reset()
+
+        return results_objective
+
+

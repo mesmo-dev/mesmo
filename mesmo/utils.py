@@ -162,8 +162,45 @@ class ResultsBase(ObjectBase):
         return self
 
 
+class SharedStateActor:
+    # Class variable to track whether Ray is initialized
+    _ray_initialized = False
+
+    def __init__(self):
+        # Check if Ray is initialized and initialize if not
+        if not SharedStateActor._ray_initialized and mesmo.config.config["multiprocessing"]["run_parallel"]:
+            self._initialize_ray()
+            SharedStateActor._ray_initialized = True
+
+        # Your initialization logic for the actor goes here
+        self.shared_dict = dict()
+
+    def _initialize_ray(self):
+        if not ray.is_initialized():
+            # Your Ray initialization logic goes here
+            ray.init(num_cpus=max(int(mesmo.config.config["multiprocessing"]["cpu_share"] * os.cpu_count()), 1),
+                     dashboard_port=8266)
+
+    def set(self, flag_range, step_ahead_value, constrainted_objectives):
+        indices = [
+            tuple([gp for gp in flag_range(objective_index)])
+            for objective_index, objective in enumerate(constrainted_objectives)
+        ]
+        indices.reverse()
+        skip_gps = list(itertools.product(*indices))
+        tmp_flag = {}
+
+        for gp in skip_gps:
+            tmp_flag[gp] = step_ahead_value
+
+        self.shared_dict.update(tmp_flag)
+
+    def get(self, gp_key):
+        return self.shared_dict.get(gp_key, 0)
+
+
 def starmap(
-    function: typing.Callable, argument_sequence: typing.Iterable[tuple], keyword_arguments: dict = None
+        function: typing.Callable, argument_sequence: typing.Iterable[tuple], keyword_arguments: dict = None
 ) -> list:
     """Utility function to execute a function for a sequence of arguments, effectively replacing a for-loop.
     Allows running repeated function calls in-parallel, based on Python's `multiprocessing` module.
@@ -195,7 +232,9 @@ def starmap(
         # If `run_parallel`, use `ray_starmap` for parallel execution.
         if mesmo.config.parallel_pool is None:
             log_time("parallel pool setup")
-            ray.init(num_cpus=max(int(mesmo.config.config["multiprocessing"]["cpu_share"] * os.cpu_count()), 1))
+            if not ray.is_initialized():
+                ray.init(num_cpus=max(int(mesmo.config.config["multiprocessing"]["cpu_share"] * os.cpu_count()), 1),
+                         include_dashboard=True, dashboard_port=8266)
             mesmo.config.parallel_pool = True
             log_time("parallel pool setup")
         results = ray_starmap(function_partial, argument_sequence)
@@ -211,7 +250,6 @@ def starmap(
         ]
 
     return results
-
 
 def chunk_dict(dict_in: dict, chunk_count: int = os.cpu_count()):
     """Divide dictionary into equally sized chunks."""
